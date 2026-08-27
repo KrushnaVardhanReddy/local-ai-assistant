@@ -15,7 +15,7 @@ PROVIDER_CONFIG = {
 def _load_env():
     env_dict = {}
     # Assume config.py is in backend/ and .env is in the repo root.
-    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env.local")
     if os.path.exists(env_path):
         with open(env_path, "r", encoding="utf-8") as f:
             for line in f:
