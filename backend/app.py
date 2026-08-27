@@ -3,6 +3,7 @@ import queue
 import threading
 import traceback
 import sys
+import re
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -131,7 +132,21 @@ async def ws_endpoint(websocket: WebSocket):
 
                     await websocket.send_json({"type": "transcript", "text": transcript})
 
-                    messages = [{"role": "user", "content": transcript}]
+                    rag_context = ""
+                    if config.RAG_ENABLED:
+                        loop = asyncio.get_event_loop()
+                        rag_context = await loop.run_in_executor(None, retriever.retrieve, transcript)
+
+                    system_content = config.SYSTEM_PROMPT
+                    if rag_context:
+                        system_content += f"\n\n{rag_context}"
+                        sources = list(dict.fromkeys(re.findall(r'\[Source: ([^\],]+)', rag_context)))
+                        await websocket.send_json({"type": "rag_sources", "sources": sources})
+
+                    messages = [
+                        {"role": "system", "content": system_content},
+                        {"role": "user", "content": transcript}
+                    ]
 
                     try:
                         async for token in llm_client.stream(messages):
