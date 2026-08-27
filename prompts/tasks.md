@@ -124,5 +124,5 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P10-T1 | `frontend/src/lib/Assistant.svelte` | Modular UI — Top toolbar, Left Pane (Live STT), Right Pane (LLM Response) | ⬜ | — |
+| P10-T1 | `frontend/src/lib/Assistant.svelte` | Modular UI — Top toolbar, Left Pane (Live STT), Right Pane (LLM Response) | ✅ | — |
 
