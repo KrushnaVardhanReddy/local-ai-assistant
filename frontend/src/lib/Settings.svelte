@@ -51,12 +51,13 @@
   }
 </script>
 
-<button class="settings-toggle" onclick={toggleSettings} aria-label="Settings" data-testid="settings-btn">
-  ⚙️
-</button>
+<div class="settings-wrapper">
+  <button class="settings-toggle" onclick={toggleSettings} aria-label="Settings" data-testid="settings-btn">
+    ⚙️
+  </button>
 
-{#if showSettings}
-<div class="settings-panel">
+  {#if showSettings}
+  <div class="settings-panel">
   <div style="display: flex; justify-content: space-between; align-items: center;">
     <h2>Settings</h2>
   </div>
@@ -115,24 +116,30 @@
         </form>
       {/if}
     {/if}
+    </div>
   </div>
+  {/if}
 </div>
-{/if}
 
 <style>
+  .settings-wrapper {
+    position: relative;
+  }
+
   .settings-toggle {
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     cursor: pointer;
     color: #fff;
     opacity: 0.7;
     transition: opacity 0.2s;
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0.5rem;
-    z-index: 10;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
   }
 
   .settings-toggle:hover {
@@ -140,6 +147,9 @@
   }
 
   .settings-panel {
+    position: absolute;
+    bottom: calc(100% + 0.5rem);
+    right: 0;
     background: rgba(30, 30, 30, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -148,7 +158,7 @@
     width: 320px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     font-family: system-ui, -apple-system, sans-serif;
-    margin-top: 2.5rem; /* space for the toggle button */
+    z-index: 1000;
   }
 
   .config-section {
