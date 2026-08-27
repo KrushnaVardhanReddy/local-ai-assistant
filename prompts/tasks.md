@@ -66,6 +66,7 @@
 | P5-T2 | `backend/rag/retriever.py` | Semantic search, top-K retrieval | ⬜ | — |
 | P5-T3 | `backend/app.py` | Inject RAG context into LLM system prompt | ⬜ | — |
 | P5-T4 | `frontend/src/lib/KnowledgeBase.svelte` | Drag-and-drop file upload UI | ⬜ | — |
+| P5-T5 | `backend/rag/web_search.py` | Web Search via duckduckgo-search injected into context | ⬜ | — |
 
 ---
 

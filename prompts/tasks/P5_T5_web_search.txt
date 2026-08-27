@@ -1,0 +1,97 @@
+TASK: P5-T5 — Web Search Integration (Web RAG)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Give the LLM real-time internet access using DuckDuckGo (free, no API key). Instead
+of relying on complex LLM tool-calling (which fails on smaller local models), we will
+use a "Web RAG" approach: when a user asks a question, we asynchronously fetch the
+top 3 DuckDuckGo search results and inject them into the system prompt alongside
+the local ChromaDB context.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use the `duckduckgo-search` Python library.
+- It must be extremely fast: limit to `max_results=3`.
+- Web Search must be toggleable via a new config flag `config.WEB_SEARCH_ENABLED`.
+- Run the DDG search asynchronously (using an executor) in parallel with the ChromaDB retrieval to prevent latency buildup.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/app.py` (P5-T3): Currently handles the ChromaDB RAG retrieval before calling the LLM. We will add the Web search here concurrently.
+- `backend/config.py`: Add `WEB_SEARCH_ENABLED`.
+- `backend/requirements.txt`: Add `duckduckgo-search>=6.0.0`.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/rag/web_search.py (CREATE)
+   a. Import `from duckduckgo_search import DDGS`.
+   b. Define `search_web(query: str, max_results: int = 3) -> str`:
+      - Initialize `ddgs = DDGS()`.
+      - Call `results = ddgs.text(query, max_results=max_results)`.
+      - If results is empty or throws an exception, return `""`.
+      - Format the output into a string:
+        ```
+        --- Internet Search Results ---
+        [Source: <href>] <title>
+        <body>
+        ```
+      - Return the formatted string.
+
+2. FILE: backend/app.py (MODIFY)
+   a. Import `search_web` from `rag.web_search`.
+   b. In the `/ws` message handler where `rag_context` is generated (from P5-T3):
+      - If `config.WEB_SEARCH_ENABLED` is true, run `search_web` concurrently with `retrieve` using `asyncio.gather` and `loop.run_in_executor`.
+      - Example logic:
+        ```python
+        loop = asyncio.get_event_loop()
+        tasks = []
+        if config.RAG_ENABLED: tasks.append(loop.run_in_executor(None, retrieve, transcript_text))
+        if config.WEB_SEARCH_ENABLED: tasks.append(loop.run_in_executor(None, search_web, transcript_text))
+        
+        results = await asyncio.gather(*tasks)
+        ```
+      - Combine the non-empty results from both ChromaDB and Web Search.
+      - Append the combined string to `config.SYSTEM_PROMPT`.
+   c. Add `POST /web_search/toggle` endpoint to toggle `config.WEB_SEARCH_ENABLED` at runtime.
+
+3. FILE: backend/config.py (MODIFY)
+   Add: `WEB_SEARCH_ENABLED: bool = os.getenv("WEB_SEARCH_ENABLED", "false").lower() == "true"`
+
+4. FILE: backend/requirements.txt (MODIFY)
+   Add: `duckduckgo-search>=6.0.0`
+
+5. FILE: frontend/src/lib/KnowledgeBase.svelte (MODIFY)
+   Add a second toggle switch below the RAG toggle: "Use Internet Search for responses".
+   It hits the `POST /web_search/toggle` endpoint.
+
+6. Build and Test:
+   a. Enable Internet Search in the UI.
+   b. Ask a question about current events (e.g., "What is the price of Bitcoin today?").
+   c. Confirm the LLM streams back an accurate answer based on the web results.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `duckduckgo-search` can sometimes be rate-limited if heavily spammed. Wrap the `ddgs.text()` call in a `try...except` block and return an empty string if it fails, so it doesn't crash the LLM generation pipeline.
+- Running them in `asyncio.gather` is crucial. If Chroma takes 50ms and Web Search takes 400ms, running them sequentially takes 450ms. Concurrently, it only takes 400ms.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/rag/web_search.py
+
+FILES TO MODIFY:
+- backend/app.py
+- backend/config.py
+- backend/requirements.txt
+- frontend/src/lib/KnowledgeBase.svelte
+
+Commit: "jules: P5-T5 add Web Search integration via duckduckgo-search"
+Target branch: main
