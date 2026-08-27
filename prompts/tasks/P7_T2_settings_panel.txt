@@ -29,8 +29,10 @@ DELIVERABLES
    a. Create a minimalist Svelte component with a settings icon (e.g., ⚙️).
    b. Clicking the icon opens a modal or dropdown containing:
       - "Backend API URL" input field (default: `127.0.0.1:8000`).
+      - "Dev Mode: Disable Stealth (E2E Visibility)" checkbox (default: false).
       - "Save & Reconnect" button.
    c. On save, persist the URL to `localStorage.setItem('backend_url', value)`.
+   d. If the Dev Mode checkbox is toggled, invoke a Tauri IPC command `toggle_stealth({ enable: !isChecked })`.
 
 2. FILE: frontend/src/lib/ws.ts (MODIFY)
    a. Update the URL resolution logic to prioritize `localStorage.getItem('backend_url')`.
@@ -40,10 +42,16 @@ DELIVERABLES
 3. FILE: frontend/src/App.svelte (MODIFY)
    a. Mount the `<Settings />` component in the top corner of the overlay.
 
+4. FILE: src-tauri/src/main.rs (MODIFY)
+   a. Add a new IPC command `toggle_stealth(enable: bool)`.
+   b. If `enable` is false, remove the OS-level stealth hooks (e.g., window.set_always_on_top(false), allow capture). If true, re-apply the `WDA_EXCLUDEFROMCAPTURE` / stealth hooks.
+   c. Register this command in the `tauri::Builder::default().invoke_handler()`.
+
 4. Build and Test:
    a. Run the app.
    b. Open Settings, change the URL to a dummy value, hit Save.
    c. Verify the WebSocket attempts to connect to the new URL and updates the status indicator.
+   d. Toggle "Dev Mode" and verify the Tauri window becomes visible/capturable by screen recorders for E2E testing.
 
 ═══════════════════════════════════════════════════════════════
 IMPLEMENTATION HINTS
@@ -60,6 +68,7 @@ FILES TO CREATE:
 FILES TO MODIFY:
 - frontend/src/lib/ws.ts
 - frontend/src/App.svelte
+- src-tauri/src/main.rs
 
 Commit: "jules: P7-T2 add Settings panel and Remote Backend URL configuration"
 Target branch: main
