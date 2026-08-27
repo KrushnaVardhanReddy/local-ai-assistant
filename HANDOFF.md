@@ -25,28 +25,23 @@ We have evolved the initial Local Whisper concept into a full **Anti-Piracy, Spl
 We are orchestrating development through **Jules**. 
 
 **✅ What is DONE (Merged to `main`):**
-- **Wave 1 & Wave 2 are completely finished and merged.**
+- **Wave 1, Wave 2, and Wave 3 are completely finished and merged.**
+- We have the `faster-whisper` transcriber logic.
+- We have the main `Assistant.svelte` floating UI.
+- We have the Tauri Stealth Mode window hooks.
 - We have the SvelteKit scaffolding, Supabase Auth schema, and Stripe Webhooks.
 - We have the Python audio listener, async LLM client, and health checks.
 - The Svelte 5 reactive WebSocket store (`ws.svelte.ts`) is fully functional.
 
 **⏳ What is IN PROGRESS (Waiting on Jules):**
-- We just triggered **Wave 3** via `jules_submit.py`. We are currently waiting for Jules to open PRs for:
-  1. `P2-T2`: The `faster-whisper` transcriber logic.
-  2. `P4-T3`: The main `Assistant.svelte` floating UI.
-  3. `P4-T5`: The Tauri Stealth Mode window hooks.
+- Nothing currently in flight. We are ready to trigger Wave 4!
 
 ---
 
 ## ⏭️ Next Steps to Resume
 
-1. **Review and Merge Wave 3:** 
-   When you return, check GitHub for PRs related to `P2-T2`, `P4-T3`, and `P4-T5`. You can easily merge them using the helper script:
-   ```bash
-   bash scripts/merge_prs.sh <start_pr_number> <end_pr_number>
-   ```
-2. **Trigger Wave 4 (The Glue):**
-   Once Wave 3 is merged, run:
+1. **Trigger Wave 4 (The Glue):**
+   When you return, run:
    ```bash
    python3 scripts/jules_submit.py --task P3-T2
    python3 scripts/jules_submit.py --task P4-T4
