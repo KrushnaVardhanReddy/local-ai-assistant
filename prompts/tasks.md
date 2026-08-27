@@ -22,7 +22,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P1-T1 | `backend/ollama_check.py` | Ollama health-check + curl test helper | ⏳ | — |
+| P1-T1 | `backend/ollama_check.py` | Ollama health-check + curl test helper | ✅ | — |
 | P1-T2 | `backend/config.py` | Central config module (all env-var overrideable settings) | ✅ | — |
 
 ---
@@ -31,9 +31,9 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P2-T1 | `backend/audio_listener.py` | Mic capture with sounddevice, chunked streaming | ⏳ | — |
-| P2-T2 | `backend/transcriber.py` | faster-whisper CUDA integration, returns text stream | ⬜ | — |
-| P2-T3 | `backend/requirements.txt`, `backend/README.md` | All Python deps pinned | ⏳ | — |
+| P2-T1 | `backend/audio_listener.py` | Mic capture with sounddevice, chunked streaming | ✅ | — |
+| P2-T2 | `backend/transcriber.py` | faster-whisper CUDA integration, returns text stream | ⏳ | — |
+| P2-T3 | `backend/requirements.txt`, `backend/README.md` | All Python deps pinned | ✅ | — |
 
 ---
 
@@ -41,7 +41,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P3-T1 | `backend/llm_client.py` | Async OpenAI-compat LLM client with streaming token support | ⏳ | — |
+| P3-T1 | `backend/llm_client.py` | Async OpenAI-compat LLM client with streaming token support | ✅ | — |
 | P3-T2 | `backend/app.py` | FastAPI server with `/ws` WebSocket, pipes STT → LLM → frontend | ⬜ | — |
 
 ---
@@ -51,10 +51,10 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P4-T1 | `frontend/` | Scaffold Svelte 5 + Tauri 2.0 project | ✅ | — |
-| P4-T2 | `frontend/src/lib/ws.ts` | Reactive WebSocket store using Svelte 5 runes | ⏳ | — |
-| P4-T3 | `frontend/src/lib/Assistant.svelte`, `app.css` | Glassmorphism floating overlay, streams tokens | ⬜ | — |
+| P4-T2 | `frontend/src/lib/ws.ts` | Reactive WebSocket store using Svelte 5 runes | ✅ | — |
+| P4-T3 | `frontend/src/lib/Assistant.svelte`, `app.css` | Glassmorphism floating overlay, streams tokens | ⏳ | — |
 | P4-T4 | `frontend/src/App.svelte`, `main.ts` | Root component, mounts assistant, mic status dot | ⬜ | — |
-| P4-T5 | `src-tauri/src/main.rs` | **Stealth Mode** — screen share safe, dock hidden, global hotkey | ⬜ | — |
+| P4-T5 | `src-tauri/src/main.rs` | **Stealth Mode** — screen share safe, dock hidden, global hotkey | ⏳ | — |
 
 ---
 
@@ -99,7 +99,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P8-T1 | `web/` | SvelteKit web app scaffold | ✅ | — |
-| P8-T2 | `web/src/routes/login/` | Supabase auth + DB schema | ⏳ | — |
-| P8-T3 | `web/src/routes/api/billing/` | Stripe billing integration | ⏳ | — |
+| P8-T2 | `web/src/routes/login/` | Supabase auth + DB schema | ✅ | — |
+| P8-T3 | `web/src/routes/api/billing/` | Stripe billing integration | ✅ | — |
 | P8-T4 | `backend/auth.py`, `keys.py` | FastAPI JWT middleware + encrypted key storage | ⬜ | — |
 | P8-T5 | `frontend/src/lib/auth.ts` | Tauri app auth flow — OS keychain | ⬜ | — |
