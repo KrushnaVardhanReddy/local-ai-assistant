@@ -44,7 +44,7 @@ for pr in $(seq $START_PR $END_PR); do
     gh pr ready "$pr" >/dev/null 2>&1 || true
 
     # Squash merge and delete remote branch
-    if gh pr merge "$pr" --squash --delete-branch --yes 2>/dev/null; then
+    if gh pr merge "$pr" --squash --delete-branch 2>/dev/null; then
         echo "  ✅ Merged PR #$pr"
         ((MERGED++))
     else
