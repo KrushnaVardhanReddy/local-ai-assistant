@@ -1,7 +1,38 @@
 <script lang="ts">
   import { wsState } from "$lib/ws.svelte";
+  import { onMount } from "svelte";
+  import { listen } from "@tauri-apps/api/event";
+  import { invoke } from "@tauri-apps/api/core";
 
   let responseEl: HTMLElement | undefined = $state();
+
+  onMount(() => {
+    const unlisten = listen("trigger-vision", async () => {
+      if (wsState.isAnalyzingScreen) return;
+
+      wsState.isAnalyzingScreen = true;
+      try {
+        const base64Image = await invoke<string>("capture_screen");
+
+        await fetch("http://127.0.0.1:8000/vision/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ image_base64: base64Image })
+        });
+
+      } catch (e) {
+        console.error("Failed to capture screen or send to backend:", e);
+      } finally {
+        wsState.isAnalyzingScreen = false;
+      }
+    });
+
+    return () => {
+      unlisten.then(f => f());
+    };
+  });
 
   $effect(() => {
     // This effect runs whenever wsState.response changes
@@ -18,7 +49,12 @@
 <div class="assistant-panel">
   <div class="header">
     <div class="brand">✦ Local AI</div>
-    <div class="mic-status {wsState.isListening ? 'listening' : ''}"></div>
+    <div class="header-right">
+      {#if wsState.isAnalyzingScreen}
+        <div class="vision-indicator" title="Analyzing screen...">👁️</div>
+      {/if}
+      <div class="mic-status {wsState.isListening ? 'listening' : ''}"></div>
+    </div>
   </div>
 
   <div class="content">
@@ -86,6 +122,17 @@
     color: #7c3aed;
     font-weight: 600;
     font-size: 1.1rem;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .vision-indicator {
+    font-size: 1.1rem;
+    animation: pulse 1.5s infinite;
   }
 
   .mic-status {

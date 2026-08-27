@@ -5,6 +5,7 @@ export const wsState = $state({
   response: "",
   isListening: false,
   isThinking: false,
+  isAnalyzingScreen: false,
   isConnected: false,
   error: null as string | null
 });

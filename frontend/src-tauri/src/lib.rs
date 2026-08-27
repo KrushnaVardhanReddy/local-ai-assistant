@@ -1,5 +1,9 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
+use xcap::Monitor;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
+use std::io::Cursor;
+use image::{DynamicImage, RgbaImage};
 
 static STEALTH_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -76,6 +80,25 @@ fn toggle_stealth(window: tauri::WebviewWindow, enabled: bool) {
     set_screen_share_safe(&window, enabled);
 }
 
+#[tauri::command]
+fn capture_screen() -> Result<String, String> {
+    let monitors = Monitor::all().map_err(|e| e.to_string())?;
+
+    // We only capture the primary display (the first one)
+    if let Some(monitor) = monitors.first() {
+        let image: RgbaImage = monitor.capture_image().map_err(|e| e.to_string())?;
+        let dynamic_image = DynamicImage::ImageRgba8(image);
+
+        let mut buffer = Cursor::new(Vec::new());
+        dynamic_image.write_to(&mut buffer, image::ImageFormat::Jpeg).map_err(|e| e.to_string())?;
+
+        let base64_string = STANDARD.encode(buffer.into_inner());
+        Ok(format!("data:image/jpeg;base64,{}", base64_string))
+    } else {
+        Err("No monitors found".into())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -106,9 +129,15 @@ pub fn run() {
                 }
             }).expect("failed to register global shortcut");
 
+            app.global_shortcut().on_shortcut("Ctrl+Shift+S", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("trigger-vision", ());
+                }
+            }).expect("failed to register Ctrl+Shift+S shortcut");
+
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, toggle_stealth])
+        .invoke_handler(tauri::generate_handler![greet, toggle_stealth, capture_screen])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
