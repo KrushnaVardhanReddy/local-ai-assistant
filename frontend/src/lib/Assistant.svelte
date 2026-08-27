@@ -1,0 +1,216 @@
+<script lang="ts">
+  import { wsState } from "$lib/ws.svelte";
+
+  let responseEl: HTMLElement | undefined = $state();
+
+  $effect(() => {
+    // This effect runs whenever wsState.response changes
+    if (wsState.response && responseEl) {
+      responseEl.scrollTop = responseEl.scrollHeight;
+    }
+  });
+
+  function clearError() {
+    wsState.error = null;
+  }
+</script>
+
+<div class="assistant-panel">
+  <div class="header">
+    <div class="brand">✦ Local AI</div>
+    <div class="mic-status {wsState.isListening ? 'listening' : ''}"></div>
+  </div>
+
+  <div class="content">
+    {#if !wsState.transcript && !wsState.response && wsState.isConnected}
+      <div class="idle-hint">Hold <code>Ctrl+Shift+Space</code> to speak</div>
+    {/if}
+
+    {#if wsState.transcript}
+      {#key wsState.transcript}
+        <div class="transcript-bubble">
+          {wsState.transcript}
+        </div>
+      {/key}
+    {/if}
+
+    {#if wsState.response || wsState.isThinking}
+      <div class="response-area" bind:this={responseEl}>
+        <span class="response-text">{wsState.response}</span>
+        {#if wsState.isThinking}
+          <span class="cursor">▌</span>
+        {/if}
+      </div>
+    {/if}
+  </div>
+
+  <div class="status-bar">
+    {#if wsState.error}
+      <button class="status-error" onclick={clearError}>
+        ⚠ {wsState.error}
+      </button>
+    {:else if wsState.isConnected}
+      <span class="status-connected">● Connected</span>
+    {:else}
+      <span class="status-connecting">○ Reconnecting<span class="dots"></span></span>
+    {/if}
+  </div>
+</div>
+
+<style>
+  .assistant-panel {
+    background: rgba(13, 13, 13, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    color: #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    /* Providing some initial sizing to make it visible during dev */
+    min-height: 400px;
+    max-width: 400px;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .brand {
+    color: #7c3aed;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .mic-status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #475569; /* grey when not listening */
+    transition: background-color 0.3s;
+  }
+
+  .mic-status.listening {
+    background-color: #22c55e;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+  }
+
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    overflow-y: auto;
+    gap: 1.5rem;
+  }
+
+  .idle-hint {
+    margin: auto;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .idle-hint code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+
+  .transcript-bubble {
+    align-self: flex-end;
+    background: rgba(124, 58, 237, 0.15);
+    border: 1px solid rgba(124, 58, 237, 0.5);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    max-width: 85%;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    animation: fade-up 0.3s ease-out forwards;
+  }
+
+  .response-area {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #e2e8f0;
+    max-height: 100%;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+
+  .cursor {
+    color: #7c3aed;
+    display: inline-block;
+    animation: blink 1s step-end infinite;
+    margin-left: 2px;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .status-bar {
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .status-connected {
+    color: #22c55e;
+  }
+
+  .status-connecting {
+    color: #94a3b8;
+  }
+
+  .dots::after {
+    content: '';
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+
+  @keyframes dots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+    100% { content: ''; }
+  }
+
+  .status-error {
+    color: #f59e0b;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .status-error:hover {
+    text-decoration: underline;
+  }
+</style>
