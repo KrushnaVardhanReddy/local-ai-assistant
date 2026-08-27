@@ -78,7 +78,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P6-T1 | `main.rs`, `Assistant.svelte` | Tauri screenshot capture hotkey (`Ctrl+Shift+S`) to Base64 | ✅ | #22 |
-| P6-T2 | `backend/app.py`, `llm_client.py` | `/vision/analyze` endpoint mapping to Vision LLM | ⬜ | — |
+| P6-T2 | `backend/app.py`, `llm_client.py` | `/vision/analyze` endpoint mapping to Vision LLM | ✅ | #25 |
 
 ---
 
@@ -88,7 +88,7 @@
 |---|---|---|---|---|
 | P7-T1 | `main.rs`, `ws.ts`, `Assistant.svelte` | Stealth Hotkeys: PTT, Scroll (Up/Down), Panic Clear | ⬜ | — |
 | P7-T2 | `frontend/src/lib/Settings.svelte` | Settings panel: model selector, mic selector | ✅ | #24 |
-| P7-T3 | `scripts/build.sh` | Validate PyInstaller + Tauri bundles | ⬜ | — |
+| P7-T3 | `scripts/build.sh` | Validate PyInstaller + Tauri bundles | ✅ | #26 |
 | P7-T4 | `README.md` | Final pass — screenshots, install instructions | ✅ | #23 |
 | P7-T5 | `scripts/start_remote.sh`, `backend/app.py` | Remote Helper Mode — serve UI statically + Cloudflare tunnel | ⬜ | — |
 | P7-T6 | `tests/`, `e2e/`, `playwright.config.ts` | E2E test suite — pytest API tests + Playwright frontend tests | ⬜ | — |
