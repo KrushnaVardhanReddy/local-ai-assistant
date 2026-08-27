@@ -23,6 +23,7 @@ from transcriber import Transcriber
 from llm_client import LLMClient
 from rag import ingestor
 from rag import retriever
+from rag.web_search import search_web
 
 from contextlib import asynccontextmanager
 
@@ -220,14 +221,31 @@ async def ws_endpoint(websocket: WebSocket):
                     outbound_queue.put_nowait({"type": "transcript", "text": transcript})
 
                     rag_context = ""
+                    web_context = ""
+
+                    loop = asyncio.get_event_loop()
+                    tasks = []
+
                     if config.RAG_ENABLED:
-                        loop = asyncio.get_event_loop()
-                        rag_context = await loop.run_in_executor(None, retriever.retrieve, transcript)
+                        tasks.append(loop.run_in_executor(None, retriever.retrieve, transcript))
+                    else:
+                        tasks.append(asyncio.sleep(0, result=""))
+
+                    if config.WEB_SEARCH_ENABLED:
+                        tasks.append(loop.run_in_executor(None, search_web, transcript))
+                    else:
+                        tasks.append(asyncio.sleep(0, result=""))
+
+                    results = await asyncio.gather(*tasks)
+                    rag_context = results[0]
+                    web_context = results[1]
+
+                    combined_context = "\n\n".join(filter(None, [rag_context, web_context]))
 
                     system_content = config.SYSTEM_PROMPT
-                    if rag_context:
-                        system_content += f"\n\n{rag_context}"
-                        sources = list(dict.fromkeys(re.findall(r'\[Source: ([^\],]+)', rag_context)))
+                    if combined_context:
+                        system_content += f"\n\n{combined_context}"
+                        sources = list(dict.fromkeys(re.findall(r'\[Source: ([^\],]+)', combined_context)))
                         outbound_queue.put_nowait({"type": "rag_sources", "sources": sources})
 
                     messages = [
@@ -345,6 +363,15 @@ async def rag_status():
 async def rag_toggle():
     config.RAG_ENABLED = not config.RAG_ENABLED
     return {"enabled": config.RAG_ENABLED}
+
+@app.get("/web_search/status")
+async def web_search_status():
+    return {"enabled": config.WEB_SEARCH_ENABLED}
+
+@app.post("/web_search/toggle")
+async def web_search_toggle():
+    config.WEB_SEARCH_ENABLED = not config.WEB_SEARCH_ENABLED
+    return {"enabled": config.WEB_SEARCH_ENABLED}
 
 
 if __name__ == "__main__":
