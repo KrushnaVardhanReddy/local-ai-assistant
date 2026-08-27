@@ -32,10 +32,10 @@ class AudioListener:
             self._stream.start()
         except sd.PortAudioError as e:
             print(f"Error initializing microphone: {e}", file=sys.stderr)
-            sys.exit(1)
+            raise RuntimeError("Failed to init mic")
         except Exception as e:
             print(f"Unexpected error initializing microphone: {e}", file=sys.stderr)
-            sys.exit(1)
+            raise RuntimeError("Failed to init mic")
 
     def _callback(self, indata, frames, time, status):
         if status:
