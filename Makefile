@@ -21,7 +21,7 @@ dev-frontend:
 # Run both backend and frontend concurrently
 dev-all:
 	@echo "Starting backend and frontend... (Press CTRL+C to stop both)"
-	@bash -c 'trap "echo \"Cleaning up...\"; pkill -f \"python3 app.py\" || true" EXIT; \
+	@bash -c 'trap "echo \"Cleaning up...\"; pkill -9 -f \"app.py\" || true" EXIT; \
 	cd backend && .venv/bin/python3 app.py & \
 	echo "Waiting 5 seconds for backend to initialize..." && \
 	sleep 5 && \
@@ -31,8 +31,8 @@ dev-all:
 # Force kill all running instances of the frontend and backend
 stop:
 	@echo "Stopping all backend and frontend processes..."
-	-pkill -f "python3 app.py"
-	-pkill -f "tauri"
+	-pkill -9 -f "app.py"
+	-pkill -9 -f "tauri"
 	@echo "All processes stopped!"
 
 # Run the E2E tests (from P7-T6)
