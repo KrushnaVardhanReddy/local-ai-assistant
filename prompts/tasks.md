@@ -66,7 +66,7 @@
 | P5-T2 | `backend/rag/retriever.py` | Semantic search, top-K retrieval | ✅ | #17 |
 | P5-T3 | `backend/app.py` | Inject RAG context into LLM system prompt | ✅ | #19 |
 | P5-T4 | `frontend/src/lib/KnowledgeBase.svelte` | Drag-and-drop file upload UI | ✅ | #21 |
-| P5-T5 | `backend/rag/web_search.py` | Web Search via duckduckgo-search injected into context | ⬜ | — |
+| P5-T5 | `backend/rag/web_search.py` | Web Search via duckduckgo-search injected into context | ✅ | #27 |
 
 ---
 
@@ -86,11 +86,11 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P7-T1 | `main.rs`, `ws.ts`, `Assistant.svelte` | Stealth Hotkeys: PTT, Scroll (Up/Down), Panic Clear | ⬜ | — |
+| P7-T1 | `main.rs`, `ws.ts`, `Assistant.svelte` | Stealth Hotkeys: PTT, Scroll (Up/Down), Panic Clear | ✅ | #28 |
 | P7-T2 | `frontend/src/lib/Settings.svelte` | Settings panel: model selector, mic selector | ✅ | #24 |
 | P7-T3 | `scripts/build.sh` | Validate PyInstaller + Tauri bundles | ✅ | #26 |
 | P7-T4 | `README.md` | Final pass — screenshots, install instructions | ✅ | #23 |
-| P7-T5 | `scripts/start_remote.sh`, `backend/app.py` | Remote Helper Mode — serve UI statically + Cloudflare tunnel | ⬜ | — |
+| P7-T5 | `scripts/start_remote.sh`, `backend/app.py` | Remote Helper Mode — serve UI statically + Cloudflare tunnel | ✅ | #29 |
 | P7-T6 | `tests/`, `e2e/`, `playwright.config.ts` | E2E test suite — pytest API tests + Playwright frontend tests | ⬜ | — |
 
 ---
