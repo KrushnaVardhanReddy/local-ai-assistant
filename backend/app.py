@@ -320,9 +320,10 @@ async def ws_endpoint(websocket: WebSocket):
                         except:
                             pass
 
-                    # Broadcast transcript to ALL connected clients
+                    # Broadcast transcript to ALL connected clients and signal thinking state
                     for out_q in list(active_outbound_queues):
                         out_q.put_nowait({"type": "transcript", "text": transcript})
+                        out_q.put_nowait({"type": "message_start"})
 
                     rag_context = ""
                     web_context = ""

@@ -129,6 +129,8 @@ export function connect(url?: string): void {
       switch (data.type) {
         case "transcript":
           wsState.transcript = data.text;
+          break;
+        case "message_start":
           wsState.response = "";
           wsState.isThinking = true;
           wsState.ragSources = [];
