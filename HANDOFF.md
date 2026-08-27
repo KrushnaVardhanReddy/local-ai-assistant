@@ -34,21 +34,26 @@ We are orchestrating development through **Jules**.
 - The Svelte 5 reactive WebSocket store (`ws.svelte.ts`) is fully functional.
 
 **⏳ What is IN PROGRESS (Waiting on Jules):**
-- Nothing currently in flight. We are ready to trigger Wave 4!
+- We just triggered **Wave 4** via `jules_submit.py`. We are waiting for:
+  1. `P3-T2`: `app.py` (FastAPI backend server - The Glue)
+  2. `P4-T4`: `App.svelte` (Root Svelte UI)
 
 ---
 
 ## ⏭️ Next Steps to Resume
 
-1. **Trigger Wave 4 (The Glue):**
-   When you return, run:
+1. **Review and Merge Wave 4:** 
+   When you return, check GitHub for PRs related to `P3-T2` and `P4-T4`. You can easily merge them using the helper script:
    ```bash
-   python3 scripts/jules_submit.py --task P3-T2
-   python3 scripts/jules_submit.py --task P4-T4
+   bash scripts/merge_prs.sh <start_pr_number> <end_pr_number>
    ```
-   *Note: `P3-T2` builds the `app.py` FastAPI server. This is the critical piece that finally glues the audio, transcriber, and LLM together. Once this merges, the app will be fully testable end-to-end!*
-3. **Trigger Phase 5 (Local RAG):**
-   After the main app loop works, trigger `P5-T1` to build the ChromaDB document ingestion pipeline.
+2. **Test the Pipeline End-to-End!**
+   Once Wave 4 is merged, the core pipeline is completely connected. You can start the FastAPI server and test the audio transcription and UI streaming!
+3. **Trigger Wave 5 (Local RAG):**
+   After testing, run:
+   ```bash
+   python3 scripts/jules_submit.py --task P5-T1
+   ```
 
 ---
 
