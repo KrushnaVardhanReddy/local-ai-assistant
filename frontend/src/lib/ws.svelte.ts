@@ -60,7 +60,19 @@ export function connect(url?: string): void {
   if (typeof localStorage !== 'undefined') {
     storedUrl = localStorage.getItem('backend_url');
   }
-  let targetUrl = url ?? storedUrl ?? import.meta.env.VITE_WS_URL ?? "ws://127.0.0.1:8765/ws";
+
+  let defaultUrl = "ws://127.0.0.1:8765/ws";
+  if (typeof window !== 'undefined') {
+    // Check if we are in a normal browser (not Tauri)
+    const isBrowser = typeof (window as any).__TAURI_INTERNALS__ === 'undefined';
+    if (isBrowser) {
+      const host = window.location.host;
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      defaultUrl = `${wsProtocol}//${host}/ws`;
+    }
+  }
+
+  let targetUrl = url ?? storedUrl ?? import.meta.env.VITE_WS_URL ?? defaultUrl;
   if (targetUrl.startsWith('http://')) {
     targetUrl = targetUrl.replace('http://', 'ws://');
   } else if (targetUrl.startsWith('https://')) {
@@ -189,4 +201,12 @@ function scheduleReconnect(): void {
 export function reconnect(url: string): void {
   disconnect();
   connect(url);
+}
+
+export function sendChat(text: string): void {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "chat", text }));
+  } else {
+    console.error("WebSocket is not connected. Cannot send chat message.");
+  }
 }
