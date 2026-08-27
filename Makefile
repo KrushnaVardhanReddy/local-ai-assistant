@@ -1,4 +1,4 @@
-.PHONY: install dev-backend dev-frontend dev-all e2e clean
+.PHONY: install dev-backend dev-frontend dev-all stop e2e clean
 
 # Install all dependencies (Frontend + Backend)
 install:
@@ -20,12 +20,20 @@ dev-frontend:
 
 # Run both backend and frontend concurrently
 dev-all:
-	@echo "Starting backend..."
+	@echo "Starting backend and frontend... (Press CTRL+C to stop both)"
+	@bash -c 'trap "echo \"Cleaning up...\"; pkill -f \"python3 app.py\" || true" EXIT; \
 	cd backend && .venv/bin/python3 app.py & \
 	echo "Waiting 5 seconds for backend to initialize..." && \
 	sleep 5 && \
 	echo "Starting frontend..." && \
-	cd frontend && npm run tauri dev
+	cd frontend && npm run tauri dev'
+
+# Force kill all running instances of the frontend and backend
+stop:
+	@echo "Stopping all backend and frontend processes..."
+	-pkill -f "python3 app.py"
+	-pkill -f "tauri"
+	@echo "All processes stopped!"
 
 # Run the E2E tests (from P7-T6)
 e2e:
