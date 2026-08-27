@@ -14,6 +14,14 @@ A real-time, context-aware desktop assistant that runs **completely offline** on
 
 ---
 
+## ✨ Features
+
+- **Local Speech-to-Text (STT):** Powered by Parakeet-TDT and faster-whisper, providing sub-second transcription with complete privacy on your own hardware.
+- **Retrieval-Augmented Generation (RAG):** Context-aware interactions using local document embedding with ChromaDB and sentence-transformers. No data is sent to external APIs.
+- **Stealth Mode:** A minimal, unintrusive UI that runs as a floating overlay, keeping you focused while providing quick access to AI assistance.
+
+---
+
 ## 🚀 Architecture Overview
 
 This application uses a **dual-process architecture** to separate heavy AI compute from the user interface:
@@ -84,20 +92,16 @@ cd Local_AI_Assistant
 ollama run llama3:8b-instruct-q4_K_M
 ```
 
-### 3. Set Up the Python Backend
+### 3. Install Dependencies
 
 ```bash
-cd backend
-pip install -r requirements.txt
-python app.py
+make install
 ```
 
-### 4. Launch the Desktop App
+### 4. Launch the Application
 
 ```bash
-cd frontend
-npm install
-npm run tauri dev
+make dev-all
 ```
 
 ---
@@ -186,6 +190,21 @@ LLM_PROVIDER=groq
 LLM_MODEL=llama-3.1-70b-versatile
 GROQ_API_KEY=gsk_...
 ```
+
+---
+
+## 🌐 Remote Helper Mode
+
+You can expose your local AI assistant's backend securely over the internet using a Cloudflare tunnel. This allows you to interact with your assistant remotely while still running the compute locally.
+
+### Setup
+
+1. Install `cloudflared` (see [Cloudflare documentation](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)).
+2. Authenticate and create a tunnel pointing to your local backend port (default: `8000`).
+3. Example command to quickly expose the backend:
+   ```bash
+   cloudflared tunnel --url http://localhost:8000
+   ```
 
 ---
 
