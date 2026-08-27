@@ -22,8 +22,15 @@
 
 <div class="app-shell">
   {#if showKnowledgeBase}
-    <div class="modal-overlay" onclick={() => showKnowledgeBase = false}>
-      <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+    <div
+      class="modal-overlay"
+      role="button"
+      tabindex="0"
+      aria-label="Close knowledge base"
+      onclick={() => showKnowledgeBase = false}
+      onkeydown={(e) => e.key === 'Escape' && (showKnowledgeBase = false)}
+    >
+      <div class="modal-content" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
         <button class="close-btn" onclick={() => showKnowledgeBase = false}>✖</button>
         <KnowledgeBase />
       </div>
