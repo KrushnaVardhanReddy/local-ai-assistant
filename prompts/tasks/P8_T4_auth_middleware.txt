@@ -65,6 +65,7 @@ DELIVERABLES
       - Await the first message (5s timeout). If timeout, close with 1008 "Auth timeout".
       - Parse `{"type":"auth","token":"..."}`. If missing or wrong type, close 1008.
       - Call `get_user_id(token)`. If `AuthError`, close 1008 with the error message.
+      - Query Supabase `profiles` table to check if the user has `plan == 'lifetime'`. If not, close with 1008 "License required".
       - Determine user's LLM provider from their stored key:
         - For each provider in ["openai","groq","gemini","anthropic"], call `key_store.get_key(user_id, provider)`.
         - Use the first non-None result. If none found, fall back to `config.resolved_llm()`.

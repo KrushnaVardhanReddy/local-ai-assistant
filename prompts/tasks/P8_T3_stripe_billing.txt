@@ -3,9 +3,9 @@ TASK: P6-T3 — Stripe Billing Integration
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
-Integrate Stripe for Pro plan subscriptions: checkout session creation, webhook
-handler that syncs subscription status to Supabase, customer portal for self-service
-plan management, and a billing page in the user dashboard.
+Integrate Stripe for a One-Time Lifetime License ($49): checkout session creation, webhook
+handler that syncs license status to Supabase, customer portal for receipt management,
+and a billing page in the user dashboard.
 
 ═══════════════════════════════════════════════════════════════
 CONSTRAINTS & RULES
@@ -33,11 +33,10 @@ DELIVERABLES
    b. Get or create Stripe Customer for the user:
       - Check `profiles.stripe_customer_id`. If null, call `stripe.customers.create({ email })` and save to `profiles`.
    c. Create Stripe Checkout Session:
-      ```typescript
       const session = await stripe.checkout.sessions.create({
           customer: stripeCustomerId,
-          mode: 'subscription',
-          line_items: [{ price: env.STRIPE_PRO_PRICE_ID, quantity: 1 }],
+          mode: 'payment', // One-time lifetime license
+          line_items: [{ price: env.STRIPE_LIFETIME_PRICE_ID, quantity: 1 }],
           success_url: `${origin}/dashboard/billing?success=true`,
           cancel_url: `${origin}/pricing`,
           metadata: { supabase_user_id: userId }
@@ -54,19 +53,18 @@ DELIVERABLES
    a. Read raw request body as text (use `request.text()` — NOT `request.json()`, signature verification requires the raw body).
    b. Call `stripe.webhooks.constructEvent(body, sig, env.STRIPE_WEBHOOK_SECRET)` — return 400 on failure.
    c. Handle events:
-      - `checkout.session.completed` → set `profiles.plan = 'pro'` where `stripe_customer_id = event.data.object.customer`.
-      - `customer.subscription.deleted` → set `profiles.plan = 'free'`.
-      - `invoice.payment_failed` → set `profiles.plan = 'free'`.
+      - `checkout.session.completed` → set `profiles.plan = 'lifetime'` where `stripe_customer_id = event.data.object.customer`.
+      - `charge.refunded` → set `profiles.plan = 'free'`.
    d. Use Supabase service role client (initialized with `SUPABASE_SERVICE_ROLE_KEY`) for the DB update.
    e. Return `json({ received: true })` with status 200 on success.
 
 4. FILE: web/src/routes/dashboard/billing/+page.svelte (CREATE)
    a. Server load function (`+page.server.ts`): return `{ plan: locals.user.plan, nextBillingDate }`.
    b. UI:
-      - Current plan badge — "Free" (grey) or "Pro" (purple).
-      - If Free: "Upgrade to Pro — $12/mo" button that calls `POST /api/billing/checkout` and redirects to returned URL.
-      - If Pro: "Manage Subscription" button that calls `POST /api/billing/portal` and redirects.
-      - If `?success=true` in URL: show a "🎉 Welcome to Pro!" success banner.
+      - Current plan badge — "Free" (grey) or "Lifetime License" (gold).
+      - If Free: "Unlock Lifetime License — $49" button that calls `POST /api/billing/checkout` and redirects to returned URL.
+      - If Lifetime: "Manage Billing / Receipts" button that calls `POST /api/billing/portal` and redirects.
+      - If `?success=true` in URL: show a "🎉 Lifetime License Unlocked!" success banner.
 
 5. Build and Test:
    a. Run `stripe listen --forward-to localhost:5173/api/billing/webhook` in a terminal.
