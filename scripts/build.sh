@@ -43,6 +43,13 @@ if [ "$BUILD_BACKEND" == "true" ]; then
     pyinstaller \
         --name "local-ai-backend${SUFFIX}" \
         --onefile \
+        --hidden-import fastapi \
+        --hidden-import uvicorn \
+        --hidden-import faster_whisper \
+        --hidden-import websockets \
+        --hidden-import sounddevice \
+        --hidden-import chromadb \
+        --hidden-import sentence_transformers \
         app.py
 
     echo "✅ Backend binary: backend/dist/local-ai-backend${SUFFIX}"
@@ -59,6 +66,9 @@ if [ "$BUILD_FRONTEND" == "true" ]; then
         npm install
     fi
 
+    # Required for linuxdeploy on some CI systems
+    export APPIMAGE_EXTRACT_AND_RUN=1
+
     npm run tauri build
 
     echo "✅ Tauri bundle: frontend/src-tauri/target/release/bundle/"
@@ -68,4 +78,4 @@ fi
 echo ""
 echo "🎉 Build complete!"
 echo "   Backend:  backend/dist/local-ai-backend${SUFFIX}"
-echo "   Frontend: frontend/src-tauri/target/release/bundle/"
+echo "   Frontend: frontend/src-tauri/target/release/"
