@@ -26,6 +26,7 @@ from llm_client import LLMClient
 from rag import ingestor
 from rag import retriever
 from rag.web_search import search_web
+from smart_filter import SilenceBuffer, passes_filter
 
 from contextlib import asynccontextmanager
 
@@ -198,6 +199,10 @@ async def ws_endpoint(websocket: WebSocket):
     outbound_queue = asyncio.Queue()
     active_outbound_queues.add(outbound_queue)
 
+    is_streaming = asyncio.Event()  # Set when LLM is actively streaming
+    pending_questions = asyncio.Queue()
+    silence_buffer = SilenceBuffer()
+
     async def async_sender():
         try:
             while True:
@@ -245,7 +250,32 @@ async def ws_endpoint(websocket: WebSocket):
                     transcript = chunk.get("text", "")
                 else:
                     # Transcription MUST run in a background thread — never block the async event loop
-                    transcript = await asyncio.to_thread(transcriber.transcribe, chunk)
+                    raw_transcript = await asyncio.to_thread(transcriber.transcribe, chunk)
+                    if raw_transcript:
+                        # LAYER 1: Silence Buffer — accumulate until silence detected
+                        silence_buffer.add(raw_transcript)
+
+                    if not silence_buffer.is_silent():
+                        continue  # Keep accumulating
+
+                    # Silence detected — flush the assembled thought
+                    assembled = silence_buffer.flush()
+
+                    # LAYER 3: Heuristic Intent Filter
+                    should_send, reason = passes_filter(assembled)
+                    if not should_send:
+                        continue
+
+                    transcript = assembled
+
+                if not transcript:
+                    continue
+
+                # LAYER 2: Busy Guard
+                if is_streaming.is_set():
+                    print(f"[BUSY] Queued: '{transcript}'", file=sys.stderr)
+                    pending_questions.put_nowait(transcript)
+                    continue
 
                 if transcript:
                     # Clear queue backlog
@@ -293,6 +323,7 @@ async def ws_endpoint(websocket: WebSocket):
                         {"role": "user", "content": transcript}
                     ]
 
+                    is_streaming.set()
                     try:
                         async for token in connection_llm_client.stream(messages):
                             for out_q in list(active_outbound_queues):
@@ -303,6 +334,13 @@ async def ws_endpoint(websocket: WebSocket):
                         print(f"LLM Stream Error: {e}", file=sys.stderr)
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "error", "message": f"LLM Error: {str(e)}"})
+                    finally:
+                        is_streaming.clear()
+                        # Process any queued questions now that streaming is done
+                        if not pending_questions.empty():
+                            next_q = pending_questions.get_nowait()
+                            # Put it back in the main queue to be processed as a "chat" bypass
+                            ws_queue.put_nowait({"type": "chat", "text": next_q})
 
             except asyncio.TimeoutError:
                 # Keep-alive ping
