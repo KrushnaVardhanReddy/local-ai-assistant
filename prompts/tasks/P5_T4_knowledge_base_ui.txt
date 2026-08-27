@@ -1,0 +1,108 @@
+TASK: P5-T4 — Knowledge Base UI (Drag-and-Drop Upload + Source Display)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a "Knowledge Base" tab to the Tauri desktop app's settings panel. Users can
+drag-and-drop or click-to-select PDF/TXT/MD files to upload them to the local RAG
+backend. The assistant overlay also shows which source files informed each response.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- File upload must use `fetch("http://127.0.0.1:{port}/rag/upload", { method: "POST", body: FormData })` — NOT the Tauri FS plugin (backend handles the file).
+- Only accept `.pdf`, `.txt`, `.md` — validate client-side before upload and reject others with inline error.
+- Show a per-file upload progress indicator (use `XMLHttpRequest` with `upload.onprogress` for accurate progress — `fetch` API doesn't expose upload progress).
+- After upload, refresh the document list from `GET /rag/documents` automatically.
+- The "Sources" citation display in the assistant must work with the existing `rag_sources` WS message type from P5-T3.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/Assistant.svelte` (P4-T3): Handle new `rag_sources` WS message type — display source citations below the streaming response.
+- `frontend/src/lib/ws.ts` (P4-T2): Already dispatches messages by `type`. Add handler: `if (data.type === "rag_sources") { ragSources = data.sources }`.
+- `frontend/src/lib/Settings.svelte` (P6-T1 in new numbering): Add a "Knowledge Base" tab section. If Settings doesn't exist yet, create `KnowledgeBase.svelte` as a standalone component and integrate it in `App.svelte`.
+- Backend endpoints available: `POST /rag/upload`, `GET /rag/documents`, `DELETE /rag/document/{filename}`.
+- Design tokens: same as the rest of the app — `#0d0d0d` background, `rgba(255,255,255,0.04)` surface, `#7c3aed` accent.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/KnowledgeBase.svelte (CREATE)
+   Sections in order:
+   a. **Drop zone** (full-width dashed bordered box, `~200px` height):
+      - Text: "Drop PDF, TXT, or MD files here, or click to browse"
+      - On `dragover`: border turns purple (`#7c3aed`), slight glow effect.
+      - On `drop` or `<input type="file" multiple accept=".pdf,.txt,.md">`: validate extensions, queue uploads.
+   b. **Upload queue** (shown below drop zone during upload):
+      - One row per file: filename + animated progress bar (0–100%) + status icon (⏳ / ✅ / ❌).
+      - Upload via `XMLHttpRequest` to `POST /rag/upload` with `FormData`. Update progress with `xhr.upload.onprogress`.
+      - On success: add file to document list, remove from queue after 2s.
+   c. **Ingested documents list**:
+      - Fetched on component mount from `GET /rag/documents`.
+      - One row per file: 📄 icon + filename + "Delete" button (calls `DELETE /rag/document/{filename}`, then refreshes list).
+      - Empty state: "No documents ingested yet. Upload your first file above."
+   d. **RAG toggle**:
+      - A toggle switch labeled "Use knowledge base for responses".
+      - Calls `POST /rag/toggle` (add this endpoint to `app.py` — sets `config.RAG_ENABLED` at runtime).
+      - Reads current state from `GET /rag/status` on mount.
+
+2. FILE: frontend/src/lib/ws.ts (MODIFY)
+   Add reactive state:
+   ```typescript
+   export let ragSources = $state<string[]>([])
+   ```
+   In the message handler, add:
+   ```typescript
+   if (data.type === "rag_sources") ragSources = data.sources
+   if (data.type === "message_start") ragSources = []  // clear on new message
+   ```
+
+3. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+   Import `ragSources` from `$lib/ws`. Below the streaming response text area, add:
+   ```svelte
+   {#if ragSources.length > 0}
+     <div class="rag-sources">
+       🔍 Sources: {ragSources.join(' · ')}
+     </div>
+   {/if}
+   ```
+   Style `.rag-sources`: `font-size: 0.7rem; color: #64748b; margin-top: 0.5rem; font-style: italic;`
+
+4. FILE: backend/app.py (MODIFY — minor)
+   Add two small endpoints:
+   - `GET /rag/status` → `{"enabled": config.RAG_ENABLED}`
+   - `POST /rag/toggle` → toggles `config.RAG_ENABLED` in-place, returns new status.
+
+5. FILE: frontend/src/App.svelte (MODIFY)
+   Import `KnowledgeBase` and add a "Knowledge Base" section to the settings panel,
+   triggered by a 📚 icon button in the top-right of the assistant overlay.
+
+6. Build and Test:
+   a. Drop a PDF onto the drop zone — confirm progress bar reaches 100% and file appears in document list.
+   b. Ask a voice question about the PDF content — confirm "🔍 Sources: ..." appears below the response.
+   c. Click Delete on a document — confirm it disappears from the list and subsequent queries no longer reference it.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `dragover` and `dragleave` events don't bubble reliably in Svelte — bind them directly on the drop zone `<div>`, not on a parent. Use `event.preventDefault()` in `dragover` to allow the drop.
+- `XMLHttpRequest` is not deprecated — it's the ONLY way to track upload progress in browsers. Use it here, even though the rest of the app uses `fetch`.
+- `config.RAG_ENABLED` is a module-level variable in Python. In-place mutation (`config.RAG_ENABLED = not config.RAG_ENABLED`) works because the FastAPI route and the `app.py` pipeline code read from the same module object. No restart needed.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- frontend/src/lib/KnowledgeBase.svelte
+
+FILES TO MODIFY:
+- frontend/src/lib/ws.ts
+- frontend/src/lib/Assistant.svelte
+- frontend/src/App.svelte
+- backend/app.py (add /rag/status and /rag/toggle)
+
+Commit: "jules: P5-T4 add Knowledge Base UI with drag-and-drop upload and RAG source citations"
+Target branch: main

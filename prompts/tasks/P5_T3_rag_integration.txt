@@ -1,0 +1,87 @@
+TASK: P5-T3 — RAG App Integration (Inject Context into LLM Prompt)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Modify the FastAPI WebSocket handler (`app.py`) so that before every LLM call,
+the user's query is used to retrieve relevant chunks from ChromaDB and the chunks
+are prepended to the LLM system prompt as additional context. When RAG is disabled
+or no documents are ingested, the pipeline must behave exactly as before.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- RAG injection is OPTIONAL: controlled by `config.RAG_ENABLED` (bool, default `True`).
+- If `RAG_ENABLED=False` or the retriever returns `""`, skip injection — LLM call proceeds unchanged.
+- The injected context must appear as a SYSTEM message at the TOP of the messages array, BEFORE the user's turn — never mixed into the user message content.
+- The original system prompt (from config) must still be present — RAG context is appended to it, not replacing it.
+- NEVER block the WebSocket event loop — wrap `retrieve()` in `asyncio.get_event_loop().run_in_executor(None, retrieve, query)` since sentence-transformers is synchronous.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/app.py` (P3-T2): The `/ws` handler has a `process_message(text: str)` or equivalent function that builds the messages array and calls `llm_client.chat()`. Modify only that section.
+- `backend/rag/retriever.py` (P5-T2): Provides `retrieve(query: str) -> str`.
+- `backend/config.py`: Add `RAG_ENABLED: bool = os.getenv("RAG_ENABLED", "true").lower() == "true"`.
+- Messages array structure going INTO the LLM call:
+  ```python
+  [
+      {"role": "system", "content": config.SYSTEM_PROMPT + "\n\n" + rag_context},
+      {"role": "user",   "content": transcript_text}
+  ]
+  ```
+  When `rag_context == ""`, just use `config.SYSTEM_PROMPT` without the newlines.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/app.py (MODIFY)
+   In the WebSocket message processing function:
+   a. After transcription text is received, BEFORE building the messages array:
+      ```python
+      rag_context = ""
+      if config.RAG_ENABLED:
+          loop = asyncio.get_event_loop()
+          rag_context = await loop.run_in_executor(None, retrieve, transcript_text)
+      ```
+   b. Build system prompt:
+      ```python
+      system_content = config.SYSTEM_PROMPT
+      if rag_context:
+          system_content += f"\n\n{rag_context}"
+      ```
+   c. Use `system_content` in the messages array.
+   d. If `rag_context` is non-empty, send a WS message to the frontend BEFORE streaming starts:
+      ```json
+      {"type": "rag_sources", "sources": ["report.pdf", "notes.md"]}
+      ```
+      Parse source file names from `rag_context` lines matching `[Source: <filename>`.
+      This lets the frontend display "🔍 Sources: report.pdf, notes.md" in the UI.
+
+2. FILE: backend/config.py (MODIFY)
+   Add: `RAG_ENABLED: bool = os.getenv("RAG_ENABLED", "true").lower() == "true"`
+
+3. Build and Test:
+   a. Ingest a PDF. Ask a question about it via the desktop app.
+   b. Confirm the LLM response references content from the PDF.
+   c. Set `RAG_ENABLED=false` — confirm the RAG retrieval step is skipped (no latency from embedding).
+   d. With empty collection and `RAG_ENABLED=true` — confirm no errors, WS stream proceeds normally.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `run_in_executor(None, retrieve, text)` uses the default `ThreadPoolExecutor`. `sentence-transformers` is thread-safe for inference (GIL is released during the NumPy/BLAS operations) so this is safe.
+- Parse source file names from the formatted context string with: `re.findall(r'\[Source: ([^\],]+)', rag_context)`. Deduplicate the result with `list(dict.fromkeys(...))` to preserve order.
+- Keep the `rag_sources` WS message type in the frontend's message handler (`ws.ts`) as a no-op initially — the UI update for showing sources comes in P5-T4.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/app.py
+- backend/config.py (add RAG_ENABLED)
+
+Commit: "jules: P5-T3 inject RAG context into LLM system prompt with async executor"
+Target branch: main

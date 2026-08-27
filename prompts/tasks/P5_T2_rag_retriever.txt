@@ -1,0 +1,88 @@
+TASK: P5-T2 — RAG Retriever (Semantic Search + Context Builder)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build the retrieval half of the RAG pipeline. Given a user query string, embed it
+locally, search the ChromaDB collection for the top-K most relevant chunks, and
+return them formatted as a ready-to-inject system prompt context block.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- NEVER call an external API for embeddings — use the same `all-MiniLM-L6-v2` singleton from `ingestor.py`.
+- If ChromaDB collection is empty (no documents ingested), `retrieve()` must return an empty string silently — NOT raise an error.
+- The retriever must be importable as a standalone module: `from rag.retriever import retrieve`.
+- Default top-K = 4. Configurable via `config.RAG_TOP_K`.
+- Deduplicate chunks from the same source file — if 3 of the top-4 results come from the same file, show at most 2 from that file. This prevents one large document from dominating the context.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/rag/ingestor.py` (P5-T1): Provides `_collection` and `_embedder` singletons. Import them directly.
+- `backend/config.py` (P5-T1 + P1-T2): Add `RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "4"))`.
+- `backend/app.py` (P5-T3): Will call `from rag.retriever import retrieve` and inject result into system prompt.
+- The retriever output is a plain string, formatted like:
+  ```
+  --- Relevant context from your knowledge base ---
+  [Source: report.pdf, chunk 3]
+  ...text of chunk...
+
+  [Source: notes.md, chunk 1]
+  ...text of chunk...
+  ```
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/rag/retriever.py (CREATE)
+   a. Import `_collection` and `_embedder` from `rag.ingestor`. Import `config`.
+   b. Define `retrieve(query: str, top_k: int = None) -> str`:
+      - If `top_k` is None, use `config.RAG_TOP_K`.
+      - If collection has 0 items (`_collection.count() == 0`), return `""`.
+      - Embed query: `query_embedding = _embedder.encode([query]).tolist()[0]`.
+      - Query: `results = _collection.query(query_embeddings=[query_embedding], n_results=min(top_k * 2, _collection.count()), include=["documents","metadatas","distances"])`.
+      - Fetch `top_k * 2` results then apply deduplication logic:
+        - Iterate results sorted by distance (ascending = most relevant first).
+        - Keep a `seen_sources: dict[str, int]` counter. Skip a result if `seen_sources[source] >= 2`.
+        - Stop once you have `top_k` kept results.
+      - Format the kept results into the context block string (see format above).
+      - Return the formatted string. If no results survive deduplication, return `""`.
+   c. Define `GET /rag/search?q=<query>&k=<int>` FastAPI endpoint (add to a new `retriever_router`):
+      - Calls `retrieve(q, k)`. Returns `{"context": result, "empty": result == ""}`.
+      - Useful for debugging retrieval quality from the frontend.
+
+2. FILE: backend/config.py (MODIFY)
+   Add: `RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "4"))`
+
+3. FILE: backend/app.py (MODIFY — only add router)
+   Add: `app.include_router(retriever.retriever_router, prefix="/rag")`
+
+4. Build and Test:
+   a. With a document already ingested (P5-T1 done), call:
+      `curl "http://127.0.0.1:8000/rag/search?q=what+is+the+main+topic"`
+   b. Confirm the response includes `"context"` with 1–4 formatted chunk blocks.
+   c. Call with empty collection — confirm `{"context": "", "empty": true}`.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `_collection.count()` is O(1) — safe to call on every request.
+- ChromaDB `query(n_results=N)` raises an error if `N > _collection.count()`. Guard with `min(top_k * 2, _collection.count())` as specified.
+- `distances` in ChromaDB results are L2 distances for the default embedding space — lower = more similar. Sort ascending before deduplication.
+- Importing `_collection` from `ingestor` means both modules share the same ChromaDB client instance — this is intentional and efficient. Do NOT create a second `PersistentClient` in this file.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/rag/retriever.py
+
+FILES TO MODIFY:
+- backend/config.py (add RAG_TOP_K)
+- backend/app.py (add retriever router)
+
+Commit: "jules: P5-T2 add RAG retriever — semantic search with deduplication and context formatting"
+Target branch: main

@@ -1,0 +1,99 @@
+TASK: P5-T1 — RAG Ingestor (File Upload + Chunking + ChromaDB)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build a fully local document ingestion pipeline. Users upload PDFs, plain text,
+or Markdown files via a REST endpoint. The backend parses them, splits into chunks,
+generates embeddings locally (via `sentence-transformers`), and stores them in
+ChromaDB — all with zero cloud connectivity required.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- NEVER send documents or embeddings to an external API — use a local model only.
+- Embedding model: `all-MiniLM-L6-v2` (sentence-transformers). No OpenAI embeddings.
+- ChromaDB must persist to disk at `config.CHROMA_DIR` (default: `./data/chroma`).
+- The collection name is always `"user_knowledge"`.
+- Each chunk's metadata must include: `source_file`, `chunk_index`, `file_type`.
+- Max chunk size: 512 tokens. Overlap: 64 tokens. Use character-level splitting as fallback if tokenizer unavailable.
+- Uploaded files are saved temporarily to `config.UPLOAD_DIR` (default: `./data/uploads`), processed, then deleted.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/config.py` (P1-T2): Add `CHROMA_DIR`, `UPLOAD_DIR`, `EMBEDDING_MODEL` fields.
+- `backend/app.py` (P3-T2): Mount the ingestor router — `app.include_router(ingestor.router, prefix="/rag")`.
+- `backend/requirements.txt` (P2-T3): Add `chromadb>=0.5`, `sentence-transformers>=3.0`, `pypdf>=4.0`, `python-multipart>=0.0.9`.
+- The retriever (P5-T2) and app integration (P5-T3) will import from this module — design with clean interfaces.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/rag/__init__.py (CREATE — empty)
+
+2. FILE: backend/rag/ingestor.py (CREATE)
+   a. Import: `chromadb`, `sentence_transformers.SentenceTransformer`, `pypdf.PdfReader`, `fastapi.APIRouter`, `pathlib.Path`.
+   b. Module-level singletons (initialized lazily on first call):
+      - `_chroma_client = chromadb.PersistentClient(path=config.CHROMA_DIR)`
+      - `_collection = _chroma_client.get_or_create_collection("user_knowledge")`
+      - `_embedder = SentenceTransformer(config.EMBEDDING_MODEL)`
+   c. Define `chunk_text(text: str, chunk_size: int = 512, overlap: int = 64) -> list[str]`:
+      - Splits `text` into overlapping chunks by character count (not tokens — simpler and portable).
+      - Returns list of chunk strings. Empty text returns `[]`.
+   d. Define `extract_text(filepath: Path) -> str`:
+      - `.pdf` → iterate `PdfReader(filepath).pages`, join `page.extract_text()`.
+      - `.txt` / `.md` → `filepath.read_text(encoding="utf-8")`.
+      - Any other extension → raise `ValueError(f"Unsupported file type: {filepath.suffix}")`.
+   e. Define `ingest_file(filepath: Path) -> dict`:
+      - Call `extract_text()`. If empty string, raise `ValueError("Document appears to be empty or unreadable")`.
+      - Call `chunk_text()`. Log chunk count.
+      - Call `_embedder.encode(chunks, batch_size=32, show_progress_bar=False).tolist()`.
+      - Call `_collection.upsert(ids=[...], embeddings=[...], documents=chunks, metadatas=[...])`.
+      - IDs format: `f"{filepath.stem}_chunk_{i}"`.
+      - Return `{"file": filepath.name, "chunks_ingested": len(chunks)}`.
+   f. Define FastAPI router with two endpoints:
+      - `POST /rag/upload` — accepts `UploadFile`, saves to `config.UPLOAD_DIR / file.filename`,
+        calls `ingest_file()`, deletes temp file, returns `{"ok": True, "chunks": N}`.
+      - `DELETE /rag/document/{filename}` — deletes all chunks where `metadata["source_file"] == filename`
+        using `_collection.delete(where={"source_file": filename})`. Returns `{"ok": True}`.
+      - `GET /rag/documents` — returns `{"documents": list[str]}` of unique source files in the collection.
+        Query: `_collection.get(include=["metadatas"])` then deduplicate `source_file` values.
+
+3. FILE: backend/config.py (MODIFY)
+   Add:
+   ```python
+   CHROMA_DIR:      str  = os.getenv("CHROMA_DIR", "./data/chroma")
+   UPLOAD_DIR:      str  = os.getenv("UPLOAD_DIR", "./data/uploads")
+   EMBEDDING_MODEL: str  = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+   ```
+   Also add startup logic: `Path(CHROMA_DIR).mkdir(parents=True, exist_ok=True)` and `Path(UPLOAD_DIR).mkdir(...)`.
+
+4. Build and Test:
+   a. `pip install chromadb sentence-transformers pypdf python-multipart`.
+   b. `curl -F "file=@/path/to/test.pdf" http://127.0.0.1:8000/rag/upload` — confirm `{"ok": true, "chunks": N}`.
+   c. `curl http://127.0.0.1:8000/rag/documents` — confirm the filename appears.
+   d. Upload same file again — confirm no duplicate chunks (upsert).
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `SentenceTransformer` downloads the model on first use (~90MB). In `ingestor.py`, initialize it at module import time (not inside the route handler) so the download happens at server startup, not during the first user upload.
+- ChromaDB `upsert` is idempotent on `id` — re-uploading the same file with the same chunk IDs safely replaces the old data. This is intentional.
+- `PdfReader.pages[i].extract_text()` can return `None` on image-only PDFs — guard with `(page.extract_text() or "")` to avoid `TypeError` when joining.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/rag/__init__.py
+- backend/rag/ingestor.py
+
+FILES TO MODIFY:
+- backend/config.py
+- backend/requirements.txt
+
+Commit: "jules: P5-T1 add RAG ingestor — PDF/TXT/MD chunking with ChromaDB + local embeddings"
+Target branch: main
