@@ -75,294 +75,213 @@
       handleChatSubmit();
     }
   }
+
+  function triggerVision() {
+    if (!wsState.isAnalyzingScreen && !isBrowser) {
+      // Dispatch a synthetic event that the backend/Tauri bridge will pick up
+      // Or just invoke directly here if we are not relying on the global hotkey
+      invoke<string>("capture_screen").then(async (base64Image) => {
+        wsState.isAnalyzingScreen = true;
+        const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
+        try {
+          await fetch(`${apiUrl}/vision/analyze`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ image_base64: base64Image })
+          });
+        } finally {
+          wsState.isAnalyzingScreen = false;
+        }
+      }).catch(console.error);
+    }
+  }
+
+  function clearHistory() {
+    wsState.transcript = "";
+    wsState.response = "";
+    wsState.ragSources = [];
+    const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
+    fetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
+  }
 </script>
 
-<div class="assistant-panel" data-testid="assistant-panel">
-  <div class="header">
-    <div class="brand">✦ Local AI</div>
-    <div class="header-right">
-      {#if wsState.isPTTHeld}
-        <div class="ptt-indicator" title="PTT Active">🔴</div>
+<div class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark" id="dashboard-overlay">
+  <!-- Top Toolbar -->
+  <header class="toolbar glass-pill pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" data-tauri-drag-region>
+    <!-- Brand / Primary Action -->
+    <div class="flex items-center gap-4 pointer-events-none">
+      <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">Local AI</span>
+      <!-- Live Indicator -->
+      <div class="flex items-center gap-2 bg-white/5 rounded-full px-3 py-1 border border-white/5 {wsState.isListening ? '' : 'opacity-50'}">
+        <div class="w-2 h-2 rounded-full {wsState.isListening ? 'bg-secondary animate-pulse shadow-[0_0_8px_rgba(78,222,163,0.6)]' : 'bg-gray-500'}"></div>
+        <span class="font-label-caps text-label-caps {wsState.isListening ? 'text-secondary' : 'text-gray-400'} tracking-widest uppercase">
+          {wsState.isListening ? (wsState.isPTTHeld ? 'PTT Active' : 'Live') : 'Mic Off'}
+        </span>
+      </div>
+      {#if wsState.isConnected}
+        <span class="font-label-caps text-label-caps text-secondary tracking-widest uppercase ml-2">● Connected</span>
+      {:else}
+        <span class="font-label-caps text-label-caps text-gray-400 tracking-widest uppercase ml-2">○ Reconnecting...</span>
       {/if}
-      {#if wsState.isAnalyzingScreen}
-        <div class="vision-indicator" title="Analyzing screen...">👁️</div>
+      {#if wsState.error}
+        <button class="font-label-caps text-label-caps text-red-400 tracking-widest uppercase ml-2 hover:underline pointer-events-auto" onclick={clearError}>
+          ⚠ {wsState.error}
+        </button>
       {/if}
-      <div class="mic-status {wsState.isListening ? 'listening' : ''}" data-testid="mic-status"></div>
     </div>
-  </div>
 
-  <div class="content" bind:this={contentEl}>
-    {#if !wsState.transcript && !wsState.response && wsState.isConnected}
-      <div class="idle-hint">Hold <code>Ctrl+Shift+Space</code> to speak</div>
-    {/if}
-
-    {#if wsState.transcript}
-      {#key wsState.transcript}
-        <div class="transcript-bubble">
-          {wsState.transcript}
+    <!-- Central Chat Input (Stealth) -->
+    {#if isBrowser}
+      <div class="flex-1 max-w-xl mx-8">
+        <div class="relative flex items-center w-full h-8 bg-white/5 rounded-lg border border-white/10 transition-colors focus-within:bg-white/10 focus-within:border-white/20">
+          <span class="material-symbols-outlined text-[18px] text-on-surface-variant ml-3" data-icon="search" style="font-variation-settings: 'FILL' 0;">chat</span>
+          <input 
+            class="w-full bg-transparent border-none text-on-surface-variant font-body-sm text-body-sm focus:ring-0 placeholder-on-surface-variant/50 h-full px-3 outline-none pointer-events-auto" 
+            placeholder="Silent chat (Helper Mode)..." 
+            type="text"
+            bind:value={chatText}
+            onkeydown={handleChatKeydown}
+          />
+          <button class="font-mono-data text-mono-data text-on-surface-variant/40 hover:text-primary mr-3 text-[10px] pointer-events-auto" onclick={handleChatSubmit}>SEND</button>
         </div>
-      {/key}
+      </div>
+    {:else}
+      <div class="flex-1 max-w-xl mx-8"></div>
     {/if}
 
-    {#if wsState.response || wsState.isThinking}
-      <div class="response-area" bind:this={responseEl}>
-        <span class="response-text">{wsState.response}</span>
-        {#if wsState.isThinking}
-          <span class="cursor">▌</span>
+    <!-- Trailing Actions -->
+    <div class="flex items-center gap-2">
+      <button aria-label="Screenshot" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto {wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : ''}" onclick={triggerVision}>
+        <span class="material-symbols-outlined text-[20px]" data-icon="screenshot_monitor">screenshot_monitor</span>
+      </button>
+      <button aria-label="Clear Context" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto" onclick={clearHistory}>
+        <span class="material-symbols-outlined text-[20px]" data-icon="mop">mop</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Grid -->
+  <main class="flex-1 flex gap-container-padding w-full max-w-7xl mx-auto h-[calc(100vh-120px)] pb-6">
+    <!-- Left Panel: Live Ears (Transcription) -->
+    <aside class="live-ears-panel glass-panel pointer-events-auto w-1/3 rounded-[24px] flex flex-col overflow-hidden transition-transform duration-300 shadow-2xl">
+      <!-- Panel Header -->
+      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20" data-tauri-drag-region>
+        <div class="flex items-center gap-2 pointer-events-none">
+          <span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="hearing">hearing</span>
+          <h2 class="font-label-caps text-label-caps text-on-surface-variant tracking-wider">Live Ears</h2>
+        </div>
+      </div>
+      
+      <!-- Panel Body (Live STT) -->
+      <div class="flex-1 p-6 overflow-y-auto hide-scrollbar flex flex-col gap-4 font-body-sm text-body-sm text-on-surface-variant/80" bind:this={contentEl}>
+        {#if !wsState.transcript}
+           <div class="text-center text-on-surface-variant/50 mt-10">
+             Waiting for speech...
+           </div>
         {/if}
+
+        {#if wsState.transcript}
+          <div class="transcript-line border-l-secondary/30">
+            <span class="block text-secondary/70 font-mono-data text-mono-data mb-1 text-[11px]">Interviewer</span>
+            <p class="leading-relaxed text-on-background/90">{wsState.transcript}</p>
+          </div>
+        {/if}
+      </div>
+    </aside>
+
+    <!-- Right Panel: The Brain (AI Insights) -->
+    <section class="brain-panel glass-panel pointer-events-auto w-2/3 rounded-[24px] flex flex-col overflow-hidden shadow-2xl relative">
+      <!-- Ambient Glow effect for the brain panel -->
+      <div class="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none"></div>
+      
+      <!-- Panel Header -->
+      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 z-10" data-tauri-drag-region>
+        <div class="flex items-center gap-2 pointer-events-none">
+          <span class="material-symbols-outlined text-primary text-[20px]" data-icon="memory">memory</span>
+          <h2 class="font-label-caps text-label-caps text-primary tracking-wider text-glow">The Brain</h2>
+        </div>
         {#if wsState.ragSources && wsState.ragSources.length > 0}
-          <div class="rag-sources">
+          <div class="text-[10px] text-secondary font-mono-data">
             🔍 Sources: {wsState.ragSources.join(' · ')}
           </div>
         {/if}
       </div>
-    {/if}
-  </div>
 
-  {#if isBrowser}
-    <div class="chat-input-container">
-      <textarea
-        bind:value={chatText}
-        onkeydown={handleChatKeydown}
-        placeholder="Silent Chat Input (Helper Mode)..."
-        rows="2"
-      ></textarea>
-      <button class="chat-submit" onclick={handleChatSubmit} disabled={!chatText.trim()}>
-        Send
-      </button>
-    </div>
-  {/if}
+      <!-- Panel Body (Insights & Suggestions) -->
+      <div class="flex-1 p-6 overflow-y-auto hide-scrollbar z-10 flex flex-col gap-6" bind:this={responseEl}>
+        {#if !wsState.response && !wsState.isThinking}
+          <div class="text-center text-on-surface-variant/50 mt-20">
+            Listening for questions to answer...
+          </div>
+        {/if}
 
-  <div class="status-bar">
-    {#if wsState.error}
-      <button class="status-error" onclick={clearError}>
-        ⚠ {wsState.error}
-      </button>
-    {:else if wsState.isConnected}
-      <span class="status-connected">● Connected</span>
-    {:else}
-      <span class="status-connecting">○ Reconnecting<span class="dots"></span></span>
-    {/if}
-  </div>
+        {#if wsState.response || wsState.isThinking}
+          <div class="flex-1 flex flex-col gap-4">
+            <div class="group flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 cursor-default relative">
+              <div class="ml-1 response-content text-on-surface-variant whitespace-pre-wrap leading-relaxed">
+                {wsState.response}
+                {#if wsState.isThinking}
+                  <span class="inline-block w-1.5 h-4 bg-primary align-middle animate-pulse ml-1"></span>
+                {/if}
+              </div>
+            </div>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Generating Indicator (Bottom pinned) -->
+      {#if wsState.isThinking}
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/5 z-20">
+          <div class="h-full bg-primary/40 w-1/3 rounded-r-full relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+          </div>
+        </div>
+      {/if}
+    </section>
+  </main>
 </div>
 
 <style>
-  .assistant-panel {
-    background: rgba(13, 13, 13, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    color: #e2e8f0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    /* Providing some initial sizing to make it visible during dev */
-    min-height: 400px;
-    max-width: 400px;
+  .glass-panel {
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
   }
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  .glass-pill {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
   }
-
-  .brand {
-    color: #7c3aed;
-    font-weight: 500;
-    font-size: 1.1rem;
+  .transcript-line {
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      padding-left: 12px;
+      margin-bottom: 16px;
   }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+  .hide-scrollbar::-webkit-scrollbar {
+      display: none;
   }
-
-  .vision-indicator {
-    font-size: 1.1rem;
-    animation: pulse 1.5s infinite;
+  .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
   }
-
-  .mic-status {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: #475569; /* grey when not listening */
-    transition: background-color 0.3s;
+  .text-glow {
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
   }
-
-  .mic-status.listening {
-    background-color: #22c55e;
-    animation: pulse 1.5s infinite;
+  @keyframes shimmer {
+      100% {
+          transform: translateX(100%);
+      }
   }
-
-  @keyframes pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
-    }
-    70% {
-      box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
-    }
+  .animate-\\[shimmer_2s_infinite\\] {
+      animation: shimmer 2s infinite;
   }
-
-  .content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem;
-    overflow-y: auto;
-    gap: 1.5rem;
+  .response-content {
+      font-size: 1rem;
   }
-
-  .idle-hint {
-    margin: auto;
-    color: #94a3b8;
-    font-size: 0.9rem;
-    text-align: center;
-  }
-
-  .idle-hint code {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 0.2rem 0.4rem;
-    border-radius: 4px;
-    font-family: inherit;
-    font-size: 0.85rem;
-  }
-
-  .transcript-bubble {
-    align-self: flex-end;
-    background: rgba(124, 58, 237, 0.15);
-    border: 1px solid rgba(124, 58, 237, 0.5);
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    max-width: 85%;
-    font-size: 0.95rem;
-    line-height: 1.4;
-    animation: fade-up 0.3s ease-out forwards;
-  }
-
-  .response-area {
-    font-size: 0.95rem;
-    line-height: 1.5;
-    color: #e2e8f0;
-    max-height: 100%;
-    overflow-y: auto;
-    white-space: pre-wrap;
-  }
-
-  .cursor {
-    color: #7c3aed;
-    display: inline-block;
-    animation: blink 1s step-end infinite;
-    margin-left: 2px;
-  }
-
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-  }
-
-  .status-bar {
-    padding: 0.75rem 1.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-  }
-
-  .status-connected {
-    color: #22c55e;
-  }
-
-  .status-connecting {
-    color: #94a3b8;
-  }
-
-  .dots::after {
-    content: '';
-    animation: dots 1.5s steps(4, end) infinite;
-  }
-
-  @keyframes dots {
-    0% { content: ''; }
-    25% { content: '.'; }
-    50% { content: '..'; }
-    75% { content: '...'; }
-    100% { content: ''; }
-  }
-
-  .status-error {
-    color: #f59e0b;
-    background: none;
-    border: none;
-    padding: 0;
-    font-size: inherit;
-    font-family: inherit;
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .status-error:hover {
-    text-decoration: underline;
-  }
-
-  .rag-sources {
-    font-size: 0.7rem;
-    color: #64748b;
-    margin-top: 0.5rem;
-    font-style: italic;
-  }
-
-  .chat-input-container {
-    display: flex;
-    padding: 1rem 1.5rem;
-    gap: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  .chat-input-container textarea {
-    flex: 1;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 0.75rem;
-    color: #e2e8f0;
-    font-family: inherit;
-    font-size: 0.9rem;
-    resize: none;
-    outline: none;
-  }
-
-  .chat-input-container textarea:focus {
-    border-color: rgba(124, 58, 237, 0.5);
-  }
-
-  .chat-submit {
-    background: #7c3aed;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 0 1rem;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background 0.2s;
-  }
-
-  .chat-submit:hover:not(:disabled) {
-    background: #6d28d9;
-  }
-
-  .chat-submit:disabled {
-    background: #475569;
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
+  
+  /* We remove default styles from the component since it's full screen now */
 </style>
