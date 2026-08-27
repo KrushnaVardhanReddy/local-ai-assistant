@@ -1,10 +1,31 @@
 <script lang="ts">
   import { authState, signIn, signOut } from "$lib/auth.svelte";
+  import { reconnect } from "$lib/ws.svelte";
+  import { invoke } from "@tauri-apps/api/core";
 
   let email = $state("");
   let password = $state("");
   let signInError = $state<string | null>(null);
   let isSigningIn = $state(false);
+
+  // New settings state
+  let showSettings = $state(false);
+  let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8000");
+  let isDevModeChecked = $state(false);
+
+  function toggleSettings() {
+    showSettings = !showSettings;
+  }
+
+  async function handleSaveSettings() {
+    localStorage.setItem("backend_url", backendUrl);
+    reconnect(backendUrl);
+    try {
+      await invoke("toggle_stealth", { enable: !isDevModeChecked });
+    } catch (err) {
+      console.error("Failed to toggle stealth", err);
+    }
+  }
 
   async function handleSignIn(e: Event) {
     e.preventDefault();
@@ -30,7 +51,32 @@
   }
 </script>
 
+<button class="settings-toggle" onclick={toggleSettings} aria-label="Settings">
+  ⚙️
+</button>
+
+{#if showSettings}
 <div class="settings-panel">
+  <h2>Settings</h2>
+
+  <div class="config-section">
+    <div class="input-group">
+      <label for="backendUrl">Backend API URL</label>
+      <input type="text" id="backendUrl" bind:value={backendUrl} placeholder="127.0.0.1:8000" />
+    </div>
+
+    <div class="checkbox-group">
+      <label>
+        <input type="checkbox" bind:checked={isDevModeChecked} />
+        Dev Mode: Disable Stealth (E2E Visibility)
+      </label>
+    </div>
+
+    <button class="btn-primary save-btn" onclick={handleSaveSettings}>Save & Reconnect</button>
+  </div>
+
+  <hr class="divider" />
+
   <h2>Account</h2>
   <div class="content">
     {#if authState.authMode === "local"}
@@ -69,8 +115,28 @@
     {/if}
   </div>
 </div>
+{/if}
 
 <style>
+  .settings-toggle {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #fff;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5rem;
+    z-index: 10;
+  }
+
+  .settings-toggle:hover {
+    opacity: 1;
+  }
+
   .settings-panel {
     background: rgba(30, 30, 30, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -80,7 +146,36 @@
     width: 320px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     font-family: system-ui, -apple-system, sans-serif;
+    margin-top: 2.5rem; /* space for the toggle button */
   }
+
+  .config-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #ddd;
+    cursor: pointer;
+  }
+
+  .save-btn {
+    margin-top: 0.5rem;
+  }
+
+  .divider {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 1.5rem 0;
+  }
+
+
 
   h2 {
     margin: 0 0 1rem 0;
