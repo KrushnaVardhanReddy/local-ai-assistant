@@ -64,8 +64,8 @@
 |---|---|---|---|---|
 | P5-T1 | `backend/rag/ingestor.py` | File upload endpoint, PDF/TXT chunking → ChromaDB | ✅ | #16 |
 | P5-T2 | `backend/rag/retriever.py` | Semantic search, top-K retrieval | ✅ | #17 |
-| P5-T3 | `backend/app.py` | Inject RAG context into LLM system prompt | ⬜ | — |
-| P5-T4 | `frontend/src/lib/KnowledgeBase.svelte` | Drag-and-drop file upload UI | ⬜ | — |
+| P5-T3 | `backend/app.py` | Inject RAG context into LLM system prompt | ✅ | #19 |
+| P5-T4 | `frontend/src/lib/KnowledgeBase.svelte` | Drag-and-drop file upload UI | ✅ | #21 |
 | P5-T5 | `backend/rag/web_search.py` | Web Search via duckduckgo-search injected into context | ⬜ | — |
 
 ---
@@ -77,7 +77,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P6-T1 | `main.rs`, `Assistant.svelte` | Tauri screenshot capture hotkey (`Ctrl+Shift+S`) to Base64 | ⬜ | — |
+| P6-T1 | `main.rs`, `Assistant.svelte` | Tauri screenshot capture hotkey (`Ctrl+Shift+S`) to Base64 | ✅ | #22 |
 | P6-T2 | `backend/app.py`, `llm_client.py` | `/vision/analyze` endpoint mapping to Vision LLM | ⬜ | — |
 
 ---
@@ -102,5 +102,5 @@
 | P8-T1 | `web/` | SvelteKit web app scaffold | ✅ | — |
 | P8-T2 | `web/src/routes/login/` | Supabase auth + DB schema | ✅ | — |
 | P8-T3 | `web/src/routes/api/billing/` | Stripe billing integration | ✅ | — |
-| P8-T4 | `backend/auth.py`, `keys.py` | FastAPI JWT middleware + encrypted key storage | ⬜ | — |
-| P8-T5 | `frontend/src/lib/auth.ts` | Tauri app auth flow — OS keychain | ⬜ | — |
+| P8-T4 | `backend/auth.py`, `keys.py` | FastAPI JWT middleware + encrypted key storage | ✅ | #18 |
+| P8-T5 | `frontend/src/lib/auth.ts` | Tauri app auth flow — OS keychain | ✅ | #20 |
