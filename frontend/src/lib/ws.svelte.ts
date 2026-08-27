@@ -7,7 +7,8 @@ export const wsState = $state({
   isListening: false,
   isThinking: false,
   isConnected: false,
-  error: null as string | null
+  error: null as string | null,
+  ragSources: [] as string[]
 });
 
 let ws: WebSocket | null = null;
@@ -64,6 +65,10 @@ export function connect(url?: string): void {
           wsState.transcript = data.text;
           wsState.response = "";
           wsState.isThinking = true;
+          wsState.ragSources = [];
+          break;
+        case "rag_sources":
+          wsState.ragSources = data.sources;
           break;
         case "token":
           wsState.response += data.text;
