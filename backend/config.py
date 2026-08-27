@@ -55,6 +55,10 @@ class Config:
     SUPABASE_SERVICE_KEY: str = ""
     ENCRYPTION_KEY: str = ""
 
+    CHROMA_DIR: str = ""
+    UPLOAD_DIR: str = ""
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+
     def __post_init__(self):
         # Override fields with os.environ
         self.LLM_PROVIDER = os.environ.get("LLM_PROVIDER", self.LLM_PROVIDER)
@@ -76,6 +80,15 @@ class Config:
         self.SUPABASE_URL = os.environ.get("SUPABASE_URL", self.SUPABASE_URL)
         self.SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", self.SUPABASE_SERVICE_KEY)
         self.ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY", self.ENCRYPTION_KEY)
+
+        self.CHROMA_DIR = os.environ.get("CHROMA_DIR", "./data/chroma")
+        self.UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "./data/uploads")
+        self.EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+
+        # Create necessary directories
+        import pathlib
+        pathlib.Path(self.CHROMA_DIR).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(self.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
 
     def resolved_llm(self) -> dict:
         is_cloud = self.LLM_PROVIDER.lower() not in {"auto", "ollama", "lmstudio", "llamacpp"}

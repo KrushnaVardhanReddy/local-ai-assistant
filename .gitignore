@@ -71,3 +71,4 @@ supabase/seed.sql
 # ─── Jules / CI scratch ───────────────────────────────────────────────────────
 *.tmp
 scratch/
+backend/data/
