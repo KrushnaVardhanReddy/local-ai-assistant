@@ -1,12 +1,19 @@
 <script lang="ts">
-  import { wsState } from "$lib/ws.svelte";
+  import { wsState, sendChat } from "$lib/ws.svelte";
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
 
   let responseEl: HTMLElement | undefined = $state();
 
+  let isBrowser = $state(false);
+  let chatText = $state("");
+
   onMount(() => {
+    // Check if we are running in a regular browser instead of Tauri
+    isBrowser = typeof window !== 'undefined' && typeof (window as any).__TAURI_INTERNALS__ === 'undefined';
+    const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8000";
+
     const unlisten = listen("trigger-vision", async () => {
       if (wsState.isAnalyzingScreen) return;
 
@@ -14,7 +21,7 @@
       try {
         const base64Image = await invoke<string>("capture_screen");
 
-        await fetch("http://127.0.0.1:8000/vision/analyze", {
+        await fetch(`${apiUrl}/vision/analyze`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -43,6 +50,20 @@
 
   function clearError() {
     wsState.error = null;
+  }
+
+  function handleChatSubmit() {
+    if (chatText.trim()) {
+      sendChat(chatText);
+      chatText = "";
+    }
+  }
+
+  function handleChatKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleChatSubmit();
+    }
   }
 </script>
 
@@ -84,6 +105,20 @@
       </div>
     {/if}
   </div>
+
+  {#if isBrowser}
+    <div class="chat-input-container">
+      <textarea
+        bind:value={chatText}
+        onkeydown={handleChatKeydown}
+        placeholder="Silent Chat Input (Helper Mode)..."
+        rows="2"
+      ></textarea>
+      <button class="chat-submit" onclick={handleChatSubmit} disabled={!chatText.trim()}>
+        Send
+      </button>
+    </div>
+  {/if}
 
   <div class="status-bar">
     {#if wsState.error}
@@ -271,5 +306,50 @@
     color: #64748b;
     margin-top: 0.5rem;
     font-style: italic;
+  }
+
+  .chat-input-container {
+    display: flex;
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .chat-input-container textarea {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: #e2e8f0;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: none;
+    outline: none;
+  }
+
+  .chat-input-container textarea:focus {
+    border-color: rgba(124, 58, 237, 0.5);
+  }
+
+  .chat-submit {
+    background: #7c3aed;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 1rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+
+  .chat-submit:hover:not(:disabled) {
+    background: #6d28d9;
+  }
+
+  .chat-submit:disabled {
+    background: #475569;
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 </style>
