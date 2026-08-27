@@ -124,4 +124,10 @@
     display: flex;
     justify-content: flex-end;
   }
+  .settings-content {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1000;
+  }
 </style>
