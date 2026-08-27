@@ -1,0 +1,60 @@
+TASK: P10-T1 — Modular Dashboard UI (Stitch)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Redesign the floating Local AI Assistant into a "Modular Dashboard" layout optimized
+for stealth interviews. The UI should no longer be a single vertical scrolling chat.
+Instead, it should feature distinct, independent floating panels rendered over a
+transparent background.
+
+The layout consists of three primary elements:
+1. **Top Toolbar:** A compact, centered pill-shaped bar containing global controls
+   (Settings, Clear, Screenshot, Mode Toggles) and a stealthy chat input box.
+2. **Left Panel (Live Ears):** A smaller panel dedicated to the live STT transcription.
+   It displays exactly what the interviewer is saying in real-time.
+3. **Right Panel (The Brain):** A larger panel dedicated to the LLM's response.
+   The response should be formatted in concise bullet points for rapid reading.
+
+═══════════════════════════════════════════════════════════════
+DESIGN AESTHETICS (STITCH GUIDELINES)
+═══════════════════════════════════════════════════════════════
+- **Theme:** Dark mode, glassmorphism (translucent dark backgrounds with subtle blur),
+  white text.
+- **Corners:** Heavily rounded borders (e.g., `border-radius: 16px` or more for panels,
+  pill-shaped for the toolbar).
+- **Window Management:** The overall wrapper must have a transparent background and
+  `pointer-events: none`. Only the panels and toolbar should have `pointer-events: auto`
+  and visible backgrounds.
+- **Typography:** Modern, clean sans-serif (e.g., Inter or system default), highly
+  legible at small sizes.
+- **Controls:** Each panel (Left and Right) should have its own mini header with
+  an icon, title, and small utility buttons (like a clear or expand icon).
+
+═══════════════════════════════════════════════════════════════
+STATE BINDINGS (SVELTE 5 RUNES)
+═══════════════════════════════════════════════════════════════
+Assume the following state exists from the Phase 9 backend updates:
+- `wsState.liveTranscript`: The current ongoing speech (bind to Left Panel).
+- `wsState.currentQuestion`: The finalized question sent to the LLM (bind to top of Right Panel).
+- `wsState.currentAnswer`: The streaming LLM response (bind to body of Right Panel).
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES FOR STITCH
+═══════════════════════════════════════════════════════════════
+Generate the Svelte component HTML and CSS required for this layout.
+
+The output should contain:
+1. A master container (`#dashboard-overlay`) that is fixed, full-width, full-height,
+   and click-through.
+2. A top toolbar (`.toolbar`) centered at the top.
+3. A flex or grid container below the toolbar that horizontally aligns the Left Panel
+   (`.live-ears-panel`) and Right Panel (`.brain-panel`).
+4. Ensure the Right Panel is roughly 2-3x wider than the Left Panel, as reading the
+   LLM answer requires more screen real estate.
+5. All required CSS for the glassmorphism aesthetic and proper spacing.
+
+═══════════════════════════════════════════════════════════════
+TARGET FILE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/Assistant.svelte` (will be completely replaced/refactored based on Stitch output)

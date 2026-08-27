@@ -116,3 +116,13 @@
 |---|---|---|---|---|
 | P9-T1 | `backend/smart_filter.py`, `backend/app.py`, `backend/config.py` | Smart Audio Filter — VAD silence buffer + busy guard + intent heuristic | ⬜ | — |
 
+---
+
+## Phase 10 — Modular Dashboard UI 🎨
+
+> Complete UI overhaul from a vertical chat to a multi-panel dashboard optimized for stealth.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P10-T1 | `frontend/src/lib/Assistant.svelte` | Modular UI — Top toolbar, Left Pane (Live STT), Right Pane (LLM Response) | ⬜ | — |
+
