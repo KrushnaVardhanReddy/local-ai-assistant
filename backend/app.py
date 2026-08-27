@@ -255,6 +255,7 @@ async def ws_endpoint(websocket: WebSocket):
                         websocket.audio_buffer = b""
                         websocket.last_active_time = time.monotonic()
                         websocket.last_live_transcript = ""
+                        websocket.is_transcribing = False
 
                     audio_np = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32768.0
                     rms = np.sqrt(np.mean(audio_np**2))
@@ -267,13 +268,17 @@ async def ws_endpoint(websocket: WebSocket):
                         if len(websocket.audio_buffer) > 16000 * 2 * 30: # 30 seconds max
                             websocket.audio_buffer = websocket.audio_buffer[-16000 * 2 * 30:]
                             
-                        if len(websocket.audio_buffer) > 0:
-                            # We can transcribe the growing buffer for live ears
-                            live_transcript = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
-                            if live_transcript and live_transcript != websocket.last_live_transcript:
-                                websocket.last_live_transcript = live_transcript
-                                for out_q in list(active_outbound_queues):
-                                    out_q.put_nowait({"type": "transcript", "text": live_transcript})
+                        if len(websocket.audio_buffer) > 0 and not websocket.is_transcribing:
+                            websocket.is_transcribing = True
+                            try:
+                                # We can transcribe the growing buffer for live ears
+                                live_transcript = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
+                                if live_transcript and live_transcript != websocket.last_live_transcript:
+                                    websocket.last_live_transcript = live_transcript
+                                    for out_q in list(active_outbound_queues):
+                                        out_q.put_nowait({"type": "transcript", "text": live_transcript})
+                            finally:
+                                websocket.is_transcribing = False
                         continue
 
                     # If silent and we have audio, check timeout
