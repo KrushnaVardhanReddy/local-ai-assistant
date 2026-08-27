@@ -40,6 +40,11 @@
         {#if wsState.isThinking}
           <span class="cursor">▌</span>
         {/if}
+        {#if wsState.ragSources && wsState.ragSources.length > 0}
+          <div class="rag-sources">
+            🔍 Sources: {wsState.ragSources.join(' · ')}
+          </div>
+        {/if}
       </div>
     {/if}
   </div>
@@ -212,5 +217,12 @@
 
   .status-error:hover {
     text-decoration: underline;
+  }
+
+  .rag-sources {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 0.5rem;
+    font-style: italic;
   }
 </style>
