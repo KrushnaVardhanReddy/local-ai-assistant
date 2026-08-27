@@ -23,7 +23,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P1-T1 | `backend/ollama_check.py` | Ollama health-check + curl test helper | ⬜ | — |
-| P1-T2 | `backend/config.py` | Central config module (all env-var overrideable settings) | ⏳ | — |
+| P1-T2 | `backend/config.py` | Central config module (all env-var overrideable settings) | ✅ | — |
 
 ---
 
@@ -50,7 +50,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P4-T1 | `frontend/` | Scaffold Svelte 5 + Tauri 2.0 project | ⏳ | — |
+| P4-T1 | `frontend/` | Scaffold Svelte 5 + Tauri 2.0 project | ✅ | — |
 | P4-T2 | `frontend/src/lib/ws.ts` | Reactive WebSocket store using Svelte 5 runes | ⬜ | — |
 | P4-T3 | `frontend/src/lib/Assistant.svelte`, `app.css` | Glassmorphism floating overlay, streams tokens | ⬜ | — |
 | P4-T4 | `frontend/src/App.svelte`, `main.ts` | Root component, mounts assistant, mic status dot | ⬜ | — |
@@ -96,7 +96,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P8-T1 | `web/` | SvelteKit web app scaffold | ⏳ | — |
+| P8-T1 | `web/` | SvelteKit web app scaffold | ✅ | — |
 | P8-T2 | `web/src/routes/login/` | Supabase auth + DB schema | ⬜ | — |
 | P8-T3 | `web/src/routes/api/billing/` | Stripe billing integration | ⬜ | — |
 | P8-T4 | `backend/auth.py`, `keys.py` | FastAPI JWT middleware + encrypted key storage | ⬜ | — |
