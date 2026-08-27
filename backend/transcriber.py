@@ -14,13 +14,13 @@ class Transcriber:
     def load(self) -> None:
         start_time = time.perf_counter()
         try:
-            self.model = WhisperModel(self.model_size, device=self.device, compute_type=self.compute_type)
+            self.model = WhisperModel(self.model_size, device=self.device, compute_type=self.compute_type, cpu_threads=4)
         except Exception as e:
             if "cuda" in str(e).lower():
                 print("⚠️  CUDA unavailable — falling back to CPU")
                 self.device = "cpu"
-                self.compute_type = "float32"
-                self.model = WhisperModel(self.model_size, device=self.device, compute_type=self.compute_type)
+                self.compute_type = "float32" # int8 fallback might fail on some CPUs
+                self.model = WhisperModel(self.model_size, device=self.device, compute_type=self.compute_type, cpu_threads=4)
             else:
                 raise e
         elapsed = time.perf_counter() - start_time
