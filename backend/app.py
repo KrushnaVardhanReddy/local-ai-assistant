@@ -13,6 +13,7 @@ from audio_listener import AudioListener
 from transcriber import Transcriber
 from llm_client import LLMClient
 from rag import ingestor
+from rag import retriever
 
 from contextlib import asynccontextmanager
 
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(ingestor.router, prefix="/rag")
+app.include_router(retriever.retriever_router, prefix="/rag")
 
 
 # Global instances
