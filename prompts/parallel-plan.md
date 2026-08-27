@@ -176,11 +176,13 @@ python3 scripts/jules_submit.py --task P7-T5
 | **P6-T2** | P5-T4 + P6-T1 | Settings panel (model, mic, stealth toggles) |
 | **P6-T3** | All backend | Build validation (PyInstaller + Tauri) |
 | **P6-T4** | All | README final pass |
+| **P7-T6** | P5-T3 + P4-T4 | E2E test suite (pytest API + Playwright UI) |
 
 ```bash
 python3 scripts/jules_submit.py --task P6-T2
 python3 scripts/jules_submit.py --task P6-T3
 python3 scripts/jules_submit.py --task P6-T4
+python3 scripts/jules_submit.py --task P7-T6
 ```
 
 ---
@@ -198,9 +200,9 @@ python3 scripts/jules_submit.py --task P6-T4
 | **6** | P5-T2 | — | P5-T1 merged |
 | **7** | P5-T3 · P7-T4 | ✅ Both | Wave 6 merged |
 | **8** | P5-T4 · P6-T1 · P7-T5 | ✅ All 3 | Wave 7 merged |
-| **9** | P6-T2 · P6-T3 · P6-T4 | ✅ All 3 | Wave 8 merged |
+| **9** | P6-T2 · P6-T3 · P6-T4 · P7-T6 | ✅ All 4 | Wave 8 merged |
 
-**Total tasks:** 20 | **Phases:** 7 | **Max parallel in Wave 2:** 7 tasks
+**Total tasks:** 21 | **Phases:** 7 | **Max parallel in Wave 2:** 7 tasks
 
 ---
 
