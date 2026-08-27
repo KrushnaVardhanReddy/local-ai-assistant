@@ -6,6 +6,7 @@ declare global {
 		interface Locals {
 			session: any;
 			user: any;
+			supabase: any;
 		}
 		// interface PageData {}
 		// interface PageState {}
