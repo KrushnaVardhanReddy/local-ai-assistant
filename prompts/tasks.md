@@ -114,7 +114,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P9-T1 | `backend/smart_filter.py`, `backend/app.py`, `backend/config.py` | Smart Audio Filter — VAD silence buffer + busy guard + intent heuristic | ⬜ | — |
+| P9-T1 | `backend/smart_filter.py`, `backend/app.py`, `backend/config.py` | Smart Audio Filter — VAD silence buffer + busy guard + intent heuristic | ✅ | #31 |
 
 ---
 
