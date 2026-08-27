@@ -1,0 +1,212 @@
+<script lang="ts">
+  import { env } from '$env/dynamic/public';
+  import { page } from '$app/stores';
+</script>
+
+<svelte:head>
+  <title>Pricing - Local AI Assistant</title>
+</svelte:head>
+
+<nav class="navbar">
+  <a href="/" class="logo">✦ Local AI</a>
+  <div class="nav-links">
+    <a href="/download" class="btn btn-secondary">Download</a>
+    <a href="/login" class="btn btn-primary">Sign In</a>
+  </div>
+</nav>
+
+<main>
+  <div class="header">
+    <h1>Simple, transparent pricing</h1>
+    <p>Run locally for free, or upgrade for cloud sync and advanced features.</p>
+  </div>
+
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <h2>Free / Self-Hosted</h2>
+      <div class="price">$0<span>/forever</span></div>
+      <p class="description">Download the desktop app. Run any local model. No account needed.</p>
+
+      <ul class="feature-list">
+        <li>✓ Connect to Ollama & LM Studio</li>
+        <li>✓ Stealth mode & keyboard shortcuts</li>
+        <li>✓ Local history storage</li>
+        <li>✓ Community support</li>
+      </ul>
+
+      <a href="/download" class="btn btn-secondary btn-full">Download Free</a>
+    </div>
+
+    <div class="pricing-card pro">
+      <div class="popular-badge">Most Popular</div>
+      <h2>Pro</h2>
+      <div class="price">$12<span>/mo</span></div>
+      <p class="description">Dashboard, encrypted API key sync, usage analytics.</p>
+
+      <ul class="feature-list">
+        <li>✓ Everything in Free</li>
+        <li>✓ Cloud dashboard access</li>
+        <li>✓ Encrypted API key sync across devices</li>
+        <li>✓ Usage analytics & insights</li>
+        <li>✓ Priority email support</li>
+      </ul>
+
+      <a href={env.PUBLIC_STRIPE_PRO_LINK || "#"} class="btn btn-primary btn-full">Get Started</a>
+    </div>
+  </div>
+</main>
+
+<style>
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: var(--border);
+  }
+
+  .logo {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-primary {
+    background-color: var(--accent);
+    color: white;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    background-color: #6d28d9;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--muted);
+    color: var(--text);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--text);
+  }
+
+  .btn-full {
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: auto;
+  }
+
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .header h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .header p {
+    font-size: 1.25rem;
+    color: var(--muted);
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  @media (min-width: 768px) {
+    .pricing-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .pricing-card {
+    background-color: var(--surface);
+    border: var(--border);
+    border-radius: 12px;
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .pricing-card h2 {
+    margin-top: 0;
+    font-size: 1.5rem;
+  }
+
+  .price {
+    font-size: 3rem;
+    font-weight: 700;
+    margin: 1rem 0;
+  }
+
+  .price span {
+    font-size: 1rem;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .description {
+    color: var(--muted);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+  }
+
+  .feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2.5rem 0;
+    flex-grow: 1;
+  }
+
+  .feature-list li {
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+
+  .pricing-card.pro {
+    border-color: var(--accent);
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.15);
+  }
+
+  .popular-badge {
+    position: absolute;
+    top: -12px;
+    right: 2rem;
+    background-color: var(--accent);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+</style>
