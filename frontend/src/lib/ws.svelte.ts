@@ -59,6 +59,11 @@ export function connect(url?: string): void {
   let storedUrl = null;
   if (typeof localStorage !== 'undefined') {
     storedUrl = localStorage.getItem('backend_url');
+    // Auto-migrate stale port 8000 → 8765
+    if (storedUrl && storedUrl.includes(':8000')) {
+      storedUrl = storedUrl.replace(':8000', ':8765');
+      localStorage.setItem('backend_url', storedUrl);
+    }
   }
 
   let defaultUrl = "ws://127.0.0.1:8765/ws";

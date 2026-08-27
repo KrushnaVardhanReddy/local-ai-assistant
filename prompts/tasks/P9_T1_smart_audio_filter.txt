@@ -1,0 +1,294 @@
+TASK: P9-T1 — Smart Audio Filter (VAD Buffer + Busy Guard + Intent Heuristic)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The current audio pipeline fires an LLM request for every single 500ms audio chunk,
+including noise, filler words like "Okay", "Mm-hmm", "Thank you", and fragments
+transcribed from ambient sound in the room. This results in hundreds of wasted LLM
+calls and a poor user experience.
+
+This task implements a three-layer intelligent audio filter on the Python backend:
+
+  LAYER 1 — Silence Buffer (VAD)
+    Buffer incoming transcripts until the user has been silent for at least
+    SILENCE_THRESHOLD_SECONDS (default: 1.5s). Only send the accumulated
+    full thought to the LLM once silence is detected. This ensures the full
+    question is captured before triggering a response.
+
+  LAYER 2 — Busy Guard (Streaming Lock)
+    If the LLM is currently streaming a response (IS_STREAMING = True), all
+    new incoming audio transcripts are silently dropped. The user should finish
+    reading the current answer before asking the next question.
+
+  LAYER 3 — Heuristic Intent Filter
+    After silence is detected and the full thought is assembled, run a lightweight
+    heuristic check before sending to the LLM. Drop the transcript if:
+      a) Word count is less than MIN_WORDS (default: 4)
+      b) The transcript does not contain any question signal:
+           - ends with "?"
+           - starts with or contains a question word:
+             "what", "how", "why", "when", "where", "which", "who",
+             "explain", "describe", "can you", "could you", "should",
+             "is there", "are there", "tell me", "help me", "what is",
+             "what are", "how do", "how does", "how can", "difference between"
+      c) The transcript is a known filler/noise phrase (case-insensitive exact match):
+             {"okay", "ok", "yeah", "yes", "no", "mm-hmm", "hmm", "uh",
+              "um", "right", "sure", "thanks", "thank you", "bye", "alright",
+              "all right", "got it", "i see", "i know", "oh", "ah", "so"}
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- All changes are BACKEND ONLY. Do NOT modify any frontend files.
+- All new config values (SILENCE_THRESHOLD_SECONDS, MIN_WORDS) must be
+  added to `backend/config.py` as env-var-overrideable fields, consistent
+  with how existing fields like RAG_ENABLED and AUDIO_CHUNK_SECONDS are defined.
+- The Busy Guard flag (IS_STREAMING) must be a per-connection asyncio.Event,
+  not a global, to support multiple simultaneous WebSocket clients.
+- Preserve the existing push-to-talk (PTT) bypass: when a message arrives with
+  type "chat" (from the Remote Helper or PTT release), it bypasses ALL three
+  filter layers and goes directly to the LLM. PTT users are explicitly opting in.
+- Do NOT break any existing API endpoints (/health, /ptt/start, /ptt/stop,
+  /vision/analyze, /rag/*, /history/clear).
+- Add log lines for debugging:
+    - When a transcript is dropped by the length filter: log "[FILTER] Dropped (too short): '<text>'"
+    - When a transcript is dropped as noise/filler: log "[FILTER] Dropped (filler): '<text>'"
+    - When a transcript is dropped because streaming is active: log "[FILTER] Dropped (busy): '<text>'"
+    - When a transcript is assembled after silence: log "[VAD] Assembled: '<full text>'"
+    - When a transcript passes all filters: log "[INTENT] Accepted: '<text>'"
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/config.py`: Dataclass-based config. All fields are env-var overrideable
+  in `__post_init__`. Add new fields here following the exact same pattern.
+- `backend/app.py`: The main FastAPI server. The `/ws` WebSocket handler is where
+  audio chunks arrive, get transcribed, and get sent to the LLM. The filter logic
+  must be injected into this handler.
+- The audio pipeline inside `/ws`: audio chunk → `transcriber.transcribe(chunk)`
+  → transcript string → (currently goes straight to LLM).
+  After this task, the pipeline becomes:
+  chunk → transcribe → [LAYER 2 check] → accumulate to buffer →
+  [silence detection] → [LAYER 3 heuristic] → LLM.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/config.py (MODIFY)
+   Add the following fields to the Config dataclass and wire them in __post_init__:
+
+   ```python
+   # Smart Audio Filter config
+   SILENCE_THRESHOLD_SECONDS: float = 1.5
+   MIN_WORDS: int = 4
+   SMART_FILTER_ENABLED: bool = True
+   ```
+
+   In __post_init__:
+   ```python
+   self.SILENCE_THRESHOLD_SECONDS = float(os.environ.get("SILENCE_THRESHOLD_SECONDS", self.SILENCE_THRESHOLD_SECONDS))
+   self.MIN_WORDS = int(os.environ.get("MIN_WORDS", self.MIN_WORDS))
+   self.SMART_FILTER_ENABLED = os.environ.get("SMART_FILTER_ENABLED", "true").lower() == "true"
+   ```
+
+2. FILE: backend/smart_filter.py (CREATE)
+   Create a new standalone module with the filtering logic so it is testable
+   independently of the WebSocket handler:
+
+   ```python
+   """
+   Smart Audio Filter — three-layer guard for deciding whether a transcript
+   should be forwarded to the LLM or silently dropped.
+   """
+   import re
+   import time
+   import sys
+   from config import config
+
+   FILLER_PHRASES = {
+       "okay", "ok", "yeah", "yes", "no", "mm-hmm", "hmm", "uh", "um",
+       "right", "sure", "thanks", "thank you", "bye", "alright", "all right",
+       "got it", "i see", "i know", "oh", "ah", "so", "yep", "nope",
+   }
+
+   QUESTION_SIGNALS = [
+       r"\?$",
+       r"\b(what|how|why|when|where|which|who|explain|describe)\b",
+       r"\b(can you|could you|should|is there|are there|tell me|help me)\b",
+       r"\b(difference between|what is|what are|how do|how does|how can)\b",
+   ]
+
+   def is_question(text: str) -> bool:
+       """Returns True if the text appears to be a meaningful question or request."""
+       lower = text.lower().strip()
+       for pattern in QUESTION_SIGNALS:
+           if re.search(pattern, lower):
+               return True
+       return False
+
+   def is_filler(text: str) -> bool:
+       """Returns True if the text is a known noise or filler phrase."""
+       normalized = text.lower().strip().rstrip(".")
+       return normalized in FILLER_PHRASES
+
+   def passes_filter(text: str) -> tuple[bool, str]:
+       """
+       Run all heuristic filter layers.
+       Returns (should_send: bool, reason: str).
+       """
+       if not config.SMART_FILTER_ENABLED:
+           return True, "filter_disabled"
+
+       word_count = len(text.split())
+
+       if word_count < config.MIN_WORDS:
+           print(f"[FILTER] Dropped (too short): '{text}'", file=sys.stderr)
+           return False, "too_short"
+
+       if is_filler(text):
+           print(f"[FILTER] Dropped (filler): '{text}'", file=sys.stderr)
+           return False, "filler"
+
+       if not is_question(text):
+           print(f"[FILTER] Dropped (not a question): '{text}'", file=sys.stderr)
+           return False, "not_question"
+
+       print(f"[INTENT] Accepted: '{text}'", file=sys.stderr)
+       return True, "accepted"
+
+
+   class SilenceBuffer:
+       """
+       Accumulates transcript fragments. When SILENCE_THRESHOLD_SECONDS of
+       silence is detected (no new fragment arrives), flushes the buffer
+       as a single assembled thought.
+       """
+
+       def __init__(self):
+           self._buffer: list[str] = []
+           self._last_activity: float = 0.0
+
+       def add(self, text: str) -> None:
+           self._buffer.append(text)
+           self._last_activity = time.monotonic()
+
+       def is_silent(self) -> bool:
+           if not self._buffer:
+               return False
+           return (time.monotonic() - self._last_activity) >= config.SILENCE_THRESHOLD_SECONDS
+
+       def flush(self) -> str:
+           """Returns the assembled text and resets the buffer."""
+           assembled = " ".join(self._buffer).strip()
+           self._buffer = []
+           self._last_activity = 0.0
+           print(f"[VAD] Assembled: '{assembled}'", file=sys.stderr)
+           return assembled
+
+       def is_empty(self) -> bool:
+           return len(self._buffer) == 0
+   ```
+
+3. FILE: backend/app.py (MODIFY)
+   a. Import the new module at the top:
+      ```python
+      from smart_filter import SilenceBuffer, passes_filter
+      ```
+
+   b. Add a per-connection IS_STREAMING flag (asyncio.Event) inside the
+      `ws_endpoint` function, just before the main while loop:
+      ```python
+      is_streaming = asyncio.Event()  # Set when LLM is actively streaming
+      silence_buffer = SilenceBuffer()
+      ```
+
+   c. Inside the main `while True` loop, after transcribing the audio chunk,
+      replace the existing direct LLM dispatch with the three-layer filter logic:
+
+      ```python
+      if isinstance(chunk, dict) and chunk.get("type") == "chat":
+          # PTT / Remote Helper chat bypass — skip ALL filters
+          transcript = chunk.get("text", "")
+      else:
+          # Audio chunk — transcribe first
+          raw_transcript = await asyncio.to_thread(transcriber.transcribe, chunk)
+          if not raw_transcript:
+              continue
+
+          # LAYER 2: Busy Guard — drop if LLM is currently streaming
+          if is_streaming.is_set():
+              print(f"[FILTER] Dropped (busy): '{raw_transcript}'", file=sys.stderr)
+              continue
+
+          # LAYER 1: Silence Buffer — accumulate until silence detected
+          silence_buffer.add(raw_transcript)
+          if not silence_buffer.is_silent():
+              continue  # Keep accumulating
+
+          # Silence detected — flush the assembled thought
+          assembled = silence_buffer.flush()
+
+          # LAYER 3: Heuristic Intent Filter
+          should_send, reason = passes_filter(assembled)
+          if not should_send:
+              continue
+
+          transcript = assembled
+
+      if not transcript:
+          continue
+      ```
+
+   d. Mark the streaming flag around the LLM call:
+      ```python
+      is_streaming.set()
+      try:
+          async for token in connection_llm_client.stream(messages):
+              for out_q in list(active_outbound_queues):
+                  out_q.put_nowait({"type": "token", "text": token})
+          for out_q in list(active_outbound_queues):
+              out_q.put_nowait({"type": "end"})
+      except Exception as e:
+          print(f"LLM Stream Error: {e}", file=sys.stderr)
+          for out_q in list(active_outbound_queues):
+              out_q.put_nowait({"type": "error", "message": f"LLM Error: {str(e)}"})
+      finally:
+          is_streaming.clear()
+      ```
+
+4. FILE: tests/test_smart_filter.py (CREATE)
+   Write pytest unit tests for the smart_filter module:
+   - test that short phrases (< 4 words) are dropped
+   - test that filler phrases ("okay", "thanks") are dropped
+   - test that question phrases pass ("What is the difference between React and Vue?")
+   - test that non-question long statements are dropped
+   - test that filter is bypassed when SMART_FILTER_ENABLED=false
+   - test SilenceBuffer accumulates and flushes correctly
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The SilenceBuffer uses `time.monotonic()` for reliable elapsed time measurement.
+- Keep the SilenceBuffer loop integration simple: the main `while True` loop already
+  runs at ~10ms cadence (from `asyncio.sleep(0.01)` in the bridge). The `is_silent()`
+  check runs on every loop iteration, so the silence detection resolution is ~10ms —
+  more than precise enough.
+- The `is_streaming` asyncio.Event is per-connection, not global, so multiple
+  remote helpers don't accidentally block each other.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/smart_filter.py
+- tests/test_smart_filter.py
+
+FILES TO MODIFY:
+- backend/config.py
+- backend/app.py
+
+Commit: "jules: P9-T1 add smart audio filter — VAD buffer + busy guard + intent heuristic"
+Target branch: main
