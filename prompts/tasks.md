@@ -85,7 +85,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P7-T1 | `main.rs`, `ws.ts`, `Assistant.svelte` | Push-to-talk global hotkey (`Ctrl+Shift+P`) | ⬜ | — |
+| P7-T1 | `main.rs`, `ws.ts`, `Assistant.svelte` | Stealth Hotkeys: PTT, Scroll (Up/Down), Panic Clear | ⬜ | — |
 | P7-T2 | `frontend/src/lib/Settings.svelte` | Settings panel: model selector, mic selector | ⬜ | — |
 | P7-T3 | `scripts/build.sh` | Validate PyInstaller + Tauri bundles | ⬜ | — |
 | P7-T4 | `README.md` | Final pass — screenshots, install instructions | ⬜ | — |

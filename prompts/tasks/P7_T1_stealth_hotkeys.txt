@@ -1,0 +1,75 @@
+TASK: P7-T1 — Stealth Hotkeys (Push-to-Talk, Scroll, Clear)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement a suite of global stealth hotkeys that allow full interaction with the
+assistant without using a mouse (which could look suspicious on camera).
+1. Push-to-Talk (PTT): Hold `Ctrl+Shift+P` to record, release to transcribe.
+2. Scroll: `Ctrl+Shift+Up` and `Ctrl+Shift+Down` to scroll the assistant's UI.
+3. Panic Clear: `Ctrl+Shift+X` to instantly wipe the current screen.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Hotkeys must NOT conflict with the show/hide hotkey (`Ctrl+Shift+Space`) or screenshot hotkey (`Ctrl+Shift+S`).
+- PTT mode vs Always-On mode must be toggleable via `POST /ptt/mode`.
+- Scroll hotkeys must emit Tauri events to the frontend which trigger JS `scrollBy()` on the message container.
+- Panic Clear hotkey must clear the UI array AND call a backend `POST /history/clear` endpoint to drop context.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src-tauri/src/main.rs` (P4-T5): Global shortcut registration exists here.
+- `frontend/src/lib/Assistant.svelte` (P4-T3): Contains the UI and scrollable message container.
+- `backend/audio_listener.py` (P2-T1): Needs `pause()` and `resume()` methods to handle PTT.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src-tauri/src/main.rs (MODIFY)
+   Register four new global shortcuts:
+   a. `Ctrl+Shift+P`: On press emit `"ptt-start"`, on release emit `"ptt-stop"`.
+   b. `Ctrl+Shift+Down`: On press emit `"scroll-down"`.
+   c. `Ctrl+Shift+Up`: On press emit `"scroll-up"`.
+   d. `Ctrl+Shift+X`: On press emit `"panic-clear"`.
+
+2. FILE: frontend/src/lib/ws.ts (MODIFY)
+   a. Listen for `"ptt-start"` and `"ptt-stop"` → update `export let isPTTHeld = $state(false)`.
+   b. Forward API requests for PTT to backend: `fetch('http://127.0.0.1:8000/ptt/start', { method: 'POST' })`.
+   c. Listen for `"panic-clear"` → call `fetch('http://127.0.0.1:8000/history/clear')` and clear local messages arrays.
+
+3. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+   a. Add a PTT status indicator (🔴) when `isPTTHeld` is true.
+   b. Listen for `"scroll-down"` and `"scroll-up"` Tauri events.
+   c. In those listeners, grab the chat container DOM node and call `node.scrollBy({ top: 100, behavior: 'smooth' })` (and `-100` for up).
+
+4. FILE: backend/audio_listener.py (MODIFY)
+   a. Add `self._paused = threading.Event()` (default `set()`).
+   b. In `_callback()`, return early if `not self._paused.is_set()`.
+   c. Add `pause()` (clears audio queue) and `resume()`.
+
+5. FILE: backend/app.py (MODIFY)
+   a. Add `POST /ptt/start` and `POST /ptt/stop` (calls listener methods if PTT mode enabled).
+   b. Add `POST /history/clear` (clears the `llm_client` internal context/history array).
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Tauri `ShortcutEvent` needs `ShortcutState::Pressed` to differentiate press vs release for PTT.
+- For scrolling, bind the Svelte chat container to a variable using `bind:this={chatContainer}` so the event listeners can call `scrollBy` on it.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src-tauri/src/main.rs
+- frontend/src/lib/ws.ts
+- frontend/src/lib/Assistant.svelte
+- backend/audio_listener.py
+- backend/app.py
+
+Commit: "jules: P7-T1 add stealth hotkeys for PTT, scrolling, and panic clear"
+Target branch: main
