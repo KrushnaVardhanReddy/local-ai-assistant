@@ -12,7 +12,7 @@ from config import config
 from audio_listener import AudioListener
 from transcriber import Transcriber
 from llm_client import LLMClient
-
+from rag import ingestor
 
 from contextlib import asynccontextmanager
 
@@ -23,6 +23,7 @@ async def lifespan(app: FastAPI):
     await shutdown_event()
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(ingestor.router, prefix="/rag")
 
 
 # Global instances

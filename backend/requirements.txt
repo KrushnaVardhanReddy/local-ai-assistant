@@ -22,3 +22,9 @@ cryptography>=42.0.0
 
 # Utilities
 python-dotenv>=1.0.0
+
+# RAG
+chromadb>=0.5
+sentence-transformers>=3.0
+pypdf>=4.0
+python-multipart>=0.0.9
