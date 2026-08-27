@@ -1,0 +1,65 @@
+TASK: P7-T2 — Settings Panel & Remote Backend Configuration
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a Settings panel in the frontend UI to allow the user to change their configuration
+on the fly. Critically, this must include an "API URL" input so the user can easily swap
+out `127.0.0.1:8000` for a remote Cloudflare Tunnel URL (e.g. `wss://friend-pc.trycloudflare.com`),
+allowing the candidate to run the lightweight UI locally while a remote friend's powerful
+PC does all the heavy LLM/Whisper backend processing.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Settings must be persisted to `localStorage` so they survive restarts.
+- Changing the Backend URL must instantly trigger a WebSocket reconnect in `ws.ts`.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/ws.ts`: Currently hardcodes the connection URL.
+- `frontend/src/App.svelte`: Root component where the settings button will live.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/Settings.svelte (CREATE)
+   a. Create a minimalist Svelte component with a settings icon (e.g., ⚙️).
+   b. Clicking the icon opens a modal or dropdown containing:
+      - "Backend API URL" input field (default: `127.0.0.1:8000`).
+      - "Save & Reconnect" button.
+   c. On save, persist the URL to `localStorage.setItem('backend_url', value)`.
+
+2. FILE: frontend/src/lib/ws.ts (MODIFY)
+   a. Update the URL resolution logic to prioritize `localStorage.getItem('backend_url')`.
+   b. Export a `reconnect()` function that closes the current socket and opens a new one using the updated URL.
+   c. The UI in `Settings.svelte` must call `reconnect()` on save.
+
+3. FILE: frontend/src/App.svelte (MODIFY)
+   a. Mount the `<Settings />` component in the top corner of the overlay.
+
+4. Build and Test:
+   a. Run the app.
+   b. Open Settings, change the URL to a dummy value, hit Save.
+   c. Verify the WebSocket attempts to connect to the new URL and updates the status indicator.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Ensure the backend URL parsing correctly handles `wss://` vs `ws://`. If the user pastes a standard `https://` Cloudflare tunnel URL, the `ws.ts` script should auto-convert the protocol to `wss://` for the WebSocket connection.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- frontend/src/lib/Settings.svelte
+
+FILES TO MODIFY:
+- frontend/src/lib/ws.ts
+- frontend/src/App.svelte
+
+Commit: "jules: P7-T2 add Settings panel and Remote Backend URL configuration"
+Target branch: main

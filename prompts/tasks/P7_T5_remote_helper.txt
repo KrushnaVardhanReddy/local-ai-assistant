@@ -8,6 +8,8 @@ over the internet to view the live transcript and control the UI (scroll, clear 
 trigger searches) on behalf of the candidate. This eliminates the need for the
 candidate to touch their mouse or keyboard during an interview, making the stealth
 assistant truly undetectable.
+Also includes a "Silent Chat Input" box in the Remote Helper UI so the remote friend
+can copy-paste massive blocks of code from Zoom chats directly into the AI's context.
 
 ═══════════════════════════════════════════════════════════════
 CONSTRAINTS & RULES
@@ -58,12 +60,20 @@ DELIVERABLES
    c. Run the tunnel: `cloudflared tunnel --url http://127.0.0.1:8000`
    d. The script should explicitly instruct the user to copy the `https://*.trycloudflare.com` URL and send it to their remote helper, who must append `/helper` to the URL.
 
-4. Build and Test:
+4. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+   a. Add a text input box (`<input bind:value={chatText}>`) and a submit button at the bottom of the UI, but ONLY show it if `window.location.protocol.startsWith('http')` (i.e. only in the Remote Helper web browser, hidden in the Tauri desktop app).
+   b. On submit, send a WebSocket message: `ws.send(JSON.stringify({ type: "chat", text: chatText }))`.
+
+5. FILE: backend/app.py (MODIFY)
+   a. Update the `/ws` handler to intercept `{"type": "chat"}`.
+   b. Treat incoming "chat" messages identical to incoming voice transcriptions — instantly pipe the pasted text to the LLM logic to stream an answer.
+
+6. Build and Test:
    a. Run `npm run build` in `frontend/` to generate the `dist` folder.
    b. Run the FastAPI server.
    c. Open your normal web browser to `http://127.0.0.1:8000/helper`.
-   d. Speak into the mic (via the Tauri app or backend listener) — verify the transcript streams to the browser.
-   e. Click "Clear" in the browser — verify the Tauri app clears instantly.
+   d. Paste a coding question into the new text box and submit.
+   e. Verify the Tauri app updates with the generated answer.
 
 ═══════════════════════════════════════════════════════════════
 IMPLEMENTATION HINTS
@@ -81,6 +91,7 @@ FILES TO CREATE:
 FILES TO MODIFY:
 - backend/app.py
 - frontend/src/lib/ws.ts
+- frontend/src/lib/Assistant.svelte
 
-Commit: "jules: P7-T5 add Remote Helper Mode serving via FastAPI and Cloudflare Tunnels"
+Commit: "jules: P7-T5 add Remote Helper Mode and Silent Chat Input"
 Target branch: main
