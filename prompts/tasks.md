@@ -62,7 +62,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P5-T1 | `backend/rag/ingestor.py` | File upload endpoint, PDF/TXT chunking → ChromaDB | ⬜ | — |
+| P5-T1 | `backend/rag/ingestor.py` | File upload endpoint, PDF/TXT chunking → ChromaDB | ✅ | #16 |
 | P5-T2 | `backend/rag/retriever.py` | Semantic search, top-K retrieval | ⬜ | — |
 | P5-T3 | `backend/app.py` | Inject RAG context into LLM system prompt | ⬜ | — |
 | P5-T4 | `frontend/src/lib/KnowledgeBase.svelte` | Drag-and-drop file upload UI | ⬜ | — |

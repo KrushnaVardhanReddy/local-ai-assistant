@@ -34,25 +34,25 @@ We are orchestrating development through **Jules**.
 - The Svelte 5 reactive WebSocket store (`ws.svelte.ts`) is fully functional.
 
 **⏳ What is IN PROGRESS (Waiting on Jules):**
-- We just triggered **Wave 4** via `jules_submit.py`. We are waiting for:
-  1. `P3-T2`: `app.py` (FastAPI backend server - The Glue)
-  2. `P4-T4`: `App.svelte` (Root Svelte UI)
+- We just triggered **Wave 6** via `jules_submit.py`. We are waiting for:
+  1. `P5-T2`: `retriever.py` (semantic search)
 
 ---
 
 ## ⏭️ Next Steps to Resume
 
-1. **Review and Merge Wave 4:** 
-   When you return, check GitHub for PRs related to `P3-T2` and `P4-T4`. You can easily merge them using the helper script:
+1. **Review and Merge Wave 6:** 
+   When you return, check GitHub for PRs related to `P5-T2`. You can easily merge them using the helper script:
    ```bash
    bash scripts/merge_prs.sh <start_pr_number> <end_pr_number>
    ```
 2. **Test the Pipeline End-to-End!**
    Once Wave 4 is merged, the core pipeline is completely connected. You can start the FastAPI server and test the audio transcription and UI streaming!
-3. **Trigger Wave 5 (Local RAG):**
+3. **Trigger Wave 7 (RAG Integration + SaaS Auth):**
    After testing, run:
    ```bash
-   python3 scripts/jules_submit.py --task P5-T1
+   python3 scripts/jules_submit.py --task P5-T3
+   python3 scripts/jules_submit.py --task P7-T4
    ```
 
 ---
