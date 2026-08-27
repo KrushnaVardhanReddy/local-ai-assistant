@@ -36,27 +36,29 @@ DELIVERABLES
 
 1. FILE: frontend/src/lib/ws.ts (NEW)
 
-   a. Export reactive state using Svelte 5 `$state` rune:
+   a. Export reactive state using a single Svelte 5 `$state` object (required by Svelte 5 compiler rules for reassignment):
       ```typescript
-      export let transcript  = $state("")
-      export let response    = $state("")
-      export let isListening = $state(false)
-      export let isThinking  = $state(false)
-      export let isConnected = $state(false)
-      export let error       = $state<string | null>(null)
+      export const wsState = $state({
+          transcript: "",
+          response: "",
+          isListening: false,
+          isThinking: false,
+          isConnected: false,
+          error: null as string | null
+      })
       ```
 
    b. Export `connect(url?: string): void`:
       - Use `url ?? import.meta.env.VITE_WS_URL ?? "ws://127.0.0.1:8765/ws"`.
       - Create a `new WebSocket(url)`.
-      - On `onopen`: set `isConnected = true`, `isListening = true`. If `accessToken` (imported from auth.ts, null for now) is non-null, send auth frame.
+      - On `onopen`: set `wsState.isConnected = true`, `wsState.isListening = true`. If `accessToken` (imported from auth.ts, null for now) is non-null, send auth frame.
       - On `onmessage`: parse JSON, handle each `type`:
-        - `"transcript"`: set `transcript = data.text`, reset `response = ""`, set `isThinking = true`.
-        - `"token"`: append `response += data.text`.
-        - `"end"`: set `isThinking = false`.
-        - `"error"`: set `error = data.message`, set `isThinking = false`.
-      - On `onclose`: set `isConnected = false`, `isListening = false`. If not a clean close (code 1000), schedule reconnect.
-      - On `onerror`: set `error = "WebSocket connection error"`.
+        - `"transcript"`: set `wsState.transcript = data.text`, reset `wsState.response = ""`, set `wsState.isThinking = true`.
+        - `"token"`: append `wsState.response += data.text`.
+        - `"end"`: set `wsState.isThinking = false`.
+        - `"error"`: set `wsState.error = data.message`, set `wsState.isThinking = false`.
+      - On `onclose`: set `wsState.isConnected = false`, `wsState.isListening = false`. If not a clean close (code 1000), schedule reconnect.
+      - On `onerror`: set `wsState.error = "WebSocket connection error"`.
 
    c. Export `disconnect(): void`:
       - Close the WebSocket with code 1000.
@@ -68,8 +70,8 @@ DELIVERABLES
       - Use `setTimeout(() => connect(lastUrl), retryDelay)` for reconnect.
 
 2. Build and Test:
-   a. Import in App.svelte: `import { transcript, isConnected } from '$lib/ws'` — confirm TypeScript compiles cleanly.
-   b. With backend running, open `npm run tauri dev` — confirm `isConnected` becomes true in browser devtools.
+   a. Import in App.svelte: `import { wsState } from '$lib/ws'` — confirm TypeScript compiles cleanly.
+   b. With backend running, open `npm run tauri dev` — confirm `wsState.isConnected` becomes true in browser devtools.
 
 ═══════════════════════════════════════════════════════════════
 IMPLEMENTATION HINTS
