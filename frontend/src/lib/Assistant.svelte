@@ -5,8 +5,16 @@
   import { invoke } from "@tauri-apps/api/core";
 
   let responseEl: HTMLElement | undefined = $state();
+  let contentEl: HTMLElement | undefined = $state();
 
   onMount(() => {
+    const unlistenScrollDown = listen("scroll-down", () => {
+      contentEl?.scrollBy({ top: 100, behavior: 'smooth' });
+    });
+    const unlistenScrollUp = listen("scroll-up", () => {
+      contentEl?.scrollBy({ top: -100, behavior: 'smooth' });
+    });
+
     const unlisten = listen("trigger-vision", async () => {
       if (wsState.isAnalyzingScreen) return;
 
@@ -31,6 +39,8 @@
 
     return () => {
       unlisten.then(f => f());
+      unlistenScrollDown.then(f => f());
+      unlistenScrollUp.then(f => f());
     };
   });
 
@@ -50,6 +60,9 @@
   <div class="header">
     <div class="brand">✦ Local AI</div>
     <div class="header-right">
+      {#if wsState.isPTTHeld}
+        <div class="ptt-indicator" title="PTT Active">🔴</div>
+      {/if}
       {#if wsState.isAnalyzingScreen}
         <div class="vision-indicator" title="Analyzing screen...">👁️</div>
       {/if}
@@ -57,7 +70,7 @@
     </div>
   </div>
 
-  <div class="content">
+  <div class="content" bind:this={contentEl}>
     {#if !wsState.transcript && !wsState.response && wsState.isConnected}
       <div class="idle-hint">Hold <code>Ctrl+Shift+Space</code> to speak</div>
     {/if}
