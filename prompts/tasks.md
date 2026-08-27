@@ -42,7 +42,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P3-T1 | `backend/llm_client.py` | Async OpenAI-compat LLM client with streaming token support | ✅ | — |
-| P3-T2 | `backend/app.py` | FastAPI server with `/ws` WebSocket, pipes STT → LLM → frontend | ⬜ | — |
+| P3-T2 | `backend/app.py` | FastAPI server with `/ws` WebSocket, pipes STT → LLM → frontend | ⏳ | — |
 
 ---
 
@@ -53,7 +53,7 @@
 | P4-T1 | `frontend/` | Scaffold Svelte 5 + Tauri 2.0 project | ✅ | — |
 | P4-T2 | `frontend/src/lib/ws.ts` | Reactive WebSocket store using Svelte 5 runes | ✅ | — |
 | P4-T3 | `frontend/src/lib/Assistant.svelte`, `app.css` | Glassmorphism floating overlay, streams tokens | ✅ | — |
-| P4-T4 | `frontend/src/App.svelte`, `main.ts` | Root component, mounts assistant, mic status dot | ⬜ | — |
+| P4-T4 | `frontend/src/App.svelte`, `main.ts` | Root component, mounts assistant, mic status dot | ⏳ | — |
 | P4-T5 | `src-tauri/src/main.rs` | **Stealth Mode** — screen share safe, dock hidden, global hotkey | ✅ | — |
 
 ---
