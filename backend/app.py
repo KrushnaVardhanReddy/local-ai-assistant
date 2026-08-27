@@ -43,8 +43,11 @@ llm_client = None
 listener = None
 sync_queue = queue.Queue()
 
-# Set of active per-connection asyncio.Queue objects
+# Set of active per-connection asyncio.Queue objects for raw audio
 active_ws_queues = set()
+
+# Set of active per-connection asyncio.Queue objects for outbound JSON messages
+active_outbound_queues = set()
 
 def _audio_loop(listener: AudioListener, sync_queue: queue.Queue):
     """Background thread to capture audio chunks."""
@@ -177,9 +180,25 @@ async def ws_endpoint(websocket: WebSocket):
             await websocket.close(code=1008, reason=f"Auth error: {str(e)}")
             return
 
-    # Create a per-connection asyncio.Queue
+    # Create a per-connection asyncio.Queue for audio chunks
     ws_queue = asyncio.Queue()
     active_ws_queues.add(ws_queue)
+
+    # Create a unified queue for outbound messages to this websocket
+    outbound_queue = asyncio.Queue()
+    active_outbound_queues.add(outbound_queue)
+
+    async def async_sender():
+        try:
+            while True:
+                msg = await outbound_queue.get()
+                await websocket.send_json(msg)
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            print(f"Error in async_sender: {e}", file=sys.stderr)
+
+    sender_task = asyncio.create_task(async_sender())
 
     try:
         while True:
@@ -198,7 +217,7 @@ async def ws_endpoint(websocket: WebSocket):
                         except:
                             pass
 
-                    await websocket.send_json({"type": "transcript", "text": transcript})
+                    outbound_queue.put_nowait({"type": "transcript", "text": transcript})
 
                     rag_context = ""
                     if config.RAG_ENABLED:
@@ -209,7 +228,7 @@ async def ws_endpoint(websocket: WebSocket):
                     if rag_context:
                         system_content += f"\n\n{rag_context}"
                         sources = list(dict.fromkeys(re.findall(r'\[Source: ([^\],]+)', rag_context)))
-                        await websocket.send_json({"type": "rag_sources", "sources": sources})
+                        outbound_queue.put_nowait({"type": "rag_sources", "sources": sources})
 
                     messages = [
                         {"role": "system", "content": system_content},
@@ -218,19 +237,16 @@ async def ws_endpoint(websocket: WebSocket):
 
                     try:
                         async for token in connection_llm_client.stream(messages):
-                            await websocket.send_json({"type": "token", "text": token})
-                        await websocket.send_json({"type": "end"})
+                            outbound_queue.put_nowait({"type": "token", "text": token})
+                        outbound_queue.put_nowait({"type": "end"})
                     except Exception as e:
                         print(f"LLM Stream Error: {e}", file=sys.stderr)
-                        await websocket.send_json({"type": "error", "message": f"LLM Error: {str(e)}"})
+                        outbound_queue.put_nowait({"type": "error", "message": f"LLM Error: {str(e)}"})
 
             except asyncio.TimeoutError:
                 # Keep-alive ping
                 # Preventing the WebSocket from closing on long silences
-                try:
-                    await websocket.send_json({"type": "ping"})
-                except:
-                    pass
+                outbound_queue.put_nowait({"type": "ping"})
 
     except WebSocketDisconnect:
         print("WebSocket disconnected.", file=sys.stderr)
@@ -242,8 +258,41 @@ async def ws_endpoint(websocket: WebSocket):
         except:
             pass
     finally:
+        sender_task.cancel()
         if ws_queue in active_ws_queues:
             active_ws_queues.remove(ws_queue)
+        if outbound_queue in active_outbound_queues:
+            active_outbound_queues.remove(outbound_queue)
+
+
+class VisionModel(BaseModel):
+    image_base64: str
+
+@app.post("/vision/analyze")
+async def analyze_vision(body: VisionModel):
+    async def process_vision():
+        vision_client = await LLMClient.from_config(is_vision=True)
+        prompt = "Extract any coding problems, technical questions, or architecture diagrams from this screenshot. Provide a structured approach, pseudocode, and edge cases. Do not write the full code."
+
+        # Broadcast message start to all connected clients
+        for q in list(active_outbound_queues):
+            q.put_nowait({"type": "message_start"})
+
+        try:
+            async for token in vision_client.chat_vision(body.image_base64, prompt):
+                for q in list(active_outbound_queues):
+                    q.put_nowait({"type": "token", "text": token})
+
+            for q in list(active_outbound_queues):
+                q.put_nowait({"type": "end"})
+        except Exception as e:
+            print(f"Vision Stream Error: {e}", file=sys.stderr)
+            for q in list(active_outbound_queues):
+                q.put_nowait({"type": "error", "message": f"Vision LLM Error: {str(e)}"})
+
+    # Start the processing as a background task so the POST endpoint returns immediately
+    asyncio.create_task(process_vision())
+    return {"status": "processing started"}
 
 
 class KeyModel(BaseModel):
