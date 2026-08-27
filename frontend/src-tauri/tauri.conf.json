@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "Local AI Assistant",
-        "width": 420,
-        "height": 600,
+        "width": 1200,
+        "height": 800,
         "resizable": true,
         "transparent": true,
         "decorations": false,
