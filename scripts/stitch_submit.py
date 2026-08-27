@@ -8,8 +8,9 @@ Usage:
   python3 stitch_submit.py --create "Project Name"
   python3 stitch_submit.py --project-info <project_id>
   python3 stitch_submit.py --generate --project-id <project_id> --prompt "Prompt description..."
-  python3 stitch_submit.py --submit-task 403   # Run P4-T3 Assistant UI
-  python3 stitch_submit.py --submit-task 601   # Run P6-T1 Web App
+#   python3 stitch_submit.py --submit-task 403   # Run P4-T3 Assistant UI
+#   python3 stitch_submit.py --submit-task 801   # Run P8-T1 Web App
+#   python3 stitch_submit.py --submit-task 1001  # Run P10-T1 Modular UI
 """
 
 import subprocess
@@ -197,11 +198,11 @@ STITCH_TASKS = {
         "owner": "Stitch",
         "prompt_file": "prompts/tasks/P4_T3_assistant_ui.txt",
     },
-    601: {
-        "name": "P6-T1 — SvelteKit Web App (Landing Page + Dashboard)",
-        "wave": 1,
+    801: {
+        "name": "P8-T1 — SvelteKit Web App Scaffold",
+        "wave": 8,
         "owner": "Stitch",
-        "prompt_file": "prompts/tasks/P6_T1_web_app_scaffold.txt",
+        "prompt_file": "prompts/tasks/P8_T1_web_app_scaffold.txt",
     },
     1001: {
         "name": "P10-T1 — Modular Dashboard UI",
@@ -434,7 +435,7 @@ def main():
         list_stitch_tasks()
         sys.exit(0)
 
-    # 6. Submit a specific Phase 12 Stitch task by number
+    # 6. Submit a specific Stitch task by number
     if "--submit-task" in args:
         idx = args.index("--submit-task")
         if idx + 1 >= len(args):
