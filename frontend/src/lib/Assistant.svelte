@@ -56,7 +56,7 @@
   }
 </script>
 
-<div class="assistant-panel">
+<div class="assistant-panel" data-testid="assistant-panel">
   <div class="header">
     <div class="brand">✦ Local AI</div>
     <div class="header-right">
@@ -66,7 +66,7 @@
       {#if wsState.isAnalyzingScreen}
         <div class="vision-indicator" title="Analyzing screen...">👁️</div>
       {/if}
-      <div class="mic-status {wsState.isListening ? 'listening' : ''}"></div>
+      <div class="mic-status {wsState.isListening ? 'listening' : ''}" data-testid="mic-status"></div>
     </div>
   </div>
 

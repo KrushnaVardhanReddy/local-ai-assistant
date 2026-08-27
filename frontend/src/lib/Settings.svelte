@@ -51,34 +51,35 @@
   }
 </script>
 
-<button class="settings-toggle" onclick={toggleSettings} aria-label="Settings">
+<button class="settings-toggle" onclick={toggleSettings} aria-label="Settings" data-testid="settings-btn">
   ⚙️
 </button>
 
 {#if showSettings}
 <div class="settings-panel">
-  <h2>Settings</h2>
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h2>Settings</h2>
+  </div>
 
   <div class="config-section">
     <div class="input-group">
       <label for="backendUrl">Backend API URL</label>
-      <input type="text" id="backendUrl" bind:value={backendUrl} placeholder="127.0.0.1:8000" />
+      <input type="text" id="backendUrl" bind:value={backendUrl} placeholder="127.0.0.1:8000" data-testid="backend-url-input" />
     </div>
 
     <div class="checkbox-group">
       <label>
-        <input type="checkbox" bind:checked={isDevModeChecked} />
+        <input type="checkbox" bind:checked={isDevModeChecked} data-testid="dev-mode-toggle" />
         Dev Mode: Disable Stealth (E2E Visibility)
       </label>
     </div>
 
-    <button class="btn-primary save-btn" onclick={handleSaveSettings}>Save & Reconnect</button>
+    <button class="btn-primary save-btn" onclick={handleSaveSettings} data-testid="settings-save-btn">Save & Reconnect</button>
   </div>
 
   <hr class="divider" />
 
   <h2>Account</h2>
-  <div class="content">
     {#if authState.authMode === "local"}
       <p class="local-mode-text">Running in local mode &mdash; no account needed.</p>
     {:else}
