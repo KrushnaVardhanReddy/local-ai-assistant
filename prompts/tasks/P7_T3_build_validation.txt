@@ -1,0 +1,33 @@
+TASK: P7-T3 — Validate PyInstaller + Tauri bundles
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a `scripts/build.sh` script that automates the process of bundling the Python FastAPI backend into a standalone executable using PyInstaller, and bundling the Tauri frontend into a production-ready app. This prepares the app for distribution.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- PyInstaller must package the `faster-whisper` and FastAPI dependencies.
+- Tauri build should use `npm run tauri build`.
+- The script must fail if any step fails.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: scripts/build.sh (CREATE)
+   a. Bash script with strict error checking (`set -e`).
+   b. Run `pyinstaller` on `backend/app.py` with required hidden imports.
+   c. Run `npm run tauri build` in `frontend/`.
+   d. Output the paths to the generated binaries.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- scripts/build.sh
+
+Commit: "jules: P7-T3 add build validation script"
+Target branch: main
