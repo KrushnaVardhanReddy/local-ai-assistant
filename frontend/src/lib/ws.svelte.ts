@@ -1,4 +1,5 @@
-import { accessToken } from '$lib/auth';
+import { authState, supabase } from '$lib/auth.svelte';
+import { invoke } from '@tauri-apps/api/core';
 
 export const wsState = $state({
   transcript: "",
@@ -40,13 +41,18 @@ export function connect(url?: string): void {
     return;
   }
 
-  ws.onopen = () => {
+  ws.onopen = async () => {
     wsState.isConnected = true;
     wsState.isListening = true;
     retryDelay = 500; // Reset exponential backoff
 
-    if (accessToken !== null) {
-      ws?.send(JSON.stringify({ type: "auth", token: accessToken }));
+    if (authState.accessToken !== null) {
+      try {
+        const machine_id: string = await invoke('get_machine_id');
+        ws?.send(JSON.stringify({ type: "auth", token: authState.accessToken, machine_id }));
+      } catch (err) {
+        console.error("Failed to get machine id", err);
+      }
     }
   };
 
@@ -66,8 +72,16 @@ export function connect(url?: string): void {
           wsState.isThinking = false;
           break;
         case "error":
-          wsState.error = data.message;
-          wsState.isThinking = false;
+          if (data.message && data.message.includes("Token expired") && supabase) {
+            console.log("Token expired, refreshing session...");
+            supabase.auth.refreshSession().then(() => {
+              disconnect();
+              connect(lastUrl);
+            });
+          } else {
+            wsState.error = data.message;
+            wsState.isThinking = false;
+          }
           break;
         default:
           console.warn("Unknown message type:", data.type);
