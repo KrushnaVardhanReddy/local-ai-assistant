@@ -1,0 +1,73 @@
+TASK: P6-T1 — Vision Copilot (Tauri Screenshot Capture)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement a global hotkey (`Ctrl+Shift+S`) in the Tauri frontend that captures a
+screenshot of the current screen, compresses it, and sends it to the backend for
+Vision LLM processing. This allows the assistant to read coding problems or diagrams
+currently visible on the user's screen.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Hotkey must be global — it must work even when the app is out of focus.
+- Do not save the screenshot to disk; keep it in memory as a Base64-encoded string to avoid clutter.
+- Send the screenshot to the backend via a new HTTP `POST /vision/analyze` endpoint.
+- Show a brief loading indicator in the Assistant UI while processing.
+- Only capture the primary display if multiple displays exist, or capture all (whichever is simpler via standard crates).
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src-tauri/src/main.rs` (P4-T5): Global shortcut registration happens here. Add `Ctrl+Shift+S`.
+- Use the `scrap` or `xcap` crate in Rust for cross-platform screenshot capabilities.
+- `frontend/src/lib/Assistant.svelte` (P4-T3): Needs state for `isAnalyzingScreen`.
+- Backend endpoint `POST /vision/analyze` will be implemented in P6-T2. Assume it accepts `{"image_base64": "..."}`.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src-tauri/Cargo.toml (MODIFY)
+   Add a screenshot crate (e.g., `xcap = "0.0.12"` or `image = "0.24"`).
+
+2. FILE: frontend/src-tauri/src/main.rs (MODIFY)
+   a. Define a Tauri command `capture_screen` that uses the chosen crate to take a screenshot.
+   b. Convert the image to a JPEG or PNG in memory and encode it as a Base64 string.
+   c. Return `Result<String, String>` (the Base64 string).
+   d. Register the global shortcut `Ctrl+Shift+S`. When triggered, emit an event `"trigger-vision"` to the frontend.
+
+3. FILE: frontend/src/lib/ws.ts (MODIFY)
+   Add reactive state: `export let isAnalyzingScreen = $state(false)`.
+
+4. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+   a. Listen for the `"trigger-vision"` Tauri event.
+   b. When triggered: set `isAnalyzingScreen = true`.
+   c. Invoke the `capture_screen` Rust command.
+   d. Send the returned Base64 string to `POST http://127.0.0.1:8000/vision/analyze` via `fetch`.
+   e. Set `isAnalyzingScreen = false`.
+   f. UI addition: If `isAnalyzingScreen` is true, show a small pulsing 👁️ icon or "Analyzing screen..." text.
+
+5. Build and Test:
+   a. Mock the backend endpoint locally or wait for P6-T2.
+   b. Press `Ctrl+Shift+S` and verify the `trigger-vision` event fires and captures a Base64 string.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The `xcap` crate is excellent for cross-platform screenshots.
+- Ensure the Base64 string includes the data URI prefix (e.g., `data:image/jpeg;base64,...`) before sending it to the backend, or have the backend format it.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src-tauri/Cargo.toml
+- frontend/src-tauri/src/main.rs
+- frontend/src/lib/ws.ts
+- frontend/src/lib/Assistant.svelte
+
+Commit: "jules: P6-T1 add global screenshot capture and vision trigger"
+Target branch: main

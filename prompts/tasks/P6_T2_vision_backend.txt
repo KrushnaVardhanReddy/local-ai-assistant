@@ -1,0 +1,76 @@
+TASK: P6-T2 — Vision Copilot (Backend LLM Integration)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement the backend `/vision/analyze` endpoint. It receives a Base64 screenshot,
+passes it to a Vision-capable LLM (like GPT-4o, Claude 3.5 Sonnet, or Llama 3.2 Vision
+via Groq/Ollama), and streams the resulting analysis directly into the WebSocket
+broadcast queue so the UI displays the code solution.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- The vision processing must reuse the existing OpenAI-compatible `llm_client.py` logic where possible, but injected with an image content block.
+- The prompt sent with the image should be: `"Extract any coding problems, technical questions, or architecture diagrams from this screenshot. Provide a structured approach, pseudocode, and edge cases. Do not write the full code."`
+- The response must be streamed to the frontend exactly like audio transcripts are.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/app.py` (P3-T2): The main FastAPI app. We will add a `POST /vision/analyze` route here.
+- `backend/llm_client.py` (P3-T1): Supports OpenAI API formatting. Vision models in the OpenAI API accept `content` as an array containing both text and `image_url` objects.
+- `backend/config.py`: Add `VISION_MODEL` setting, defaulting to `gpt-4o-mini` or the chosen model.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/llm_client.py (MODIFY)
+   a. Add a method `async chat_vision(self, image_base64: str, prompt: str) -> AsyncGenerator[str, None]`.
+   b. Format the message correctly for OpenAI vision models:
+      ```python
+      messages = [{
+          "role": "user",
+          "content": [
+              {"type": "text", "text": prompt},
+              {"type": "image_url", "image_url": {"url": image_base64}}
+          ]
+      }]
+      ```
+   c. Call the `v1/chat/completions` endpoint with streaming enabled and yield the chunks.
+
+2. FILE: backend/app.py (MODIFY)
+   a. Add endpoint `POST /vision/analyze`.
+   b. Accept a JSON body `{"image_base64": "data:image/png;base64,..."}`.
+   c. Inside the endpoint, trigger an async background task or handle it directly:
+      - Call `llm_client.chat_vision(image_base64, VISION_PROMPT)`.
+      - Iterate over the stream.
+      - Push the tokens to the global WebSocket broadcast mechanism (`ws_manager.broadcast()`).
+   d. Ensure the first broadcast includes `{"type": "message_start"}` so the UI knows a new block is starting.
+
+3. FILE: backend/config.py (MODIFY)
+   Add: `VISION_MODEL: str = os.getenv("VISION_MODEL", "gpt-4o-mini")`.
+   Update `LLMClient.from_config()` if needed to support switching models for vision calls.
+
+4. Build and Test:
+   a. Send a manual `POST` request to `/vision/analyze` with a valid Base64 image.
+   b. Verify the UI begins streaming the output response.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `image_base64` must contain the mime type prefix if it doesn't already: `data:image/jpeg;base64,{base64_data}`.
+- If the user uses a strictly audio LLM in `LLM_MODEL` (like Llama 3 8B), the vision route will fail. The `VISION_MODEL` config provides a dedicated model string specifically for this route.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/llm_client.py
+- backend/app.py
+- backend/config.py
+
+Commit: "jules: P6-T2 add Vision LLM integration for processing screenshots"
+Target branch: main
