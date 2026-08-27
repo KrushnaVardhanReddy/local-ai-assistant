@@ -28,3 +28,4 @@ chromadb>=0.5
 sentence-transformers>=3.0
 pypdf>=4.0
 python-multipart>=0.0.9
+duckduckgo-search>=6.0.0

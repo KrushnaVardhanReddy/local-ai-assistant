@@ -62,11 +62,13 @@ class Config:
     RAG_TOP_K: int = 4
 
     RAG_ENABLED: bool = True
+    WEB_SEARCH_ENABLED: bool = False
     SYSTEM_PROMPT: str = "You are a helpful AI assistant."
 
     def __post_init__(self):
         # Override fields with os.environ
         self.RAG_ENABLED = os.environ.get("RAG_ENABLED", "true").lower() == "true"
+        self.WEB_SEARCH_ENABLED = os.environ.get("WEB_SEARCH_ENABLED", "false").lower() == "true"
         self.SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", self.SYSTEM_PROMPT)
 
         self.LLM_PROVIDER = os.environ.get("LLM_PROVIDER", self.LLM_PROVIDER)
