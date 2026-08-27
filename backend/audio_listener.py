@@ -1,6 +1,7 @@
 import sys
 import queue
 import math
+import threading
 import numpy as np
 import sounddevice as sd
 
@@ -13,6 +14,8 @@ class AudioListener:
         self.chunk_frames = int(sample_rate * chunk_seconds)
         self._queue: queue.Queue[bytes] = queue.Queue()
         self._stream = None
+        self._paused = threading.Event()
+        self._paused.set()
 
     def start(self) -> None:
         try:
@@ -38,11 +41,25 @@ class AudioListener:
             pass
 
     def _callback(self, indata, frames, time, status):
+        if not self._paused.is_set():
+            return
+
         if status:
             print(f"Audio status: {status}", file=sys.stderr)
 
         # indata is a buffer/memoryview, so we copy it to bytes
         self._queue.put(bytes(indata))
+
+    def pause(self):
+        self._paused.clear()
+        while not self._queue.empty():
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                break
+
+    def resume(self):
+        self._paused.set()
 
     def stop(self) -> None:
         if self._stream:
