@@ -4,8 +4,9 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			session: any;
-			user: any;
+			supabase: import('@supabase/supabase-js').SupabaseClient;
+			session: import('@supabase/supabase-js').Session | null;
+			user: import('@supabase/supabase-js').User | null;
 		}
 		// interface PageData {}
 		// interface PageState {}
