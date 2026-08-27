@@ -1,0 +1,112 @@
+TASK: P4-T1 — Scaffold Svelte 5 + Tauri 2.0 Frontend
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Scaffold the Svelte 5 + Tauri 2.0 desktop app in the `frontend/` directory with
+correct window configuration for a transparent, always-on-top, dock-hidden floating
+overlay. The scaffold must be immediately runnable with `npm run tauri dev`.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use Svelte 5 (NOT Svelte 4) — runes-based reactivity only, no legacy `writable()` stores.
+- Use Tauri 2.0 (NOT v1) — config schema and plugin system changed significantly.
+- TypeScript must be enabled.
+- Do NOT install any UI component library (no shadcn, no Tailwind, no DaisyUI) — vanilla CSS only.
+- The scaffold's App.svelte should render only a placeholder `<h1>` — real components come in P4-T3/T4.
+- `npm install && npm run tauri dev` must work with no additional setup steps.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/` does not yet exist — create it from scratch.
+- The desktop window must be: transparent background, no decorations (frameless), always on top, skipped from taskbar.
+- Rust is required on the developer's machine for Tauri (Tauri 2.0 uses Rust for the shell).
+- The WebSocket URL (`ws://127.0.0.1:8765/ws`) will be passed via a Vite env var `VITE_WS_URL` so it can be changed for hosted SaaS mode later.
+- Window size: 420×600 default, resizable. Position: top-right corner of the screen (Tauri can set this via logical position).
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src-tauri/tauri.conf.json (CREATE)
+   Configure the app window:
+   ```json
+   {
+     "app": {
+       "windows": [{
+         "title": "Local AI Assistant",
+         "width": 420, "height": 600,
+         "resizable": true,
+         "transparent": true,
+         "decorations": false,
+         "alwaysOnTop": true,
+         "skipTaskbar": true,
+         "shadow": false
+       }]
+     },
+     "identifier": "com.localai.assistant",
+     "productName": "Local AI Assistant"
+   }
+   ```
+
+2. FILE: frontend/src-tauri/Cargo.toml (CREATE)
+   Standard Tauri 2.0 Cargo.toml with:
+   - `tauri = { version = "2", features = ["protocol-asset"] }`
+   - `tauri-build = { version = "2", features = [] }` in build-dependencies
+
+3. FILE: frontend/package.json (CREATE)
+   Scripts must include:
+   - `"dev": "vite"` — for web-only preview
+   - `"tauri": "tauri"` — Tauri CLI passthrough
+   - `"tauri dev": "tauri dev"` — launches Tauri dev mode
+   - `"tauri build": "tauri build"` — production bundle
+
+4. FILE: frontend/vite.config.ts (CREATE)
+   Standard SvelteKit/Vite config with `@sveltejs/vite-plugin-svelte`.
+
+5. FILE: frontend/src/App.svelte (CREATE)
+   Minimal placeholder:
+   ```svelte
+   <script lang="ts">
+     // Placeholder — replaced in P4-T4
+   </script>
+   <h1 style="color:white;font-family:Inter,sans-serif;padding:2rem;">
+     Local AI Assistant
+   </h1>
+   ```
+
+6. FILE: frontend/.env.example (CREATE)
+   ```
+   VITE_WS_URL=ws://127.0.0.1:8765/ws
+   PUBLIC_SUPABASE_URL=
+   PUBLIC_SUPABASE_ANON_KEY=
+   ```
+
+7. Build and Test:
+   a. Run `npm install` in `frontend/` — confirm no errors.
+   b. Run `npm run tauri dev` — confirm a transparent frameless window appears with the "Local AI Assistant" heading.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Tauri 2.0 uses a flat `tauri.conf.json` structure. The Tauri 1.x nested `tauri > windows` key no longer works — windows are now under `app > windows`.
+- For transparent windows on Linux, the compositor must support transparency (most modern ones do). Add `"backgroundColor": "#00000000"` explicitly in the window config as a belt-and-suspenders measure.
+- To create the scaffold quickly: run `npm create tauri-app@latest . -- --template svelte-ts --manager npm` in the `frontend/` directory, then modify the generated tauri.conf.json to add the window settings above. Do NOT run it interactively — use the non-interactive flags shown.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- frontend/ (full scaffold)
+- frontend/src-tauri/tauri.conf.json
+- frontend/src-tauri/Cargo.toml
+- frontend/package.json
+- frontend/vite.config.ts
+- frontend/src/App.svelte
+- frontend/.env.example
+
+Commit: "jules: P4-T1 scaffold Svelte 5 + Tauri 2.0 transparent overlay window"
+Target branch: main

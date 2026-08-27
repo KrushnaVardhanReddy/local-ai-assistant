@@ -1,0 +1,88 @@
+TASK: P2-T3 — Python Requirements & Backend README
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create the pinned `backend/requirements.txt` with all Python dependencies for the
+full backend stack, and a concise `backend/README.md` explaining how to install
+and run the backend for both local and SaaS modes.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use `>=` minimum version pins only (e.g., `>=1.0.0`) — NOT exact `==` pins.
+- Do NOT include packages not used by this project (no LangChain, no Streamlit, no torch directly — faster-whisper bundles its own CTranslate2).
+- backend/README.md must be under 40 lines.
+- Requirements must cover ALL backend modules: audio, STT, LLM client, FastAPI, auth, encryption.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- backend/ modules created so far: config.py, llm_health_check.py, audio_listener.py, transcriber.py
+- Upcoming modules (P3, P6): llm_client.py (aiohttp), app.py (fastapi+uvicorn+websockets), auth.py (PyJWT), keys.py (cryptography)
+- Python minimum: 3.10+
+- CUDA: required for STT GPU mode; optional for CPU fallback (faster-whisper handles this internally)
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/requirements.txt (CREATE)
+   Write the following sections with inline comments:
+
+   # Audio capture
+   sounddevice>=0.4.6
+   numpy>=1.24.0
+
+   # Speech-to-Text (brings CTranslate2 + CUDA support internally)
+   faster-whisper>=1.0.0
+
+   # LLM client — async HTTP for OpenAI-compatible /v1/chat/completions
+   aiohttp>=3.9.0
+
+   # API server + WebSocket
+   fastapi>=0.110.0
+   uvicorn[standard]>=0.29.0
+   websockets>=12.0
+
+   # Auth (SaaS mode — safe to install even in local mode)
+   PyJWT>=2.8.0
+   httpx>=0.27.0
+
+   # Encryption for BYOK key storage
+   cryptography>=42.0.0
+
+   # Utilities
+   python-dotenv>=1.0.0
+
+2. FILE: backend/README.md (CREATE)
+   Include the following sections:
+   a. **Setup** — `pip install -r requirements.txt`
+   b. **Run** — `python3 app.py` (starts FastAPI + WebSocket server on ws://127.0.0.1:8765)
+   c. **Required env vars table** — reference all keys from config.py:
+      LLM_PROVIDER, LLM_MODEL, STT_MODEL, STT_DEVICE, WS_PORT (with defaults shown)
+   d. **Optional SaaS env vars** — SUPABASE_JWT_SECRET, ENCRYPTION_KEY (if blank, auth is disabled)
+   e. **CUDA note** — "If CUDA is unavailable, STT falls back to CPU automatically."
+   f. **Health check** — `python3 llm_health_check.py`
+
+3. Build and Test:
+   a. Run `pip install -r backend/requirements.txt` in a clean venv — confirm no errors.
+   b. Run `python3 -c "import sounddevice, faster_whisper, aiohttp, fastapi, jwt, cryptography"` — confirm all imports succeed.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `uvicorn[standard]` installs `uvloop` and `httptools` for better async performance — always use the extras bracket.
+- `python-dotenv` is listed here as a convenience for local dev even though config.py also does manual .env parsing — having both is harmless and lets developers use `dotenv` CLI tools.
+- Do NOT pin `torch` — faster-whisper uses CTranslate2 which bundles its own optimized runtime and does NOT require a separate PyTorch install.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/requirements.txt
+- backend/README.md
+
+Commit: "jules: P2-T3 add backend requirements and README"
+Target branch: main

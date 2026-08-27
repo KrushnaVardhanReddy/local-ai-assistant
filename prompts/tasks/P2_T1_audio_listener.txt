@@ -1,0 +1,86 @@
+TASK: P2-T1 — Microphone Audio Listener
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement a real-time microphone capture class that continuously reads audio
+from the system default mic in small chunks and queues them for downstream
+STT processing. Must work on Linux, macOS, and Windows.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use `sounddevice` as the audio capture library (not PyAudio).
+- Audio format: 16kHz, mono, int16 PCM — exactly what Whisper/Parakeet expect.
+- Must NOT crash if no microphone is found — print a clear error and exit code 1.
+- `get_chunk()` must be a blocking call using `queue.Queue.get(timeout=2)`.
+- All configurable values (sample_rate, chunk_seconds) read from `config.py`.
+- The class must be thread-safe — the sounddevice callback runs in a separate thread.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/config.py` exists (P1-T2). Import: `from config import config`
+- `config.AUDIO_SAMPLE_RATE` = 16000 (int)
+- `config.AUDIO_CHUNK_SECONDS` = 0.5 (float)
+- Chunk size in frames = int(AUDIO_SAMPLE_RATE * AUDIO_CHUNK_SECONDS) = 8000 frames
+- The transcriber (P2-T2) will call `listener.get_chunk()` in a loop and pass raw bytes.
+- In app.py (P3-T2), `AudioListener` runs in a background thread; an asyncio.Queue bridges it to the async WebSocket handler.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/audio_listener.py (NEW)
+
+   a. Define class `AudioListener` with `__init__(self, sample_rate: int, chunk_seconds: float)`.
+      - Compute `self.chunk_frames = int(sample_rate * chunk_seconds)`.
+      - Initialize `self._queue: queue.Queue[bytes] = queue.Queue()`.
+      - Set `self._stream = None`.
+
+   b. Define `start(self) -> None`:
+      - Open a `sounddevice.RawInputStream` with dtype="int16", channels=1,
+        samplerate=sample_rate, blocksize=chunk_frames, callback=self._callback.
+      - Print startup message: "🎤 Listening on: {device name} | {sample_rate}Hz | {chunk_ms}ms chunks"
+
+   c. Define `_callback(self, indata, frames, time, status)`:
+      - Put `bytes(indata)` into `self._queue`.
+      - If status is non-null, print the status to stderr (overruns/underruns).
+
+   d. Define `stop(self) -> None`:
+      - Close and join the sounddevice stream.
+
+   e. Define `get_chunk(self) -> bytes`:
+      - Return `self._queue.get(timeout=2)` — raises `queue.Empty` on timeout (caller handles it).
+
+   f. In `if __name__ == "__main__"` block:
+      - Instantiate AudioListener from config defaults and call start().
+      - Loop: call get_chunk(), compute RMS amplitude as `sqrt(mean(frombuffer(chunk, int16)**2))`, print RMS.
+      - Handle KeyboardInterrupt gracefully: call stop(), print "Stopped."
+
+2. FILE: backend/requirements.txt (CREATE or UPDATE)
+   Add: `sounddevice>=0.4.6` and `numpy>=1.24.0`
+
+3. Build and Test:
+   a. Run `python3 backend/audio_listener.py` — confirm mic RMS values print to terminal.
+   b. Run with no mic connected — confirm clean error message and exit code 1.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Wrap the `sounddevice.RawInputStream` open in a try/except `sounddevice.PortAudioError` to catch "no device" errors cleanly before calling sys.exit(1).
+- `sounddevice.query_devices(kind='input')` returns the default input device info dict — use `info['name']` in the startup message.
+- The callback `indata` is a memoryview/buffer — wrap with `bytes(indata)` before queuing, since queue operations after stream close may outlive the buffer.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/audio_listener.py
+
+FILES TO MODIFY:
+- backend/requirements.txt
+
+Commit: "jules: P2-T1 add real-time microphone audio listener"
+Target branch: main

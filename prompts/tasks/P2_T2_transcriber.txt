@@ -1,0 +1,83 @@
+TASK: P2-T2 — Faster-Whisper Transcriber
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement a Speech-to-Text transcriber using faster-whisper on CUDA. It accepts
+raw int16 PCM bytes from AudioListener, converts them to float32, and returns a
+transcribed text string. Must fall back gracefully to CPU if CUDA is unavailable.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use `faster_whisper.WhisperModel` — do NOT use OpenAI's whisper package.
+- Input audio is raw int16 PCM at 16kHz mono. Always normalize to float32 before passing to model.
+- Return empty string `""` for silent/empty chunks — do NOT raise on silence.
+- Log model load time and per-chunk inference time using `time.perf_counter`.
+- All model/device/compute settings come from `config.py` — never hardcode.
+- If CUDA is unavailable, fall back to CPU with a printed warning — do NOT crash.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/config.py` exists (P1-T2). Import: `from config import config`
+- `config.STT_MODEL` = "base" (model size: tiny/base/small/medium/large)
+- `config.STT_DEVICE` = "cuda" | "cpu"
+- `config.STT_COMPUTE_TYPE` = "float16" | "int8" | "float32"
+- `backend/audio_listener.py` exists (P2-T1). `AudioListener.get_chunk()` returns `bytes` (int16 PCM).
+- The transcriber is called in a loop from `app.py` (P3-T2) in a background thread.
+- faster-whisper's `model.transcribe()` returns `(segments_generator, info)`. Join all segment texts.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/transcriber.py (NEW)
+
+   a. Define class `Transcriber` with `__init__(self, model_size: str, device: str, compute_type: str)`.
+      Store args, set `self.model = None`.
+
+   b. Define `load(self) -> None`:
+      - Record start time with `time.perf_counter()`.
+      - Try `WhisperModel(model_size, device=device, compute_type=compute_type)`.
+      - On `Exception` containing "CUDA" or "cuda" in the message, retry with `device="cpu"`, `compute_type="float32"` and print: "⚠️  CUDA unavailable — falling back to CPU".
+      - Print: "✅ STT model loaded in {elapsed:.2f}s on {device}"
+
+   c. Define `transcribe(self, audio_bytes: bytes) -> str`:
+      - Convert: `audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0`
+      - Call `self.model.transcribe(audio_np, beam_size=5, language="en")` — returns (segments, info).
+      - Join all `segment.text` values with a space, strip whitespace.
+      - If result is empty or only whitespace, return `""`.
+      - Log inference time to stderr: "STT: {elapsed*1000:.0f}ms → '{text[:50]}'"
+
+   d. In `if __name__ == "__main__"` block:
+      - Load the model.
+      - Start AudioListener, collect 3 seconds of audio (6 chunks at 0.5s each).
+      - Concatenate chunk bytes, call transcribe(), print result.
+
+2. FILE: backend/requirements.txt (MODIFY)
+   Add: `faster-whisper>=1.0.0`
+
+3. Build and Test:
+   a. Run `python3 backend/transcriber.py` — speak for 3 seconds and confirm transcript prints.
+   b. Pass a silent chunk (8000 zero bytes) — confirm `""` is returned without error.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `np.frombuffer` requires the bytes length to be a multiple of 2 (int16 = 2 bytes). Pad with a zero byte if `len(audio_bytes) % 2 != 0` to avoid ValueError.
+- faster-whisper's `transcribe()` returns a generator for segments — consume it fully with `list(segments)` before joining, otherwise the generator may expire if the model is reused concurrently.
+- To detect silence before transcribing, compute RMS: if `np.sqrt(np.mean(audio_np**2)) < 0.01`, return `""` immediately to avoid hallucinations on silence (Whisper is known to hallucinate on silent audio).
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/transcriber.py
+
+FILES TO MODIFY:
+- backend/requirements.txt
+
+Commit: "jules: P2-T2 add faster-whisper transcriber with CUDA/CPU fallback"
+Target branch: main

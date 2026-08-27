@@ -1,0 +1,95 @@
+TASK: P4-T3 — Assistant Overlay UI Component
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build the main Svelte 5 floating assistant overlay component — a dark glassmorphism
+panel that shows the user's spoken words (transcript) and streams the LLM response
+token-by-token in real time, with a blinking cursor while the response generates.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Vanilla CSS only — no Tailwind, no component libraries, no inline style objects.
+- All CSS must be in a `<style>` scoped block inside the component file.
+- Do NOT hardcode any text — all content comes from ws.ts reactive state.
+- The blinking cursor (`▌`) must use CSS `@keyframes blink` animation, NOT JavaScript intervals.
+- Component must be importable as: `import Assistant from '$lib/Assistant.svelte'`
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/ws.ts` exists (P4-T2). Import state:
+  `import { transcript, response, isListening, isThinking, isConnected, error } from '$lib/ws'`
+- This component is rendered by `App.svelte` (P4-T4).
+- Window is transparent and frameless — the component IS the visible UI. No page background.
+- Design tokens to use:
+    Background: rgba(13,13,13,0.85) with backdrop-filter: blur(12px)
+    Accent:     #7c3aed (purple)
+    Text:       #e2e8f0 (light grey)
+    Font:       Inter (loaded in app.css via Google Fonts)
+    Border:     1px solid rgba(255,255,255,0.08)
+    Radius:     16px on main panel, 12px on bubbles
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/Assistant.svelte (NEW)
+
+   a. Header bar (always visible):
+      - Left: "✦ Local AI" text in accent color.
+      - Right: mic status dot — green pulsing circle if `isListening`, grey if not.
+        Use CSS `@keyframes pulse` for the green animation.
+
+   b. Transcript bubble (shows when `transcript` is non-empty):
+      - Use `{#key transcript}` block so it re-animates on each new utterance.
+      - Style as a user speech bubble (right-aligned, accent-border, fade-up animation).
+      - Show the text: `transcript`
+
+   c. Response area (shows when `response` or `isThinking`):
+      - Stream `response` text as plain text — no markdown rendering.
+      - While `isThinking` is true and `response` is non-empty, append a `<span class="cursor">▌</span>` element at the end.
+      - CSS for cursor: `animation: blink 1s step-end infinite`
+      - `@keyframes blink { 0%,100% { opacity:1 } 50% { opacity:0 } }`
+
+   d. Status bar (bottom):
+      - If `isConnected`: show "● Connected" in green.
+      - If `!isConnected`: show "○ Reconnecting..." in grey with a CSS dots animation.
+      - If `error`: show "⚠ {error}" in amber, clicking it clears `error = null`.
+
+   e. Idle state (no transcript, no response, connected):
+      - Show centered hint text: "Hold `Ctrl+Shift+Space` to speak" in muted grey.
+
+   f. Scroll behavior:
+      - Response area should auto-scroll to bottom as tokens stream in.
+      - Use `bind:this={responseEl}` and `$effect(() => { responseEl.scrollTop = responseEl.scrollHeight })` triggered by `response` changes.
+
+2. FILE: frontend/src/app.css (CREATE or MODIFY)
+   Add:
+   - `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');`
+   - `*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }`
+   - `body { background: transparent; font-family: 'Inter', sans-serif; }`
+   - `@keyframes fade-up { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }`
+
+3. Build and Test:
+   a. Run `npm run tauri dev` — confirm the panel is visible, semi-transparent, and correctly positioned.
+   b. With backend running, speak — confirm transcript bubble appears and LLM tokens stream in with blinking cursor.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Use `$effect(() => { if (responseEl) responseEl.scrollTop = responseEl.scrollHeight })` in Svelte 5 (replaces the old `afterUpdate` lifecycle). The effect re-runs whenever `response` changes because it's read inside the effect body.
+- The `{#key transcript}` block forces the bubble to remount on each new transcript — this re-triggers the CSS `fade-up` animation cleanly without needing JavaScript.
+- For the pulsing mic dot, use `box-shadow: 0 0 0 0 rgba(34,197,94,0.4)` animated to `box-shadow: 0 0 0 8px rgba(34,197,94,0)` — this creates the sonar-ring pulse effect with pure CSS.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- frontend/src/lib/Assistant.svelte
+- frontend/src/app.css
+
+Commit: "jules: P4-T3 add glassmorphism assistant overlay UI with streaming token display"
+Target branch: main

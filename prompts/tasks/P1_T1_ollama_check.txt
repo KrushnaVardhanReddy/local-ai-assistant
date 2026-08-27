@@ -1,0 +1,64 @@
+TASK: P1-T1 — LLM Backend Health Check
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a standalone Python script that probes all supported local and cloud LLM
+backends to verify one is reachable and the configured model is loaded before the
+main backend starts. Supports auto-detection across Ollama, LM Studio, and llama.cpp.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use ONLY Python standard library (urllib, json, os, sys). No pip installs.
+- Each probe must have a 1-second timeout — do NOT hang on unreachable hosts.
+- Must exit code 0 on success, exit code 1 on failure.
+- Must be runnable standalone: `python3 backend/llm_health_check.py`
+- Import config from `config.py` (P1-T2) for all settings.
+- NEVER use Ollama-specific endpoints (/api/generate). Always use /v1/models and /v1/chat/completions.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- All provider URLs and model names come from `backend/config.py` (created in P1-T2).
+- The three local providers and their default base URLs:
+    ollama   → http://localhost:11434/v1
+    lmstudio → http://localhost:1234/v1
+    llamacpp → http://localhost:8080/v1
+- Cloud providers (openai, groq, gemini, anthropic) require an API key — skip probing them here.
+- The config module exposes: `config.LLM_PROVIDER`, `config.LLM_MODEL`, `config.resolved_llm()`
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/llm_health_check.py (NEW)
+   a. Define `probe(url, timeout=1) -> bool` — attempts GET {url}/models, returns True on HTTP 200.
+   b. Define `detect_backend() -> tuple[str, str]` — iterates local provider URLs, returns (provider_name, base_url) for the first that responds. Raises SystemExit with a clear message if none respond.
+   c. Define `test_completion(base_url, model, api_key="") -> bool` — sends a minimal POST to {base_url}/chat/completions with `{"model": model, "messages": [{"role":"user","content":"Say OK"}], "max_tokens": 5}`. Returns True if response contains a choices array.
+   d. In `main()`:
+      - If `config.LLM_PROVIDER == "auto"`, call `detect_backend()`.
+      - Otherwise use `config.resolved_llm()` to get the configured provider's URL and key.
+      - Call `test_completion()` and print ✅/❌ per step.
+      - Print the final active base URL and exit with appropriate code.
+
+2. Build and Test:
+   a. Run `python3 backend/llm_health_check.py` with Ollama running — confirm ✅ output.
+   b. Run with no backend running — confirm ❌ exit code 1.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Use `urllib.request.urlopen(req, timeout=1)` wrapped in a broad `except Exception` to safely swallow connection errors during probing.
+- For the test completion, check `response["choices"][0]["message"]["content"]` is non-empty rather than exact-matching the string.
+- Cloud providers: if `config.LLM_PROVIDER` is a cloud provider, skip auto-detection entirely and just call `test_completion()` with the resolved URL and key from `config.resolved_llm()`.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/llm_health_check.py
+
+Commit: "jules: P1-T1 add LLM backend health check with auto-detection"
+Target branch: main

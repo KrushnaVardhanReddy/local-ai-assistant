@@ -1,0 +1,104 @@
+TASK: P6-T4 — FastAPI JWT Auth Middleware + BYOK Key Storage
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a JWT validation middleware to the existing FastAPI backend so the `/ws`
+WebSocket only accepts authenticated users. Also implement encrypted BYOK API key
+storage and retrieval so each user's LLM calls use their own key, not a shared one.
+Local mode (no env vars) must continue to work unchanged — zero regressions.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- If `SUPABASE_JWT_SECRET` is NOT set, skip ALL auth — local mode works exactly as before.
+- NEVER log or print decrypted API keys, even partially.
+- NEVER use a shared global `LLMClient` in SaaS mode — each WS connection gets its own client with the user's key.
+- Encryption must use `cryptography.fernet.Fernet` (AES-128-CBC + HMAC-SHA256). No other cipher.
+- `SUPABASE_SERVICE_KEY` is used only in `keys.py` for Supabase REST calls — never pass it to the frontend.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/app.py` (P3-T2) exists. The `/ws` endpoint currently has a placeholder:
+  "if SUPABASE_JWT_SECRET is set, close with 1008". Replace that placeholder with real auth.
+- `backend/config.py` (P1-T2) already has: `SUPABASE_JWT_SECRET`, `SUPABASE_URL`,
+  `SUPABASE_SERVICE_KEY`, `ENCRYPTION_KEY` fields.
+- `supabase/migrations/001_initial.sql` (P6-T2) created `user_api_keys` table with
+  columns: `user_id UUID`, `provider TEXT`, `key_encrypted TEXT`, `key_hash TEXT`.
+- WS auth protocol: client sends `{"type":"auth","token":"<jwt>"}` as FIRST message.
+  Server validates JWT, loads user's BYOK key for their LLM provider, then proceeds.
+- `backend/requirements.txt` already includes `PyJWT>=2.8.0`, `cryptography>=42.0.0`, `httpx>=0.27.0`.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/auth.py (NEW)
+   a. Define `AuthError(Exception)`.
+   b. Define `verify_supabase_jwt(token: str) -> dict`:
+      - `jwt.decode(token, config.SUPABASE_JWT_SECRET, algorithms=["HS256"], audience="authenticated")`
+      - Return payload on success. Raise `AuthError` on `jwt.ExpiredSignatureError` or `jwt.InvalidTokenError`.
+   c. Define `get_user_id(token: str) -> str`:
+      - Call `verify_supabase_jwt(token)` and return `payload["sub"]` (Supabase user UUID).
+
+2. FILE: backend/keys.py (NEW)
+   a. Define class `KeyStore` with `__init__(self, encryption_key: str, supabase_url: str, service_key: str)`.
+      - Initialize `self._fernet = Fernet(encryption_key.encode())` — raises `ValueError` if key is invalid.
+   b. Define `async get_key(self, user_id: str, provider: str) -> str | None`:
+      - GET `{supabase_url}/rest/v1/user_api_keys?user_id=eq.{user_id}&provider=eq.{provider}&select=key_encrypted`
+        with headers `{"apikey": service_key, "Authorization": f"Bearer {service_key}"}`.
+      - If no rows returned, return `None`.
+      - Decrypt: `self._fernet.decrypt(row["key_encrypted"].encode()).decode()`.
+   c. Define `async save_key(self, user_id: str, provider: str, api_key: str) -> None`:
+      - Encrypt: `encrypted = self._fernet.encrypt(api_key.encode()).decode()`.
+      - Compute hash: `hashlib.sha256(api_key.encode()).hexdigest()[:12]` (for masked display).
+      - UPSERT to `user_api_keys` via Supabase REST: POST with `Prefer: resolution=merge-duplicates`.
+   d. Define `async delete_key(self, user_id: str, provider: str) -> None`:
+      - DELETE `{supabase_url}/rest/v1/user_api_keys?user_id=eq.{user_id}&provider=eq.{provider}`.
+   e. Instantiate a module-level singleton:
+      `key_store = KeyStore(config.ENCRYPTION_KEY, config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY) if config.ENCRYPTION_KEY else None`
+
+3. FILE: backend/app.py (MODIFY — replace the auth placeholder)
+   In the `/ws` WebSocket handler:
+   a. If `config.SUPABASE_JWT_SECRET` is set (SaaS mode):
+      - Await the first message (5s timeout). If timeout, close with 1008 "Auth timeout".
+      - Parse `{"type":"auth","token":"..."}`. If missing or wrong type, close 1008.
+      - Call `get_user_id(token)`. If `AuthError`, close 1008 with the error message.
+      - Determine user's LLM provider from their stored key:
+        - For each provider in ["openai","groq","gemini","anthropic"], call `key_store.get_key(user_id, provider)`.
+        - Use the first non-None result. If none found, fall back to `config.resolved_llm()`.
+      - Instantiate a per-connection `LLMClient(base_url, model, api_key, provider)`.
+   b. If `config.SUPABASE_JWT_SECRET` is NOT set (local mode): use `LLMClient.from_config()` as before.
+
+4. FILE: backend/app.py (MODIFY — add BYOK key management endpoints)
+   Add REST endpoints for the web dashboard to call:
+   - `POST /api/keys/{provider}` — body: `{"api_key": "sk-..."}`. Auth via JWT in `Authorization: Bearer` header. Call `key_store.save_key()`. Return 200.
+   - `DELETE /api/keys/{provider}` — same auth. Call `key_store.delete_key()`. Return 204.
+   - `POST /api/keys/{provider}/test` — save key temporarily, call `LLMClient.health_check()`, return `{"ok": bool}`.
+
+5. Build and Test:
+   a. Local mode: run `python3 backend/app.py` with no `SUPABASE_JWT_SECRET` — confirm WS connects without auth.
+   b. SaaS mode: set `SUPABASE_JWT_SECRET=test`, connect WS without auth frame — confirm 1008 close.
+   c. Connect with valid JWT — confirm connection proceeds and uses the correct LLM client.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `Fernet(key)` requires the key to be a 32-byte URL-safe base64-encoded string. Generate one with `Fernet.generate_key()` and store in `ENCRYPTION_KEY` env var. If the key is invalid, `KeyStore.__init__` will raise early at startup — fail fast, don't defer.
+- For the JWT `audience` claim: Supabase JWTs use `"authenticated"` as the audience. If `jwt.decode` raises `InvalidAudienceError`, check that `audience="authenticated"` is passed correctly.
+- Use `httpx.AsyncClient` (not `requests`) for the Supabase REST calls in `keys.py` to stay non-blocking inside the async FastAPI app.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/auth.py
+- backend/keys.py
+
+FILES TO MODIFY:
+- backend/app.py (replace auth placeholder, add key management endpoints)
+
+Commit: "jules: P6-T4 add FastAPI JWT auth middleware and encrypted BYOK key storage"
+Target branch: main

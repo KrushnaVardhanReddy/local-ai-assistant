@@ -1,0 +1,92 @@
+TASK: P3-T1 — Async LLM Client (OpenAI-Compatible, Local + Cloud)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement an async Python client that communicates with any local or cloud LLM
+provider (Ollama, LM Studio, llama.cpp, OpenAI, Groq, Gemini, Anthropic) using
+the shared OpenAI-compatible `/v1/chat/completions` streaming API. A single client
+class works for all providers — only base_url, api_key, and request headers differ.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use `aiohttp.ClientSession` — do NOT use the `openai` Python package.
+- NEVER use Ollama-specific endpoints (/api/generate, /api/chat).
+- ALWAYS use POST /v1/chat/completions with "stream": true.
+- Anthropic requires an extra header: `anthropic-version: 2023-06-01`.
+- Cloud providers need `Authorization: Bearer <key>`. Local providers send no auth header.
+- On connection error, yield the error as a string token — do NOT raise uncaught exceptions.
+- NEVER log or print API keys, even partially.
+- All settings come from `config.resolved_llm()` — do not hardcode provider logic outside `from_config()`.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/config.py` exists (P1-T2). `config.resolved_llm()` returns:
+  {"base_url": str, "api_key": str, "provider": str, "is_cloud": bool}
+- The streaming response format is Server-Sent Events (SSE):
+    data: {"choices":[{"delta":{"content":"token"}}]}\n
+    data: [DONE]\n
+- `app.py` (P3-T2) instantiates `LLMClient.from_config()` once at startup, then calls
+  `client.stream(messages)` per WebSocket session. In SaaS mode (P6-T4), a per-user
+  client is instantiated with user-specific keys per WebSocket connection.
+- Conversation history: `messages` is a full OpenAI-format list — multi-turn is supported from day one.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/llm_client.py (NEW)
+
+   a. Define class `LLMClient` with `__init__(self, base_url: str, model: str, api_key: str = "", provider: str = "")`.
+
+   b. Define `_build_headers(self) -> dict`:
+      - Always include `"Content-Type": "application/json"`.
+      - If `api_key` is non-empty, add `"Authorization": f"Bearer {api_key}"`.
+      - If `provider == "anthropic"`, add `"anthropic-version": "2023-06-01"`.
+
+   c. Define `async stream(self, messages: list[dict], system_prompt: str = "") -> AsyncGenerator[str, None]`:
+      - If system_prompt is non-empty, prepend `{"role":"system","content":system_prompt}` to messages copy.
+      - POST to `{base_url}/chat/completions` with body: `{"model": model, "messages": messages, "stream": true}`.
+      - Read response line by line. For each line starting with `"data: "`:
+        - Strip prefix, skip if value is `"[DONE]"`.
+        - Parse JSON, yield `chunk["choices"][0]["delta"].get("content","")`.
+      - On `aiohttp.ClientConnectorError`: yield `"[Error: Cannot connect to LLM backend at {base_url}]"`.
+      - On HTTP 401/403: yield `"[Error: Invalid API key for {provider}]"`.
+      - On HTTP 429: yield `"[Error: Rate limit hit — please retry shortly]"`.
+
+   d. Define `async health_check(self) -> bool`:
+      - GET `{base_url}/models` with auth headers.
+      - Return True if HTTP 200 and response body contains `self.model` string.
+      - Return False on any exception.
+
+   e. Define `@classmethod from_config(cls) -> "LLMClient"`:
+      - Call `config.resolved_llm()` to get base_url, api_key, provider.
+      - If provider == "auto", probe local URLs (ollama→lmstudio→llamacpp) until one responds (1s timeout each).
+      - Instantiate and return `LLMClient(base_url, config.LLM_MODEL, api_key, provider)`.
+
+   f. In `if __name__ == "__main__"` block:
+      - Run `asyncio.run(test())` which calls `from_config()`, then streams the prompt "What is 2+2? Answer in one word." and prints each token as it arrives.
+
+2. Build and Test:
+   a. Run `python3 backend/llm_client.py` with a local backend running — confirm streaming tokens print.
+   b. Set `LLM_PROVIDER=openai` with an invalid key — confirm `"[Error: Invalid API key...]"` is yielded cleanly.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Use `async with aiohttp.ClientSession() as session` inside `stream()` rather than a persistent session on the class — this avoids event loop lifecycle issues when `stream()` is called from different asyncio contexts.
+- SSE lines may be empty (blank separator lines between events) — add `if not line.strip(): continue` before parsing.
+- Some providers (Gemini) include extra fields in the delta dict. Only read `.get("content","")` — never assume delta has a `content` key.
+- For the `auto` provider detection in `from_config()`, use `asyncio.wait_for(health_check(), timeout=1.0)` on each candidate to keep probing non-blocking.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/llm_client.py
+
+Commit: "jules: P3-T1 add async OpenAI-compatible LLM client for local and cloud providers"
+Target branch: main

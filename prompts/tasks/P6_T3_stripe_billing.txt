@@ -1,0 +1,95 @@
+TASK: P6-T3 — Stripe Billing Integration
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Integrate Stripe for Pro plan subscriptions: checkout session creation, webhook
+handler that syncs subscription status to Supabase, customer portal for self-service
+plan management, and a billing page in the user dashboard.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- The Stripe webhook MUST verify the signature using `stripe.webhooks.constructEvent` — reject all unsigned requests with HTTP 400.
+- `STRIPE_SECRET_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are server-only — NEVER import them in `+page.svelte` files.
+- Webhook handling must be idempotent — use Stripe event ID to skip already-processed events.
+- `SUPABASE_SERVICE_ROLE_KEY` is used ONLY in the webhook handler to update `profiles.plan` — no other server route should use it.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `web/src/hooks.server.ts` (P6-T2) sets `locals.session` and `locals.user` on every request.
+- `supabase/migrations/001_initial.sql` (P6-T2) created `profiles` table with `plan TEXT DEFAULT 'free'` and `stripe_customer_id TEXT`.
+- Stripe Checkout flow: browser → `POST /api/billing/checkout` → Stripe hosted page → success_url back to dashboard.
+- Webhook flow: Stripe → `POST /api/billing/webhook` → update `profiles.plan` in Supabase via service role.
+- The dashboard billing page reads `locals.user.plan` from the server load function to show current plan status.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: web/src/routes/api/billing/checkout/+server.ts (CREATE)
+   a. Verify `locals.session` — return 401 if not authenticated.
+   b. Get or create Stripe Customer for the user:
+      - Check `profiles.stripe_customer_id`. If null, call `stripe.customers.create({ email })` and save to `profiles`.
+   c. Create Stripe Checkout Session:
+      ```typescript
+      const session = await stripe.checkout.sessions.create({
+          customer: stripeCustomerId,
+          mode: 'subscription',
+          line_items: [{ price: env.STRIPE_PRO_PRICE_ID, quantity: 1 }],
+          success_url: `${origin}/dashboard/billing?success=true`,
+          cancel_url: `${origin}/pricing`,
+          metadata: { supabase_user_id: userId }
+      })
+      ```
+   d. Return `json({ url: session.url })`.
+
+2. FILE: web/src/routes/api/billing/portal/+server.ts (CREATE)
+   a. Verify session, get `stripe_customer_id` from `profiles`.
+   b. Create `stripe.billingPortal.sessions.create({ customer, return_url: '/dashboard/billing' })`.
+   c. Return `json({ url: portal.url })`.
+
+3. FILE: web/src/routes/api/billing/webhook/+server.ts (CREATE)
+   a. Read raw request body as text (use `request.text()` — NOT `request.json()`, signature verification requires the raw body).
+   b. Call `stripe.webhooks.constructEvent(body, sig, env.STRIPE_WEBHOOK_SECRET)` — return 400 on failure.
+   c. Handle events:
+      - `checkout.session.completed` → set `profiles.plan = 'pro'` where `stripe_customer_id = event.data.object.customer`.
+      - `customer.subscription.deleted` → set `profiles.plan = 'free'`.
+      - `invoice.payment_failed` → set `profiles.plan = 'free'`.
+   d. Use Supabase service role client (initialized with `SUPABASE_SERVICE_ROLE_KEY`) for the DB update.
+   e. Return `json({ received: true })` with status 200 on success.
+
+4. FILE: web/src/routes/dashboard/billing/+page.svelte (CREATE)
+   a. Server load function (`+page.server.ts`): return `{ plan: locals.user.plan, nextBillingDate }`.
+   b. UI:
+      - Current plan badge — "Free" (grey) or "Pro" (purple).
+      - If Free: "Upgrade to Pro — $12/mo" button that calls `POST /api/billing/checkout` and redirects to returned URL.
+      - If Pro: "Manage Subscription" button that calls `POST /api/billing/portal` and redirects.
+      - If `?success=true` in URL: show a "🎉 Welcome to Pro!" success banner.
+
+5. Build and Test:
+   a. Run `stripe listen --forward-to localhost:5173/api/billing/webhook` in a terminal.
+   b. Click "Upgrade to Pro" → complete Stripe test checkout → confirm `profiles.plan` becomes `'pro'` in Supabase.
+   c. Click "Manage Subscription" → confirm Stripe customer portal opens.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `request.text()` vs `request.json()`: the webhook endpoint MUST read the body as raw text first, pass it to `stripe.webhooks.constructEvent`, and THEN parse JSON separately. Reading as JSON first consumes the body stream and breaks signature verification.
+- For the Supabase update in the webhook, match on `stripe_customer_id` (not `supabase_user_id` from metadata) because subscription events like `customer.subscription.deleted` only include the customer ID, not the checkout metadata.
+- In SvelteKit, set `export const config = { runtime: 'edge' }` is NOT recommended here — edge runtimes may not support the Stripe Node SDK. Use the default Node runtime.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- web/src/routes/api/billing/checkout/+server.ts
+- web/src/routes/api/billing/portal/+server.ts
+- web/src/routes/api/billing/webhook/+server.ts
+- web/src/routes/dashboard/billing/+page.svelte
+- web/src/routes/dashboard/billing/+page.server.ts
+
+Commit: "jules: P6-T3 add Stripe billing — checkout, webhook sync, customer portal"
+Target branch: main

@@ -1,0 +1,73 @@
+# ─── Secrets & Environment ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+*.env
+
+# ─── Python Backend ───────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+pip-wheel-metadata/
+
+# faster-whisper model cache
+~/.cache/huggingface/
+backend/.cache/
+*.bin
+*.safetensors
+
+# PyInstaller output
+backend/dist/
+backend/build/
+*.spec
+
+# ─── Rust / Tauri ─────────────────────────────────────────────────────────────
+frontend/src-tauri/target/
+Cargo.lock
+
+# ─── Node / Frontend ──────────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+web/node_modules/
+.svelte-kit/
+frontend/.svelte-kit/
+web/.svelte-kit/
+.output/
+frontend/dist/
+web/dist/
+web/build/
+
+# ─── Editor & OS ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Supabase ─────────────────────────────────────────────────────────────────
+supabase/.temp/
+supabase/seed.sql
+
+# ─── Jules / CI scratch ───────────────────────────────────────────────────────
+*.tmp
+scratch/

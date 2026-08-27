@@ -1,0 +1,122 @@
+TASK: P4-T5 — Tauri Stealth Mode (Screen Share Safe + Dock Hidden)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement platform-native stealth features in the Tauri Rust shell so the app
+window is excluded from screen capture, hidden from the Dock/Taskbar, absent from
+Alt+Tab/CMD+Tab, and togglable via a global hotkey — matching Parakeet AI's privacy features.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- ALL platform-specific code MUST be gated with `#[cfg(target_os = "...")]` — the code must compile cleanly on macOS, Windows, and Linux.
+- The global show/hide toggle hotkey (`Ctrl+Shift+Space`) must not conflict with the push-to-talk hotkey (`Ctrl+Shift+P`) added in P5-T1.
+- A Tauri command `toggle_stealth(enabled: bool)` must be exposed so the Svelte settings panel can toggle stealth mode at runtime.
+- NEVER use `unsafe` blocks without a code comment explaining why it's safe.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src-tauri/src/main.rs` exists (P4-T1 scaffold). Modify it.
+- `frontend/src-tauri/Cargo.toml` exists. Add platform-specific dependencies.
+- Tauri 2.0 global shortcut plugin: `tauri-plugin-global-shortcut`. Register with `app.plugin(tauri_plugin_global_shortcut::Builder::new().build())`.
+- On macOS: `NSWindowSharingNone` excludes window from all screen capture APIs (QuickTime, Zoom, Teams, etc.).
+- On Windows: `WDA_EXCLUDEFROMCAPTURE` (Windows 10 2004+) does the same via GDI.
+- Skip-taskbar (`skipTaskbar: true` in tauri.conf.json, already set in P4-T1) handles Dock/Taskbar hiding on most platforms.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src-tauri/src/main.rs (MODIFY)
+
+   a. Add `set_screen_share_safe(window)` function:
+      - macOS: use `cocoa` and `objc` crates. Get the NSWindow pointer via `window.ns_window()`. Call `setSharingType:` with `NSWindowSharingNone` (value 0).
+        ```rust
+        #[cfg(target_os = "macos")]
+        fn set_screen_share_safe(window: &tauri::WebviewWindow) {
+            use cocoa::appkit::NSWindow;
+            use objc::runtime::Object;
+            unsafe {
+                let ns_win = window.ns_window().unwrap() as *mut Object;
+                let _: () = objc::msg_send![ns_win, setSharingType: 0u64];
+            }
+        }
+        ```
+      - Windows: use `windows` crate. Call `SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE)`.
+        ```rust
+        #[cfg(target_os = "windows")]
+        fn set_screen_share_safe(window: &tauri::WebviewWindow) {
+            use windows::Win32::UI::WindowsAndMessaging::{SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE};
+            let hwnd = windows::Win32::Foundation::HWND(window.hwnd().unwrap().0);
+            unsafe { let _ = SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE); }
+        }
+        ```
+      - Linux: no-op — Linux compositors handle this differently; log a warning.
+
+   b. Add `hide_from_dock()` function (macOS only):
+      - Set `NSApp.setActivationPolicy(NSApplicationActivationPolicyAccessory)` to remove from Dock and CMD+Tab.
+        ```rust
+        #[cfg(target_os = "macos")]
+        fn hide_from_dock() {
+            use cocoa::appkit::{NSApp, NSApplicationActivationPolicy::NSApplicationActivationPolicyAccessory};
+            unsafe { NSApp().setActivationPolicy_(NSApplicationActivationPolicyAccessory); }
+        }
+        ```
+
+   c. Add Tauri command `#[tauri::command] fn toggle_stealth(window: tauri::WebviewWindow, enabled: bool)`:
+      - If `enabled`: call `set_screen_share_safe(&window)`.
+      - Toggle is persisted in a `static AtomicBool STEALTH_ENABLED`.
+
+   d. In `main()`, after building the app:
+      - Call `hide_from_dock()` on macOS.
+      - Call `set_screen_share_safe()` on the main window.
+      - Register global shortcut `Ctrl+Shift+Space`:
+        ```rust
+        app.global_shortcut().on_shortcut("Ctrl+Shift+Space", |app, _shortcut, _event| {
+            let win = app.get_webview_window("main").unwrap();
+            if win.is_visible().unwrap() { win.hide().unwrap(); }
+            else { win.show().unwrap(); win.set_focus().unwrap(); }
+        })?;
+        ```
+      - Register `toggle_stealth` with `.invoke_handler(tauri::generate_handler![toggle_stealth])`.
+
+2. FILE: frontend/src-tauri/Cargo.toml (MODIFY)
+   Add platform-specific deps:
+   ```toml
+   tauri-plugin-global-shortcut = "2"
+
+   [target.'cfg(target_os = "macos")'.dependencies]
+   cocoa = "0.25"
+   objc = "0.2"
+
+   [target.'cfg(target_os = "windows")'.dependencies]
+   windows = { version = "0.52", features = [
+       "Win32_UI_WindowsAndMessaging",
+       "Win32_Foundation"
+   ]}
+   ```
+
+3. Build and Test:
+   a. Run `npm run tauri build` — confirm it compiles on the current OS with no unsafe warnings.
+   b. Open a screen share session (Zoom, OBS, or system screenshot) — confirm the window is invisible in the capture.
+   c. Press `Ctrl+Shift+Space` — confirm window toggles visibility.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `window.ns_window()` returns an `isize` on macOS, not a pointer — cast with `as *mut Object` only inside the unsafe block and immediately after obtaining it.
+- On Windows, `WDA_EXCLUDEFROMCAPTURE` only works on Windows 10 build 2004 (20H1) or later. For earlier Windows, `WDA_MONITOR` is the fallback — apply `WDA_MONITOR` if `WDA_EXCLUDEFROMCAPTURE` fails.
+- `NSApplicationActivationPolicyAccessory` removes the dock icon but also prevents the app from becoming the "key application" when clicked — this is intentional for a floating overlay that shouldn't steal focus.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src-tauri/src/main.rs
+- frontend/src-tauri/Cargo.toml
+
+Commit: "jules: P4-T5 add Tauri stealth mode — screen share exclusion, dock hidden, global toggle"
+Target branch: main

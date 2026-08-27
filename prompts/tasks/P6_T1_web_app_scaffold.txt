@@ -1,0 +1,109 @@
+TASK: P6-T1 — SvelteKit Web App (Landing Page + Dashboard Scaffold)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build the SvelteKit web application that serves as the public marketing site AND the
+authenticated user dashboard for the BYOK SaaS tier. This is a separate app from
+the Tauri desktop client — it runs in a browser and is deployed to a hosting platform.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use SvelteKit (latest stable) with TypeScript. NOT the Tauri frontend.
+- Vanilla CSS only — no Tailwind, no UI library. Dark theme matching the desktop app.
+- Auth-protected routes MUST check the session server-side in `+page.server.ts` — do NOT rely on client-side checks alone.
+- No placeholder lorem ipsum — write real product copy for this specific project.
+- `npm run dev` must work after `npm install` and setting env vars in `.env.local`.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- This is a NEW `web/` directory at the repo root — separate from `frontend/` (Tauri app) and `backend/` (Python).
+- Auth is handled by Supabase (set up in P6-T2). This task creates the pages; the auth logic module comes next.
+- The dashboard pages will be protected with `redirect(303, '/login')` if no session exists.
+- Design tokens (match desktop app):
+    Background: #0d0d0d  |  Surface: rgba(255,255,255,0.04)
+    Accent: #7c3aed      |  Text: #e2e8f0  |  Muted: #64748b
+    Font: Inter          |  Border: 1px solid rgba(255,255,255,0.08)
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: web/ (SCAFFOLD via `npm create svelte@latest web -- --template skeleton --types ts --no-prettier --no-eslint`)
+   After scaffolding, modify:
+
+2. FILE: web/src/routes/+page.svelte (REPLACE with landing page)
+   Sections in order:
+   a. **Navbar**: Logo ("✦ Local AI") left, "Download" + "Sign In" buttons right.
+   b. **Hero**: H1 "Your Private AI Assistant", subtitle "Real-time voice AI that runs on your hardware. No cloud. No data leaks. No subscriptions.", CTA button "Download Free" → `/download`, secondary link "Or use the cloud dashboard →" → `/pricing`.
+   c. **Features grid** (3 cards): "100% Private — data never leaves your machine", "Any LLM — Ollama, LM Studio, OpenAI, Groq", "Screen Share Safe — invisible to Zoom, Teams, OBS".
+   d. **Stealth features list** (styled like Parakeet): numbered 01–05 list: Screen Share Safe, Dock Hidden, Task Manager Invisible, Tab Switch Silent, Cursor Undetectable.
+   e. **Provider logos**: Ollama · LM Studio · llama.cpp · OpenAI · Groq · Gemini · Anthropic.
+   f. **Footer**: GitHub link, Privacy Policy placeholder, © 2025 Local AI Assistant.
+
+3. FILE: web/src/routes/pricing/+page.svelte (CREATE)
+   Two pricing cards side by side:
+   - **Free / Self-Hosted**: "Download the desktop app. Run any local model. No account needed." Feature list. CTA: "Download Free".
+   - **Pro ($12/mo)**: "Dashboard, encrypted API key sync, usage analytics." Feature list. CTA: "Get Started" → `PUBLIC_STRIPE_PRO_LINK` env var.
+
+4. FILE: web/src/routes/dashboard/+page.svelte (CREATE)
+   Auth-protected overview page:
+   - Shows: "Welcome back, {user.email}", Plan badge (Free / Pro).
+   - Sidebar nav: Overview · API Keys · Billing · Settings.
+   - Main area: quick-start instructions for connecting the desktop app.
+
+4. FILE: web/src/routes/dashboard/+page.server.ts (CREATE)
+   ```typescript
+   import { redirect } from '@sveltejs/kit'
+   export async function load({ locals }) {
+       if (!locals.session) throw redirect(303, '/login')
+       return { user: locals.user }
+   }
+   ```
+   (Supabase session is set in hooks.server.ts — created in P6-T2.)
+
+5. FILE: web/src/routes/dashboard/keys/+page.svelte (CREATE)
+   API key management UI:
+   - One row per provider (OpenAI, Groq, Gemini, Anthropic).
+   - Each row: provider name + logo icon, masked key display (`sk-...****`), "Update" button (opens inline form), "Delete" button.
+   - "Test Connection" button per provider — calls `POST /api/keys/{provider}/test`.
+
+6. FILE: web/.env.example (CREATE)
+   ```
+   PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+   PUBLIC_SUPABASE_ANON_KEY=eyJ...
+   SUPABASE_SERVICE_ROLE_KEY=eyJ...
+   PUBLIC_STRIPE_PRO_LINK=https://buy.stripe.com/...
+   STRIPE_SECRET_KEY=sk_live_...
+   STRIPE_WEBHOOK_SECRET=whsec_...
+   STRIPE_PRO_PRICE_ID=price_...
+   ```
+
+7. Build and Test:
+   a. `npm install && npm run dev` in `web/` — confirm landing page loads at localhost:5173.
+   b. Visit `/dashboard` without a session — confirm redirect to `/login`.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Use `IntersectionObserver` on the features section to trigger CSS `opacity:0 → 1` fade-in animations as the user scrolls — no JavaScript animation library needed.
+- For the pricing cards, use CSS `grid: 1fr 1fr` with a `gap: 2rem`. Highlight the Pro card with `border-color: #7c3aed` and a subtle `box-shadow: 0 0 40px rgba(124,58,237,0.15)`.
+- The dashboard sidebar can be a simple `<nav>` with `position: sticky; top: 1rem` — no router needed for the tab navigation since each tab is its own SvelteKit route.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- web/ (full SvelteKit scaffold)
+- web/src/routes/+page.svelte
+- web/src/routes/pricing/+page.svelte
+- web/src/routes/dashboard/+page.svelte
+- web/src/routes/dashboard/+page.server.ts
+- web/src/routes/dashboard/keys/+page.svelte
+- web/.env.example
+
+Commit: "jules: P6-T1 add SvelteKit web app with landing page and dashboard scaffold"
+Target branch: main

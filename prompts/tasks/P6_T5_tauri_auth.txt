@@ -1,0 +1,88 @@
+TASK: P6-T5 — Tauri App Auth Flow (Login + OS Keychain Token Storage)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add optional SaaS authentication to the Tauri desktop app. JWT stored in the
+OS keychain, injected into every WebSocket as the first auth frame.
+Local mode (no Supabase env vars) must work identically — zero regressions.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- JWT must be stored in the OS keychain ONLY — never localStorage or plain files.
+- If `PUBLIC_SUPABASE_URL` is empty/unset, `authMode` stays `"local"` — all auth UI hidden.
+- If WS receives `{"type":"error","message":"Token expired"}`: refresh session and reconnect — do NOT show login screen.
+- Store BOTH access_token AND refresh_token in keychain (joined with `:`) to enable auto-refresh.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/ws.ts` (P4-T2): `connect()` sends auth frame if `accessToken` is non-null.
+- `frontend/src-tauri/src/main.rs` (P4-T5): add `save_token`, `load_token`, `delete_token` commands.
+- `frontend/src-tauri/Cargo.toml` (P4-T5): add `keyring = "2"`.
+- Use `@supabase/supabase-js` (not `@supabase/ssr`) — this is a browser/Tauri context.
+- WS auth protocol: first message after open → `{"type":"auth","token":"<jwt>"}`.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/auth.ts (NEW)
+   a. Reactive state: `user`, `accessToken`, `authMode` using Svelte 5 `$state`.
+   b. `restoreSession()`: call `invoke("load_token")`, split on `:` to get access + refresh tokens, call `supabase.auth.setSession({access_token, refresh_token})`. On success set `user`. On fail call `invoke("delete_token")`.
+   c. `signIn(email, password)`: `supabase.auth.signInWithPassword()`, on success call `invoke("save_token", { token: access+":"+refresh })`.
+   d. `signOut()`: `supabase.auth.signOut()` + `invoke("delete_token")` + reset state.
+   e. `onAuthStateChange` listener: on token refresh, update keychain via `invoke("save_token")`.
+
+2. FILE: frontend/src-tauri/src/main.rs (MODIFY)
+   Add three keychain commands using `keyring` crate:
+   - `save_token(token: String)` → `Entry::new("local-ai-assistant","auth-token").set_password(&token)`
+   - `load_token()` → `Entry::new(...).get_password()`
+   - `delete_token()` → `Entry::new(...).delete_credential()`
+   Register all three in `generate_handler![]`.
+
+3. FILE: frontend/src-tauri/Cargo.toml (MODIFY)
+   Add: `keyring = "2"` to `[dependencies]`.
+
+4. FILE: frontend/src/App.svelte (MODIFY)
+   In `onMount`: after `connect()`, call `await restoreSession()` from `$lib/auth`.
+
+5. FILE: frontend/src/lib/ws.ts (MODIFY)
+   - In `onopen`: import `accessToken` from `$lib/auth`; if non-null send `{"type":"auth","token":accessToken}`.
+   - In message handler for `"error"`: if message includes "Token expired", refresh session and reconnect.
+
+6. FILE: frontend/src/lib/Settings.svelte (CREATE)
+   Account section:
+   - `authMode === "local"`: show "Running in local mode — no account needed."
+   - `authMode === "saas"` + not logged in: email/password form + `signIn()`.
+   - `authMode === "saas"` + logged in: email, plan badge, "Open Dashboard" link, "Sign Out" button.
+
+7. Build and Test:
+   a. No env vars: confirm WS connects with no auth frame, no login UI shown.
+   b. With Supabase env vars: sign in → confirm token saved in OS keychain.
+   c. Restart app → confirm session restored from keychain without re-login.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `keyring::Entry::get_password()` returns `Err` when no entry exists (first launch) — treat as normal "no session", not an error to log.
+- On Linux in headless CI, the Secret Service daemon may not be running. Check for `SKIP_KEYCHAIN=1` env var and fall back to in-memory storage to keep CI green.
+- Svelte 5: import `accessToken` directly from `$lib/auth` in `ws.ts` — since it's a `$state` module-level rune, it's reactive across imports without any wrapper.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- frontend/src/lib/auth.ts
+- frontend/src/lib/Settings.svelte
+
+FILES TO MODIFY:
+- frontend/src-tauri/src/main.rs
+- frontend/src-tauri/Cargo.toml
+- frontend/src/App.svelte
+- frontend/src/lib/ws.ts
+
+Commit: "jules: P6-T5 add Tauri app auth with OS keychain JWT storage and SaaS WS handshake"
+Target branch: main

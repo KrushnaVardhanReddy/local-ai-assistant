@@ -1,0 +1,89 @@
+TASK: P4-T2 — Svelte 5 Reactive WebSocket Store
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a TypeScript WebSocket client module using Svelte 5 runes that connects
+to the Python backend, parses the JSON message protocol, and exposes reactive
+state (transcript, response, connection status) to all UI components.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use Svelte 5 runes ONLY (`$state`, `$derived`) — do NOT use the legacy `writable()` store API.
+- Must auto-reconnect with exponential backoff (500ms → 1s → 2s → 4s → max 5s) on unexpected disconnect.
+- WebSocket URL defaults to `import.meta.env.VITE_WS_URL` — never hardcode `localhost`.
+- The `auth` frame (for SaaS mode) must be sent as the very first message after connection opens, but only if `accessToken` is non-null. For local mode it is always null — skip silently.
+- Module must be importable as: `import { transcript, response, connect } from '$lib/ws'`
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/` scaffold exists (P4-T1). This file goes in `frontend/src/lib/ws.ts`.
+- The backend WebSocket (`backend/app.py`, P3-T2) sends these JSON frames:
+    {"type":"transcript","text":"..."}  — user's spoken words after STT
+    {"type":"token","text":"..."}       — one LLM response token
+    {"type":"end"}                      — LLM response complete
+    {"type":"error","message":"..."}    — backend error
+- For SaaS auth (P6-T5), the first outgoing frame must be:
+    {"type":"auth","token":"<jwt>"}
+- `accessToken` comes from `$lib/auth.ts` (P6-T5). For now, it is always `null`.
+- `App.svelte` (P4-T4) calls `connect()` on mount and `disconnect()` on destroy.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/ws.ts (NEW)
+
+   a. Export reactive state using Svelte 5 `$state` rune:
+      ```typescript
+      export let transcript  = $state("")
+      export let response    = $state("")
+      export let isListening = $state(false)
+      export let isThinking  = $state(false)
+      export let isConnected = $state(false)
+      export let error       = $state<string | null>(null)
+      ```
+
+   b. Export `connect(url?: string): void`:
+      - Use `url ?? import.meta.env.VITE_WS_URL ?? "ws://127.0.0.1:8765/ws"`.
+      - Create a `new WebSocket(url)`.
+      - On `onopen`: set `isConnected = true`, `isListening = true`. If `accessToken` (imported from auth.ts, null for now) is non-null, send auth frame.
+      - On `onmessage`: parse JSON, handle each `type`:
+        - `"transcript"`: set `transcript = data.text`, reset `response = ""`, set `isThinking = true`.
+        - `"token"`: append `response += data.text`.
+        - `"end"`: set `isThinking = false`.
+        - `"error"`: set `error = data.message`, set `isThinking = false`.
+      - On `onclose`: set `isConnected = false`, `isListening = false`. If not a clean close (code 1000), schedule reconnect.
+      - On `onerror`: set `error = "WebSocket connection error"`.
+
+   c. Export `disconnect(): void`:
+      - Close the WebSocket with code 1000.
+      - Cancel any pending reconnect timer.
+
+   d. Implement exponential backoff reconnect:
+      - Keep a `retryDelay = 500` (ms). After each failed reconnect, double it up to 5000.
+      - On successful connection, reset `retryDelay = 500`.
+      - Use `setTimeout(() => connect(lastUrl), retryDelay)` for reconnect.
+
+2. Build and Test:
+   a. Import in App.svelte: `import { transcript, isConnected } from '$lib/ws'` — confirm TypeScript compiles cleanly.
+   b. With backend running, open `npm run tauri dev` — confirm `isConnected` becomes true in browser devtools.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Svelte 5 `$state` variables declared at module level are "module-level runes" — they are reactive singletons shared across all component imports. This is the correct pattern for global stores in Svelte 5.
+- Do NOT close and reopen on every component mount/destroy cycle — `connect()` should be idempotent (check if already connected before creating a new WebSocket).
+- To distinguish a clean close (user called `disconnect()`) from an unexpected one, set a `let intentionalClose = false` flag before calling `ws.close(1000)` in `disconnect()`, and check it in `onclose` before scheduling reconnect.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- frontend/src/lib/ws.ts
+
+Commit: "jules: P4-T2 add Svelte 5 reactive WebSocket store with auto-reconnect"
+Target branch: main

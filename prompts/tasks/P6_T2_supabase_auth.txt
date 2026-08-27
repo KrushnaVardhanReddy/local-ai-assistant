@@ -1,0 +1,101 @@
+TASK: P6-T2 — Supabase Auth + Database Schema
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Integrate Supabase Auth into the SvelteKit web app (email + Google OAuth) and
+create the database schema for user profiles, encrypted BYOK API key storage,
+and usage tracking — all with Row Level Security enabled.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Row Level Security (RLS) MUST be enabled on all tables — no exceptions.
+- NEVER store API keys in plaintext — `key_encrypted` column only holds Fernet-encrypted bytes.
+- `SUPABASE_SERVICE_ROLE_KEY` is server-only — it must NEVER appear in client-side code or `+page.svelte` files.
+- Session must persist across page refreshes — use Supabase `detectSessionInUrl: true`.
+- Auth state must be available server-side via `locals.session` (set in `hooks.server.ts`).
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `web/` SvelteKit app exists (P6-T1). Auth pages go in `web/src/routes/login/`.
+- `dashboard/+page.server.ts` already checks `locals.session` (P6-T1) — this task provides it.
+- The Supabase client is initialized in `web/src/lib/supabase.ts` (client-side) and `web/src/lib/supabase-server.ts` (server-side with service role key).
+- The Python backend (P6-T4) decrypts API keys — encryption is done server-side in Python, NOT in the browser.
+- On signup, a database trigger auto-creates a `profiles` row to avoid race conditions.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: web/src/lib/supabase.ts (CREATE — client-side, browser-safe)
+   ```typescript
+   import { createClient } from '@supabase/supabase-js'
+   import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public'
+   export const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+       auth: { detectSessionInUrl: true, persistSession: true }
+   })
+   ```
+
+2. FILE: web/src/hooks.server.ts (CREATE)
+   On every server request, refresh the Supabase session and set `locals.session` and `locals.user`:
+   ```typescript
+   import { createServerClient } from '@supabase/ssr'
+   export async function handle({ event, resolve }) {
+       // ... create server client from cookies, set event.locals.session
+   }
+   ```
+   Use `@supabase/ssr` package (NOT `@supabase/auth-helpers-sveltekit` — that's deprecated).
+
+3. FILE: web/src/routes/login/+page.svelte (CREATE)
+   a. Tab toggle between "Sign In" and "Sign Up" using Svelte `$state`.
+   b. Email + password form. On submit call `supabase.auth.signInWithPassword()` or `supabase.auth.signUp()`.
+   c. "Continue with Google" button — calls `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: '/auth/callback' }})`.
+   d. On success: `goto('/dashboard')`.
+   e. Show inline error below the form on failure (not alert/toast).
+
+4. FILE: web/src/routes/auth/callback/+server.ts (CREATE)
+   Exchange the OAuth code for a session and redirect to dashboard:
+   ```typescript
+   import { redirect } from '@sveltejs/kit'
+   export async function GET({ url, locals: { supabase } }) {
+       const code = url.searchParams.get('code')
+       if (code) await supabase.auth.exchangeCodeForSession(code)
+       throw redirect(303, '/dashboard')
+   }
+   ```
+
+5. FILE: supabase/migrations/001_initial.sql (CREATE)
+   Create these tables with RLS:
+   - `profiles(id UUID PK → auth.users, email TEXT, plan TEXT DEFAULT 'free', stripe_customer_id TEXT, created_at TIMESTAMPTZ)`
+   - `user_api_keys(id UUID PK, user_id UUID → profiles, provider TEXT, key_hash TEXT, key_encrypted TEXT, created_at TIMESTAMPTZ, UNIQUE(user_id, provider))`
+   - `usage_events(id UUID PK, user_id UUID → profiles, provider TEXT, model TEXT, tokens_in INT, tokens_out INT, created_at TIMESTAMPTZ)`
+   Enable RLS + add `FOR ALL USING (auth.uid() = user_id)` policies on each.
+   Add trigger `on_auth_user_created` that inserts into `profiles` after INSERT on `auth.users`.
+
+6. Build and Test:
+   a. Run `npx supabase db push` to apply migration — confirm tables appear in Supabase dashboard.
+   b. Visit `/login`, sign up with email — confirm redirect to `/dashboard` and `profiles` row created.
+   c. Visit `/dashboard` in a new incognito tab — confirm redirect to `/login`.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Use `@supabase/ssr` (not the deprecated `@supabase/auth-helpers-sveltekit`). The `createServerClient` function from `@supabase/ssr` takes `cookies` from the SvelteKit event to read/write session cookies.
+- The `profiles` trigger function must use `SECURITY DEFINER` so it can insert into `profiles` even though the new user doesn't have a session yet at signup time.
+- For `key_encrypted`, store the raw Fernet token as a base64 string. The column type should be `TEXT`, not `BYTEA`, to avoid encoding issues across Python → Postgres → JavaScript boundaries.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- web/src/lib/supabase.ts
+- web/src/hooks.server.ts
+- web/src/routes/login/+page.svelte
+- web/src/routes/auth/callback/+server.ts
+- supabase/migrations/001_initial.sql
+
+Commit: "jules: P6-T2 add Supabase auth, login page, and database schema with RLS"
+Target branch: main

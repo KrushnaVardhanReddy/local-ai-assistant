@@ -1,0 +1,97 @@
+TASK: P3-T2 — FastAPI WebSocket Server (Main App)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create the main FastAPI backend application that ties AudioListener, Transcriber,
+and LLMClient into a complete pipeline. It broadcasts streamed LLM response tokens
+to connected Svelte frontend clients over a WebSocket at `/ws`.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Audio capture and transcription MUST run in a background thread — never block the async event loop.
+- Use `asyncio.Queue` to bridge the sync audio thread to the async WebSocket handler.
+- If `SUPABASE_JWT_SECRET` is set in config, the WebSocket must validate a JWT auth frame before proceeding (see P6-T4 for full SaaS auth). For now, add a placeholder check: if the env var is set, close the WS with code 1008 and message "Auth not yet implemented".
+- Handle WebSocket disconnections cleanly — stop streaming, log, do not crash.
+- All settings come from `config.py` — never hardcode host, port, or model names.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/config.py` — provides all settings.
+- `backend/audio_listener.py` — `AudioListener.start()`, `get_chunk() -> bytes`, `stop()`.
+- `backend/transcriber.py` — `Transcriber.load()`, `transcribe(bytes) -> str`.
+- `backend/llm_client.py` — `LLMClient.from_config()`, `stream(messages) -> AsyncGenerator[str, None]`.
+- The Svelte frontend (`ws.ts`, P4-T2) connects via WebSocket and expects JSON frames:
+    {"type": "transcript", "text": "..."}   — when STT produces text
+    {"type": "token",      "text": "..."}   — each LLM streaming token
+    {"type": "end"}                          — LLM response complete
+    {"type": "error",      "message": "..."} — on any failure
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/app.py (NEW)
+
+   a. Create a `FastAPI()` instance. On `@app.on_event("startup")`:
+      - Load Transcriber and call `transcriber.load()`.
+      - Instantiate `LLMClient.from_config()`.
+      - Start `AudioListener` from config defaults.
+      - Start a background thread running `_audio_loop(listener, sync_queue)` that:
+        - Loops forever calling `listener.get_chunk()`.
+        - Puts each chunk into a `queue.Queue` (sync_queue, shared with async bridge).
+
+   b. Define `async _async_audio_bridge(sync_queue, async_queue)`:
+      - Runs as an asyncio task.
+      - Polls `sync_queue` every 10ms (non-blocking `get_nowait` in a try/except).
+      - Puts items into `async_queue` (an `asyncio.Queue`).
+      - This bridges the sync thread to the async event loop without blocking.
+
+   c. Define `@app.websocket("/ws") async def ws_endpoint(websocket: WebSocket)`:
+      - Accept the connection.
+      - If `config.SUPABASE_JWT_SECRET` is set, close with code 1008, message "Auth not yet implemented — set P6-T4 task". Return.
+      - Create a per-connection `asyncio.Queue` fed by the bridge task.
+      - Loop:
+        - Await next audio chunk from the asyncio queue (with 5s timeout).
+        - Call `transcriber.transcribe(chunk)`.
+        - If transcript is non-empty:
+          - Send `{"type":"transcript","text":transcript}`.
+          - Stream `llm_client.stream([{"role":"user","content":transcript}])`:
+            - For each token: send `{"type":"token","text":token}`.
+          - Send `{"type":"end"}`.
+      - On `WebSocketDisconnect`: log and return cleanly.
+      - On any other exception: send `{"type":"error","message":str(e)}`, log, return.
+
+   d. Add `GET /health` endpoint returning:
+      `{"status":"ok","llm_provider":config.LLM_PROVIDER,"auth_enabled": bool(config.SUPABASE_JWT_SECRET)}`
+
+   e. Add entrypoint:
+      ```python
+      if __name__ == "__main__":
+          import uvicorn
+          uvicorn.run("app:app", host=config.WS_HOST, port=config.WS_PORT, reload=False)
+      ```
+
+2. Build and Test:
+   a. Run `python3 backend/app.py` — confirm startup logs show model loaded and mic started.
+   b. Connect to `ws://127.0.0.1:8765/ws` with `wscat` or a browser WebSocket console, speak — confirm transcript and token frames arrive.
+   c. Curl `http://127.0.0.1:8765/health` — confirm JSON response.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The audio bridge pattern (sync thread → sync queue → asyncio bridge task → asyncio queue) is necessary because `asyncio.Queue` is not thread-safe. The bridge task uses `asyncio.sleep(0.01)` between polls to yield control to the event loop.
+- Use `asyncio.wait_for(async_queue.get(), timeout=5.0)` in the WS loop and catch `asyncio.TimeoutError` to send a keep-alive ping — this prevents the WebSocket from closing on long silences.
+- Multiple simultaneous WebSocket connections are supported by design — each connection gets its own `asyncio.Queue` that independently receives from the shared audio bridge. The transcriber is called once per chunk per active connection (or shared if you want to optimize later).
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/app.py
+
+Commit: "jules: P3-T2 add FastAPI WebSocket server wiring STT → LLM → frontend"
+Target branch: main

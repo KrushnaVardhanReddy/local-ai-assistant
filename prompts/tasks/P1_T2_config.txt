@@ -1,0 +1,92 @@
+TASK: P1-T2 — Central Config Module
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a single `config.py` module that centralizes ALL backend settings — LLM
+provider selection (local or cloud), model names, audio params, and server ports.
+Every other backend module imports from this module; no settings are defined elsewhere.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use ONLY Python standard library (os, dataclasses, urllib). No external deps.
+- Every field must read from an environment variable with a sensible default.
+- Numeric env vars must be cast to int/float — never leave them as strings.
+- Must manually parse `.env` from the repo root (no python-dotenv dependency).
+- Importable as: `from config import config`
+- NEVER hardcode URLs, ports, or model names as bare string literals — always via PROVIDER_CONFIG or env vars.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- This is the first file created in the backend/. No prior modules exist yet.
+- All other backend modules (llm_health_check.py, audio_listener.py, transcriber.py,
+  llm_client.py, app.py) will `from config import config` as their first import.
+- Cloud providers all use `Authorization: Bearer <key>` header.
+  Anthropic additionally requires `anthropic-version: 2023-06-01` header.
+- Supported LLM_PROVIDER values:
+    Local (no key): auto, ollama, lmstudio, llamacpp
+    Cloud (key req): openai, groq, gemini, anthropic
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/config.py (NEW)
+
+   a. Define `PROVIDER_CONFIG` dict mapping provider name → {url, key_env}:
+      - ollama:   {url: "http://localhost:11434/v1", key_env: None}
+      - lmstudio: {url: "http://localhost:1234/v1",  key_env: None}
+      - llamacpp: {url: "http://localhost:8080/v1",  key_env: None}
+      - openai:   {url: "https://api.openai.com/v1", key_env: "OPENAI_API_KEY"}
+      - groq:     {url: "https://api.groq.com/openai/v1", key_env: "GROQ_API_KEY"}
+      - gemini:   {url: "https://generativelanguage.googleapis.com/v1beta/openai/", key_env: "GEMINI_API_KEY"}
+      - anthropic:{url: "https://api.anthropic.com/v1", key_env: "ANTHROPIC_API_KEY"}
+
+   b. Define `_load_env()` — reads .env from repo root, returns dict of key=value pairs.
+      Parse manually: strip whitespace, skip comment lines starting with `#`, split on first `=`.
+
+   c. Define `@dataclass Config` with fields:
+      LLM: LLM_PROVIDER (default "auto"), LLM_MODEL (default "llama3"),
+           LLM_BASE_URL (default ""), LLM_API_KEY (default "")
+      STT: STT_MODEL (default "base"), STT_DEVICE (default "cuda"),
+           STT_COMPUTE_TYPE (default "float16")
+      Audio: AUDIO_SAMPLE_RATE (int, default 16000), AUDIO_CHUNK_SECONDS (float, default 0.5)
+      Server: WS_HOST (default "127.0.0.1"), WS_PORT (int, default 8765)
+      SaaS: SUPABASE_JWT_SECRET (default ""), SUPABASE_URL (default ""),
+            SUPABASE_SERVICE_KEY (default ""), ENCRYPTION_KEY (default "")
+
+   d. Define `Config.resolved_llm(self) -> dict` returning:
+      {"base_url": str, "api_key": str, "provider": str, "is_cloud": bool}
+      - If LLM_BASE_URL is set explicitly, use it directly.
+      - Else look up PROVIDER_CONFIG[LLM_PROVIDER] for URL and key_env.
+      - Read API key from env using key_env if not None.
+      - is_cloud = provider not in {"auto","ollama","lmstudio","llamacpp"}
+
+   e. Define `Config.summary(self)` — prints all active settings as a formatted table.
+      If `resolved_llm()["is_cloud"]` is True, print:
+      "⚠️  PRIVACY WARNING: LLM responses are routed through an external cloud provider."
+
+   f. Instantiate at module level: `config = Config()` (reads env vars at import time).
+
+2. Build and Test:
+   a. Run `python3 -c "from config import config; config.summary()"` — confirm no errors.
+   b. Run with `LLM_PROVIDER=openai OPENAI_API_KEY=test python3 -c "from config import config; print(config.resolved_llm())"` — confirm is_cloud=True.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Use `os.environ.get(key, default)` after merging the .env file dict into os.environ at startup so all modules see env vars uniformly regardless of source.
+- For `resolved_llm()` with `LLM_PROVIDER="auto"`, return the auto-detect sentinel — the actual detection is done lazily in `llm_health_check.py` and `LLMClient.from_config()`, not here, to avoid network calls at import time.
+- Cast AUDIO_SAMPLE_RATE and WS_PORT with `int()`, AUDIO_CHUNK_SECONDS with `float()` inside `__post_init__`.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/config.py
+
+Commit: "jules: P1-T2 add central config module with multi-provider LLM support"
+Target branch: main
