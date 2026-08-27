@@ -26,8 +26,9 @@ CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
   `SUPABASE_SERVICE_KEY`, `ENCRYPTION_KEY` fields.
 - `supabase/migrations/001_initial.sql` (P6-T2) created `user_api_keys` table with
   columns: `user_id UUID`, `provider TEXT`, `key_encrypted TEXT`, `key_hash TEXT`.
-- WS auth protocol: client sends `{"type":"auth","token":"<jwt>"}` as FIRST message.
-  Server validates JWT, loads user's BYOK key for their LLM provider, then proceeds.
+- The `profiles` table includes a `machine_id TEXT` column.
+- WS auth protocol: client sends `{"type":"auth","token":"<jwt>","machine_id":"<uuid>"}` as FIRST message.
+  Server validates JWT, verifies `machine_id`, loads user's BYOK key for their LLM provider, then proceeds.
 - `backend/requirements.txt` already includes `PyJWT>=2.8.0`, `cryptography>=42.0.0`, `httpx>=0.27.0`.
 
 ═══════════════════════════════════════════════════════════════
@@ -63,9 +64,12 @@ DELIVERABLES
    In the `/ws` WebSocket handler:
    a. If `config.SUPABASE_JWT_SECRET` is set (SaaS mode):
       - Await the first message (5s timeout). If timeout, close with 1008 "Auth timeout".
-      - Parse `{"type":"auth","token":"..."}`. If missing or wrong type, close 1008.
+      - Parse `{"type":"auth","token":"...","machine_id":"..."}`. If missing or wrong type, close 1008.
       - Call `get_user_id(token)`. If `AuthError`, close 1008 with the error message.
       - Query Supabase `profiles` table to check if the user has `plan == 'lifetime'`. If not, close with 1008 "License required".
+      - Check the `machine_id` from the payload against the `profiles.machine_id` in the DB.
+        - If DB `machine_id` is null, save the payload `machine_id` to the DB.
+        - If it is not null and does not match the payload `machine_id`, close with 1008 "Hardware ID mismatch. Please reset your machine ID in the dashboard."
       - Determine user's LLM provider from their stored key:
         - For each provider in ["openai","groq","gemini","anthropic"], call `key_store.get_key(user_id, provider)`.
         - Use the first non-None result. If none found, fall back to `config.resolved_llm()`.

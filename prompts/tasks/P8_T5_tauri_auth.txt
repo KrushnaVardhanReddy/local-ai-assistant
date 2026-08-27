@@ -22,7 +22,7 @@ CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
 - `frontend/src-tauri/src/main.rs` (P4-T5): add `save_token`, `load_token`, `delete_token` commands.
 - `frontend/src-tauri/Cargo.toml` (P4-T5): add `keyring = "2"`.
 - Use `@supabase/supabase-js` (not `@supabase/ssr`) — this is a browser/Tauri context.
-- WS auth protocol: first message after open → `{"type":"auth","token":"<jwt>"}`.
+- WS auth protocol: first message after open → `{"type":"auth","token":"<jwt>","machine_id":"<uuid>"}`.
 
 ═══════════════════════════════════════════════════════════════
 DELIVERABLES
@@ -40,7 +40,9 @@ DELIVERABLES
    - `save_token(token: String)` → `Entry::new("local-ai-assistant","auth-token").set_password(&token)`
    - `load_token()` → `Entry::new(...).get_password()`
    - `delete_token()` → `Entry::new(...).delete_credential()`
-   Register all three in `generate_handler![]`.
+   Add a `get_machine_id()` command:
+   - Checks `Entry::new("local-ai-assistant","machine-id").get_password()`. If missing, generates a new UUID (`uuid::Uuid::new_v4().to_string()`), saves it, and returns it.
+   Register all four in `generate_handler![]`.
 
 3. FILE: frontend/src-tauri/Cargo.toml (MODIFY)
    Add: `keyring = "2"` to `[dependencies]`.
@@ -49,7 +51,7 @@ DELIVERABLES
    In `onMount`: after `connect()`, call `await restoreSession()` from `$lib/auth`.
 
 5. FILE: frontend/src/lib/ws.ts (MODIFY)
-   - In `onopen`: import `accessToken` from `$lib/auth`; if non-null send `{"type":"auth","token":accessToken}`.
+   - In `onopen`: import `accessToken` from `$lib/auth`; if non-null, fetch `machine_id = await invoke('get_machine_id')` and send `{"type":"auth","token":accessToken,"machine_id":machine_id}`.
    - In message handler for `"error"`: if message includes "Token expired", refresh session and reconnect.
 
 6. FILE: frontend/src/lib/Settings.svelte (CREATE)
