@@ -20,10 +20,10 @@
   });
 </script>
 
-<div class="app-shell">
+<div class="app-shell pointer-events-none">
   {#if showKnowledgeBase}
     <div
-      class="modal-overlay"
+      class="modal-overlay pointer-events-auto"
       role="button"
       tabindex="0"
       aria-label="Close knowledge base"
@@ -37,15 +37,12 @@
     </div>
   {/if}
 
-  <div class="main-content">
-    <div class="assistant-wrapper">
-      <button class="kb-btn" onclick={() => showKnowledgeBase = !showKnowledgeBase} title="Knowledge Base">
-        📚
-      </button>
-      <Assistant />
-    </div>
-  </div>
-  <div class="settings-content">
+  <Assistant />
+  
+  <div class="fixed top-6 right-8 z-[100] pointer-events-auto flex gap-4">
+    <button class="text-on-surface-variant hover:text-primary transition-colors text-xl" onclick={() => showKnowledgeBase = !showKnowledgeBase} title="Knowledge Base">
+      📚
+    </button>
     <Settings />
   </div>
 </div>
@@ -55,36 +52,6 @@
     width: 100vw;
     height: 100vh;
     background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: flex-start;
-    padding: 1rem;
-    position: relative;
-    gap: 1rem;
-  }
-
-  .assistant-wrapper {
-    position: relative;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .kb-btn {
-    position: absolute;
-    top: 1rem;
-    right: 1.5rem;
-    background: none;
-    border: none;
-    font-size: 1.25rem;
-    cursor: pointer;
-    z-index: 10;
-    transition: transform 0.2s;
-  }
-
-  .kb-btn:hover {
-    transform: scale(1.1);
   }
 
   .modal-overlay {
@@ -125,16 +92,5 @@
 
   .close-btn:hover {
     color: #e2e8f0;
-  }
-
-  .main-content {
-    display: flex;
-    justify-content: flex-end;
-  }
-  .settings-content {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    z-index: 1000;
   }
 </style>
