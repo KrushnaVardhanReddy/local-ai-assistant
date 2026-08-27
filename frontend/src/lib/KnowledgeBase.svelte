@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
 
   let ragEnabled = $state(false);
+  let webSearchEnabled = $state(false);
   let documents = $state<string[]>([]);
   let isDragging = $state(false);
 
@@ -27,6 +28,16 @@
     } catch (e) {
       console.error("Failed to fetch RAG status", e);
     }
+
+    try {
+      const res = await fetch(`${API_BASE}/web_search/status`);
+      if (res.ok) {
+        const data = await res.json();
+        webSearchEnabled = data.enabled;
+      }
+    } catch (e) {
+      console.error("Failed to fetch web search status", e);
+    }
   }
 
   async function toggleRag() {
@@ -38,6 +49,18 @@
       }
     } catch (e) {
       console.error("Failed to toggle RAG", e);
+    }
+  }
+
+  async function toggleWebSearch() {
+    try {
+      const res = await fetch(`${API_BASE}/web_search/toggle`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        webSearchEnabled = data.enabled;
+      }
+    } catch (e) {
+      console.error("Failed to toggle web search", e);
     }
   }
 
@@ -163,6 +186,11 @@
       <input type="checkbox" checked={ragEnabled} onchange={toggleRag} />
       <span class="slider"></span>
       Use knowledge base for responses
+    </label>
+    <label class="toggle">
+      <input type="checkbox" checked={webSearchEnabled} onchange={toggleWebSearch} />
+      <span class="slider"></span>
+      Use Internet Search for responses
     </label>
   </div>
 
