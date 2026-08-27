@@ -58,6 +58,7 @@ class Config:
     CHROMA_DIR: str = ""
     UPLOAD_DIR: str = ""
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    RAG_TOP_K: int = 4
 
     def __post_init__(self):
         # Override fields with os.environ
@@ -84,6 +85,7 @@ class Config:
         self.CHROMA_DIR = os.environ.get("CHROMA_DIR", "./data/chroma")
         self.UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "./data/uploads")
         self.EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        self.RAG_TOP_K = int(os.environ.get("RAG_TOP_K", self.RAG_TOP_K))
 
         # Create necessary directories
         import pathlib
