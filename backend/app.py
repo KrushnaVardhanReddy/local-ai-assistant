@@ -5,7 +5,9 @@ import traceback
 import sys
 import re
 
+import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import uvicorn
 
@@ -36,6 +38,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(ingestor.router, prefix="/rag")
 app.include_router(retriever.retriever_router, prefix="/rag")
+
+frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
+if os.path.exists(frontend_dist):
+    app.mount("/helper", StaticFiles(directory=frontend_dist, html=True), name="helper")
 
 
 # Global instances
@@ -202,16 +208,44 @@ async def ws_endpoint(websocket: WebSocket):
         except Exception as e:
             print(f"Error in async_sender: {e}", file=sys.stderr)
 
+    async def async_receiver():
+        try:
+            while True:
+                msg_str = await websocket.receive_text()
+                try:
+                    msg = json.loads(msg_str)
+                    if msg.get("type") == "chat":
+                        # We need to process the chat on the backend exactly once,
+                        # but broadcast the user's transcript to all connected clients
+                        # so they can see the message that was sent.
+                        transcript_msg = {"type": "transcript", "text": msg.get("text", "")}
+
+                        # Only put the LLM processing logic on ONE of the queues (the current one)
+                        # so we don't trigger N concurrent LLM requests
+                        ws_queue.put_nowait(msg)
+                except Exception as e:
+                    print(f"Error parsing incoming WS message: {e}", file=sys.stderr)
+        except asyncio.CancelledError:
+            pass
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            print(f"Error in async_receiver: {e}", file=sys.stderr)
+
     sender_task = asyncio.create_task(async_sender())
+    receiver_task = asyncio.create_task(async_receiver())
 
     try:
         while True:
             try:
-                # Await next audio chunk with 5s timeout
+                # Await next audio chunk or chat message with 5s timeout
                 chunk = await asyncio.wait_for(ws_queue.get(), timeout=5.0)
 
-                # Transcription MUST run in a background thread — never block the async event loop
-                transcript = await asyncio.to_thread(transcriber.transcribe, chunk)
+                if isinstance(chunk, dict) and chunk.get("type") == "chat":
+                    transcript = chunk.get("text", "")
+                else:
+                    # Transcription MUST run in a background thread — never block the async event loop
+                    transcript = await asyncio.to_thread(transcriber.transcribe, chunk)
 
                 if transcript:
                     # Clear queue backlog
@@ -221,7 +255,9 @@ async def ws_endpoint(websocket: WebSocket):
                         except:
                             pass
 
-                    outbound_queue.put_nowait({"type": "transcript", "text": transcript})
+                    # Broadcast transcript to ALL connected clients
+                    for out_q in list(active_outbound_queues):
+                        out_q.put_nowait({"type": "transcript", "text": transcript})
 
                     rag_context = ""
                     web_context = ""
@@ -249,7 +285,8 @@ async def ws_endpoint(websocket: WebSocket):
                     if combined_context:
                         system_content += f"\n\n{combined_context}"
                         sources = list(dict.fromkeys(re.findall(r'\[Source: ([^\],]+)', combined_context)))
-                        outbound_queue.put_nowait({"type": "rag_sources", "sources": sources})
+                        for out_q in list(active_outbound_queues):
+                            out_q.put_nowait({"type": "rag_sources", "sources": sources})
 
                     messages = [
                         {"role": "system", "content": system_content},
@@ -258,11 +295,14 @@ async def ws_endpoint(websocket: WebSocket):
 
                     try:
                         async for token in connection_llm_client.stream(messages):
-                            outbound_queue.put_nowait({"type": "token", "text": token})
-                        outbound_queue.put_nowait({"type": "end"})
+                            for out_q in list(active_outbound_queues):
+                                out_q.put_nowait({"type": "token", "text": token})
+                        for out_q in list(active_outbound_queues):
+                            out_q.put_nowait({"type": "end"})
                     except Exception as e:
                         print(f"LLM Stream Error: {e}", file=sys.stderr)
-                        outbound_queue.put_nowait({"type": "error", "message": f"LLM Error: {str(e)}"})
+                        for out_q in list(active_outbound_queues):
+                            out_q.put_nowait({"type": "error", "message": f"LLM Error: {str(e)}"})
 
             except asyncio.TimeoutError:
                 # Keep-alive ping
@@ -280,6 +320,7 @@ async def ws_endpoint(websocket: WebSocket):
             pass
     finally:
         sender_task.cancel()
+        receiver_task.cancel()
         if ws_queue in active_ws_queues:
             active_ws_queues.remove(ws_queue)
         if outbound_queue in active_outbound_queues:
