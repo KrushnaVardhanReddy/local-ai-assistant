@@ -31,8 +31,20 @@
 </script>
 
 <div class="settings-panel">
-  <h2>Account</h2>
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h2>Account</h2>
+    <button data-testid="settings-btn" aria-label="Settings" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">⚙</button>
+  </div>
   <div class="content">
+    <div style="margin-bottom: 1rem;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+        <input type="checkbox" data-testid="dev-mode-toggle" />
+        Developer Mode
+      </label>
+      <div style="margin-top: 0.5rem;">
+        <input type="text" data-testid="backend-url-input" placeholder="Backend URL" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #444; background: #222; color: white;" />
+      </div>
+    </div>
     {#if authState.authMode === "local"}
       <p class="local-mode-text">Running in local mode &mdash; no account needed.</p>
     {:else}
