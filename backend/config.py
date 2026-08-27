@@ -60,8 +60,14 @@ class Config:
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     RAG_TOP_K: int = 4
 
+    RAG_ENABLED: bool = True
+    SYSTEM_PROMPT: str = "You are a helpful AI assistant."
+
     def __post_init__(self):
         # Override fields with os.environ
+        self.RAG_ENABLED = os.environ.get("RAG_ENABLED", "true").lower() == "true"
+        self.SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", self.SYSTEM_PROMPT)
+
         self.LLM_PROVIDER = os.environ.get("LLM_PROVIDER", self.LLM_PROVIDER)
         self.LLM_MODEL = os.environ.get("LLM_MODEL", self.LLM_MODEL)
         self.LLM_BASE_URL = os.environ.get("LLM_BASE_URL", self.LLM_BASE_URL)
