@@ -203,6 +203,12 @@ STITCH_TASKS = {
         "owner": "Stitch",
         "prompt_file": "prompts/tasks/P6_T1_web_app_scaffold.txt",
     },
+    1001: {
+        "name": "P10-T1 — Modular Dashboard UI",
+        "wave": 4,
+        "owner": "Stitch",
+        "prompt_file": "prompts/tasks/P10_T1_modular_ui.txt",
+    },
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
