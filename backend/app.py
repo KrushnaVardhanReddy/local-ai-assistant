@@ -8,8 +8,16 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from config import config
+import json
+import httpx
+
+from fastapi import Request, HTTPException, Depends, Response
+from pydantic import BaseModel
+
+from config import config, PROVIDER_CONFIG
 from audio_listener import AudioListener
+from auth import get_user_id, AuthError
+from keys import key_store
 from transcriber import Transcriber
 from llm_client import LLMClient
 from rag import ingestor
@@ -104,9 +112,69 @@ async def shutdown_event():
 async def ws_endpoint(websocket: WebSocket):
     await websocket.accept()
 
+    connection_llm_client = llm_client
+
     if config.SUPABASE_JWT_SECRET:
-        await websocket.close(code=1008, reason="Auth not yet implemented — set P6-T4 task")
-        return
+        try:
+            auth_msg_str = await asyncio.wait_for(websocket.receive_text(), timeout=5.0)
+            auth_msg = json.loads(auth_msg_str)
+            if auth_msg.get("type") != "auth" or "token" not in auth_msg or "machine_id" not in auth_msg:
+                await websocket.close(code=1008, reason="Invalid auth message")
+                return
+
+            token = auth_msg["token"]
+            machine_id = auth_msg["machine_id"]
+            user_id = get_user_id(token)
+
+            if not key_store:
+                await websocket.close(code=1008, reason="Key store not configured")
+                return
+
+            try:
+                await key_store.verify_user_profile(user_id, machine_id)
+            except Exception as e:
+                await websocket.close(code=1008, reason=str(e))
+                return
+
+            # Determine LLM provider from stored keys
+            providers_to_check = ["openai", "groq", "gemini", "anthropic"]
+            found_key = None
+            found_provider = None
+
+            if key_store:
+                for prov in providers_to_check:
+                    key = await key_store.get_key(user_id, prov)
+                    if key:
+                        found_key = key
+                        found_provider = prov
+                        break
+
+            if found_key and found_provider:
+                base_url = PROVIDER_CONFIG.get(found_provider, {}).get("url", "")
+                connection_llm_client = LLMClient(
+                    base_url=base_url,
+                    model=config.LLM_MODEL,
+                    api_key=found_key,
+                    provider=found_provider
+                )
+            else:
+                llm_config = config.resolved_llm()
+                connection_llm_client = LLMClient(
+                    base_url=llm_config.get("base_url", ""),
+                    model=config.LLM_MODEL,
+                    api_key=llm_config.get("api_key", ""),
+                    provider=llm_config.get("provider", "")
+                )
+
+        except asyncio.TimeoutError:
+            await websocket.close(code=1008, reason="Auth timeout")
+            return
+        except AuthError as e:
+            await websocket.close(code=1008, reason=str(e))
+            return
+        except Exception as e:
+            await websocket.close(code=1008, reason=f"Auth error: {str(e)}")
+            return
 
     # Create a per-connection asyncio.Queue
     ws_queue = asyncio.Queue()
@@ -134,7 +202,7 @@ async def ws_endpoint(websocket: WebSocket):
                     messages = [{"role": "user", "content": transcript}]
 
                     try:
-                        async for token in llm_client.stream(messages):
+                        async for token in connection_llm_client.stream(messages):
                             await websocket.send_json({"type": "token", "text": token})
                         await websocket.send_json({"type": "end"})
                     except Exception as e:
@@ -162,6 +230,40 @@ async def ws_endpoint(websocket: WebSocket):
         if ws_queue in active_ws_queues:
             active_ws_queues.remove(ws_queue)
 
+
+class KeyModel(BaseModel):
+    api_key: str
+
+async def get_current_user_id(request: Request) -> str:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ")[1]
+    try:
+        return get_user_id(token)
+    except AuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+@app.post("/api/keys/{provider}")
+async def save_api_key(provider: str, body: KeyModel, user_id: str = Depends(get_current_user_id)):
+    if not key_store:
+        raise HTTPException(status_code=500, detail="Key store not configured")
+    await key_store.save_key(user_id, provider, body.api_key)
+    return {"message": "Key saved successfully"}
+
+@app.delete("/api/keys/{provider}")
+async def delete_api_key(provider: str, user_id: str = Depends(get_current_user_id)):
+    if not key_store:
+        raise HTTPException(status_code=500, detail="Key store not configured")
+    await key_store.delete_key(user_id, provider)
+    return Response(status_code=204)
+
+@app.post("/api/keys/{provider}/test")
+async def test_api_key(provider: str, body: KeyModel, user_id: str = Depends(get_current_user_id)):
+    base_url = PROVIDER_CONFIG.get(provider, {}).get("url", "")
+    temp_client = LLMClient(base_url=base_url, model=config.LLM_MODEL, api_key=body.api_key, provider=provider)
+    is_ok = await temp_client.health_check()
+    return {"ok": is_ok}
 
 @app.get("/health")
 async def health_check():
