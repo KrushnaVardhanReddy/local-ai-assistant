@@ -10,7 +10,7 @@
 
   // New settings state
   let showSettings = $state(false);
-  let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8000");
+  let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
   let isDevModeChecked = $state(false);
 
   function toggleSettings() {
@@ -64,7 +64,7 @@
   <div class="config-section">
     <div class="input-group">
       <label for="backendUrl">Backend API URL</label>
-      <input type="text" id="backendUrl" bind:value={backendUrl} placeholder="127.0.0.1:8000" data-testid="backend-url-input" />
+      <input type="text" id="backendUrl" bind:value={backendUrl} placeholder="127.0.0.1:8765" data-testid="backend-url-input" />
     </div>
 
     <div class="checkbox-group">

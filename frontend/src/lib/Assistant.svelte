@@ -20,7 +20,7 @@
 
     // Check if we are running in a regular browser instead of Tauri
     isBrowser = typeof window !== 'undefined' && typeof (window as any).__TAURI_INTERNALS__ === 'undefined';
-    const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8000";
+    const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
 
     const unlisten = listen("trigger-vision", async () => {
       if (wsState.isAnalyzingScreen) return;

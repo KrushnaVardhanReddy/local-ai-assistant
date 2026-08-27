@@ -22,12 +22,12 @@ let listenersInitialized = false;
 function initListeners() {
   listen("ptt-start", () => {
     wsState.isPTTHeld = true;
-    fetch('http://127.0.0.1:8000/ptt/start', { method: 'POST' }).catch(console.error);
+    fetch('http://127.0.0.1:8765/ptt/start', { method: 'POST' }).catch(console.error);
   });
 
   listen("ptt-stop", () => {
     wsState.isPTTHeld = false;
-    fetch('http://127.0.0.1:8000/ptt/stop', { method: 'POST' }).catch(console.error);
+    fetch('http://127.0.0.1:8765/ptt/stop', { method: 'POST' }).catch(console.error);
   });
 
   listen("panic-clear", () => {
@@ -35,7 +35,7 @@ function initListeners() {
     wsState.response = "";
     wsState.isThinking = false;
     wsState.ragSources = [];
-    fetch('http://127.0.0.1:8000/history/clear', { method: 'POST' }).catch(console.error);
+    fetch('http://127.0.0.1:8765/history/clear', { method: 'POST' }).catch(console.error);
   });
 }
 let retryDelay = 500;
@@ -79,6 +79,11 @@ export function connect(url?: string): void {
     targetUrl = targetUrl.replace('https://', 'wss://');
   } else if (!targetUrl.includes('://')) {
     targetUrl = 'ws://' + targetUrl;
+  }
+
+  // Always ensure the WebSocket path ends with /ws
+  if (!targetUrl.endsWith('/ws')) {
+    targetUrl = targetUrl.replace(/\/?$/, '/ws');
   }
 
   lastUrl = targetUrl;
