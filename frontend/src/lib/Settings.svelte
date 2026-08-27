@@ -80,6 +80,7 @@
   <hr class="divider" />
 
   <h2>Account</h2>
+  <div class="content">
     {#if authState.authMode === "local"}
       <p class="local-mode-text">Running in local mode &mdash; no account needed.</p>
     {:else}
