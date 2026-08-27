@@ -288,6 +288,15 @@ async def health_check():
         "auth_enabled": bool(config.SUPABASE_JWT_SECRET)
     }
 
+@app.get("/rag/status")
+async def rag_status():
+    return {"enabled": config.RAG_ENABLED}
+
+@app.post("/rag/toggle")
+async def rag_toggle():
+    config.RAG_ENABLED = not config.RAG_ENABLED
+    return {"enabled": config.RAG_ENABLED}
+
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host=config.WS_HOST, port=config.WS_PORT, reload=False)
