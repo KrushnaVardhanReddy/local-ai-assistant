@@ -1,7 +1,11 @@
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use tauri::Manager;
+use keyring::Entry;
 
 static STEALTH_ENABLED: AtomicBool = AtomicBool::new(false);
+static IN_MEMORY_TOKEN: Mutex<Option<String>> = Mutex::new(None);
+static IN_MEMORY_MACHINE_ID: Mutex<Option<String>> = Mutex::new(None);
 
 #[cfg(target_os = "macos")]
 fn set_screen_share_safe(window: &tauri::WebviewWindow, enabled: bool) {
@@ -76,6 +80,73 @@ fn toggle_stealth(window: tauri::WebviewWindow, enabled: bool) {
     set_screen_share_safe(&window, enabled);
 }
 
+fn use_in_memory_keychain() -> bool {
+    std::env::var("SKIP_KEYCHAIN").is_ok()
+}
+
+#[tauri::command]
+fn save_token(token: String) -> Result<(), String> {
+    if use_in_memory_keychain() {
+        let mut mem_token = IN_MEMORY_TOKEN.lock().unwrap();
+        *mem_token = Some(token);
+        return Ok(());
+    }
+
+    let entry = Entry::new("local-ai-assistant", "auth-token").map_err(|e| e.to_string())?;
+    entry.set_password(&token).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn load_token() -> Result<String, String> {
+    if use_in_memory_keychain() {
+        let mem_token = IN_MEMORY_TOKEN.lock().unwrap();
+        if let Some(token) = &*mem_token {
+            return Ok(token.clone());
+        } else {
+            return Err("No token found".to_string());
+        }
+    }
+
+    let entry = Entry::new("local-ai-assistant", "auth-token").map_err(|e| e.to_string())?;
+    entry.get_password().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_token() -> Result<(), String> {
+    if use_in_memory_keychain() {
+        let mut mem_token = IN_MEMORY_TOKEN.lock().unwrap();
+        *mem_token = None;
+        return Ok(());
+    }
+
+    let entry = Entry::new("local-ai-assistant", "auth-token").map_err(|e| e.to_string())?;
+    entry.delete_password().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_machine_id() -> Result<String, String> {
+    if use_in_memory_keychain() {
+        let mut mem_id = IN_MEMORY_MACHINE_ID.lock().unwrap();
+        if let Some(id) = &*mem_id {
+            return Ok(id.clone());
+        } else {
+            let new_id = uuid::Uuid::new_v4().to_string();
+            *mem_id = Some(new_id.clone());
+            return Ok(new_id);
+        }
+    }
+
+    let entry = Entry::new("local-ai-assistant", "machine-id").map_err(|e| e.to_string())?;
+    if let Ok(id) = entry.get_password() {
+        Ok(id)
+    } else {
+        let new_id = uuid::Uuid::new_v4().to_string();
+        let _ = entry.set_password(&new_id);
+        Ok(new_id)
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -108,7 +179,14 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, toggle_stealth])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            toggle_stealth,
+            save_token,
+            load_token,
+            delete_token,
+            get_machine_id
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

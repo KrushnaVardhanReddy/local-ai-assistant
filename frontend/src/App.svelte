@@ -2,8 +2,13 @@
   import { onMount, onDestroy } from "svelte";
   import { connect, disconnect, wsState } from "$lib/ws.svelte";
   import Assistant from "$lib/Assistant.svelte";
+  import Settings from "$lib/Settings.svelte";
+  import { restoreSession, authState } from "$lib/auth.svelte";
 
-  onMount(() => {
+  onMount(async () => {
+    if (authState.authMode === "saas") {
+      await restoreSession();
+    }
     connect();
   });
 
@@ -13,7 +18,12 @@
 </script>
 
 <div class="app-shell">
-  <Assistant />
+  <div class="main-content">
+    <Assistant />
+  </div>
+  <div class="settings-content">
+    <Settings />
+  </div>
 </div>
 
 <style>
@@ -22,8 +32,15 @@
     height: 100vh;
     background: transparent;
     display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
     padding: 1rem;
+    gap: 1rem;
+  }
+
+  .main-content {
+    display: flex;
+    justify-content: flex-end;
   }
 </style>
