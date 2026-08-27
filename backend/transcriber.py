@@ -43,7 +43,7 @@ class Transcriber:
                 return ""
 
         start_time = time.perf_counter()
-        segments, info = self.model.transcribe(audio_np, beam_size=5, language="en")
+        segments, info = self.model.transcribe(audio_np, beam_size=1, language="en", condition_on_previous_text=False)
 
         segments_list = list(segments)
         text = " ".join([segment.text for segment in segments_list]).strip()
