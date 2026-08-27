@@ -17,9 +17,11 @@ This task implements a three-layer intelligent audio filter on the Python backen
     question is captured before triggering a response.
 
   LAYER 2 — Busy Guard (Streaming Lock)
-    If the LLM is currently streaming a response (IS_STREAMING = True), all
-    new incoming audio transcripts are silently dropped. The user should finish
-    reading the current answer before asking the next question.
+    Instead of dropping audio while the LLM is streaming, the system should
+    still assemble thoughts (Layer 1) and check intent (Layer 3). If a valid
+    new question is detected while the LLM is currently streaming (IS_STREAMING = True),
+    it should be placed in a pending queue. Once the current stream finishes,
+    the pending question is automatically sent to the LLM.
 
   LAYER 3 — Heuristic Intent Filter
     After silence is detected and the full thought is assembled, run a lightweight
@@ -54,9 +56,9 @@ CONSTRAINTS & RULES
 - Add log lines for debugging:
     - When a transcript is dropped by the length filter: log "[FILTER] Dropped (too short): '<text>'"
     - When a transcript is dropped as noise/filler: log "[FILTER] Dropped (filler): '<text>'"
-    - When a transcript is dropped because streaming is active: log "[FILTER] Dropped (busy): '<text>'"
     - When a transcript is assembled after silence: log "[VAD] Assembled: '<full text>'"
-    - When a transcript passes all filters: log "[INTENT] Accepted: '<text>'"
+    - When a transcript passes filters but LLM is busy: log "[BUSY] Queued: '<text>'"
+    - When a transcript passes filters and is sent: log "[INTENT] Accepted: '<text>'"
 
 ═══════════════════════════════════════════════════════════════
 CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
@@ -197,10 +199,11 @@ DELIVERABLES
       from smart_filter import SilenceBuffer, passes_filter
       ```
 
-   b. Add a per-connection IS_STREAMING flag (asyncio.Event) inside the
-      `ws_endpoint` function, just before the main while loop:
+   b. Add a per-connection IS_STREAMING flag (asyncio.Event) and a pending queue
+      inside the `ws_endpoint` function, just before the main while loop:
       ```python
       is_streaming = asyncio.Event()  # Set when LLM is actively streaming
+      pending_questions = asyncio.Queue()
       silence_buffer = SilenceBuffer()
       ```
 
@@ -209,17 +212,12 @@ DELIVERABLES
 
       ```python
       if isinstance(chunk, dict) and chunk.get("type") == "chat":
-          # PTT / Remote Helper chat bypass — skip ALL filters
+          # PTT / Remote Helper chat bypass — skip filters
           transcript = chunk.get("text", "")
       else:
           # Audio chunk — transcribe first
           raw_transcript = await asyncio.to_thread(transcriber.transcribe, chunk)
           if not raw_transcript:
-              continue
-
-          # LAYER 2: Busy Guard — drop if LLM is currently streaming
-          if is_streaming.is_set():
-              print(f"[FILTER] Dropped (busy): '{raw_transcript}'", file=sys.stderr)
               continue
 
           # LAYER 1: Silence Buffer — accumulate until silence detected
@@ -239,6 +237,12 @@ DELIVERABLES
 
       if not transcript:
           continue
+      
+      # LAYER 2: Busy Guard
+      if is_streaming.is_set():
+          print(f"[BUSY] Queued: '{transcript}'", file=sys.stderr)
+          pending_questions.put_nowait(transcript)
+          continue
       ```
 
    d. Mark the streaming flag around the LLM call:
@@ -256,6 +260,11 @@ DELIVERABLES
               out_q.put_nowait({"type": "error", "message": f"LLM Error: {str(e)}"})
       finally:
           is_streaming.clear()
+          # Process any queued questions now that streaming is done
+          if not pending_questions.empty():
+              next_q = pending_questions.get_nowait()
+              # Put it back in the main queue to be processed as a "chat" bypass
+              ws_queue.put_nowait({"type": "chat", "text": next_q})
       ```
 
 4. FILE: tests/test_smart_filter.py (CREATE)
