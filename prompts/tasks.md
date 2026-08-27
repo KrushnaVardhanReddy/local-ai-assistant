@@ -104,3 +104,15 @@
 | P8-T3 | `web/src/routes/api/billing/` | Stripe billing integration | ✅ | — |
 | P8-T4 | `backend/auth.py`, `keys.py` | FastAPI JWT middleware + encrypted key storage | ✅ | #18 |
 | P8-T5 | `frontend/src/lib/auth.ts` | Tauri app auth flow — OS keychain | ✅ | #20 |
+
+---
+
+## Phase 9 — Smart Audio Intelligence 🧠🎙️
+
+> Eliminates wasted LLM calls by filtering noise, fillers, and ambient audio.
+> Prevents interruptions while the user is reading a streamed response.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P9-T1 | `backend/smart_filter.py`, `backend/app.py`, `backend/config.py` | Smart Audio Filter — VAD silence buffer + busy guard + intent heuristic | ⬜ | — |
+
