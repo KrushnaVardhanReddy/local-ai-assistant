@@ -206,6 +206,36 @@ pub fn run() {
                 }
             }).expect("failed to register Ctrl+Shift+S shortcut");
 
+            app.global_shortcut().on_shortcut("Ctrl+Shift+P", |app, _shortcut, event| {
+                match event.state() {
+                    tauri_plugin_global_shortcut::ShortcutState::Pressed => {
+                        let _ = app.emit("ptt-start", ());
+                    }
+                    tauri_plugin_global_shortcut::ShortcutState::Released => {
+                        let _ = app.emit("ptt-stop", ());
+                    }
+                    _ => {}
+                }
+            }).expect("failed to register Ctrl+Shift+P shortcut");
+
+            app.global_shortcut().on_shortcut("Ctrl+Shift+Down", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("scroll-down", ());
+                }
+            }).expect("failed to register Ctrl+Shift+Down shortcut");
+
+            app.global_shortcut().on_shortcut("Ctrl+Shift+Up", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("scroll-up", ());
+                }
+            }).expect("failed to register Ctrl+Shift+Up shortcut");
+
+            app.global_shortcut().on_shortcut("Ctrl+Shift+X", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("panic-clear", ());
+                }
+            }).expect("failed to register Ctrl+Shift+X shortcut");
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

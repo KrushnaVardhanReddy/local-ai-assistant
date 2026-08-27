@@ -1,6 +1,8 @@
 import { authState, supabase } from '$lib/auth.svelte';
 import { invoke } from '@tauri-apps/api/core';
 
+import { listen } from '@tauri-apps/api/event';
+
 export const wsState = $state({
   transcript: "",
   response: "",
@@ -9,10 +11,33 @@ export const wsState = $state({
   isAnalyzingScreen: false,
   isConnected: false,
   error: null as string | null,
-  ragSources: [] as string[]
+  ragSources: [] as string[],
+  isPTTHeld: false,
+  pttMode: false
 });
 
 let ws: WebSocket | null = null;
+let listenersInitialized = false;
+
+function initListeners() {
+  listen("ptt-start", () => {
+    wsState.isPTTHeld = true;
+    fetch('http://127.0.0.1:8000/ptt/start', { method: 'POST' }).catch(console.error);
+  });
+
+  listen("ptt-stop", () => {
+    wsState.isPTTHeld = false;
+    fetch('http://127.0.0.1:8000/ptt/stop', { method: 'POST' }).catch(console.error);
+  });
+
+  listen("panic-clear", () => {
+    wsState.transcript = "";
+    wsState.response = "";
+    wsState.isThinking = false;
+    wsState.ragSources = [];
+    fetch('http://127.0.0.1:8000/history/clear', { method: 'POST' }).catch(console.error);
+  });
+}
 let retryDelay = 500;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let intentionalClose = false;
@@ -47,6 +72,11 @@ export function connect(url?: string): void {
   lastUrl = targetUrl;
   intentionalClose = false;
   wsState.error = null;
+
+  if (!listenersInitialized) {
+    initListeners();
+    listenersInitialized = true;
+  }
 
   try {
     ws = new WebSocket(targetUrl);

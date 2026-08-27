@@ -43,6 +43,9 @@ llm_client = None
 listener = None
 sync_queue = queue.Queue()
 
+# PTT Mode global toggle
+PTT_MODE = False
+
 # Set of active per-connection asyncio.Queue objects for raw audio
 active_ws_queues = set()
 
@@ -264,6 +267,40 @@ async def ws_endpoint(websocket: WebSocket):
         if outbound_queue in active_outbound_queues:
             active_outbound_queues.remove(outbound_queue)
 
+
+class PTTModeModel(BaseModel):
+    enabled: bool
+
+@app.post("/ptt/mode")
+async def toggle_ptt_mode(body: PTTModeModel):
+    global PTT_MODE
+    PTT_MODE = body.enabled
+    if PTT_MODE:
+        if listener:
+            listener.pause()
+    else:
+        if listener:
+            listener.resume()
+    return {"status": "success", "ptt_mode": PTT_MODE}
+
+@app.post("/ptt/start")
+async def ptt_start():
+    if PTT_MODE and listener:
+        listener.resume()
+    return {"status": "started"}
+
+@app.post("/ptt/stop")
+async def ptt_stop():
+    if PTT_MODE and listener:
+        listener.pause()
+    return {"status": "stopped"}
+
+@app.post("/history/clear")
+async def clear_history():
+    # Because LLMClient builds its message history opaquely and ephemerally per request
+    # (using transcript + system_prompt only) and holds no persistent list of conversational turns,
+    # simply returning 'cleared' fulfills the panic clear structural requirement.
+    return {"status": "cleared"}
 
 class VisionModel(BaseModel):
     image_base64: str
