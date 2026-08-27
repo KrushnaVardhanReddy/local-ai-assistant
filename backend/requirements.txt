@@ -1,0 +1,24 @@
+# Audio capture
+sounddevice>=0.4.6
+numpy>=1.24.0
+
+# Speech-to-Text (brings CTranslate2 + CUDA support internally)
+faster-whisper>=1.0.0
+
+# LLM client — async HTTP for OpenAI-compatible /v1/chat/completions
+aiohttp>=3.9.0
+
+# API server + WebSocket
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+websockets>=12.0
+
+# Auth (SaaS mode — safe to install even in local mode)
+PyJWT>=2.8.0
+httpx>=0.27.0
+
+# Encryption for BYOK key storage
+cryptography>=42.0.0
+
+# Utilities
+python-dotenv>=1.0.0
