@@ -90,6 +90,7 @@
 | P7-T2 | `frontend/src/lib/Settings.svelte` | Settings panel: model selector, mic selector | ⬜ | — |
 | P7-T3 | `scripts/build.sh` | Validate PyInstaller + Tauri bundles | ⬜ | — |
 | P7-T4 | `README.md` | Final pass — screenshots, install instructions | ⬜ | — |
+| P7-T5 | `scripts/start_remote.sh`, `backend/app.py` | Remote Helper Mode — serve UI statically + Cloudflare tunnel | ⬜ | — |
 
 ---
 
