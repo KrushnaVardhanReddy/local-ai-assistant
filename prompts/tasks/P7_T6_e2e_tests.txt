@@ -1,0 +1,165 @@
+TASK: P7-T6 — E2E Test Suite (Backend API + Frontend in Isolation)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a two-layer automated test suite to validate the complete
+Local AI Assistant pipeline without requiring a running Tauri binary:
+  Layer 1: pytest-based async tests for all FastAPI backend endpoints.
+  Layer 2: Playwright tests for the Svelte frontend running in browser mode (no Tauri).
+
+The Tauri binary (stealth, hotkeys, keychain) is validated manually.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- No mocks for the core pipeline. Use a real (but lightweight) test fixture.
+- Tests must be runnable with a single command each:
+    Layer 1: `pytest tests/`
+    Layer 2: `npx playwright test`
+- All tests must be idempotent — safe to re-run without manual cleanup.
+- Do NOT test Tauri IPC, OS keychain, or stealth hooks — those are out of scope.
+- Use `TAURI_ENV_DEBUG_VISIBLE=true` note in README — Playwright needs the window visible.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `backend/app.py`         — FastAPI app: `/health`, `/ws`, `/rag/upload`, `/rag/search`, `/rag/documents`
+- `backend/rag/ingestor.py` — POST /rag/upload, GET /rag/documents, DELETE /rag/document/{filename}
+- `backend/rag/retriever.py` — GET /rag/search?q=...
+- `frontend/src/lib/ws.svelte.ts`  — WebSocket store (connect/disconnect/state)
+- `frontend/src/lib/Assistant.svelte` — Main floating UI overlay
+- `frontend/src/lib/KnowledgeBase.svelte` — File upload drag-and-drop UI
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+──────────────────────────────────────────────────────────────
+LAYER 1: Backend API Tests (pytest)
+──────────────────────────────────────────────────────────────
+
+1. FILE: tests/__init__.py (CREATE — empty)
+
+2. FILE: tests/conftest.py (CREATE)
+   a. Define an `app_client` pytest fixture using `httpx.AsyncClient` pointed at
+      the FastAPI app (import `app` from `backend.app`).
+   b. Define a `mock_ws_server` fixture using `websockets.serve()` on an unused
+      local port. This lets frontend tests connect to a real WS without a running backend.
+   c. Use `pytest_asyncio` with `asyncio_mode = "auto"` in `pyproject.toml`.
+
+3. FILE: tests/test_health.py (CREATE)
+   - `test_health_ok`: GET /health → assert status 200, body contains `"status": "ok"`.
+
+4. FILE: tests/test_rag.py (CREATE)
+   - `test_upload_txt`: POST /rag/upload with a small in-memory TXT file → assert
+     `{"ok": true, "chunks": <int > 0}`.
+   - `test_list_documents`: GET /rag/documents → assert the uploaded filename appears.
+   - `test_search`: GET /rag/search?q=<word from uploaded txt> → assert `"context"` is
+     non-empty.
+   - `test_delete_document`: DELETE /rag/document/<filename> → assert ok.
+   - `test_search_empty_after_delete`: GET /rag/search?q=<same word> → assert
+     `"empty": true`.
+
+5. FILE: tests/test_websocket.py (CREATE)
+   - `test_ws_health_frame`: Connect to `/ws` via `websockets.connect()`. Send no audio.
+     Assert we receive a `{"type": "ping"}` keep-alive within 6 seconds (the 5s timeout
+     sends a ping on silence).
+
+6. FILE: pyproject.toml (MODIFY — add pytest config section):
+   ```toml
+   [tool.pytest.ini_options]
+   asyncio_mode = "auto"
+   testpaths = ["tests"]
+   ```
+
+──────────────────────────────────────────────────────────────
+LAYER 2: Frontend Playwright Tests
+──────────────────────────────────────────────────────────────
+
+7. FILE: playwright.config.ts (CREATE at repo root)
+   - `baseURL`: `http://localhost:5173` (Vite dev server).
+   - `webServer`: auto-start `npm run dev` in `frontend/` before tests.
+   - `use.headless`: false when `TAURI_ENV_DEBUG_VISIBLE=true`, otherwise true.
+   - Single chromium project.
+
+8. FILE: e2e/assistant.spec.ts (CREATE)
+   - `test('assistant overlay renders')`: Navigate to `/`, assert an element with
+     `data-testid="assistant-panel"` is visible.
+   - `test('mic status dot renders')`: Assert `data-testid="mic-status"` is present.
+   - `test('settings gear is clickable')`: Click `data-testid="settings-btn"`,
+     assert settings modal appears with `data-testid="backend-url-input"`.
+   - `test('dev mode toggle exists')`: Assert `data-testid="dev-mode-toggle"` is
+     present inside the settings modal.
+
+9. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+   - Add `data-testid="assistant-panel"` to the root element.
+   - Add `data-testid="mic-status"` to the mic status dot.
+
+10. FILE: frontend/src/lib/Settings.svelte (MODIFY)
+    - Add `data-testid="settings-btn"` to the settings icon/button.
+    - Add `data-testid="backend-url-input"` to the URL input.
+    - Add `data-testid="dev-mode-toggle"` to the Dev Mode checkbox.
+
+──────────────────────────────────────────────────────────────
+BUILD & DOCS
+──────────────────────────────────────────────────────────────
+
+11. FILE: backend/requirements.txt (MODIFY — add test deps under a comment):
+    ```
+    # Testing
+    pytest>=8.0
+    pytest-asyncio>=0.23
+    httpx>=0.27
+    websockets>=12.0
+    ```
+
+12. FILE: package.json (MODIFY — add in frontend or root):
+    ```json
+    "devDependencies": {
+      "@playwright/test": "^1.44.0"
+    }
+    ```
+
+13. FILE: scripts/run_e2e.sh (CREATE)
+    ```bash
+    #!/bin/bash
+    set -e
+    echo "=== Layer 1: Backend API Tests ==="
+    cd backend && python -m pytest ../tests/ -v
+    echo "=== Layer 2: Frontend Playwright Tests ==="
+    cd ../frontend && npx playwright test
+    echo "=== All E2E tests passed! ==="
+    ```
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- For `test_upload_txt`, use `httpx.AsyncClient` with `files={"file": ("test.txt", b"Hello world RAG test content", "text/plain")}`.
+- The conftest `app_client` fixture should use `asgi_transport=httpx.ASGITransport(app=app)` so no real server process is needed.
+- For Playwright, `data-testid` attributes are the most stable selectors — avoid CSS class selectors since Svelte scopes them.
+- The `webServer.reuseExistingServer` option in Playwright config prevents re-starting the dev server if already running.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- tests/__init__.py
+- tests/conftest.py
+- tests/test_health.py
+- tests/test_rag.py
+- tests/test_websocket.py
+- e2e/assistant.spec.ts
+- playwright.config.ts
+- scripts/run_e2e.sh
+
+FILES TO MODIFY:
+- pyproject.toml
+- backend/requirements.txt
+- frontend/package.json
+- frontend/src/lib/Assistant.svelte  (add data-testid attrs)
+- frontend/src/lib/Settings.svelte   (add data-testid attrs)
+
+Commit: "jules: P7-T6 add E2E test suite — pytest backend API + Playwright frontend"
+Target branch: main
