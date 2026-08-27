@@ -75,9 +75,9 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn toggle_stealth(window: tauri::WebviewWindow, enabled: bool) {
-    STEALTH_ENABLED.store(enabled, Ordering::SeqCst);
-    set_screen_share_safe(&window, enabled);
+fn toggle_stealth(window: tauri::WebviewWindow, enable: bool) {
+    STEALTH_ENABLED.store(enable, Ordering::SeqCst);
+    set_screen_share_safe(&window, enable);
 }
 
 fn use_in_memory_keychain() -> bool {

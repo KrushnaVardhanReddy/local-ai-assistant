@@ -28,7 +28,20 @@ export function connect(url?: string): void {
     return;
   }
 
-  const targetUrl = url ?? import.meta.env.VITE_WS_URL ?? "ws://127.0.0.1:8765/ws";
+
+  let storedUrl = null;
+  if (typeof localStorage !== 'undefined') {
+    storedUrl = localStorage.getItem('backend_url');
+  }
+  let targetUrl = url ?? storedUrl ?? import.meta.env.VITE_WS_URL ?? "ws://127.0.0.1:8765/ws";
+  if (targetUrl.startsWith('http://')) {
+    targetUrl = targetUrl.replace('http://', 'ws://');
+  } else if (targetUrl.startsWith('https://')) {
+    targetUrl = targetUrl.replace('https://', 'wss://');
+  } else if (!targetUrl.includes('://')) {
+    targetUrl = 'ws://' + targetUrl;
+  }
+
   lastUrl = targetUrl;
   intentionalClose = false;
   wsState.error = null;
@@ -135,4 +148,9 @@ function scheduleReconnect(): void {
 
   // Exponential backoff, max 5000ms
   retryDelay = Math.min(retryDelay * 2, 5000);
+}
+
+export function reconnect(url: string): void {
+  disconnect();
+  connect(url);
 }
