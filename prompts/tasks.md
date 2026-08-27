@@ -32,7 +32,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P2-T1 | `backend/audio_listener.py` | Mic capture with sounddevice, chunked streaming | ✅ | — |
-| P2-T2 | `backend/transcriber.py` | faster-whisper CUDA integration, returns text stream | ⏳ | — |
+| P2-T2 | `backend/transcriber.py` | faster-whisper CUDA integration, returns text stream | ✅ | — |
 | P2-T3 | `backend/requirements.txt`, `backend/README.md` | All Python deps pinned | ✅ | — |
 
 ---
@@ -52,9 +52,9 @@
 |---|---|---|---|---|
 | P4-T1 | `frontend/` | Scaffold Svelte 5 + Tauri 2.0 project | ✅ | — |
 | P4-T2 | `frontend/src/lib/ws.ts` | Reactive WebSocket store using Svelte 5 runes | ✅ | — |
-| P4-T3 | `frontend/src/lib/Assistant.svelte`, `app.css` | Glassmorphism floating overlay, streams tokens | ⏳ | — |
+| P4-T3 | `frontend/src/lib/Assistant.svelte`, `app.css` | Glassmorphism floating overlay, streams tokens | ✅ | — |
 | P4-T4 | `frontend/src/App.svelte`, `main.ts` | Root component, mounts assistant, mic status dot | ⬜ | — |
-| P4-T5 | `src-tauri/src/main.rs` | **Stealth Mode** — screen share safe, dock hidden, global hotkey | ⏳ | — |
+| P4-T5 | `src-tauri/src/main.rs` | **Stealth Mode** — screen share safe, dock hidden, global hotkey | ✅ | — |
 
 ---
 
