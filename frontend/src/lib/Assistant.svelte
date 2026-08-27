@@ -245,16 +245,18 @@
 
 <style>
   .glass-panel {
-      background: rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(18, 18, 18, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   }
   .glass-pill {
-      background: rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(32px);
-      -webkit-backdrop-filter: blur(32px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(18, 18, 18, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
   .transcript-line {
       border-left: 1px solid rgba(255, 255, 255, 0.1);
