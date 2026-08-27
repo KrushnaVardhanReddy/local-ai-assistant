@@ -192,6 +192,8 @@ async def ws_endpoint(websocket: WebSocket):
             return
 
     # Create a per-connection asyncio.Queue for audio chunks
+    # Prevent HMR ghost clients from dual-processing audio by clearing old queues
+    active_ws_queues.clear()
     ws_queue = asyncio.Queue()
     active_ws_queues.add(ws_queue)
 
