@@ -41,7 +41,10 @@ We are orchestrating development through **Jules**.
 ## ⏭️ Next Steps to Resume
 
 1. **Review and Merge Wave 3:** 
-   When you return, check GitHub for PRs related to `P2-T2`, `P4-T3`, and `P4-T5`. Validate and merge them.
+   When you return, check GitHub for PRs related to `P2-T2`, `P4-T3`, and `P4-T5`. You can easily merge them using the helper script:
+   ```bash
+   bash scripts/merge_prs.sh <start_pr_number> <end_pr_number>
+   ```
 2. **Trigger Wave 4 (The Glue):**
    Once Wave 3 is merged, run:
    ```bash
