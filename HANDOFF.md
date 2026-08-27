@@ -34,27 +34,30 @@ We are orchestrating development through **Jules**.
 - The Svelte 5 reactive WebSocket store (`ws.svelte.ts`) is fully functional.
 
 **⏳ What is IN PROGRESS (Waiting on Jules):**
-- We just triggered **Wave 7** via `jules_submit.py`. We are waiting for:
-  1. `P5-T3`: `app.py` (Inject RAG context)
-  2. `P8-T4`: `auth.py`, `keys.py` (FastAPI JWT middleware)
+- We just triggered **Wave 8** via `jules_submit.py`. We are waiting for:
+  1. `P5-T4`: `KnowledgeBase.svelte` (drag-and-drop file upload UI)
+  2. `P6-T1`: `main.rs`, `Assistant.svelte` (Vision capture hotkey)
+  3. `P8-T5`: `frontend/src/lib/auth.ts` (Tauri app auth + OS keychain)
 
 ---
 
 ## ⏭️ Next Steps to Resume
 
-1. **Review and Merge Wave 7:** 
-   When you return, check GitHub for PRs related to `P5-T3` and `P8-T4`. You can easily merge them using the helper script:
+1. **Review and Merge Wave 8:** 
+   When you return, check GitHub for PRs related to `P5-T4`, `P6-T1`, and `P8-T5`. Merge them using:
    ```bash
    bash scripts/merge_prs.sh <start_pr_number> <end_pr_number>
    ```
 2. **Test the Pipeline End-to-End!**
    Once Wave 4 is merged, the core pipeline is completely connected. You can start the FastAPI server and test the audio transcription and UI streaming!
-3. **Trigger Wave 8 (Polish + Final SaaS):**
+3. **Trigger Wave 9 (Final Polish):**
    After testing, run:
    ```bash
-   python3 scripts/jules_submit.py --task P5-T4
-   python3 scripts/jules_submit.py --task P6-T1
-   python3 scripts/jules_submit.py --task P8-T5
+   python3 scripts/jules_submit.py --task P7-T1
+   python3 scripts/jules_submit.py --task P7-T2
+   python3 scripts/jules_submit.py --task P7-T3
+   python3 scripts/jules_submit.py --task P7-T4
+   python3 scripts/jules_submit.py --task P7-T6
    ```
 
 ---
