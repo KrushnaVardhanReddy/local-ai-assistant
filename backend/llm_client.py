@@ -76,13 +76,28 @@ class LLMClient:
         except Exception:
             return False
 
+    async def chat_vision(self, image_base64: str, prompt: str) -> AsyncGenerator[str, None]:
+        if not image_base64.startswith("data:image/"):
+            image_base64 = f"data:image/jpeg;base64,{image_base64}"
+
+        messages = [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": image_base64}}
+            ]
+        }]
+
+        async for token in self.stream(messages):
+            yield token
+
     @classmethod
-    async def from_config(cls) -> "LLMClient":
+    async def from_config(cls, is_vision: bool = False) -> "LLMClient":
         llm_config = config.resolved_llm()
         base_url = llm_config.get("base_url", "")
         api_key = llm_config.get("api_key", "")
         provider = llm_config.get("provider", "")
-        model = config.LLM_MODEL
+        model = config.VISION_MODEL if is_vision else config.LLM_MODEL
 
         if provider == "auto":
             candidates = {
