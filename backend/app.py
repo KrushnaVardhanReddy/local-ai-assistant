@@ -249,24 +249,52 @@ async def ws_endpoint(websocket: WebSocket):
                 if isinstance(chunk, dict) and chunk.get("type") == "chat":
                     transcript = chunk.get("text", "")
                 else:
-                    # Transcription MUST run in a background thread — never block the async event loop
-                    raw_transcript = await asyncio.to_thread(transcriber.transcribe, chunk)
-                    if raw_transcript:
-                        # LAYER 1: Silence Buffer — accumulate until silence detected
-                        silence_buffer.add(raw_transcript)
+                    import numpy as np
+                    import time
+                    if not hasattr(websocket, "audio_buffer"):
+                        websocket.audio_buffer = b""
+                        websocket.last_active_time = time.monotonic()
+                        websocket.last_live_transcript = ""
 
-                    if not silence_buffer.is_silent():
-                        continue  # Keep accumulating
+                    audio_np = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32768.0
+                    rms = np.sqrt(np.mean(audio_np**2))
 
-                    # Silence detected — flush the assembled thought
-                    assembled = silence_buffer.flush()
-
-                    # LAYER 3: Heuristic Intent Filter
-                    should_send, reason = passes_filter(assembled)
-                    if not should_send:
+                    if rms >= 0.01:
+                        websocket.audio_buffer += chunk
+                        websocket.last_active_time = time.monotonic()
+                        
+                        # Generate live transcript for the growing buffer (max 30s to prevent overflow)
+                        if len(websocket.audio_buffer) > 16000 * 2 * 30: # 30 seconds max
+                            websocket.audio_buffer = websocket.audio_buffer[-16000 * 2 * 30:]
+                            
+                        if len(websocket.audio_buffer) > 0:
+                            # We can transcribe the growing buffer for live ears
+                            live_transcript = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
+                            if live_transcript and live_transcript != websocket.last_live_transcript:
+                                websocket.last_live_transcript = live_transcript
+                                for out_q in list(active_outbound_queues):
+                                    out_q.put_nowait({"type": "transcript", "text": live_transcript})
                         continue
 
-                    transcript = assembled
+                    # If silent and we have audio, check timeout
+                    if websocket.audio_buffer and (time.monotonic() - websocket.last_active_time) >= config.SILENCE_THRESHOLD_SECONDS:
+                        assembled = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
+                        websocket.audio_buffer = b""
+                        websocket.last_active_time = time.monotonic()
+                        websocket.last_live_transcript = ""
+                        
+                        print(f"[VAD] Assembled: '{assembled}'", file=sys.stderr)
+                        
+                        if not assembled:
+                            continue
+                            
+                        should_send, reason = passes_filter(assembled)
+                        if not should_send:
+                            continue
+
+                        transcript = assembled
+                    else:
+                        continue
 
                 if not transcript:
                     continue
