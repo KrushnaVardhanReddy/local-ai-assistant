@@ -35,6 +35,10 @@ if [ "$BUILD_BACKEND" == "true" ]; then
     echo "🐍 Building Python backend..."
     cd "$REPO_ROOT/backend"
 
+    if [ -d ".venv" ]; then
+        source .venv/bin/activate
+    fi
+
     if ! command -v pyinstaller &>/dev/null; then
         echo "⚠️  pyinstaller not found. Installing..."
         pip install pyinstaller
