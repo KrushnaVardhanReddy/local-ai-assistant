@@ -3,6 +3,9 @@
   import { reconnect } from "$lib/ws.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
+  import * as pdfjsLib from 'pdfjs-dist';
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
   let email = $state("");
   let password = $state("");
@@ -21,6 +24,11 @@
   ];
   let selectedPrompt = $state(systemPrompts[0].value);
 
+  // Resume state
+  let resumeRawText = $state("");
+  let resumeStatus = $state("");
+  let resumeFilename = $state("");
+
   onMount(async () => {
     try {
       const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
@@ -32,7 +40,72 @@
     } catch (e) {
       console.error("Failed to load system prompt", e);
     }
+
+    try {
+      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const resContext = await fetch(`${apiUrl}/api/resume/context`);
+      if (resContext.ok) {
+        const data = await resContext.json();
+        if (data.context) {
+          resumeStatus = "✅ Profile active (from previous session). Note: stored server-side in memory and resets on backend restart.";
+        }
+      }
+    } catch(e) {
+      console.error("Failed to check resume context", e);
+    }
   });
+
+  async function handleFileSelect(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (!target.files || target.files.length === 0) return;
+    const file = target.files[0];
+    resumeFilename = file.name;
+    resumeStatus = `📄 ${file.name} — Ready to extract`;
+    resumeRawText = "";
+
+    try {
+      if (file.name.toLowerCase().endsWith(".txt")) {
+        const text = await file.text();
+        resumeRawText = text;
+      } else if (file.name.toLowerCase().endsWith(".pdf")) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        let text = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const strings = content.items.map((item: any) => item.str);
+          text += strings.join(" ") + " ";
+        }
+        resumeRawText = text;
+      }
+    } catch (error) {
+      console.error("Error reading file", error);
+      resumeStatus = "❌ Error reading file content.";
+      resumeRawText = "";
+    }
+  }
+
+  async function extractResume() {
+    if (!resumeRawText) return;
+    resumeStatus = "⏳ Extracting candidate profile...";
+    try {
+      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const res = await fetch(`${apiUrl}/api/resume/extract`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: resumeRawText })
+      });
+      if (res.ok) {
+        resumeStatus = "✅ Profile extracted and active";
+      } else {
+        resumeStatus = "❌ Extraction failed — check backend";
+      }
+    } catch (e) {
+      console.error("Resume extraction failed", e);
+      resumeStatus = "❌ Extraction failed — network error";
+    }
+  }
 
   function toggleSettings() {
     showSettings = !showSettings;
@@ -117,6 +190,22 @@
     </div>
 
     <button class="btn-primary save-btn" onclick={handleSaveSettings} data-testid="settings-save-btn">Save & Reconnect</button>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="resume-section">
+    <div class="section-label">Resume Context</div>
+    <div class="input-group">
+      <label for="resumeUpload">Upload Resume (PDF or TXT)</label>
+      <input type="file" id="resumeUpload" accept=".pdf,.txt" onchange={handleFileSelect} />
+    </div>
+    {#if resumeStatus}
+      <div class="status-indicator">{resumeStatus}</div>
+    {/if}
+    <button class="btn-primary extract-btn" disabled={!resumeRawText} onclick={extractResume}>
+      Extract Profile
+    </button>
   </div>
 
   <hr class="divider" />
@@ -375,5 +464,31 @@
     padding: 0.5rem;
     border-radius: 4px;
     font-size: 0.85rem;
+  }
+
+  .resume-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #666;
+  }
+
+  .status-indicator {
+    font-size: 0.85rem;
+    color: #ddd;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #444;
+  }
+
+  .extract-btn {
+    margin-top: 0.5rem;
   }
 </style>
