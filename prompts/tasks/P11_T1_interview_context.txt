@@ -1,114 +1,123 @@
-TASK: P11-T1 — Interview Context Onboarding (Resume + Topics)
+TASK: P11-T1 — Resume Upload & LLM Context Extraction
 
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
-Add a self-contained "Interview Context" section to the existing Settings panel
-(`frontend/src/lib/Settings.svelte`). This allows the user to paste their resume
-summary, list target interview topics, and optionally specify the company/role.
-This context is stored in localStorage and appended to the active System Prompt
-before every LLM request, giving the AI a personalized understanding of the user
-rather than answering generically.
+Allow the user to upload their resume (PDF or TXT) inside the Settings panel.
+The backend will extract raw text from the resume, pass it to the LLM with a
+specific extraction prompt, and store the resulting concise candidate summary
+in memory. This summary is then automatically appended to every system prompt,
+personalizing all LLM answers without the user manually typing anything.
 
 ═══════════════════════════════════════════════════════════════
 BACKGROUND & MOTIVATION
 ═══════════════════════════════════════════════════════════════
-Currently, the app sends only the raw transcript to the LLM with a generic persona
-prompt (e.g., "Stealth Interview (Concise)"). Tools like Parakeet AI improve on
-this by prompting the user for context before the interview starts:
-  - What is your background/resume?
-  - What topics will the interview cover?
-  - What company and role are you applying for?
+Currently the AI answers every question generically, like a textbook.
+Parakeet AI and similar tools ask for the user's resume upfront so the AI
+knows: "This candidate has 3 years of React experience and is applying for
+a Senior role at Stripe" — and can tailor its hints accordingly.
 
-This context is silently prepended to every LLM system prompt so that answers are
-tailored to the candidate's exact experience level and stack, rather than giving
-a textbook explanation any stranger would receive.
-
-═══════════════════════════════════════════════════════════════
-FRONTEND: Settings.svelte CHANGES
-═══════════════════════════════════════════════════════════════
-After the existing "Persona / System Prompt" dropdown and before the Account section,
-add a new collapsible section with the heading "Interview Context".
-
-It must contain these three fields:
-
-1. **Resume / Background** (textarea, 4 rows)
-   - label: "Your Background (paste resume summary or key bullet points)"
-   - placeholder: "e.g. 3 years React & Node.js, strong in system design, built 2 SaaS products..."
-   - bound to $state variable: `resumeContext`
-   - localStorage key: `interview_resume`
-
-2. **Target Topics** (text input, comma-separated)
-   - label: "Interview Topics (comma-separated)"
-   - placeholder: "e.g. React, TypeScript, System Design, REST APIs"
-   - bound to $state variable: `targetTopics`
-   - localStorage key: `interview_topics`
-
-3. **Company & Role** (text input, optional)
-   - label: "Company & Role (optional)"
-   - placeholder: "e.g. Stripe — Senior Frontend Engineer"
-   - bound to $state variable: `companyRole`
-   - localStorage key: `interview_company`
-
-Load all three fields from localStorage in `onMount`.
+Asking the user to manually summarize their resume is friction. Instead, let
+the LLM read the resume and extract what it needs in a single one-time pass.
+The extraction result is a compact ~150-word candidate profile stored in memory
+and prepended to every subsequent system prompt automatically.
 
 ═══════════════════════════════════════════════════════════════
-PROMPT ASSEMBLY LOGIC
+BACKEND CHANGES: app.py
 ═══════════════════════════════════════════════════════════════
-Modify the `handleSaveSettings` function to assemble the final system prompt
-by combining the selected persona + the user's context before POSTing to the backend.
 
-Use this assembly template (build the suffix only if the fields are non-empty):
+1. Add a new global variable at the top of app.py:
+   ```python
+   candidate_context: str = ""  # Extracted from uploaded resume
+   ```
 
-```
-function buildSystemPrompt(basePrompt, resumeContext, targetTopics, companyRole) {
-  let suffix = "";
-  if (resumeContext.trim()) {
-    suffix += `\n\nAbout the candidate: ${resumeContext.trim()}`;
-  }
-  if (targetTopics.trim()) {
-    suffix += `\n\nInterview focus topics: ${targetTopics.trim()}`;
-  }
-  if (companyRole.trim()) {
-    suffix += `\n\nTarget company and role: ${companyRole.trim()}`;
-  }
-  return basePrompt + suffix;
-}
-```
+2. Add a new Pydantic model:
+   ```python
+   class ResumeModel(BaseModel):
+       text: str  # Raw text content of the uploaded resume
+   ```
 
-POST the assembled prompt (not just `selectedPrompt`) to `/api/system_prompt`.
+3. Add a new POST endpoint `/api/resume/extract`:
+   - Accept `ResumeModel` (the raw text of the resume, extracted by the frontend)
+   - Call the LLM (using the existing `llm_client`) with this extraction prompt:
+     ```
+     system: "You are a resume parser. Extract the candidate's key technical skills,
+              years of experience, notable projects, and target role from the resume text.
+              Be concise. Output a single paragraph of max 150 words. No bullet points."
+     user: <the resume text>
+     ```
+   - Use a NON-STREAMING call (collect the full response, do not stream)
+   - Store the result in the global `candidate_context` variable
+   - Return `{"status": "success", "summary": candidate_context}`
 
-═══════════════════════════════════════════════════════════════
-STYLING GUIDELINES
-═══════════════════════════════════════════════════════════════
-- Match the existing dark theme: background `#222`, border `1px solid #444`,
-  text `white`, label color `#aaa`, font-size `0.85rem`.
-- The textarea should have `resize: vertical` and `min-height: 80px`.
-- No external libraries. Pure CSS and Svelte only.
-- The section should have a subtle top divider (`<hr class="divider" />`) to
-  visually separate it from the Persona dropdown above it.
-- A small section title: `<p class="section-label">Interview Context</p>` styled
-  as muted all-caps text (font-size: 0.7rem, letter-spacing: 0.1em, color: #666).
+4. Add a GET endpoint `/api/resume/context`:
+   - Returns `{"context": candidate_context}`
 
-═══════════════════════════════════════════════════════════════
-BACKEND: NO CHANGES REQUIRED
-═══════════════════════════════════════════════════════════════
-The backend already has a working `/api/system_prompt` POST endpoint introduced
-in the previous session that accepts `{ "prompt": "..." }` and updates
-`config.SYSTEM_PROMPT` in memory. No backend changes are needed.
+5. Modify the existing LLM system prompt assembly (around line 360 in app.py)
+   to append `candidate_context` if it is non-empty:
+   ```python
+   system_content = config.SYSTEM_PROMPT
+   if candidate_context:
+       system_content += f"\n\nCandidate profile: {candidate_context}"
+   if combined_context:
+       system_content += f"\n\n{combined_context}"
+   ```
+   This ensures the candidate profile is always silently added to every query.
 
 ═══════════════════════════════════════════════════════════════
-CONSTRAINTS
+FRONTEND CHANGES: Settings.svelte
 ═══════════════════════════════════════════════════════════════
-- All context is stored ONLY in localStorage — it never leaves the machine.
-- The backend sends the final assembled prompt to the LLM, so the context is
-  only in the system message, not in the user message.
-- Do NOT introduce any new npm packages or external dependencies.
-- Do NOT modify `backend/app.py` or `backend/config.py`.
-- Do NOT modify `frontend/src/lib/Assistant.svelte`.
-- Only modify `frontend/src/lib/Settings.svelte`.
+
+Add a new "Resume Context" section below the existing Persona dropdown and
+above the Account section. Separated by `<hr class="divider" />`.
+
+Section contents:
+
+1. A small muted heading: "Resume Context"
+   (styled as section-label: font-size 0.7rem, uppercase, letter-spacing 0.1em, color #666)
+
+2. A file input button accepting `.pdf` and `.txt` files:
+   - Label: "Upload Resume (PDF or TXT)"
+   - On file selection, use the FileReader API:
+     - For `.txt`: read as text directly
+     - For `.pdf`: use the `pdfjs-dist` library to extract text page by page
+       (add `pdfjs-dist` as a new npm dependency)
+   - Store the extracted raw text in a `$state` variable: `resumeRawText`
+
+3. A status indicator below the button:
+   - Before upload: empty
+   - After file selected but before extraction: "📄 {filename} — Ready to extract"
+   - During extraction: "⏳ Extracting candidate profile..."
+   - After success: "✅ Profile extracted and active"
+   - On error: "❌ Extraction failed — check backend"
+
+4. An "Extract Profile" button:
+   - Disabled until `resumeRawText` is non-empty
+   - On click: POST `{ text: resumeRawText }` to `{apiUrl}/api/resume/extract`
+   - Update status label based on response
+
+5. In `onMount`, call GET `{apiUrl}/api/resume/context`. If context is non-empty,
+   show status as "✅ Profile active (from previous session)" using a note that
+   context is stored server-side in memory and will reset on backend restart.
+
+═══════════════════════════════════════════════════════════════
+IMPORTANT IMPLEMENTATION NOTES
+═══════════════════════════════════════════════════════════════
+- The LLM call for extraction must be a simple non-streaming HTTP POST to the
+  LLM provider using the existing `llm_client.stream()` pattern BUT collect
+  all tokens into a single string before returning. Use `async for token in client.stream(messages): result += token`
+- The `candidate_context` is IN MEMORY ONLY. It resets when the backend restarts.
+  This is intentional — privacy-first design, nothing persisted to disk.
+- For PDF parsing on the frontend, use `pdfjs-dist`. Install it:
+  `cd frontend && npm install pdfjs-dist`
+  Import with: `import * as pdfjsLib from 'pdfjs-dist';`
+  Set the worker: `pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;`
+- Keep all styling consistent with the existing dark theme in Settings.svelte:
+  background #222, border 1px solid #444, text white, labels #aaa.
 
 ═══════════════════════════════════════════════════════════════
 TARGET FILES
 ═══════════════════════════════════════════════════════════════
-- MODIFY: `frontend/src/lib/Settings.svelte`
+- MODIFY: `backend/app.py` (add global var, 2 endpoints, system prompt assembly)
+- MODIFY: `frontend/src/lib/Settings.svelte` (add Resume Context section)
+- RUN: `cd frontend && npm install pdfjs-dist` (add PDF parsing dependency)
