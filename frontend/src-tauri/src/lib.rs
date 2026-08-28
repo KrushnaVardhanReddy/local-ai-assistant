@@ -33,7 +33,7 @@ fn set_screen_share_safe(window: &tauri::WebviewWindow, enabled: bool) {
     use windows::Win32::UI::WindowsAndMessaging::{SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE, WDA_MONITOR, WDA_NONE};
 
     if let Ok(hwnd) = window.hwnd() {
-        let hwnd = HWND(hwnd.0);
+        let hwnd = HWND(hwnd.0 as isize);
         let affinity = if enabled {
             WDA_EXCLUDEFROMCAPTURE
         } else {
@@ -214,7 +214,6 @@ pub fn run() {
                     tauri_plugin_global_shortcut::ShortcutState::Released => {
                         let _ = app.emit("ptt-stop", ());
                     }
-                    _ => {}
                 }
             }).expect("failed to register Ctrl+Shift+P shortcut");
 
