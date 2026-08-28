@@ -3,6 +3,17 @@
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
+
+  async function startDrag(e: MouseEvent) {
+    // Only drag on left mouse button, skip if clicking a button/input
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button, input, select, textarea, a')) return;
+    try {
+      await getCurrentWindow().startDragging();
+    } catch (_) {}
+  }
 
   let responseEl: HTMLElement | undefined = $state();
   let contentEl: HTMLElement | undefined = $state();
@@ -107,7 +118,7 @@
 
 <div class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark" id="dashboard-overlay">
   <!-- Top Toolbar -->
-  <header class="toolbar glass-pill pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" data-tauri-drag-region>
+  <header class="toolbar glass-pill pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" onmousedown={startDrag} style="cursor: grab;">
     <!-- Brand / Primary Action -->
     <div class="flex items-center gap-4 pointer-events-none">
       <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">Local AI</span>
@@ -165,7 +176,7 @@
     <!-- Left Panel: Live Ears (Transcription) -->
     <aside class="live-ears-panel glass-panel pointer-events-auto w-1/3 rounded-[24px] flex flex-col overflow-hidden transition-transform duration-300 shadow-2xl">
       <!-- Panel Header -->
-      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20" data-tauri-drag-region>
+      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20" onmousedown={startDrag} style="cursor: grab;">
         <div class="flex items-center gap-2 pointer-events-none">
           <span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="hearing">hearing</span>
           <h2 class="font-label-caps text-label-caps text-on-surface-variant tracking-wider">Live Ears</h2>
@@ -195,7 +206,7 @@
       <div class="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none"></div>
       
       <!-- Panel Header -->
-      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 z-10" data-tauri-drag-region>
+      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 z-10" onmousedown={startDrag} style="cursor: grab;">
         <div class="flex items-center gap-2 pointer-events-none">
           <span class="material-symbols-outlined text-primary text-[20px]" data-icon="memory">memory</span>
           <h2 class="font-label-caps text-label-caps text-primary tracking-wider text-glow">The Brain</h2>
