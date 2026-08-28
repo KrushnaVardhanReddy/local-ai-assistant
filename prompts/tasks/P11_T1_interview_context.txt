@@ -1,0 +1,114 @@
+TASK: P11-T1 — Interview Context Onboarding (Resume + Topics)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a self-contained "Interview Context" section to the existing Settings panel
+(`frontend/src/lib/Settings.svelte`). This allows the user to paste their resume
+summary, list target interview topics, and optionally specify the company/role.
+This context is stored in localStorage and appended to the active System Prompt
+before every LLM request, giving the AI a personalized understanding of the user
+rather than answering generically.
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & MOTIVATION
+═══════════════════════════════════════════════════════════════
+Currently, the app sends only the raw transcript to the LLM with a generic persona
+prompt (e.g., "Stealth Interview (Concise)"). Tools like Parakeet AI improve on
+this by prompting the user for context before the interview starts:
+  - What is your background/resume?
+  - What topics will the interview cover?
+  - What company and role are you applying for?
+
+This context is silently prepended to every LLM system prompt so that answers are
+tailored to the candidate's exact experience level and stack, rather than giving
+a textbook explanation any stranger would receive.
+
+═══════════════════════════════════════════════════════════════
+FRONTEND: Settings.svelte CHANGES
+═══════════════════════════════════════════════════════════════
+After the existing "Persona / System Prompt" dropdown and before the Account section,
+add a new collapsible section with the heading "Interview Context".
+
+It must contain these three fields:
+
+1. **Resume / Background** (textarea, 4 rows)
+   - label: "Your Background (paste resume summary or key bullet points)"
+   - placeholder: "e.g. 3 years React & Node.js, strong in system design, built 2 SaaS products..."
+   - bound to $state variable: `resumeContext`
+   - localStorage key: `interview_resume`
+
+2. **Target Topics** (text input, comma-separated)
+   - label: "Interview Topics (comma-separated)"
+   - placeholder: "e.g. React, TypeScript, System Design, REST APIs"
+   - bound to $state variable: `targetTopics`
+   - localStorage key: `interview_topics`
+
+3. **Company & Role** (text input, optional)
+   - label: "Company & Role (optional)"
+   - placeholder: "e.g. Stripe — Senior Frontend Engineer"
+   - bound to $state variable: `companyRole`
+   - localStorage key: `interview_company`
+
+Load all three fields from localStorage in `onMount`.
+
+═══════════════════════════════════════════════════════════════
+PROMPT ASSEMBLY LOGIC
+═══════════════════════════════════════════════════════════════
+Modify the `handleSaveSettings` function to assemble the final system prompt
+by combining the selected persona + the user's context before POSTing to the backend.
+
+Use this assembly template (build the suffix only if the fields are non-empty):
+
+```
+function buildSystemPrompt(basePrompt, resumeContext, targetTopics, companyRole) {
+  let suffix = "";
+  if (resumeContext.trim()) {
+    suffix += `\n\nAbout the candidate: ${resumeContext.trim()}`;
+  }
+  if (targetTopics.trim()) {
+    suffix += `\n\nInterview focus topics: ${targetTopics.trim()}`;
+  }
+  if (companyRole.trim()) {
+    suffix += `\n\nTarget company and role: ${companyRole.trim()}`;
+  }
+  return basePrompt + suffix;
+}
+```
+
+POST the assembled prompt (not just `selectedPrompt`) to `/api/system_prompt`.
+
+═══════════════════════════════════════════════════════════════
+STYLING GUIDELINES
+═══════════════════════════════════════════════════════════════
+- Match the existing dark theme: background `#222`, border `1px solid #444`,
+  text `white`, label color `#aaa`, font-size `0.85rem`.
+- The textarea should have `resize: vertical` and `min-height: 80px`.
+- No external libraries. Pure CSS and Svelte only.
+- The section should have a subtle top divider (`<hr class="divider" />`) to
+  visually separate it from the Persona dropdown above it.
+- A small section title: `<p class="section-label">Interview Context</p>` styled
+  as muted all-caps text (font-size: 0.7rem, letter-spacing: 0.1em, color: #666).
+
+═══════════════════════════════════════════════════════════════
+BACKEND: NO CHANGES REQUIRED
+═══════════════════════════════════════════════════════════════
+The backend already has a working `/api/system_prompt` POST endpoint introduced
+in the previous session that accepts `{ "prompt": "..." }` and updates
+`config.SYSTEM_PROMPT` in memory. No backend changes are needed.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- All context is stored ONLY in localStorage — it never leaves the machine.
+- The backend sends the final assembled prompt to the LLM, so the context is
+  only in the system message, not in the user message.
+- Do NOT introduce any new npm packages or external dependencies.
+- Do NOT modify `backend/app.py` or `backend/config.py`.
+- Do NOT modify `frontend/src/lib/Assistant.svelte`.
+- Only modify `frontend/src/lib/Settings.svelte`.
+
+═══════════════════════════════════════════════════════════════
+TARGET FILES
+═══════════════════════════════════════════════════════════════
+- MODIFY: `frontend/src/lib/Settings.svelte`
