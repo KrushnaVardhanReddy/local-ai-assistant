@@ -2,6 +2,7 @@
   import { authState, signIn, signOut } from "$lib/auth.svelte";
   import { reconnect } from "$lib/ws.svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { onMount } from "svelte";
 
   let email = $state("");
   let password = $state("");
@@ -12,6 +13,26 @@
   let showSettings = $state(false);
   let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
   let isDevModeChecked = $state(false);
+
+  let systemPrompts = [
+    { label: "Stealth Interview (Concise)", value: "You are a stealth interview assistant. The user is in a live technical interview. You must provide EXTREMELY concise answers. Use a maximum of 3 short bullet points. NEVER write long paragraphs. If code is needed, provide only the core snippet." },
+    { label: "Pair Programmer (Detailed)", value: "You are an expert pair programmer. Provide detailed, step-by-step code implementations with explanations." },
+    { label: "General Chat (Default)", value: "You are a helpful AI assistant." }
+  ];
+  let selectedPrompt = $state(systemPrompts[0].value);
+
+  onMount(async () => {
+    try {
+      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const res = await fetch(`${apiUrl}/api/system_prompt`);
+      if (res.ok) {
+        const data = await res.json();
+        selectedPrompt = data.prompt;
+      }
+    } catch (e) {
+      console.error("Failed to load system prompt", e);
+    }
+  });
 
   function toggleSettings() {
     showSettings = !showSettings;
@@ -24,6 +45,17 @@
       await invoke("toggle_stealth", { enable: !isDevModeChecked });
     } catch (err) {
       console.error("Failed to toggle stealth", err);
+    }
+
+    try {
+      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      await fetch(`${apiUrl}/api/system_prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: selectedPrompt })
+      });
+    } catch (e) {
+      console.error("Failed to save system prompt", e);
     }
   }
 
@@ -73,6 +105,15 @@
         <input type="checkbox" bind:checked={isDevModeChecked} data-testid="dev-mode-toggle" />
         Dev Mode: Disable Stealth (E2E Visibility)
       </label>
+    </div>
+
+    <div class="input-group">
+      <label for="systemPrompt">Persona / System Prompt</label>
+      <select id="systemPrompt" bind:value={selectedPrompt} class="custom-select">
+        {#each systemPrompts as p}
+          <option value={p.value}>{p.label}</option>
+        {/each}
+      </select>
     </div>
 
     <button class="btn-primary save-btn" onclick={handleSaveSettings} data-testid="settings-save-btn">Save & Reconnect</button>
@@ -313,9 +354,19 @@
     color: white;
   }
 
-  .input-group input:focus {
+  .input-group input:focus, .custom-select:focus {
     outline: none;
     border-color: #007bff;
+  }
+
+  .custom-select {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #444;
+    background: #222;
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
   }
 
   .error-msg {

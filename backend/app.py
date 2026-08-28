@@ -475,6 +475,18 @@ async def analyze_vision(body: VisionModel):
     return {"status": "processing started"}
 
 
+class PromptModel(BaseModel):
+    prompt: str
+
+@app.get("/api/system_prompt")
+async def get_system_prompt():
+    return {"prompt": config.SYSTEM_PROMPT}
+
+@app.post("/api/system_prompt")
+async def set_system_prompt(body: PromptModel):
+    config.SYSTEM_PROMPT = body.prompt
+    return {"status": "success"}
+
 class KeyModel(BaseModel):
     api_key: str
 
