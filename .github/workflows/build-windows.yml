@@ -15,8 +15,20 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build Python Backend
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+          pyinstaller --name "local-ai-backend-windows" --onefile --hidden-import fastapi --hidden-import uvicorn --hidden-import faster_whisper --hidden-import websockets --hidden-import sounddevice --hidden-import chromadb --hidden-import sentence_transformers app.py
           
-      - name: Install Dependencies
+      - name: Install Frontend Dependencies
         working-directory: frontend
         run: npm install
         
@@ -28,4 +40,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: stealth-assistant-windows-exe
-          path: frontend/src-tauri/target/release/bundle/nsis/*.exe
+          path: |
+            frontend/src-tauri/target/release/bundle/nsis/*.exe
+            backend/dist/local-ai-backend-windows.exe
