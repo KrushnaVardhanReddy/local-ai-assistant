@@ -60,6 +60,7 @@ transcriber = None
 llm_client = None
 listener = None
 sync_queue = queue.Queue()
+candidate_context: str = ""
 
 # PTT Mode global toggle
 PTT_MODE = False
@@ -358,6 +359,8 @@ async def ws_endpoint(websocket: WebSocket):
                     combined_context = "\n\n".join(filter(None, [rag_context, web_context]))
 
                     system_content = config.SYSTEM_PROMPT
+                    if candidate_context:
+                        system_content += f"\n\nCandidate profile: {candidate_context}"
                     if combined_context:
                         system_content += f"\n\n{combined_context}"
                         sources = list(dict.fromkeys(re.findall(r'\[Source: ([^\],]+)', combined_context)))
@@ -473,6 +476,40 @@ async def analyze_vision(body: VisionModel):
     # Start the processing as a background task so the POST endpoint returns immediately
     asyncio.create_task(process_vision())
     return {"status": "processing started"}
+
+
+class ResumeModel(BaseModel):
+    text: str
+
+@app.post("/api/resume/extract")
+async def extract_resume(body: ResumeModel):
+    global candidate_context
+    if not llm_client:
+        raise HTTPException(status_code=503, detail="LLM Client not initialized")
+
+    system_prompt = (
+        "You are a resume parser. Extract the candidate's key technical skills, "
+        "years of experience, notable projects, and target role from the resume text. "
+        "Be concise. Output a single paragraph of max 150 words. No bullet points."
+    )
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": body.text}
+    ]
+
+    result = ""
+    try:
+        async for token in llm_client.stream(messages):
+            result += token
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
+
+    candidate_context = result.strip()
+    return {"status": "success", "summary": candidate_context}
+
+@app.get("/api/resume/context")
+async def get_resume_context():
+    return {"context": candidate_context}
 
 
 class PromptModel(BaseModel):
