@@ -1,4 +1,4 @@
-.PHONY: install dev-backend dev-frontend dev-all stop e2e clean
+.PHONY: install dev-backend dev-frontend dev-all stop e2e clean build
 
 # Install all dependencies (Frontend + Backend)
 install:
@@ -45,3 +45,8 @@ clean:
 	rm -rf backend/.venv backend/__pycache__
 	rm -rf frontend/node_modules frontend/dist
 	@echo "Clean complete!"
+
+# Build the production executables
+build:
+	@echo "Building production executables..."
+	bash scripts/build.sh
