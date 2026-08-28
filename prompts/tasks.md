@@ -126,3 +126,13 @@
 |---|---|---|---|---|
 | P10-T1 | `frontend/src/lib/Assistant.svelte` | Modular UI — Top toolbar, Left Pane (Live STT), Right Pane (LLM Response) | ✅ | — |
 
+
+---
+
+## Phase 11 — Personalization (Resume Parsing) 📄
+
+> Uses client-side PDF parsing to extract the candidate's resume and inject it directly into the LLM system prompt as an in-memory persona.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P11-T1 | `frontend/src/lib/Settings.svelte`, `backend/app.py` | pdfjs-dist resume parsing & backend memory extraction | ✅ | #32 |
