@@ -29,6 +29,7 @@ from rag.web_search import search_web
 from smart_filter import SilenceBuffer, passes_filter
 
 from contextlib import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -37,6 +38,15 @@ async def lifespan(app: FastAPI):
     await shutdown_event()
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(ingestor.router, prefix="/rag")
 app.include_router(retriever.retriever_router, prefix="/rag")
 
