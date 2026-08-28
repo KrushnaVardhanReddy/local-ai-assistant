@@ -34,11 +34,14 @@ class LLMClient:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(f"{self.base_url}/chat/completions", headers=self._build_headers(), json=payload) as resp:
-                    if resp.status in (401, 403):
-                        yield f"[Error: Invalid API key for {self.provider}]"
-                        return
-                    if resp.status == 429:
-                        yield "[Error: Rate limit hit — please retry shortly]"
+                    if resp.status != 200:
+                        if resp.status in (401, 403):
+                            yield f"[Error: Invalid API key for {self.provider}]"
+                        elif resp.status == 429:
+                            yield "[Error: Rate limit hit — please retry shortly]"
+                        else:
+                            error_text = await resp.text()
+                            yield f"[Error: LLM returned status {resp.status} - {error_text}]"
                         return
 
                     async for line in resp.content:
