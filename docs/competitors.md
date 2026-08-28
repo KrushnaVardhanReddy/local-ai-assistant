@@ -4,18 +4,17 @@ This matrix compares the **Local AI Assistant** against existing open-source and
 
 ## Feature Matrix
 
-| Feature | Local AI Assistant (Ours) | Final Round AI | Ecoute | Generic Copilots (Electron) |
+| Feature | Local AI Assistant (Ours) | Parakeet (NVIDIA) | Final Round AI | Ecoute |
 | :--- | :--- | :--- | :--- | :--- |
-| **Pricing** | Free / Open Source | $30 - $100+/mo | Free / API Costs | Variable ($10-$50/mo) |
-| **STT Processing** | Local (Faster-Whisper) | Cloud (Deepgram/etc.) | Local (Whisper) | Cloud |
-| **LLM Processing** | Local (Ollama/LM Studio) | Cloud (GPT-4) | Cloud (OpenAI API) | Cloud (GPT-4/Claude) |
-| **End-to-End Latency** | **Zero / Sub-second** | 3-5+ Seconds | 2-3 Seconds | 3-5+ Seconds |
-| **Data Privacy** | **100% Offline (No data leaves machine)** | Highly Invasive | High Risk (API) | High Risk |
-| **Stealth UI (OS-Level)** | **Yes (Tauri Transparent Native Window)** | Browser-based (Detectable) | Basic Python UI (Visible) | Varies (Usually visible) |
-| **Resource Usage** | Lightweight (Tauri / Rust) | Heavy (Chrome Extension) | Moderate (Python) | Very Heavy (Electron) |
-| **Resume Extraction** | **Yes (Local LLM One-Shot Pass)** | Yes (Cloud) | No | Rarely |
-| **Offline Knowledge Base (RAG)** | **Yes (Local Embeddings & Vector DB)** | No | No | No |
-| **Smart Audio Filter (VAD)** | **Yes (Filters noise & partial sentences)** | Basic | Yes | Basic |
+| **Pricing** | Free / Open Source | Free / Research | $30 - $100+/mo | Free / API Costs |
+| **STT Processing** | Local (Parakeet-TDT / Whisper) | Local (Parakeet) | Cloud (Deepgram/etc.) | Local (Whisper) |
+| **LLM Processing** | Local (Ollama/LM Studio) | N/A (STT focus) | Cloud (GPT-4) | Cloud (OpenAI API) |
+| **End-to-End Latency** | **Zero / Sub-second** | **Zero / Sub-second** | 3-5+ Seconds | 2-3 Seconds |
+| **Data Privacy** | **100% Offline** | **100% Offline** | Highly Invasive | High Risk (API) |
+| **Stealth UI (OS-Level)** | **Yes (Tauri Native)** | No UI (Command Line/API) | Browser-based | Basic Python UI |
+| **Resume Extraction** | **Yes (Local LLM Pass)** | No | Yes (Cloud) | No |
+| **Offline Knowledge Base** | **Yes (RAG)** | No | No | No |
+| **Smart Audio Filter** | **Yes (VAD)** | Basic | Basic | Yes |
 
 ---
 
