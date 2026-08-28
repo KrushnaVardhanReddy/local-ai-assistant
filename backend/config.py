@@ -63,7 +63,7 @@ class Config:
 
     RAG_ENABLED: bool = True
     WEB_SEARCH_ENABLED: bool = False
-    SYSTEM_PROMPT: str = "You are a helpful AI assistant."
+    SYSTEM_PROMPT: str = "You are a stealth interview assistant. The user is in a live technical interview. You must provide EXTREMELY concise answers. Use a maximum of 3 short bullet points. NEVER write long paragraphs. If code is needed, provide only the core snippet."
 
     # Smart Audio Filter config
     SILENCE_THRESHOLD_SECONDS: float = 1.5

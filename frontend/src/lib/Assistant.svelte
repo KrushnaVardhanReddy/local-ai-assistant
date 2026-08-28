@@ -52,10 +52,8 @@
   });
 
   $effect(() => {
-    // This effect runs whenever wsState.response changes
-    if (wsState.response && responseEl) {
-      responseEl.scrollTop = responseEl.scrollHeight;
-    }
+    // Removed aggressive auto-scroll so the user can read from the top down
+    // at their own pace without the text jumping away from them.
   });
 
   function clearError() {
