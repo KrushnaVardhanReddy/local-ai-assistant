@@ -184,8 +184,12 @@ pub fn run() {
             hide_from_dock();
 
             if let Some(win) = app.get_webview_window("main") {
-                // Initialize in stealth mode ON by default.
+                // Apply stealth BEFORE showing the window.
+                // This prevents any flash of the UI being visible to screen capture
+                // during the brief window between window creation and stealth activation.
                 set_screen_share_safe(&win, true);
+                // Now safe to show — the window is already invisible to capture tools.
+                let _ = win.show();
             }
 
             use tauri_plugin_global_shortcut::GlobalShortcutExt;
