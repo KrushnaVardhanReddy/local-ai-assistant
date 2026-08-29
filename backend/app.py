@@ -298,8 +298,9 @@ async def ws_endpoint(websocket: WebSocket):
                         if len(websocket.audio_buffer) > 0 and not websocket.is_transcribing:
                             websocket.is_transcribing = True
                             try:
-                                # We can transcribe the growing buffer for live ears
-                                live_transcript = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
+                                # Only transcribe the last 5 seconds for live preview, not the whole buffer
+                                tail = websocket.audio_buffer[-16000 * 2 * 5:]
+                                live_transcript = await asyncio.to_thread(transcriber.transcribe, tail)
                                 if live_transcript and live_transcript != websocket.last_live_transcript:
                                     websocket.last_live_transcript = live_transcript
                                     for out_q in list(active_outbound_queues):
@@ -310,7 +311,11 @@ async def ws_endpoint(websocket: WebSocket):
 
                     # If silent and we have audio, check timeout
                     if websocket.audio_buffer and (time.monotonic() - websocket.last_active_time) >= config.SILENCE_THRESHOLD_SECONDS:
-                        assembled = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
+                        # Reuse the last live transcript if available, avoiding redundant Whisper call
+                        if websocket.last_live_transcript:
+                            assembled = websocket.last_live_transcript
+                        else:
+                            assembled = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
                         websocket.audio_buffer = b""
                         websocket.last_active_time = time.monotonic()
                         websocket.last_live_transcript = ""
