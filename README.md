@@ -106,6 +106,21 @@ make dev-all
 
 ---
 
+## ⌨️ Global Shortcuts
+
+The assistant uses global hotkeys, meaning they work **even when the app is hidden** or you are focused on another application.
+
+| Shortcut | Action | Description |
+|---|---|---|
+| **`Ctrl+Shift+Space`** | Toggle Visibility | Instantly hides or shows the entire Assistant window. |
+| **`Ctrl+Shift+X`** | Panic Clear | Clears the current screen/transcript immediately. |
+| **`Ctrl+Shift+Down`** | Scroll Down | Scrolls the LLM response panel down. |
+| **`Ctrl+Shift+Up`** | Scroll Up | Scrolls the LLM response panel up. |
+| **`Ctrl+Shift+S`** | Vision Capture | Takes a silent screenshot of your monitor for the Vision LLM. |
+| **`Ctrl+Shift+P`** | Push-To-Talk | Hold to force the mic to listen (bypasses normal auto-detection). |
+
+---
+
 ## 💻 Hardware Requirements & Target
 
 | Component | Spec |
