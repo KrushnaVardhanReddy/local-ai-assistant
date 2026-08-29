@@ -150,3 +150,13 @@
 | P12-T1 | `frontend/src/lib/markdownRenderer.ts`, `frontend/src/lib/Assistant.svelte` | Markdown + Shiki IDE-style syntax highlighting in The Brain panel | ⏳ | — |
 | P12-T2 | `backend/app.py`, `frontend/src/lib/Settings.svelte` | Language preference dropdown — injects code language into system prompt, auto-detected from resume | ⏳ | — |
 
+---
+
+## Phase 13 — Audio Routing & Loopback 🎧
+
+> Allows the assistant to hear the interviewer by capturing system speaker output instead of just the microphone.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P13-T1 | `backend/audio_listener.py`, `backend/app.py`, `frontend/src/lib/Settings.svelte` | Audio device selector + Windows WASAPI loopback support | ⏳ | — |
+

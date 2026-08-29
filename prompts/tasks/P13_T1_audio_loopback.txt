@@ -1,0 +1,110 @@
+TASK: P13-T1 — System Audio Loopback & Device Selection
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The current `audio_listener.py` strictly listens to the default microphone. If the
+user is wearing headphones during an interview, the assistant will only hear the user
+and will be completely deaf to the interviewer's voice coming through the speakers.
+
+This task enhances the audio pipeline to support capturing system audio (Loopback)
+and exposes a device selector in the frontend Settings panel so the user can choose
+exactly what the assistant listens to.
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & OS DIFFERENCES
+═══════════════════════════════════════════════════════════════
+Capturing system audio is OS-dependent in `sounddevice`:
+- **Windows**: Use the WASAPI host API and pass `loopback=True` to the input stream.
+- **Linux**: Users must select the PulseAudio/PipeWire "Monitor" sink (e.g., "Monitor of Built-in Audio").
+- **macOS**: Requires a virtual audio cable (like BlackHole). We will just expose all
+  devices in a dropdown so Mac users can select their virtual cable.
+
+We need to provide an endpoint that lists all available audio devices, and allow the
+frontend to pass a specific `device_index` to listen to.
+
+═══════════════════════════════════════════════════════════════
+BACKEND CHANGES: audio_listener.py & app.py
+═══════════════════════════════════════════════════════════════
+
+1. Modify `backend/audio_listener.py`:
+   - Add a `device` parameter (int or None) to `AudioListener.__init__`.
+   - Update `self._stream` to use this `device` index.
+   - On Windows, if the selected device is an output device (WASAPI), enable `loopback=True`.
+     You can detect this by checking if the host API is WASAPI and max_output_channels > 0.
+     However, a simpler approach is to add a boolean `is_loopback=False` to `__init__` and pass it to the stream (only supported on Windows WASAPI).
+
+2. Create a device enumeration function in `backend/audio_listener.py`:
+   ```python
+   def get_audio_devices() -> list[dict]:
+       import sounddevice as sd
+       devices = []
+       for idx, dev in enumerate(sd.query_devices()):
+           # Filter out devices with 0 input channels, UNLESS it's a Windows WASAPI
+           # output device (which can be used for loopback)
+           hostapi = sd.query_hostapis(dev['hostapi'])['name']
+           is_wasapi = 'WASAPI' in hostapi
+           if dev['max_input_channels'] > 0 or (is_wasapi and dev['max_output_channels'] > 0):
+               devices.append({
+                   "id": idx,
+                   "name": f"{dev['name']} ({hostapi})",
+                   "is_loopback_capable": is_wasapi and dev['max_output_channels'] > 0
+               })
+       return devices
+   ```
+
+3. In `backend/app.py`:
+   - Add a global variable for the current audio listener instance so it can be restarted.
+   - Add a GET endpoint `/api/audio/devices` returning `get_audio_devices()`.
+   - Add a POST endpoint `/api/audio/device` accepting `{"device_id": int, "is_loopback": bool}`.
+   - When POST is called, stop the current `AudioListener`, create a new one with the specified device, and start it.
+
+═══════════════════════════════════════════════════════════════
+FRONTEND CHANGES: Settings.svelte
+═══════════════════════════════════════════════════════════════
+
+1. Add state variables:
+   ```typescript
+   let audioDevices = $state<Array<{id: number, name: string, is_loopback_capable: boolean}>>([]);
+   let selectedDeviceId = $state<number | null>(null);
+   let isLoopbackEnabled = $state(false);
+   ```
+
+2. In `onMount`, fetch the devices from `/api/audio/devices`.
+
+3. In the HTML (inside `config-section`), add a new dropdown for the audio device:
+   ```svelte
+   <div class="input-group">
+     <label for="audioDevice">Audio Input Device</label>
+     <select id="audioDevice" bind:value={selectedDeviceId} class="custom-select">
+       <option value={null}>Default Microphone</option>
+       {#each audioDevices as dev}
+         <option value={dev.id}>{dev.name}</option>
+       {/each}
+     </select>
+   </div>
+   ```
+
+4. Add a checkbox that only shows if the selected device `is_loopback_capable`:
+   ```svelte
+   {#if audioDevices.find(d => d.id === selectedDeviceId)?.is_loopback_capable}
+     <div class="checkbox-group">
+       <label>
+         <input type="checkbox" bind:checked={isLoopbackEnabled} />
+         Enable System Audio Loopback (Windows WASAPI only)
+       </label>
+     </div>
+   {/if}
+   ```
+
+5. In `handleSaveSettings()`, add a fetch POST to `/api/audio/device` sending the chosen settings.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+- backend/audio_listener.py
+- backend/app.py
+- frontend/src/lib/Settings.svelte
+
+Commit: "jules: P13-T1 add audio device selector and loopback support"
+Target branch: main
