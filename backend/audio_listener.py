@@ -7,11 +7,31 @@ import sounddevice as sd
 
 from config import config
 
+def get_audio_devices() -> list[dict]:
+    import sounddevice as sd
+    devices = []
+    try:
+        for idx, dev in enumerate(sd.query_devices()):
+            hostapi = sd.query_hostapis(dev['hostapi'])['name']
+            is_wasapi = 'WASAPI' in hostapi
+            if dev['max_input_channels'] > 0 or (is_wasapi and dev['max_output_channels'] > 0):
+                devices.append({
+                    "id": idx,
+                    "name": f"{dev['name']} ({hostapi})",
+                    "is_loopback_capable": is_wasapi and dev['max_output_channels'] > 0
+                })
+    except Exception as e:
+        print(f"Error enumerating devices: {e}", file=sys.stderr)
+    return devices
+
+
 class AudioListener:
-    def __init__(self, sample_rate: int, chunk_seconds: float):
+    def __init__(self, sample_rate: int, chunk_seconds: float, device: int | None = None, is_loopback: bool = False):
         self.sample_rate = sample_rate
         self.chunk_seconds = chunk_seconds
         self.chunk_frames = int(sample_rate * chunk_seconds)
+        self.device = device
+        self.is_loopback = is_loopback
         self._queue: queue.Queue[bytes] = queue.Queue()
         self._stream = None
         self._paused = threading.Event()
@@ -19,18 +39,28 @@ class AudioListener:
 
     def start(self) -> None:
         try:
-            device_info = sd.query_devices(kind='input')
+            if self.device is not None:
+                device_info = sd.query_devices(self.device)
+            else:
+                device_info = sd.query_devices(kind='input')
+
             device_name = device_info.get('name', 'Default Microphone')
 
             chunk_ms = int(self.chunk_seconds * 1000)
             print(f"🎤 Listening on: {device_name} | {self.sample_rate}Hz | {chunk_ms}ms chunks")
 
+            kwargs = {}
+            if getattr(self, 'is_loopback', False):
+                kwargs['loopback'] = True
+
             self._stream = sd.RawInputStream(
+                device=self.device,
                 dtype="int16",
                 channels=1,
                 samplerate=self.sample_rate,
                 blocksize=self.chunk_frames,
-                callback=self._callback
+                callback=self._callback,
+                **kwargs
             )
             self._stream.start()
         except sd.PortAudioError as e:
