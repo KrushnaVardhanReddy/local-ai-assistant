@@ -16,6 +16,7 @@
   let showSettings = $state(false);
   let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
   let isDevModeChecked = $state(false);
+  let preferredLanguage = $state(localStorage.getItem("preferred_language") || "");
 
   let systemPrompts = [
     { label: "Stealth Interview (Concise)", value: "You are a stealth interview assistant. The user is in a live technical interview. You must provide EXTREMELY concise answers. Use a maximum of 3 short bullet points. NEVER write long paragraphs. If code is needed, provide only the core snippet." },
@@ -52,6 +53,19 @@
       }
     } catch(e) {
       console.error("Failed to check resume context", e);
+    }
+
+    try {
+      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const resLang = await fetch(`${apiUrl}/api/language`);
+      if (resLang.ok) {
+        const data = await resLang.json();
+        if (data.language) {
+          preferredLanguage = data.language;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load language preference", e);
     }
   });
 
@@ -97,7 +111,13 @@
         body: JSON.stringify({ text: resumeRawText })
       });
       if (res.ok) {
+        const data = await res.json();
         resumeStatus = "✅ Profile extracted and active";
+        if (data.detected_language && !preferredLanguage) {
+          preferredLanguage = data.detected_language;
+          localStorage.setItem("preferred_language", preferredLanguage);
+          resumeStatus = `✅ Profile extracted. Language auto-detected: ${preferredLanguage}`;
+        }
       } else {
         resumeStatus = "❌ Extraction failed — check backend";
       }
@@ -113,11 +133,23 @@
 
   async function handleSaveSettings() {
     localStorage.setItem("backend_url", backendUrl);
+    localStorage.setItem("preferred_language", preferredLanguage);
     reconnect(backendUrl);
     try {
       await invoke("toggle_stealth", { enable: !isDevModeChecked });
     } catch (err) {
       console.error("Failed to toggle stealth", err);
+    }
+
+    try {
+      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      await fetch(`${apiUrl}/api/language`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language: preferredLanguage })
+      });
+    } catch (e) {
+      console.error("Failed to save language preference", e);
     }
 
     try {
@@ -187,6 +219,30 @@
           <option value={p.value}>{p.label}</option>
         {/each}
       </select>
+    </div>
+
+    <div class="input-group">
+      <label for="preferredLanguage">Code Language Preference</label>
+      <select id="preferredLanguage" bind:value={preferredLanguage} class="custom-select">
+        <option value="">Auto (Let LLM Decide)</option>
+        <option value="Python">Python</option>
+        <option value="JavaScript">JavaScript</option>
+        <option value="TypeScript">TypeScript</option>
+        <option value="Java">Java</option>
+        <option value="C++">C++</option>
+        <option value="C#">C#</option>
+        <option value="Go">Go</option>
+        <option value="Rust">Rust</option>
+        <option value="Ruby">Ruby</option>
+        <option value="Swift">Swift</option>
+        <option value="Kotlin">Kotlin</option>
+        <option value="SQL">SQL</option>
+        <option value="PHP">PHP</option>
+        <option value="Scala">Scala</option>
+      </select>
+      <span style="font-size: 0.72rem; color: #666; margin-top: 2px;">
+        Auto-filled from resume if detected
+      </span>
     </div>
 
     <button class="btn-primary save-btn" onclick={handleSaveSettings} data-testid="settings-save-btn">Save & Reconnect</button>
