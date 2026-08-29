@@ -234,6 +234,8 @@ async def ws_endpoint(websocket: WebSocket):
         try:
             while True:
                 msg = await outbound_queue.get()
+                if msg.get("type") == "token":
+                    print(f"[DEBUG WS] Sending token to frontend: '{msg.get('text')}'", file=sys.stderr)
                 await websocket.send_json(msg)
         except asyncio.CancelledError:
             pass
@@ -395,9 +397,11 @@ async def ws_endpoint(websocket: WebSocket):
 
                     is_streaming.set()
                     try:
+                        print(f"[DEBUG] Calling LLM with {len(messages)} messages...", file=sys.stderr)
                         async for token in connection_llm_client.stream(messages):
                             for out_q in list(active_outbound_queues):
                                 out_q.put_nowait({"type": "token", "text": token})
+                        print(f"[DEBUG] Finished calling LLM.", file=sys.stderr)
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "end"})
                     except Exception as e:

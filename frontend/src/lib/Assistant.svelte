@@ -87,7 +87,12 @@
     if (renderTimer) clearTimeout(renderTimer);
     renderTimer = setTimeout(async () => {
       if (current) {
-        renderedResponse = await renderMarkdown(current);
+        try {
+          renderedResponse = await renderMarkdown(current);
+        } catch (e) {
+          console.error("[DEBUG UI] renderMarkdown error:", e);
+          renderedResponse = "⚠️ Markdown render error: " + e;
+        }
       } else {
         renderedResponse = '';
       }

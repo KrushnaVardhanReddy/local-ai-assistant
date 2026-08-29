@@ -170,5 +170,5 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P14-T1 | `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Assistant.svelte` | Clickable transcript chip bar — accumulate, click-to-send, dismiss, auto-clear | ⬜ | — |
+| P14-T1 | `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Assistant.svelte` | Clickable transcript chip bar — accumulate, click-to-send, dismiss, auto-clear | ✅ | #36 |
 

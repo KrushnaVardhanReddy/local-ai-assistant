@@ -5,14 +5,17 @@ let highlighterPromise: Promise<any> | null = null;
 
 function getHighlighter() {
   if (!highlighterPromise) {
-    highlighterPromise = createHighlighter({
-      themes: ['tokyo-night'],
-      langs: [
-        'javascript', 'typescript', 'python', 'java', 'cpp', 'c',
-        'go', 'rust', 'sql', 'bash', 'json', 'yaml', 'html', 'css',
-        'kotlin', 'swift', 'ruby', 'php', 'csharp', 'scala'
-      ],
-    });
+    highlighterPromise = Promise.race([
+      createHighlighter({
+        themes: ['tokyo-night'],
+        langs: [
+          'javascript', 'typescript', 'python', 'java', 'cpp', 'c',
+          'go', 'rust', 'sql', 'bash', 'json', 'yaml', 'html', 'css',
+          'kotlin', 'swift', 'ruby', 'php', 'csharp', 'scala'
+        ],
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Shiki highlighter load timeout (WASM block?)")), 3000))
+    ]);
   }
   return highlighterPromise;
 }
@@ -32,5 +35,6 @@ renderer.code = async ({ text, lang }: { text: string; lang?: string | undefined
 marked.use({ renderer });
 
 export async function renderMarkdown(text: string): Promise<string> {
-  return await marked.parseAsync(text);
+  // marked.parseAsync was removed or changed in newer versions, use parse with async: true
+  return await marked.parse(text, { async: true });
 }
