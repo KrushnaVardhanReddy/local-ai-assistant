@@ -4,6 +4,7 @@
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { renderMarkdown } from "$lib/markdownRenderer";
 
   async function startDrag(e: MouseEvent) {
     // Only drag on left mouse button, skip if clicking a button/input
@@ -32,6 +33,8 @@
 
   let isBrowser = $state(false);
   let chatText = $state("");
+  let renderedResponse = $state('');
+  let renderTimer: ReturnType<typeof setTimeout> | null = null;
 
   onMount(() => {
     const unlistenScrollDown = listen("scroll-down", () => {
@@ -77,6 +80,18 @@
   $effect(() => {
     // Removed aggressive auto-scroll so the user can read from the top down
     // at their own pace without the text jumping away from them.
+  });
+
+  $effect(() => {
+    const current = wsState.response;
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = setTimeout(async () => {
+      if (current) {
+        renderedResponse = await renderMarkdown(current);
+      } else {
+        renderedResponse = '';
+      }
+    }, 50);
   });
 
   function clearError() {
@@ -251,8 +266,8 @@
         {#if wsState.response || wsState.isThinking}
           <div class="flex-1 flex flex-col gap-4">
             <div class="group flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 cursor-default relative">
-              <div class="ml-1 response-content text-on-surface-variant whitespace-pre-wrap leading-relaxed">
-                {wsState.response}
+              <div class="ml-1 response-content text-on-surface-variant leading-relaxed prose prose-invert prose-sm max-w-none">
+                {@html renderedResponse}
                 {#if wsState.isThinking}
                   <span class="inline-block w-1.5 h-4 bg-primary align-middle animate-pulse ml-1"></span>
                 {/if}
@@ -316,5 +331,76 @@
       font-size: 1rem;
   }
   
+  /* Shiki code block overrides — match our dark glass theme */
+  .response-content :global(.shiki) {
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.75rem 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Copy button container for code blocks */
+  .response-content :global(.code-block-wrapper) {
+    position: relative;
+  }
+
+  /* Inline code styling */
+  .response-content :global(code:not(.shiki code)) {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.875em;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: #7dd3fc;
+  }
+
+  /* Paragraph spacing */
+  .response-content :global(p) {
+    margin: 0.5rem 0;
+    line-height: 1.65;
+  }
+
+  /* Bullet / ordered lists */
+  .response-content :global(ul),
+  .response-content :global(ol) {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+  }
+
+  .response-content :global(li) {
+    margin: 0.25rem 0;
+    line-height: 1.55;
+  }
+
+  /* Bold text */
+  .response-content :global(strong) {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+  }
+
+  /* Blockquotes (tips, notes from LLM) */
+  .response-content :global(blockquote) {
+    border-left: 3px solid rgba(99, 179, 237, 0.5);
+    margin: 0.75rem 0;
+    padding: 0.5rem 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+  }
+
+  /* Headings inside responses */
+  .response-content :global(h1),
+  .response-content :global(h2),
+  .response-content :global(h3) {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    margin: 1rem 0 0.5rem 0;
+    line-height: 1.3;
+  }
+  .response-content :global(h3) { font-size: 1rem; }
+  .response-content :global(h2) { font-size: 1.1rem; }
+
   /* We remove default styles from the component since it's full screen now */
 </style>
