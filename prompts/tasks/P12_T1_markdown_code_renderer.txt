@@ -1,0 +1,291 @@
+TASK: P12-T1 — Markdown Rendering + IDE-Style Syntax Highlighting in The Brain Panel
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The "Brain" panel in Assistant.svelte currently renders the LLM response as raw
+plain text using `whitespace-pre-wrap`. When the LLM returns markdown (code blocks,
+bullet points, bold text), the user sees the raw markdown syntax characters instead
+of formatted output. This is especially painful during coding interviews where the
+LLM frequently returns fenced code blocks like:
+
+  ```javascript
+  function twoSum(nums, target) { ... }
+  ```
+
+This task replaces the raw text renderer with a full markdown parser + IDE-quality
+syntax highlighter so code blocks render exactly like a VS Code editor with correct
+language coloring, making responses instantly readable under interview pressure.
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & MOTIVATION
+═══════════════════════════════════════════════════════════════
+During a live coding interview, the LLM often returns structured answers with:
+  - Fenced code blocks (```python / ```javascript / ```java etc.)
+  - Bullet point lists of steps
+  - Bold/italic emphasis on key terms
+  - Inline code like `O(n)` or `Array.prototype.map`
+
+Currently all of this is completely unformatted, making the response hard to scan
+quickly. Adding Shiki-powered syntax highlighting (the same engine used by VS Code)
+means the user can instantly distinguish keywords, strings, comments, and variable
+names using color — critical when you have seconds to read and act.
+
+The "tokyo-night" or "vitesse-dark" theme is recommended to match the existing dark
+glassmorphism aesthetic of the UI.
+
+═══════════════════════════════════════════════════════════════
+DEPENDENCIES TO INSTALL
+═══════════════════════════════════════════════════════════════
+Run in the frontend/ directory:
+  npm install marked shiki
+
+- `marked` (v9+): Fast CommonMark-compliant markdown parser. Converts markdown
+  string to HTML with hooks for custom renderers.
+- `shiki` (v1+): VS Code-quality syntax highlighter. Used to colorize code blocks
+  extracted by marked. Supports 100+ languages, has zero runtime deps.
+
+Do NOT use highlight.js (too heavy). Do NOT use prism.js. Use Shiki only.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION PLAN
+═══════════════════════════════════════════════════════════════
+
+1. CREATE: frontend/src/lib/markdownRenderer.ts
+
+   A standalone async utility module that:
+
+   a) Initializes a Shiki highlighter (singleton, initialized once):
+      ```typescript
+      import { createHighlighter } from 'shiki';
+
+      let highlighterPromise: Promise<any> | null = null;
+
+      function getHighlighter() {
+        if (!highlighterPromise) {
+          highlighterPromise = createHighlighter({
+            themes: ['tokyo-night'],
+            langs: [
+              'javascript', 'typescript', 'python', 'java', 'cpp', 'c',
+              'go', 'rust', 'sql', 'bash', 'json', 'yaml', 'html', 'css',
+              'kotlin', 'swift', 'ruby', 'php', 'csharp', 'scala'
+            ],
+          });
+        }
+        return highlighterPromise;
+      }
+      ```
+
+   b) Exports an async function `renderMarkdown(text: string): Promise<string>`:
+      - Uses `marked` to parse the markdown text into HTML
+      - Intercepts code blocks via a custom `marked` renderer:
+        ```typescript
+        import { marked } from 'marked';
+
+        const renderer = new marked.Renderer();
+        renderer.code = ({ text, lang }) => {
+          // Use Shiki to highlight the code block
+          // fallback to plain <pre><code> if lang is unsupported
+        };
+        marked.use({ renderer });
+        ```
+      - Inside the custom `renderer.code`, call the Shiki highlighter:
+        ```typescript
+        const highlighter = await getHighlighter();
+        const validLang = highlighter.getLoadedLanguages().includes(lang ?? '')
+          ? lang!
+          : 'text';
+        const html = highlighter.codeToHtml(text, {
+          lang: validLang,
+          theme: 'tokyo-night',
+        });
+        return html;
+        ```
+      - For inline code, wrap in a styled `<code>` tag.
+      - Returns the full rendered HTML string.
+
+   IMPORTANT: `marked` parses synchronously but our Shiki code renderer is async.
+   Use `marked.parseAsync()` not `marked.parse()` to handle async rendering.
+
+2. MODIFY: frontend/src/lib/Assistant.svelte
+
+   a) Import the renderer at the top of the <script> block:
+      ```typescript
+      import { renderMarkdown } from '$lib/markdownRenderer';
+      ```
+
+   b) Add a new derived/reactive state variable for the rendered HTML:
+      ```typescript
+      let renderedResponse = $state('');
+      ```
+
+   c) Add a `$effect` block that watches `wsState.response` and re-renders whenever
+      the LLM streams new tokens. Because re-rendering on every token would cause
+      flickering, add a small debounce (50ms):
+      ```typescript
+      let renderTimer: ReturnType<typeof setTimeout> | null = null;
+
+      $effect(() => {
+        const current = wsState.response;
+        if (renderTimer) clearTimeout(renderTimer);
+        renderTimer = setTimeout(async () => {
+          if (current) {
+            renderedResponse = await renderMarkdown(current);
+          } else {
+            renderedResponse = '';
+          }
+        }, 50);
+      });
+      ```
+
+   d) Replace the raw text rendering section in the Brain panel body.
+      BEFORE (current code, approximately line 232):
+      ```svelte
+      <div class="ml-1 response-content text-on-surface-variant whitespace-pre-wrap leading-relaxed">
+        {wsState.response}
+        {#if wsState.isThinking}
+          <span class="inline-block w-1.5 h-4 bg-primary align-middle animate-pulse ml-1"></span>
+        {/if}
+      </div>
+      ```
+
+      AFTER:
+      ```svelte
+      <div class="ml-1 response-content text-on-surface-variant leading-relaxed prose prose-invert prose-sm max-w-none">
+        {@html renderedResponse}
+        {#if wsState.isThinking}
+          <span class="inline-block w-1.5 h-4 bg-primary align-middle animate-pulse ml-1"></span>
+        {/if}
+      </div>
+      ```
+
+      NOTE: `{@html ...}` is safe here because the content comes only from the
+      local LLM, not from any external user input. This is an intentional trust
+      decision consistent with the app's local-first architecture.
+
+   e) Add CSS styles for the rendered markdown content inside the existing <style>
+      block. These styles apply to elements inside `.response-content` and must
+      not bleed out to the rest of the UI:
+
+      ```css
+      /* Shiki code block overrides — match our dark glass theme */
+      .response-content :global(.shiki) {
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.75rem 0;
+        font-size: 0.85rem;
+        line-height: 1.6;
+        overflow-x: auto;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      /* Copy button container for code blocks */
+      .response-content :global(.code-block-wrapper) {
+        position: relative;
+      }
+
+      /* Inline code styling */
+      .response-content :global(code:not(.shiki code)) {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.875em;
+        font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+        color: #7dd3fc;
+      }
+
+      /* Paragraph spacing */
+      .response-content :global(p) {
+        margin: 0.5rem 0;
+        line-height: 1.65;
+      }
+
+      /* Bullet / ordered lists */
+      .response-content :global(ul),
+      .response-content :global(ol) {
+        padding-left: 1.5rem;
+        margin: 0.5rem 0;
+      }
+
+      .response-content :global(li) {
+        margin: 0.25rem 0;
+        line-height: 1.55;
+      }
+
+      /* Bold text */
+      .response-content :global(strong) {
+        color: rgba(255, 255, 255, 0.95);
+        font-weight: 600;
+      }
+
+      /* Blockquotes (tips, notes from LLM) */
+      .response-content :global(blockquote) {
+        border-left: 3px solid rgba(99, 179, 237, 0.5);
+        margin: 0.75rem 0;
+        padding: 0.5rem 1rem;
+        color: rgba(255, 255, 255, 0.6);
+        font-style: italic;
+      }
+
+      /* Headings inside responses */
+      .response-content :global(h1),
+      .response-content :global(h2),
+      .response-content :global(h3) {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 600;
+        margin: 1rem 0 0.5rem 0;
+        line-height: 1.3;
+      }
+      .response-content :global(h3) { font-size: 1rem; }
+      .response-content :global(h2) { font-size: 1.1rem; }
+      ```
+
+═══════════════════════════════════════════════════════════════
+IMPORTANT IMPLEMENTATION NOTES
+═══════════════════════════════════════════════════════════════
+- Shiki initialization is ASYNC and takes ~200ms on first load. The singleton
+  pattern in getHighlighter() ensures this only happens once per app session.
+  Do not re-initialize inside each render call.
+- The $effect debounce (50ms) prevents a re-render on every single streamed token.
+  The Brain panel will update frequently during streaming but won't flicker.
+- Do NOT remove the `{#if wsState.isThinking}` thinking cursor. It should remain
+  visible while streaming even though the response is now rendered as HTML. Place
+  the cursor span AFTER the `{@html}` block so it always appears at the end.
+- Keep the `whitespace-pre-wrap` style REMOVED from `.response-content` — Shiki
+  handles whitespace inside code blocks internally. Keeping pre-wrap would double-
+  format the output.
+- The `hide-scrollbar` class and the `overflow-y-auto` on the parent panel body
+  already handle scrolling. Do not add scroll rules to `.response-content` itself.
+- Shiki's `tokyo-night` theme includes its own background color (#1a1b26). The
+  `.shiki` border-radius and border rules above integrate it cleanly into the glass
+  panel without looking like a foreign element.
+
+═══════════════════════════════════════════════════════════════
+TESTING CHECKLIST (manual)
+═══════════════════════════════════════════════════════════════
+After implementation, verify the following in the running app (make dev-all):
+
+1. Ask "What is the two sum problem?" — verify the response renders with bullet
+   points and syntax-highlighted code blocks, not raw markdown.
+2. Ask a Python question — verify Python keywords are colored correctly.
+3. Ask a general question with no code — verify plain prose renders cleanly.
+4. Verify the thinking cursor (blinking bar) still appears while the LLM streams.
+5. Verify the app does not crash or freeze when the LLM returns an empty response.
+6. Verify inline code like `O(n log n)` renders with a pill background.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- frontend/src/lib/markdownRenderer.ts
+
+FILES TO MODIFY:
+- frontend/src/lib/Assistant.svelte
+- frontend/package.json (via npm install marked shiki)
+
+COMMANDS TO RUN FIRST:
+- cd frontend && npm install marked shiki
+
+Commit: "jules: P12-T1 add markdown + shiki syntax highlighting to Brain panel"
+Target branch: main
