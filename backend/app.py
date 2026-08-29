@@ -61,6 +61,7 @@ llm_client = None
 listener = None
 sync_queue = queue.Queue()
 candidate_context: str = ""
+preferred_language: str = ""
 
 # PTT Mode global toggle
 PTT_MODE = False
@@ -133,6 +134,19 @@ async def shutdown_event():
     if listener:
         listener.stop()
 
+
+class LanguagePreference(BaseModel):
+    language: str
+
+@app.post("/api/language")
+async def set_language(body: LanguagePreference):
+    global preferred_language
+    preferred_language = body.language
+    return {"status": "ok", "language": preferred_language}
+
+@app.get("/api/language")
+async def get_language():
+    return {"language": preferred_language}
 
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket):
@@ -361,6 +375,8 @@ async def ws_endpoint(websocket: WebSocket):
                     system_content = config.SYSTEM_PROMPT
                     if candidate_context:
                         system_content += f"\n\nCandidate profile: {candidate_context}"
+                    if preferred_language:
+                        system_content += f"\n\nIMPORTANT: Always provide all code examples in {preferred_language}. Do not use any other programming language for code unless the user explicitly asks."
                     if combined_context:
                         system_content += f"\n\n{combined_context}"
                         sources = list(dict.fromkeys(re.findall(r'\[Source: ([^\],]+)', combined_context)))
@@ -507,14 +523,19 @@ class ResumeModel(BaseModel):
 
 @app.post("/api/resume/extract")
 async def extract_resume(body: ResumeModel):
-    global candidate_context
+    global candidate_context, preferred_language
     if not llm_client:
         raise HTTPException(status_code=503, detail="LLM Client not initialized")
 
     system_prompt = (
         "You are a resume parser. Extract the candidate's key technical skills, "
         "years of experience, notable projects, and target role from the resume text. "
-        "Be concise. Output a single paragraph of max 150 words. No bullet points."
+        "Be concise. Output a JSON object with exactly two keys:\n"
+        "  - 'summary': A single paragraph of max 150 words describing the candidate.\n"
+        "  - 'primary_language': The single most prominent programming language from\n"
+        "    the resume (e.g. 'Python', 'JavaScript', 'Java', 'Go', 'C++', 'TypeScript').\n"
+        "    If no clear language is found, return an empty string.\n"
+        "Respond ONLY with valid JSON. No markdown, no extra text."
     )
     messages = [
         {"role": "system", "content": system_prompt},
@@ -528,8 +549,32 @@ async def extract_resume(body: ResumeModel):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
 
-    candidate_context = result.strip()
-    return {"status": "success", "summary": candidate_context}
+    llm_response_text = result.strip()
+
+    # Check if the output is wrapped in a markdown code block and strip it
+    if llm_response_text.startswith("```json"):
+        llm_response_text = llm_response_text[7:]
+    elif llm_response_text.startswith("```"):
+        llm_response_text = llm_response_text[3:]
+    if llm_response_text.endswith("```"):
+        llm_response_text = llm_response_text[:-3]
+    llm_response_text = llm_response_text.strip()
+
+    try:
+        result_json = json.loads(llm_response_text)
+        candidate_context = result_json.get("summary", llm_response_text)
+        detected_language = result_json.get("primary_language", "")
+        if detected_language and not preferred_language:
+            preferred_language = detected_language
+    except (json.JSONDecodeError, KeyError):
+        candidate_context = llm_response_text
+        detected_language = ""
+
+    return {
+        "status": "success",
+        "summary": candidate_context,
+        "detected_language": detected_language
+    }
 
 @app.get("/api/resume/context")
 async def get_resume_context():
