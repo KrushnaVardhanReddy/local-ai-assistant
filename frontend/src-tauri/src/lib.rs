@@ -85,6 +85,11 @@ fn toggle_stealth(window: tauri::WebviewWindow, enable: bool) {
 }
 
 #[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
+#[tauri::command]
 fn capture_screen() -> Result<String, String> {
     let monitors = Monitor::all().map_err(|e| e.to_string())?;
 
@@ -240,6 +245,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             toggle_stealth,
+            quit_app,
             capture_screen,
             save_token,
             load_token,
