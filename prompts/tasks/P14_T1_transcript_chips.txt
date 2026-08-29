@@ -1,0 +1,328 @@
+TASK: P14-T1 — Transcript Chip Bar (Click-to-Send Pending Transcripts)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a clickable transcript chip bar between the top toolbar and the main content
+panels. As the backend streams live transcripts (type "transcript" messages),
+the frontend accumulates them as visual "chips" — short rounded pill buttons
+showing the transcribed text. Clicking a chip immediately sends that text to
+the LLM as a priority question (using the existing "chat" bypass), skipping
+all audio filter layers.
+
+This gives the user manual control over which heard phrases to send to the LLM,
+complementing the existing automatic silence-detection flow. The auto-flow
+continues to work unchanged — the chip bar is an additional layer on top.
+
+Key behaviors:
+  1. Incoming "transcript" WS messages are accumulated into a chip array
+     (max 6 chips, oldest dropped when full).
+  2. Each chip displays the first 60 characters of the transcript, truncated
+     with "…" if longer.
+  3. Clicking a chip sends it as a `{ type: "chat", text: fullText }` message
+     via the existing `sendChat()` function, then removes the chip from the bar.
+  4. A small "×" button on each chip dismisses it without sending.
+  5. A "Clear" button at the right end of the chip bar clears all pending chips.
+  6. When the LLM starts responding (message_start), all chips are auto-cleared
+     since the auto-flow handled it.
+  7. The chip bar is hidden when there are zero chips (no empty bar visible).
+  8. Chips have a subtle entrance animation (fade + slide up).
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- All changes are FRONTEND ONLY. Do NOT modify any backend files.
+- Use Svelte 5 runes ($state, $effect) — NOT Svelte 4 stores.
+- The chip bar must use the same glassmorphism design language as the existing
+  toolbar and panels (see .glass-pill and .glass-panel in Assistant.svelte).
+- Chips must be pointer-events-auto so they are clickable on the overlay.
+- The chip bar must respect the existing layout: it sits BETWEEN the <header>
+  toolbar and the <main> content grid, inside the same outer flex-col container.
+- Do NOT break any existing functionality: transcript display in Live Ears panel,
+  LLM response in The Brain panel, PTT, vision capture, chat input, drag-to-move,
+  stealth hotkeys, or the hide/close buttons.
+- Deduplication: If a new transcript is identical to an existing chip's text,
+  replace the old chip (update in place) rather than adding a duplicate.
+- The chip bar must work in both Tauri desktop mode AND browser (Remote Helper)
+  mode.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/ws.svelte.ts`: Reactive WebSocket store using Svelte 5 runes.
+  - `wsState` is a `$state({...})` object with fields: transcript, response,
+    isListening, isThinking, isConnected, error, ragSources, isPTTHeld, pttMode.
+  - `sendChat(text: string)` sends `{ type: "chat", text }` over the WebSocket.
+    Chat messages bypass ALL backend filter layers (silence buffer, busy guard,
+    intent heuristic) and go directly to the LLM. This is the function to use
+    when the user clicks a chip.
+  - The `ws.onmessage` handler dispatches on `data.type`:
+    - "transcript" → sets `wsState.transcript` to the latest live transcript
+    - "message_start" → clears response, sets isThinking
+    - "token" → appends to wsState.response
+    - "end" → clears isThinking
+
+- `frontend/src/lib/Assistant.svelte`: The main UI component (407 lines).
+  Layout structure (important — do NOT break this):
+  ```
+  <div class="fixed inset-0 ... flex flex-col ...">
+    <header class="toolbar glass-pill ...">  ← Top toolbar
+      (brand, live indicator, chat input, action buttons)
+    </header>
+    
+    <!-- THE CHIP BAR GOES HERE — between header and main -->
+    
+    <main class="flex-1 flex gap-container-padding ...">
+      <aside class="live-ears-panel ...">   ← Left: Live STT
+      <section class="brain-panel ...">     ← Right: LLM Response
+    </main>
+  </div>
+  ```
+
+- Styling: The component uses Tailwind utility classes + custom CSS at the bottom.
+  The glassmorphism style is defined in `.glass-pill` and `.glass-panel` classes.
+  Follow the same visual language for the chip bar.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/ws.svelte.ts (MODIFY)
+
+   a. Add a new reactive field to `wsState` for the chip queue:
+      ```typescript
+      pendingTranscripts: [] as Array<{ id: number; text: string }>
+      ```
+
+   b. Add a module-level counter for unique chip IDs:
+      ```typescript
+      let chipIdCounter = 0;
+      ```
+
+   c. In the `ws.onmessage` handler, inside the "transcript" case, AFTER the
+      existing `wsState.transcript = data.text;` line, add logic to accumulate
+      chips:
+      ```typescript
+      case "transcript":
+        wsState.transcript = data.text;
+        // Accumulate as a clickable chip (deduplicate identical text)
+        const existingIdx = wsState.pendingTranscripts.findIndex(
+          (c) => c.text === data.text
+        );
+        if (existingIdx >= 0) {
+          // Update in place (keeps position, refreshes)
+          wsState.pendingTranscripts[existingIdx] = {
+            id: wsState.pendingTranscripts[existingIdx].id,
+            text: data.text
+          };
+        } else {
+          wsState.pendingTranscripts.push({
+            id: chipIdCounter++,
+            text: data.text
+          });
+          // Keep max 6 chips — drop oldest
+          if (wsState.pendingTranscripts.length > 6) {
+            wsState.pendingTranscripts.shift();
+          }
+        }
+        break;
+      ```
+
+   d. In the "message_start" case, clear the chip queue (the auto-flow handled it):
+      ```typescript
+      case "message_start":
+        wsState.response = "";
+        wsState.isThinking = true;
+        wsState.ragSources = [];
+        wsState.pendingTranscripts = [];   // ← ADD THIS LINE
+        break;
+      ```
+
+   e. In the existing `panic-clear` listener, also clear the chip queue:
+      ```typescript
+      listen("panic-clear", () => {
+        wsState.transcript = "";
+        wsState.response = "";
+        wsState.isThinking = false;
+        wsState.ragSources = [];
+        wsState.pendingTranscripts = [];   // ← ADD THIS LINE
+        ...
+      });
+      ```
+
+   f. Export two new helper functions for chip actions:
+      ```typescript
+      export function sendChip(chip: { id: number; text: string }): void {
+        sendChat(chip.text);
+        wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
+          (c) => c.id !== chip.id
+        );
+      }
+
+      export function dismissChip(chipId: number): void {
+        wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
+          (c) => c.id !== chipId
+        );
+      }
+
+      export function clearAllChips(): void {
+        wsState.pendingTranscripts = [];
+      }
+      ```
+
+2. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+
+   a. Update the import at line 2 to include the new functions:
+      ```typescript
+      import { wsState, sendChat, sendChip, dismissChip, clearAllChips } from "$lib/ws.svelte";
+      ```
+
+   b. Add the chip bar HTML between the closing `</header>` tag and the opening
+      `<main>` tag. The chip bar should ONLY render when there are pending
+      transcripts:
+
+      ```svelte
+      <!-- Transcript Chip Bar -->
+      {#if wsState.pendingTranscripts.length > 0}
+        <div class="chip-bar pointer-events-auto flex items-center gap-2 px-6 py-2 w-full max-w-7xl mx-auto overflow-x-auto hide-scrollbar">
+          {#each wsState.pendingTranscripts as chip (chip.id)}
+            <button
+              class="chip-pill group flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                     bg-white/8 border border-white/10 hover:bg-primary/20 hover:border-primary/40
+                     transition-all duration-200 cursor-pointer whitespace-nowrap
+                     animate-chip-in flex-shrink-0"
+              onclick={() => sendChip(chip)}
+              title="Click to send: {chip.text}"
+            >
+              <span class="text-on-surface-variant text-[12px] font-body-sm max-w-[200px] truncate group-hover:text-primary transition-colors">
+                {chip.text.length > 60 ? chip.text.slice(0, 60) + '…' : chip.text}
+              </span>
+              <button
+                class="w-4 h-4 flex items-center justify-center rounded-full
+                       text-on-surface-variant/40 hover:text-red-400 hover:bg-red-400/10
+                       transition-colors text-[10px] ml-0.5 flex-shrink-0"
+                onclick|stopPropagation={() => dismissChip(chip.id)}
+                aria-label="Dismiss"
+              >✕</button>
+            </button>
+          {/each}
+
+          <!-- Clear All button -->
+          <button
+            class="flex items-center gap-1 px-2.5 py-1 rounded-full
+                   text-on-surface-variant/50 hover:text-red-400 hover:bg-red-400/10
+                   border border-transparent hover:border-red-400/20
+                   transition-all duration-200 text-[11px] font-label-caps
+                   tracking-wider uppercase whitespace-nowrap flex-shrink-0"
+            onclick={() => clearAllChips()}
+          >
+            Clear
+            <span class="material-symbols-outlined text-[14px]">close</span>
+          </button>
+        </div>
+      {/if}
+      ```
+
+      IMPORTANT: In Svelte 5, event modifiers like `onclick|stopPropagation` are
+      NOT supported. Instead, use an inline handler that calls `e.stopPropagation()`:
+      ```svelte
+      onclick={(e) => { e.stopPropagation(); dismissChip(chip.id); }}
+      ```
+
+   c. Add the chip animation CSS at the bottom of the <style> block, before
+      the closing </style> tag:
+
+      ```css
+      /* Transcript chip bar */
+      .chip-bar {
+        flex-shrink: 0;
+      }
+
+      .chip-pill {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .chip-pill:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 20px rgba(99, 179, 237, 0.1);
+      }
+
+      @keyframes chipIn {
+        from {
+          opacity: 0;
+          transform: translateY(8px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .animate-chip-in {
+        animation: chipIn 0.25s ease-out;
+      }
+      ```
+
+   d. Also update the `clearHistory` function to clear chips:
+      ```typescript
+      function clearHistory() {
+        wsState.transcript = "";
+        wsState.response = "";
+        wsState.ragSources = [];
+        wsState.pendingTranscripts = [];   // ← ADD THIS LINE
+        ...
+      }
+      ```
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The `sendChat()` function already sends `{ type: "chat", text }` over the
+  WebSocket, which bypasses ALL backend filter layers. No backend changes needed.
+- Use `{#each ... as chip (chip.id)}` with a keyed each block so Svelte can
+  animate individual chips correctly.
+- The chip bar uses `overflow-x-auto` + `hide-scrollbar` (already defined in
+  Assistant.svelte CSS) for horizontal scrolling when there are many chips.
+- The `flex-shrink-0` on individual chips prevents them from being crushed
+  when the bar overflows.
+- In Svelte 5, use `onclick={(e) => { e.stopPropagation(); ... }}` instead of
+  the Svelte 4 `on:click|stopPropagation` syntax.
+- The `max-w-[200px] truncate` on the chip text ensures long transcripts don't
+  make chips too wide. The full text is available in the `title` attribute.
+
+═══════════════════════════════════════════════════════════════
+VISUAL REFERENCE
+═══════════════════════════════════════════════════════════════
+The chip bar should look like this conceptually:
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ Local AI  ● Live  ● Connected                     📷 🧹 | 👁 ✕    │ ← Existing toolbar
+├──────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐ ┌──────────────────┐ ┌────────────────┐       │
+│  │ what is the ti… ✕│ │ can you explain… ✕│ │ how does bi… ✕ │ Clear│ ← NEW chip bar
+│  └─────────────────┘ └──────────────────┘ └────────────────┘       │
+├──────────────────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌───────────────────────────────────────────────┐   │
+│  │ Live Ears│  │ The Brain                                      │   │
+│  │          │  │                                                 │   │
+│  │          │  │                                                 │   │
+│  └──────────┘  └───────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────────┘
+
+- Chips are dark semi-transparent pills matching the toolbar aesthetic
+- Hover: chips glow with primary (blue) color to indicate "click to send"
+- The ✕ dismiss button is subtle until hovered (then red)
+- The "Clear" button is right-aligned and appears only when chips exist
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+(none)
+
+FILES TO MODIFY:
+- frontend/src/lib/ws.svelte.ts
+- frontend/src/lib/Assistant.svelte
+
+Commit: "jules: P14-T1 add transcript chip bar — click-to-send pending transcripts"
+Target branch: main
