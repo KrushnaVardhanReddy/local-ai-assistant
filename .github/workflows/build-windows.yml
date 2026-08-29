@@ -26,8 +26,23 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install pyinstaller
-          pyinstaller --name "local-ai-backend-windows" --onefile --hidden-import fastapi --hidden-import uvicorn --hidden-import faster_whisper --hidden-import websockets --hidden-import sounddevice --hidden-import chromadb --hidden-import sentence_transformers app.py
-          
+          pyinstaller --name "local-ai-backend-windows" --onefile \
+            --exclude-module tkinter \
+            --exclude-module matplotlib \
+            --exclude-module PyQt5 \
+            --exclude-module PyQt6 \
+            --exclude-module IPython \
+            --exclude-module notebook \
+            --exclude-module pytest \
+            --exclude-module tensorboard \
+            --hidden-import fastapi \
+            --hidden-import uvicorn \
+            --hidden-import faster_whisper \
+            --hidden-import websockets \
+            --hidden-import sounddevice \
+            --hidden-import chromadb \
+            --hidden-import sentence_transformers \
+            app.py
       - name: Install Frontend Dependencies
         working-directory: frontend
         run: npm install
