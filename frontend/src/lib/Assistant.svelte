@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { wsState, sendChat } from "$lib/ws.svelte";
+  import { wsState, sendChat, sendChip, dismissChip, clearAllChips } from "$lib/ws.svelte";
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
@@ -138,6 +138,7 @@
     wsState.transcript = "";
     wsState.response = "";
     wsState.ragSources = [];
+    wsState.pendingTranscripts = [];
     const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
     fetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
   }
@@ -207,6 +208,49 @@
       </button>
     </div>
   </header>
+
+  <!-- Transcript Chip Bar -->
+  {#if wsState.pendingTranscripts.length > 0}
+    <div class="chip-bar pointer-events-auto flex items-center gap-2 px-6 py-2 w-full max-w-7xl mx-auto overflow-x-auto hide-scrollbar">
+      {#each wsState.pendingTranscripts as chip (chip.id)}
+        <div
+          role="button"
+          tabindex="0"
+          class="chip-pill group flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                 bg-white/8 border border-white/10 hover:bg-primary/20 hover:border-primary/40
+                 transition-all duration-200 cursor-pointer whitespace-nowrap
+                 animate-chip-in flex-shrink-0"
+          onclick={() => sendChip(chip)}
+          onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') sendChip(chip); }}
+          title="Click to send: {chip.text}"
+        >
+          <span class="text-on-surface-variant text-[12px] font-body-sm max-w-[200px] truncate group-hover:text-primary transition-colors">
+            {chip.text.length > 60 ? chip.text.slice(0, 60) + '…' : chip.text}
+          </span>
+          <button
+            class="w-4 h-4 flex items-center justify-center rounded-full
+                   text-on-surface-variant/40 hover:text-red-400 hover:bg-red-400/10
+                   transition-colors text-[10px] ml-0.5 flex-shrink-0"
+            onclick={(e) => { e.stopPropagation(); dismissChip(chip.id); }}
+            aria-label="Dismiss"
+          >✕</button>
+        </div>
+      {/each}
+
+      <!-- Clear All button -->
+      <button
+        class="flex items-center gap-1 px-2.5 py-1 rounded-full
+               text-on-surface-variant/50 hover:text-red-400 hover:bg-red-400/10
+               border border-transparent hover:border-red-400/20
+               transition-all duration-200 text-[11px] font-label-caps
+               tracking-wider uppercase whitespace-nowrap flex-shrink-0"
+        onclick={() => clearAllChips()}
+      >
+        Clear
+        <span class="material-symbols-outlined text-[14px]">close</span>
+      </button>
+    </div>
+  {/if}
 
   <!-- Main Content Grid -->
   <main class="flex-1 flex gap-container-padding w-full max-w-7xl mx-auto h-[calc(100vh-120px)] pb-6">
@@ -403,4 +447,32 @@
   .response-content :global(h2) { font-size: 1.1rem; }
 
   /* We remove default styles from the component since it's full screen now */
+
+  /* Transcript chip bar */
+  .chip-bar {
+    flex-shrink: 0;
+  }
+
+  .chip-pill {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .chip-pill:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 20px rgba(99, 179, 237, 0.1);
+  }
+
+  @keyframes chipIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-chip-in {
+    animation: chipIn 0.25s ease-out;
+  }
 </style>
