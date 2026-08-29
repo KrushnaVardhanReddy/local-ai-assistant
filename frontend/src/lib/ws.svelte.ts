@@ -13,10 +13,12 @@ export const wsState = $state({
   error: null as string | null,
   ragSources: [] as string[],
   isPTTHeld: false,
-  pttMode: false
+  pttMode: false,
+  pendingTranscripts: [] as Array<{ id: number; text: string }>
 });
 
 let ws: WebSocket | null = null;
+let chipIdCounter = 0;
 let listenersInitialized = false;
 
 function initListeners() {
@@ -35,6 +37,7 @@ function initListeners() {
     wsState.response = "";
     wsState.isThinking = false;
     wsState.ragSources = [];
+    wsState.pendingTranscripts = [];
     fetch('http://127.0.0.1:8765/history/clear', { method: 'POST' }).catch(console.error);
   });
 }
@@ -129,11 +132,33 @@ export function connect(url?: string): void {
       switch (data.type) {
         case "transcript":
           wsState.transcript = data.text;
+
+          // Accumulate as a clickable chip (deduplicate identical text)
+          const existingIdx = wsState.pendingTranscripts.findIndex(
+            (c) => c.text === data.text
+          );
+          if (existingIdx >= 0) {
+            // Update in place (keeps position, refreshes)
+            wsState.pendingTranscripts[existingIdx] = {
+              id: wsState.pendingTranscripts[existingIdx].id,
+              text: data.text
+            };
+          } else {
+            wsState.pendingTranscripts.push({
+              id: chipIdCounter++,
+              text: data.text
+            });
+            // Keep max 6 chips — drop oldest
+            if (wsState.pendingTranscripts.length > 6) {
+              wsState.pendingTranscripts.shift();
+            }
+          }
           break;
         case "message_start":
           wsState.response = "";
           wsState.isThinking = true;
           wsState.ragSources = [];
+          wsState.pendingTranscripts = [];
           break;
         case "rag_sources":
           wsState.ragSources = data.sources;
@@ -221,4 +246,22 @@ export function sendChat(text: string): void {
   } else {
     console.error("WebSocket is not connected. Cannot send chat message.");
   }
+}
+
+
+export function sendChip(chip: { id: number; text: string }): void {
+  sendChat(chip.text);
+  wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
+    (c) => c.id !== chip.id
+  );
+}
+
+export function dismissChip(chipId: number): void {
+  wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
+    (c) => c.id !== chipId
+  );
+}
+
+export function clearAllChips(): void {
+  wsState.pendingTranscripts = [];
 }
