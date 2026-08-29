@@ -17,6 +17,11 @@
   let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
   let isDevModeChecked = $state(false);
 
+  // Audio state
+  let audioDevices = $state<Array<{id: number, name: string, is_loopback_capable: boolean}>>([]);
+  let selectedDeviceId = $state<number | null>(null);
+  let isLoopbackEnabled = $state(false);
+
   let systemPrompts = [
     { label: "Stealth Interview (Concise)", value: "You are a stealth interview assistant. The user is in a live technical interview. You must provide EXTREMELY concise answers. Use a maximum of 3 short bullet points. NEVER write long paragraphs. If code is needed, provide only the core snippet." },
     { label: "Pair Programmer (Detailed)", value: "You are an expert pair programmer. Provide detailed, step-by-step code implementations with explanations." },
@@ -37,8 +42,13 @@
         const data = await res.json();
         selectedPrompt = data.prompt;
       }
+
+      const audioRes = await fetch(`${apiUrl}/api/audio/devices`);
+      if (audioRes.ok) {
+        audioDevices = await audioRes.json();
+      }
     } catch (e) {
-      console.error("Failed to load system prompt", e);
+      console.error("Failed to load initial settings", e);
     }
 
     try {
@@ -127,8 +137,14 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: selectedPrompt })
       });
+
+      await fetch(`${apiUrl}/api/audio/device`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device_id: selectedDeviceId, is_loopback: isLoopbackEnabled })
+      });
     } catch (e) {
-      console.error("Failed to save system prompt", e);
+      console.error("Failed to save settings", e);
     }
   }
 
@@ -179,6 +195,25 @@
         Dev Mode: Disable Stealth (E2E Visibility)
       </label>
     </div>
+
+    <div class="input-group">
+      <label for="audioDevice">Audio Input Device</label>
+      <select id="audioDevice" bind:value={selectedDeviceId} class="custom-select">
+        <option value={null}>Default Microphone</option>
+        {#each audioDevices as dev}
+          <option value={dev.id}>{dev.name}</option>
+        {/each}
+      </select>
+    </div>
+
+    {#if audioDevices.find(d => d.id === selectedDeviceId)?.is_loopback_capable}
+      <div class="checkbox-group">
+        <label>
+          <input type="checkbox" bind:checked={isLoopbackEnabled} />
+          Enable System Audio Loopback (Windows WASAPI only)
+        </label>
+      </div>
+    {/if}
 
     <div class="input-group">
       <label for="systemPrompt">Persona / System Prompt</label>

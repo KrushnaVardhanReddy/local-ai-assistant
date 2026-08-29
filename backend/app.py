@@ -18,7 +18,7 @@ from fastapi import Request, HTTPException, Depends, Response
 from pydantic import BaseModel
 
 from config import config, PROVIDER_CONFIG
-from audio_listener import AudioListener
+from audio_listener import AudioListener, get_audio_devices
 from auth import get_user_id, AuthError
 from keys import key_store
 from transcriber import Transcriber
@@ -412,6 +412,30 @@ async def ws_endpoint(websocket: WebSocket):
             active_ws_queues.remove(ws_queue)
         if outbound_queue in active_outbound_queues:
             active_outbound_queues.remove(outbound_queue)
+
+
+class DeviceModel(BaseModel):
+    device_id: int | None
+    is_loopback: bool
+
+@app.get("/api/audio/devices")
+async def get_audio_devices_endpoint():
+    return get_audio_devices()
+
+@app.post("/api/audio/device")
+async def set_audio_device(body: DeviceModel):
+    global listener
+    if listener:
+        listener.stop()
+
+    listener = AudioListener(
+        config.AUDIO_SAMPLE_RATE,
+        config.AUDIO_CHUNK_SECONDS,
+        device=body.device_id,
+        is_loopback=body.is_loopback
+    )
+    listener.start()
+    return {"status": "success", "device_id": body.device_id, "is_loopback": body.is_loopback}
 
 
 class PTTModeModel(BaseModel):
