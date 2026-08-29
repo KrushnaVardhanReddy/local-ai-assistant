@@ -160,3 +160,15 @@
 |---|---|---|---|---|
 | P13-T1 | `backend/audio_listener.py`, `backend/app.py`, `frontend/src/lib/Settings.svelte` | Audio device selector + Windows WASAPI loopback support | ⏳ | — |
 
+---
+
+## Phase 14 — Transcript Chip Bar (Click-to-Send) 🏷️
+
+> Shows pending transcripts as clickable chips between the toolbar and panels.
+> User can click any chip to manually send it to the LLM as a priority question,
+> bypassing all audio filter layers via the existing `sendChat()` bypass.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P14-T1 | `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Assistant.svelte` | Clickable transcript chip bar — accumulate, click-to-send, dismiss, auto-clear | ⬜ | — |
+
