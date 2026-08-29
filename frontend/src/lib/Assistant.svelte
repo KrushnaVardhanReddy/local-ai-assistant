@@ -175,23 +175,19 @@
     </div>
 
     <!-- Central Chat Input (Stealth) -->
-    {#if isBrowser}
-      <div class="flex-1 max-w-xl mx-8">
-        <div class="relative flex items-center w-full h-8 bg-white/5 rounded-lg border border-white/10 transition-colors focus-within:bg-white/10 focus-within:border-white/20">
-          <span class="material-symbols-outlined text-[18px] text-on-surface-variant ml-3" data-icon="search" style="font-variation-settings: 'FILL' 0;">chat</span>
-          <input 
-            class="w-full bg-transparent border-none text-on-surface-variant font-body-sm text-body-sm focus:ring-0 placeholder-on-surface-variant/50 h-full px-3 outline-none pointer-events-auto" 
-            placeholder="Silent chat (Helper Mode)..." 
-            type="text"
-            bind:value={chatText}
-            onkeydown={handleChatKeydown}
-          />
-          <button class="font-mono-data text-mono-data text-on-surface-variant/40 hover:text-primary mr-3 text-[10px] pointer-events-auto" onclick={handleChatSubmit}>SEND</button>
-        </div>
+    <div class="flex-1 max-w-xl mx-8">
+      <div class="relative flex items-center w-full h-8 bg-white/5 rounded-lg border border-white/10 transition-colors focus-within:bg-white/10 focus-within:border-white/20">
+        <span class="material-symbols-outlined text-[18px] text-on-surface-variant ml-3" data-icon="search" style="font-variation-settings: 'FILL' 0;">chat</span>
+        <input 
+          class="w-full bg-transparent border-none text-on-surface-variant font-body-sm text-body-sm focus:ring-0 placeholder-on-surface-variant/50 h-full px-3 outline-none pointer-events-auto" 
+          placeholder="Silent chat (Helper Mode)..." 
+          type="text"
+          bind:value={chatText}
+          onkeydown={handleChatKeydown}
+        />
+        <button class="font-mono-data text-mono-data text-on-surface-variant/40 hover:text-primary mr-3 text-[10px] pointer-events-auto" onclick={handleChatSubmit}>SEND</button>
       </div>
-    {:else}
-      <div class="flex-1 max-w-xl mx-8"></div>
-    {/if}
+    </div>
 
     <!-- Trailing Actions -->
     <div class="flex items-center gap-2">
