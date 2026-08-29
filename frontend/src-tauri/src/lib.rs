@@ -179,8 +179,8 @@ pub fn run() {
             hide_from_dock();
 
             if let Some(win) = app.get_webview_window("main") {
-                // Initialize in stealth mode off.
-                set_screen_share_safe(&win, false);
+                // Initialize in stealth mode ON by default.
+                set_screen_share_safe(&win, true);
             }
 
             use tauri_plugin_global_shortcut::GlobalShortcutExt;
