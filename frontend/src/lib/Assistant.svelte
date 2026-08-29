@@ -15,6 +15,18 @@
     } catch (_) {}
   }
 
+  async function hideWindow() {
+    try {
+      await getCurrentWindow().hide();
+    } catch (_) {}
+  }
+
+  async function closeApp() {
+    try {
+      await invoke("quit_app");
+    } catch (_) {}
+  }
+
   let responseEl: HTMLElement | undefined = $state();
   let contentEl: HTMLElement | undefined = $state();
 
@@ -167,6 +179,16 @@
       </button>
       <button aria-label="Clear Context" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto" onclick={clearHistory}>
         <span class="material-symbols-outlined text-[20px]" data-icon="mop">mop</span>
+      </button>
+      <!-- Separator -->
+      <div class="w-px h-5 bg-white/10 mx-1"></div>
+      <!-- Hide window (Ctrl+Shift+Space to restore) -->
+      <button aria-label="Hide" title="Hide (Ctrl+Shift+Space to restore)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-yellow-400 transition-colors pointer-events-auto" onclick={hideWindow}>
+        <span class="material-symbols-outlined text-[20px]" data-icon="visibility_off">visibility_off</span>
+      </button>
+      <!-- Close / Quit app -->
+      <button aria-label="Close" title="Quit App" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/20 text-on-surface-variant hover:text-red-400 transition-colors pointer-events-auto" onclick={closeApp}>
+        <span class="material-symbols-outlined text-[20px]" data-icon="close">close</span>
       </button>
     </div>
   </header>
