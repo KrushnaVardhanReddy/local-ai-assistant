@@ -1,0 +1,245 @@
+TASK: P12-T2 — Language Preference Setting (LLM Response Language Control)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Allow the user to set their preferred programming language for LLM code responses
+inside the Settings panel. This preference is then injected into every LLM system
+prompt so the AI always returns code examples in the chosen language (e.g. Python,
+JavaScript, Java, Go, C++).
+
+Additionally, when a resume is uploaded (P11-T1), the backend's `/api/resume/extract`
+endpoint should automatically detect the candidate's primary language from their skills
+and return it as part of the extraction result, pre-filling the dropdown automatically.
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & MOTIVATION
+═══════════════════════════════════════════════════════════════
+Currently the LLM decides which language to use for code examples on its own, often
+defaulting to whatever it thinks is most popular or matching the problem context.
+During a coding interview, if the candidate is applying for a Python role and the
+LLM returns a JavaScript answer, the candidate is forced to mentally re-translate it.
+
+This feature gives the user explicit control: set once, effective for the entire
+session. The preference is stored in localStorage (frontend), passed to the backend
+on every system prompt assembly, and is auto-detected from the uploaded resume to
+minimize friction.
+
+═══════════════════════════════════════════════════════════════
+BACKEND CHANGES: app.py
+═══════════════════════════════════════════════════════════════
+
+1. Add a new global variable at the top of app.py (alongside `candidate_context`):
+   ```python
+   preferred_language: str = ""  # e.g. "Python", "JavaScript", "Java"
+   ```
+
+2. Add a new Pydantic model:
+   ```python
+   class LanguagePreference(BaseModel):
+       language: str  # The language name, e.g. "Python"
+   ```
+
+3. Add a new POST endpoint `/api/language`:
+   - Accept `LanguagePreference`
+   - Store the value in the global `preferred_language` variable
+   - Return `{"status": "ok", "language": preferred_language}`
+
+4. Add a GET endpoint `/api/language`:
+   - Returns `{"language": preferred_language}`
+
+5. Modify the existing LLM system prompt assembly to inject the language preference.
+   Find the section where `system_content` is built (near the candidate_context
+   injection added in P11-T1) and append:
+
+   ```python
+   system_content = config.SYSTEM_PROMPT
+   if candidate_context:
+       system_content += f"\n\nCandidate profile: {candidate_context}"
+   if preferred_language:
+       system_content += f"\n\nIMPORTANT: Always provide all code examples in {preferred_language}. Do not use any other programming language for code unless the user explicitly asks."
+   if combined_context:
+       system_content += f"\n\n{combined_context}"
+   ```
+
+   The language instruction must come AFTER the candidate profile but BEFORE the
+   RAG context so the LLM treats it as a high-priority constraint.
+
+═══════════════════════════════════════════════════════════════
+BACKEND CHANGES: app.py — /api/resume/extract enhancement
+═══════════════════════════════════════════════════════════════
+
+Modify the existing `/api/resume/extract` endpoint (added in P11-T1) to also detect
+the candidate's primary programming language from the resume text.
+
+Change the LLM extraction prompt from:
+```
+system: "You are a resume parser. Extract the candidate's key technical skills,
+         years of experience, notable projects, and target role from the resume text.
+         Be concise. Output a single paragraph of max 150 words. No bullet points."
+user: <the resume text>
+```
+
+To:
+```
+system: "You are a resume parser. Extract the candidate's key technical skills,
+         years of experience, notable projects, and target role from the resume text.
+         Be concise. Output a JSON object with exactly two keys:
+           - 'summary': A single paragraph of max 150 words describing the candidate.
+           - 'primary_language': The single most prominent programming language from
+             the resume (e.g. 'Python', 'JavaScript', 'Java', 'Go', 'C++', 'TypeScript').
+             If no clear language is found, return an empty string.
+         Respond ONLY with valid JSON. No markdown, no extra text."
+user: <the resume text>
+```
+
+Parse the JSON response from the LLM:
+```python
+import json
+
+try:
+    result = json.loads(llm_response_text)
+    candidate_context = result.get("summary", llm_response_text)
+    detected_language = result.get("primary_language", "")
+    if detected_language and not preferred_language:
+        # Only auto-fill if the user hasn't already set a manual preference
+        preferred_language = detected_language
+except (json.JSONDecodeError, KeyError):
+    # Fallback: treat the whole response as the summary, no language detected
+    candidate_context = llm_response_text
+    detected_language = ""
+
+return {
+    "status": "success",
+    "summary": candidate_context,
+    "detected_language": detected_language
+}
+```
+
+═══════════════════════════════════════════════════════════════
+FRONTEND CHANGES: Settings.svelte
+═══════════════════════════════════════════════════════════════
+
+1. Add a new state variable:
+   ```typescript
+   let preferredLanguage = $state(localStorage.getItem("preferred_language") || "");
+   ```
+
+2. In `onMount`, load the current preference from the backend:
+   ```typescript
+   try {
+     const resLang = await fetch(`${apiUrl}/api/language`);
+     if (resLang.ok) {
+       const data = await resLang.json();
+       if (data.language) {
+         preferredLanguage = data.language;
+       }
+     }
+   } catch (e) {
+     console.error("Failed to load language preference", e);
+   }
+   ```
+
+3. In `extractResume()`, after a successful extraction, check if the backend detected
+   a primary language and auto-fill the dropdown if nothing is already set:
+   ```typescript
+   if (res.ok) {
+     const data = await res.json();
+     resumeStatus = "✅ Profile extracted and active";
+     if (data.detected_language && !preferredLanguage) {
+       preferredLanguage = data.detected_language;
+       localStorage.setItem("preferred_language", preferredLanguage);
+       resumeStatus = `✅ Profile extracted. Language auto-detected: ${preferredLanguage}`;
+     }
+   }
+   ```
+
+4. In `handleSaveSettings()`, add the language preference save alongside the existing
+   backend_url and stealth toggle saves:
+   ```typescript
+   localStorage.setItem("preferred_language", preferredLanguage);
+   try {
+     const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+     await fetch(`${apiUrl}/api/language`, {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ language: preferredLanguage })
+     });
+   } catch (e) {
+     console.error("Failed to save language preference", e);
+   }
+   ```
+
+5. Add the language preference dropdown UI inside the `config-section` div in the
+   Settings panel HTML, below the existing Persona/System Prompt dropdown and above
+   the Save button:
+
+   ```svelte
+   <div class="input-group">
+     <label for="preferredLanguage">Code Language Preference</label>
+     <select id="preferredLanguage" bind:value={preferredLanguage} class="custom-select">
+       <option value="">Auto (Let LLM Decide)</option>
+       <option value="Python">Python</option>
+       <option value="JavaScript">JavaScript</option>
+       <option value="TypeScript">TypeScript</option>
+       <option value="Java">Java</option>
+       <option value="C++">C++</option>
+       <option value="C#">C#</option>
+       <option value="Go">Go</option>
+       <option value="Rust">Rust</option>
+       <option value="Ruby">Ruby</option>
+       <option value="Swift">Swift</option>
+       <option value="Kotlin">Kotlin</option>
+       <option value="SQL">SQL</option>
+       <option value="PHP">PHP</option>
+       <option value="Scala">Scala</option>
+     </select>
+     <span style="font-size: 0.72rem; color: #666; margin-top: 2px;">
+       Auto-filled from resume if detected
+     </span>
+   </div>
+   ```
+
+═══════════════════════════════════════════════════════════════
+IMPORTANT IMPLEMENTATION NOTES
+═══════════════════════════════════════════════════════════════
+- The `preferred_language` is IN MEMORY only on the backend (like `candidate_context`).
+  It resets on backend restart. The frontend persists it in `localStorage` and reloads
+  it into the backend on each `handleSaveSettings()` call.
+- The LLM extraction prompt change (returning JSON instead of plain text) may not work
+  with all LLM providers. Add robust JSON parsing with a try/except fallback to the
+  original plain-text behavior (treat entire response as summary, no language detected).
+- The `/api/language` GET/POST endpoints must be added before the WebSocket route in
+  app.py to ensure correct FastAPI route ordering.
+- Do NOT hardcode any language into the system prompt at startup. Language preference
+  is `""` by default, meaning the LLM decides on its own. Only inject the constraint
+  when `preferred_language` is non-empty.
+- Keep all new UI styling consistent with the existing dark theme in Settings.svelte:
+  background #222, border 1px solid #444, text white, labels #aaa.
+- The hint text "Auto-filled from resume if detected" below the dropdown must be
+  styled with font-size 0.72rem and color #666.
+
+═══════════════════════════════════════════════════════════════
+TESTING CHECKLIST (manual)
+═══════════════════════════════════════════════════════════════
+1. Open Settings, select "Python" from the language dropdown, click Save & Reconnect.
+2. Ask a JavaScript-style question like "Write a function to reverse a string."
+   Verify the LLM responds with Python code, not JavaScript.
+3. Set language to "" (Auto), ask the same question — verify LLM picks freely.
+4. Upload a Python-heavy resume and click Extract Profile.
+   Verify the dropdown auto-fills to "Python" and the status message reflects detection.
+5. Upload a Java-heavy resume. Verify the dropdown auto-fills to "Java".
+6. Verify that the language preference persists after closing and reopening Settings.
+7. Verify that restarting the backend and clicking Save & Reconnect re-syncs the
+   language preference to the backend.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/app.py (add 2 endpoints, modify system prompt assembly, enhance resume extract)
+- frontend/src/lib/Settings.svelte (add language dropdown + save logic)
+
+Commit: "jules: P12-T2 add language preference setting — LLM code language control"
+Target branch: main

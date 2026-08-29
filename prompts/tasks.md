@@ -136,3 +136,17 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P11-T1 | `frontend/src/lib/Settings.svelte`, `backend/app.py` | pdfjs-dist resume parsing & backend memory extraction | ✅ | #32 |
+
+---
+
+## Phase 12 — Interview UX Polish (Code Rendering + Language Control) 💎
+
+> Improves the moment-of-need experience during live interviews.
+> T1: Renders LLM markdown as formatted HTML with VS Code-quality syntax highlighting.
+> T2: Lets the user lock the LLM to their preferred coding language, auto-detected from resume.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P12-T1 | `frontend/src/lib/markdownRenderer.ts`, `frontend/src/lib/Assistant.svelte` | Markdown + Shiki IDE-style syntax highlighting in The Brain panel | ⏳ | — |
+| P12-T2 | `backend/app.py`, `frontend/src/lib/Settings.svelte` | Language preference dropdown — injects code language into system prompt, auto-detected from resume | ⏳ | — |
+
