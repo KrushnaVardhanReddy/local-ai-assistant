@@ -151,7 +151,7 @@
 
 <div class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark" id="dashboard-overlay">
   <!-- Top Toolbar -->
-  <header class="toolbar glass-pill pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" onmousedown={startDrag} style="cursor: grab;">
+  <header class="toolbar glass-pill pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" onmousedown={startDrag}>
     <!-- Brand / Primary Action -->
     <div class="flex items-center gap-4 pointer-events-none">
       <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">Local AI</span>
