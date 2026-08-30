@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Interview Integrity Monitor",
+  "version": "1.0.0",
+  "description": "Monitors screen-share state, visibility, and maintains a heartbeat for interview integrity.",
+  "action": {
+    "default_popup": "src/popup/index.html"
+  },
+  "permissions": [
+    "tabs",
+    "scripting",
+    "activeTab"
+  ],
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/index.ts"]
+    }
+  ]
+}
