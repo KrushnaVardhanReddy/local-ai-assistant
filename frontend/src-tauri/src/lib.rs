@@ -12,52 +12,6 @@ static IN_MEMORY_TOKEN: Mutex<Option<String>> = Mutex::new(None);
 static IN_MEMORY_MACHINE_ID: Mutex<Option<String>> = Mutex::new(None);
 
 #[cfg(target_os = "macos")]
-fn set_screen_share_safe(window: &tauri::WebviewWindow, enabled: bool) {
-    use cocoa::appkit::NSWindow;
-    use objc::runtime::Object;
-    // SAFETY: We get the underlying NSWindow handle safely from Tauri,
-    // cast it to an objc Object pointer, and use Objective-C runtime message
-    // sending which is well-defined for setSharingType.
-    unsafe {
-        if let Ok(ns_win) = window.ns_window() {
-            let ns_win = ns_win as *mut Object;
-            let val: u64 = if enabled { 0 } else { 1 }; // NSWindowSharingNone = 0, NSWindowSharingReadOnly = 1
-            let _: () = objc::msg_send![ns_win, setSharingType: val];
-        }
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn set_screen_share_safe(window: &tauri::WebviewWindow, enabled: bool) {
-    use windows::Win32::Foundation::HWND;
-    use windows::Win32::UI::WindowsAndMessaging::{SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE, WDA_MONITOR, WDA_NONE};
-
-    if let Ok(hwnd) = window.hwnd() {
-        let hwnd = HWND(hwnd.0 as isize);
-        let affinity = if enabled {
-            WDA_EXCLUDEFROMCAPTURE
-        } else {
-            WDA_NONE
-        };
-
-        // SAFETY: The HWND provided by Tauri is valid and owned by the application.
-        // SetWindowDisplayAffinity is safe to call on windows belonging to the current process.
-        unsafe {
-            let res = SetWindowDisplayAffinity(hwnd, affinity);
-            if res.is_err() && enabled {
-                // Fallback for older Windows 10 versions
-                let _ = SetWindowDisplayAffinity(hwnd, WDA_MONITOR);
-            }
-        }
-    }
-}
-
-#[cfg(any(target_os = "linux", target_os = "android", target_os = "ios"))]
-fn set_screen_share_safe(_window: &tauri::WebviewWindow, _enabled: bool) {
-    println!("Warning: set_screen_share_safe is a no-op on Linux, as compositors handle this natively.");
-}
-
-#[cfg(target_os = "macos")]
 fn hide_from_dock() {
     use cocoa::appkit::{NSApp, NSApplicationActivationPolicy::NSApplicationActivationPolicyAccessory};
     // SAFETY: NSApp() returns a valid shared application instance, and calling
@@ -81,7 +35,10 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn toggle_stealth(window: tauri::WebviewWindow, enable: bool) {
     STEALTH_ENABLED.store(enable, Ordering::SeqCst);
-    set_screen_share_safe(&window, enable);
+    // Use Tauri's built-in content protection, which correctly applies
+    // SetWindowDisplayAffinity to both the parent shell HWND and the inner
+    // WebView2 child HWND via wry — fixing the Zoom screen-share visibility bug.
+    let _ = window.set_content_protected(enable);
 }
 
 #[tauri::command]
@@ -184,10 +141,10 @@ pub fn run() {
             hide_from_dock();
 
             if let Some(win) = app.get_webview_window("main") {
-                // Apply stealth BEFORE showing the window.
-                // This prevents any flash of the UI being visible to screen capture
-                // during the brief window between window creation and stealth activation.
-                set_screen_share_safe(&win, true);
+                // contentProtected: true in tauri.conf.json already applies protection
+                // declaratively before this point, but we set it explicitly here too
+                // as a belt-and-suspenders guarantee before the window is shown.
+                let _ = win.set_content_protected(true);
                 // Now safe to show — the window is already invisible to capture tools.
                 let _ = win.show();
             }
