@@ -44,6 +44,7 @@ class Config:
     STT_MODEL: str = "base"
     STT_DEVICE: str = "cuda"
     STT_COMPUTE_TYPE: str = "float16"
+    STT_PROVIDER: str = "local"  # "local" = faster-whisper on device, "groq" = Groq Whisper API
 
     AUDIO_SAMPLE_RATE: int = 16000
     AUDIO_CHUNK_SECONDS: float = 0.5
@@ -89,6 +90,7 @@ class Config:
         self.STT_MODEL = os.environ.get("STT_MODEL", self.STT_MODEL)
         self.STT_DEVICE = os.environ.get("STT_DEVICE", self.STT_DEVICE)
         self.STT_COMPUTE_TYPE = os.environ.get("STT_COMPUTE_TYPE", self.STT_COMPUTE_TYPE)
+        self.STT_PROVIDER = os.environ.get("STT_PROVIDER", self.STT_PROVIDER)
 
         self.AUDIO_SAMPLE_RATE = int(os.environ.get("AUDIO_SAMPLE_RATE", self.AUDIO_SAMPLE_RATE))
         self.AUDIO_CHUNK_SECONDS = float(os.environ.get("AUDIO_CHUNK_SECONDS", self.AUDIO_CHUNK_SECONDS))
