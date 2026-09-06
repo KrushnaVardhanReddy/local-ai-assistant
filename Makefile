@@ -23,8 +23,14 @@ dev-all:
 	@echo "Starting backend and frontend... (Press CTRL+C to stop both)"
 	@bash -c 'trap "echo \"Cleaning up...\"; pkill -9 -f \"app.py\" || true" EXIT; \
 	cd backend && .venv/bin/python3 app.py & \
-	echo "Waiting 5 seconds for backend to initialize..." && \
-	sleep 5 && \
+	echo "Waiting for backend to be ready (large models can take up to 60s)..." && \
+	for i in $$(seq 1 45); do \
+	  sleep 2 && \
+	  if curl -sf http://127.0.0.1:8765/health > /dev/null 2>&1; then \
+	    echo "✅ Backend ready after $$((i*2))s!"; break; \
+	  fi; \
+	  echo "  ...still loading ($$((i*2))s)"; \
+	done && \
 	echo "Starting frontend..." && \
 	cd frontend && npm run tauri dev'
 
