@@ -292,3 +292,12 @@
 | P20-T4 | `web/src/routes/dashboard/devices/` | Device management page — lists all registered devices with label, last-seen date. User can remove a device (frees up a slot). Useful when switching machines legitimately. | ⬜ | — |
 | P20-T5 | `frontend/src/lib/Assistant.svelte`, `frontend/src/lib/auth.svelte.ts` | Handle rejection events in frontend: `device_limit_reached` → show "Max devices reached, manage at dashboard.parakeet.app/devices"; `already_active` → show "Another session is already active — close it first or wait 5 minutes for it to expire automatically." | ⬜ | — |
 
+
+---
+
+## Phase 21 — Mock Interviews & Internationalization 🌍
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P21-T1 | `frontend/src/lib/Settings.svelte`, `backend/config.py` | **Multilingual Support:** Add language override dropdown. Updates STT prompt and LLM system prompt to enforce target language. | ⬜ | — |
+| P21-T2 | `backend/app.py`, `frontend/src/lib/Assistant.svelte` | **Mock Interview Mode:** Toggle that flips the LLM from "Answerer" to "Interviewer". Uses Edge-TTS to speak questions aloud. Feeds user answers back for evaluation. | ⬜ | — |

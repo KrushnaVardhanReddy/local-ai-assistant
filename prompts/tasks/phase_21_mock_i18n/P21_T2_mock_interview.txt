@@ -1,0 +1,32 @@
+TASK: P21-T2 — Mock Interview Practice Mode
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a safe environment for users to practice their interview skills.
+Instead of the AI answering questions, the AI *becomes* the interviewer.
+It speaks questions aloud using Edge-TTS, listens to the user's spoken answer
+via the STT pipeline, and evaluates it before asking the next question.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/mock_interviewer.py (NEW)
+═══════════════════════════════════════════════════════════════
+1. Create a loop that drives the mock interview:
+   - Ask question (use `edge-tts` to generate MP3 and play it, or stream via WS).
+   - Wait for user answer (transcribed via existing STT).
+   - Evaluate answer (using Scorecard logic from P17-T2).
+   - Generate next question based on resume and previous answer.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Assistant.svelte
+═══════════════════════════════════════════════════════════════
+1. Add a "Mock Mode" toggle in the toolbar.
+2. When Mock Mode is active:
+   - Hide the "stealth" elements since practice is done openly.
+   - Display the AI's question prominently.
+   - Enable the microphone to capture the user's answer.
+3. At the end of the session, automatically trigger the Session Report UI (P17-T3)
+   to show the final scorecard.
+
+Commit: "jules: P21-T2 add interactive Mock Interview practice mode"
+Target branch: main
