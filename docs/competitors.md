@@ -1,33 +1,49 @@
 # Feature Comparison: Stealth Interview AI Assistants
 
-This matrix compares the **Local AI Assistant** against existing open-source and commercial competitors in the real-time interview copilot space.
+This matrix compares the **Local AI Assistant** (Project Parakeet) against existing commercial competitors in the real-time interview copilot space.
 
 ## Feature Matrix
 
-| Feature | Local AI Assistant (Ours) | Parakeet (NVIDIA) | Final Round AI | Ecoute |
+| Feature | Local AI Assistant (Ours) | Final Round AI | Sensei Copilot | Ecoute (Open Source) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Pricing** | Free / Open Source | Free / Research | $30 - $100+/mo | Free / API Costs |
-| **STT Processing** | Local (Parakeet-TDT / Whisper) | Local (Parakeet) | Cloud (Deepgram/etc.) | Local (Whisper) |
-| **LLM Processing** | Local (Ollama/LM Studio) | N/A (STT focus) | Cloud (GPT-4) | Cloud (OpenAI API) |
-| **End-to-End Latency** | **Zero / Sub-second** | **Zero / Sub-second** | 3-5+ Seconds | 2-3 Seconds |
-| **Data Privacy** | **100% Offline** | **100% Offline** | Highly Invasive | High Risk (API) |
-| **Stealth UI (OS-Level)** | **Yes (Tauri Native)** | No UI (Command Line/API) | Browser-based | Basic Python UI |
-| **Resume Extraction** | **Yes (Local LLM Pass)** | No | Yes (Cloud) | No |
-| **Offline Knowledge Base** | **Yes (RAG)** | No | No | No |
-| **Smart Audio Filter** | **Yes (VAD)** | Basic | Basic | Yes |
+| **Pricing** | Subscription / PAYG | $30 - $100+/mo | Subscription | Free / API Costs |
+| **STT Processing** | Local (faster-whisper) + Gemini Live | Cloud | Cloud | Local (Whisper) |
+| **End-to-End Latency** | **Zero / Sub-second (Gemini Live)** | 3-5+ Seconds | 1-2 Seconds | 2-3 Seconds |
+| **Stealth Mode** | **Portable ZIP + Ghost Cursor / Hotkeys** | Browser/App | Chrome Extension | Basic Python UI |
+| **Speaker Diarization** | **Yes (Interviewer vs Candidate)** | No / Basic | No | No |
+| **Session Analytics** | **Yes (Post-Interview Scorecard)** | Yes (Debrief) | No | No |
+| **Resume Extraction** | Yes (Local LLM Pass / Context) | Yes | Yes | No |
+| **Remote Helper Mode** | **Yes (Cloudflare Tunnel Broadcast)** | No | No | No |
+| **Coding/LeetCode Extraction** | **Yes (Vision Copilot)** | Yes | Yes | No |
+| **Multilingual Support** | Basic (Whisper auto-detect) | Partial | **Yes (30+ Languages)** | Basic |
+| **Mock Interview Mode** | ❌ Missing | Yes | Yes | No |
 
 ---
 
-## Why These Features Matter for Live Interviews
+## Why Our Architecture Wins
 
-1. **End-to-End Latency:** 
-   During a technical interview, every second counts. If the interviewer asks a question and the AI takes 5 seconds to bounce audio to the cloud, transcribe it, send the text to GPT-4, and stream the response back, the resulting silence is awkward and suspicious. By keeping STT and the LLM completely local, our tool achieves **sub-second latency**, streaming hints before the interviewer even finishes speaking.
+1. **Undetectable Stealth (Portable App + Ghost Cursor):**
+   Competitors rely on Chrome extensions or heavy desktop applications which are easily flagged by proctoring software. Our assistant uses a zero-install **Portable ZIP** combined with advanced hotkeys and a **Ghost Cursor** (via Remote Helper). The candidate never touches their mouse, making detection practically impossible via screen-share or OS monitoring.
 
-2. **Data Privacy (100% Offline):**
-   Commercial tools require you to stream your screen and microphone to a third-party server. In many corporate environments, recording an interview under NDA and sending it to a cloud startup is a massive liability. **Local AI Assistant never sends a single byte over the internet.**
+2. **Ultra-Low Latency (Gemini Live):** 
+   In an interview, a 5-second delay is fatal. By wiring directly into the Gemini Live streaming API and skipping the STT bottleneck, our latency is sub-second, matching or beating the fastest competitors.
 
-3. **Stealth UI (Tauri vs Electron):**
-   Browser-based tools and heavy Electron apps are easily detected by standard proctoring software. Our assistant uses a Tauri-based native transparent window that hooks directly into the OS, allowing it to bypass screen-sharing visibility on most setups.
+3. **Speaker Diarization & Routing:**
+   Unlike competitors that just read a wall of text, our app splits the audio channels to tag `[INTERVIEWER]` and `[CANDIDATE]`, ensuring the LLM understands the flow of the conversation and can even provide real-time coaching on the candidate's answers.
 
-4. **Context-Awareness (Resume & RAG):**
-   Generic copilots answer questions like a textbook. Thanks to our new **Resume Extraction** feature and **Local RAG**, this assistant instantly grounds its answers in your personal experience level, tech stack, and personal notes without requiring you to manually write long prompts.
+4. **Invisible Screen Extraction (Vision Copilot):**
+   By hitting `Ctrl+Shift+S`, the app silently captures the screen in memory and pipes it to a Vision model to extract LeetCode problems or System Design diagrams instantly, without any UI overlay blocking your screen.
+
+---
+
+## 🚀 Potential Roadmap Additions (Gap Analysis)
+
+Based on checking what features drive sales for Final Round AI and Sensei Copilot, here are the major gaps we should consider for **Phase 21+**:
+
+1. **Mock Interview Mode**
+   * **The Gap:** Users want to practice with the tool before risking it on a real interview.
+   * **The Fix:** Add a mode where the LLM speaks questions aloud (via TTS) and evaluates the user's spoken answers in a simulated environment, ending with the Session Scorecard.
+
+2. **Explicit Multilingual Support**
+   * **The Gap:** Sensei advertises 30+ languages as a core feature.
+   * **The Fix:** Add a dropdown in our Settings UI to force the STT/LLM pipeline into specific languages (Spanish, Hindi, Mandarin) for international interviews.

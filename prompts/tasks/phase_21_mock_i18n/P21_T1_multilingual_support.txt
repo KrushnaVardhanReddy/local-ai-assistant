@@ -1,0 +1,33 @@
+TASK: P21-T1 — Explicit Multilingual Support (Language Override)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Instead of relying on Whisper's auto-detect (which sometimes flips to English
+accidentally during code reading), add an explicit language override to force
+the entire pipeline into a specific language (e.g., Spanish, Mandarin, Hindi).
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/config.py
+═══════════════════════════════════════════════════════════════
+1. Add `LANGUAGE_OVERRIDE: str = "auto"` to the `Config` dataclass.
+2. If language is not "auto", update the `SYSTEM_PROMPT` to include:
+   "You must respond entirely in the {LANGUAGE_OVERRIDE} language, except for code snippets."
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/transcriber.py
+═══════════════════════════════════════════════════════════════
+1. Update `transcribe()` to accept an optional `language` parameter.
+2. If `config.LANGUAGE_OVERRIDE != "auto"`, pass the ISO-639-1 code (or language name)
+   to the `faster-whisper` transcribe method. (e.g., `model.transcribe(..., language="es")`).
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Settings.svelte
+═══════════════════════════════════════════════════════════════
+1. Add a dropdown for "Interview Language".
+2. Options: "Auto-Detect", "English (en)", "Spanish (es)", "French (fr)", 
+   "German (de)", "Hindi (hi)", "Mandarin (zh)".
+3. Save to backend config on change.
+
+Commit: "jules: P21-T1 add explicit multilingual override for STT and LLM"
+Target branch: main
