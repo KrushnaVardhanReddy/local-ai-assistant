@@ -75,6 +75,89 @@ class LLMClient:
         except aiohttp.ClientConnectorError:
             yield f"[Error: Cannot connect to LLM backend at {self.base_url}]"
 
+    async def generate_scorecard(self, session_data: dict) -> dict:
+        """
+        Generate a structured interview scorecard from session turn data.
+
+        Args:
+            session_data: Output of SessionManager.export() — contains turns list
+                          with transcripts and responses.
+
+        Returns:
+            dict with keys: overall_score, summary, turns (list of per-turn evals)
+        """
+        turns = session_data.get("turns", [])
+        if not turns:
+            return {"error": "No session data to score"}
+
+        # Build a compact transcript for the LLM
+        transcript_lines = []
+        for t in turns:
+            transcript_lines.append(f"Q{t['turn'] + 1}: {t['transcript']}")
+            transcript_lines.append(f"A{t['turn'] + 1}: {t['response']}")
+        transcript_text = "\n".join(transcript_lines)
+
+        scorecard_prompt = f"""You are an expert technical interview evaluator. Analyze the following interview transcript and return a JSON scorecard.
+
+TRANSCRIPT:
+{transcript_text}
+
+Return ONLY valid JSON with this exact structure (no markdown, no explanation):
+{{
+  "overall_score": <1-10 integer>,
+  "overall_summary": "<2-3 sentence overall assessment>",
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "gaps": ["<gap 1>", "<gap 2>"],
+  "turns": [
+    {{
+      "turn": 0,
+      "score": <1-5 integer>,
+      "verdict": "<Good|Partial|Incomplete|Off-topic>",
+      "what_was_good": "<one sentence>",
+      "what_was_missing": "<one sentence or null>",
+      "suggested_addition": "<one concise sentence the candidate should have said, or null>"
+    }}
+  ]
+}}"""
+
+        messages = [
+            {"role": "system", "content": "You are a precise JSON-only technical interview evaluator."},
+            {"role": "user", "content": scorecard_prompt}
+        ]
+
+        import httpx
+
+        headers = self._build_headers()
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+            "temperature": 0.3,
+            "max_tokens": 2000,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                )
+                resp.raise_for_status()
+                content = resp.json()["choices"][0]["message"]["content"].strip()
+                if content.startswith("```"):
+                    content = content.split("```", 1)[1]
+                    if content.startswith("json\n"):
+                        content = content[5:]
+                    elif content.startswith("json"):
+                        content = content[4:]
+
+                    if content.endswith("```"):
+                        content = content[:-3].strip()
+                return json.loads(content)
+        except Exception as e:
+            return {"error": f"Scorecard generation failed: {str(e)}"}
+
     async def health_check(self) -> bool:
         try:
             async with aiohttp.ClientSession() as session:
