@@ -1,0 +1,79 @@
+TASK: P15-T3 — Speaker Label Badges in Transcript Chips (UI)
+
+PARALLEL BATCH: 4 — After Batch 3. Safe alongside P15-T2, P16-T4, P17-T4.
+Files touched: frontend/src/lib/Assistant.svelte (chip rendering only)
+PREREQUISITE: P15-T2 must be merged (sends speaker field in transcript events).
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+When the backend sends transcript events with a "speaker" field ("interviewer" or
+"candidate"), show a label badge on the transcript chip so the user can visually
+confirm the system is hearing both sides correctly.
+
+Interviewer chips: 🎤 badge, blue tint border
+Candidate chips:   👤 badge, default appearance
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/ws.svelte.ts
+═══════════════════════════════════════════════════════════════
+
+Update the transcript message handler to preserve the speaker field:
+
+In the `ws.onmessage` handler, when processing `data.type === "transcript"`,
+update the pendingTranscripts push to include speaker:
+
+```typescript
+wsState.pendingTranscripts.push({
+  id: Date.now() + Math.random(),
+  text: data.text,
+  speaker: data.speaker ?? null,  // "interviewer" | "candidate" | null
+});
+```
+
+Also update the PendingTranscript type (if typed) to include:
+```typescript
+speaker?: "interviewer" | "candidate" | null;
+```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Assistant.svelte (chip rendering section)
+═══════════════════════════════════════════════════════════════
+
+In the chip bar section (the `{#each wsState.pendingTranscripts as chip}` block),
+update the chip button to show a speaker badge when speaker is set:
+
+```svelte
+<button class="chip-pill {chip.speaker === 'interviewer' ? 'chip-interviewer' : ''}" ...>
+  {#if chip.speaker === 'interviewer'}
+    <span class="speaker-badge interviewer-badge">🎤</span>
+  {:else if chip.speaker === 'candidate'}
+    <span class="speaker-badge candidate-badge">👤</span>
+  {/if}
+  <span class="chip-text">{chip.text.length > 60 ? chip.text.slice(0, 60) + '…' : chip.text}</span>
+  <!-- existing dismiss button -->
+</button>
+```
+
+Add CSS in the <style> block:
+```css
+.chip-interviewer {
+  border-color: rgba(99, 179, 237, 0.3);
+  background: rgba(99, 179, 237, 0.08);
+}
+.speaker-badge {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+```
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src/lib/ws.svelte.ts    (add speaker field to pendingTranscripts)
+- frontend/src/lib/Assistant.svelte (add speaker badges to chip rendering)
+
+Commit: "jules: P15-T3 show speaker label badges on transcript chips"
+Target branch: main

@@ -1,0 +1,159 @@
+TASK: P20-T2+T3 — Device Registration & Concurrent Session Lock (auth.py + app.py)
+
+PARALLEL BATCH: 5 — After P20-T1 schema merged.
+Files touched: backend/auth.py (device check), backend/app.py (session lock on WS connect)
+PREREQUISITE: P20-T1 schema must be applied.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+P20-T2: On WebSocket auth, check machine_id against registered devices.
+  - If new machine: register if under plan limit, else reject.
+P20-T3: Allow only 1 concurrent session per account.
+  - On connect: write active_session_id to Supabase.
+  - If another session exists: reject with {"type": "already_active"}.
+  - On disconnect: clear active_session_id. Auto-expire after 5 min.
+
+The machine_id is already sent by the frontend on every WS auth message:
+  {"type": "auth", "token": "...", "machine_id": "..."}
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/auth.py
+═══════════════════════════════════════════════════════════════
+
+Add these two async functions to auth.py:
+
+```python
+import uuid
+import datetime
+
+async def check_and_register_device(user_id: str, machine_id: str, supabase_client) -> dict:
+    """
+    Check if machine_id is registered for this user.
+    Register it if under the plan device limit.
+    Returns {"allowed": True} or {"allowed": False, "reason": "...", "max": N}
+    """
+    # Get user's plan
+    profile = supabase_client.table("profiles").select("plan").eq("id", user_id).single().execute()
+    plan = profile.data.get("plan", "demo") if profile.data else "demo"
+
+    # Get device limit for this plan
+    limit_row = supabase_client.table("plan_device_limits").select("max_devices").eq("plan", plan).single().execute()
+    max_devices = limit_row.data.get("max_devices", 1) if limit_row.data else 1
+
+    # Check existing devices
+    existing = supabase_client.table("user_devices").select("machine_id").eq("user_id", user_id).execute()
+    existing_ids = [d["machine_id"] for d in (existing.data or [])]
+
+    if machine_id in existing_ids:
+        # Known device — update last_seen and allow
+        supabase_client.table("user_devices").update(
+            {"last_seen_at": datetime.datetime.utcnow().isoformat()}
+        ).eq("user_id", user_id).eq("machine_id", machine_id).execute()
+        return {"allowed": True}
+
+    if len(existing_ids) >= max_devices:
+        return {"allowed": False, "reason": "device_limit_reached", "max": max_devices}
+
+    # New device — register it
+    supabase_client.table("user_devices").insert({
+        "user_id": user_id,
+        "machine_id": machine_id,
+        "device_label": "New Device",
+        "registered_at": datetime.datetime.utcnow().isoformat(),
+        "last_seen_at": datetime.datetime.utcnow().isoformat(),
+    }).execute()
+    return {"allowed": True}
+
+
+async def acquire_session_lock(user_id: str, supabase_client) -> dict:
+    """
+    Try to acquire the active session slot for this user.
+    Returns {"acquired": True, "session_id": "..."} or {"acquired": False, "reason": "already_active"}
+    """
+    # Check for existing active session (ignore if older than 5 minutes — stale)
+    profile = supabase_client.table("profiles").select(
+        "active_session_id, active_session_at"
+    ).eq("id", user_id).single().execute()
+
+    if profile.data and profile.data.get("active_session_id"):
+        session_at_str = profile.data.get("active_session_at")
+        if session_at_str:
+            session_at = datetime.datetime.fromisoformat(session_at_str.replace("Z", "+00:00"))
+            age_minutes = (datetime.datetime.now(datetime.timezone.utc) - session_at).seconds / 60
+            if age_minutes < 5:
+                return {"acquired": False, "reason": "already_active"}
+
+    # Acquire the lock
+    new_session_id = str(uuid.uuid4())
+    supabase_client.table("profiles").update({
+        "active_session_id": new_session_id,
+        "active_session_at": datetime.datetime.utcnow().isoformat(),
+    }).eq("id", user_id).execute()
+    return {"acquired": True, "session_id": new_session_id}
+
+
+async def release_session_lock(user_id: str, supabase_client) -> None:
+    """Release the active session lock on disconnect."""
+    supabase_client.table("profiles").update({
+        "active_session_id": None,
+        "active_session_at": None,
+    }).eq("id", user_id).execute()
+```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py (WebSocket handler — auth message handling)
+═══════════════════════════════════════════════════════════════
+
+In the WebSocket handler, in the section that processes `{"type": "auth"}` messages,
+after validating the JWT token, add:
+
+```python
+# P20: Device registration check
+machine_id = data.get("machine_id", "")
+if machine_id and config.SUPABASE_URL:
+    device_result = await check_and_register_device(user_id, machine_id, supabase)
+    if not device_result["allowed"]:
+        await websocket.send_json({
+            "type": "device_limit_reached",
+            "max": device_result.get("max", 1),
+            "message": f"Device limit reached ({device_result['max']} max). Remove a device at your dashboard."
+        })
+        await websocket.close()
+        return
+
+    # P20: Concurrent session lock
+    session_result = await acquire_session_lock(user_id, supabase)
+    if not session_result["acquired"]:
+        await websocket.send_json({
+            "type": "already_active",
+            "message": "Another session is already active. Close it or wait 5 minutes for it to expire."
+        })
+        await websocket.close()
+        return
+
+    websocket._session_lock_id = session_result["session_id"]
+    websocket._user_id_for_lock = user_id
+```
+
+On WebSocket disconnect (in the disconnect/cleanup section):
+```python
+# P20: Release session lock
+if hasattr(websocket, "_user_id_for_lock") and config.SUPABASE_URL:
+    await release_session_lock(websocket._user_id_for_lock, supabase)
+```
+
+Note: `supabase` is the Supabase client instance already used in auth.py/app.py.
+Check the existing code for how it's initialized and use the same instance.
+If SUPABASE_URL is empty (local dev without auth), skip all P20 checks entirely.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/auth.py  (add check_and_register_device, acquire_session_lock, release_session_lock)
+- backend/app.py   (call device check + session lock in WS auth handler, release on disconnect)
+
+Commit: "jules: P20-T2+T3 device registration check and concurrent session lock"
+Target branch: main

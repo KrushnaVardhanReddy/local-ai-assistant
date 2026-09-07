@@ -1,0 +1,94 @@
+TASK: P17-T4 — Live Answer Coaching (app.py)
+
+PARALLEL BATCH: 4 — After Batch 3. Safe alongside P15-T2, P15-T3, P16-T4.
+Files touched: backend/app.py (new coaching call after LLM response completes)
+PREREQUISITE: P17-T1 (session manager) must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+After the LLM streams a response, optionally fire a second quick LLM call to
+evaluate the candidate's answer and stream back a coaching hint. This gives
+real-time "what you missed" feedback without interrupting the main response.
+
+Controlled by config: COACHING_ENABLED=true (default: false — opt-in only).
+
+Coaching hint format: "✅ Good answer. Also consider mentioning X."
+or: "⚠️ Incomplete — you didn't address Y. Add: Z."
+
+Coaching is sent as a special WebSocket message type: {"type": "coaching", "text": "..."}
+The frontend shows it in a subtle secondary area (P17-T3 handles the UI).
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/config.py
+═══════════════════════════════════════════════════════════════
+
+Add to Config dataclass:
+  ```python
+  COACHING_ENABLED: bool = False
+  ```
+
+Add to __post_init__:
+  ```python
+  self.COACHING_ENABLED = os.environ.get("COACHING_ENABLED", "false").lower() == "true"
+  ```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py
+═══════════════════════════════════════════════════════════════
+
+After the existing LLM stream loop completes (after `out_q.put_nowait({"type": "done"})`),
+add the coaching call:
+
+```python
+# Live Answer Coaching (optional — COACHING_ENABLED=true)
+if config.COACHING_ENABLED and assembled:
+    async def _send_coaching():
+        coaching_prompt = (
+            f"The interview question/context was: {assembled}\n"
+            f"The AI suggested this answer: {full_response}\n\n"
+            "In ONE sentence max, give the candidate a coaching tip: "
+            "what was good, and what key point they should add next time. "
+            "Start with ✅ if mostly complete or ⚠️ if incomplete. "
+            "Be extremely concise — max 20 words."
+        )
+        coaching_msgs = [
+            {"role": "system", "content": "You are a brief interview coach. One sentence only."},
+            {"role": "user", "content": coaching_prompt},
+        ]
+        coaching_text = ""
+        async for token in llm_client.stream(coaching_msgs, model_override=None):
+            coaching_text += token
+        if coaching_text.strip():
+            out_q.put_nowait({"type": "coaching", "text": coaching_text.strip()})
+
+    asyncio.create_task(_send_coaching())
+```
+
+Where `full_response` is the accumulated LLM response string (collect tokens
+during the stream loop into a local variable alongside the existing out_q puts).
+
+NOTE: The coaching call runs as a background task so it doesn't block the
+main WebSocket loop. The frontend receives it after the main response is done.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Collect `full_response = ""` alongside the existing token streaming loop:
+    full_response += token
+  Then use it in the coaching prompt.
+- `model_override=None` uses the same model as the main LLM call. If LLMClient
+  doesn't support model_override, just call the normal stream method.
+- COACHING_ENABLED defaults to false so existing users are not affected until
+  they opt in via .env.local.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/config.py  (add COACHING_ENABLED field)
+- backend/app.py     (add coaching background task after LLM response)
+
+Commit: "jules: P17-T4 add live answer coaching hints after LLM response"
+Target branch: main

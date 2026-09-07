@@ -1,0 +1,173 @@
+TASK: P18-T1+T2 — Portable App Build & Neutral Process Name
+
+PARALLEL BATCH: 1 — Safe to run alongside P16-T1 and P17-T1 simultaneously.
+Files touched: frontend/src-tauri/tauri.conf.json, frontend/src-tauri/Cargo.toml
+NO overlap with any other Batch 1 task.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The current Tauri build produces an NSIS installer on Windows, which:
+  1. Appears in "Apps & Features" (appwiz.cpl) — immediately betrays the app
+     during a live interview if someone opens Add/Remove Programs.
+  2. Writes registry entries, requires admin privileges to install.
+  3. Creates an obvious Start Menu entry called "Local AI Assistant".
+
+This task switches the Windows build to a fully portable ZIP — just an EXE +
+resources folder. No installer, no registry, no appwiz.cpl entry. Additionally,
+the binary/process name is changed from "Local AI Assistant" to a neutral name
+("AudioService") so it blends in Task Manager.
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND
+═══════════════════════════════════════════════════════════════
+Tauri 2.0 supports the following Windows bundle targets in tauri.conf.json:
+  - "nsis"     → installer (current, bad for stealth)
+  - "msi"      → MSI installer (also bad)
+  - "app"      → portable folder (no installer, good)
+  - "updater"  → auto-updater bundle
+
+The "app" target produces a directory containing:
+  AppName.exe
+  _up_/        (Tauri runtime files)
+  WebView2Loader.dll
+
+This directory can be zipped and distributed as a portable download.
+No admin rights required. No registry entries. No appwiz.cpl entry.
+
+The productName field in tauri.conf.json controls:
+  - The displayed app name in the window title
+  - The process name visible in Task Manager (the .exe filename)
+  - The installer product name (not relevant for portable)
+
+The [[bin]] name in Cargo.toml controls the actual binary filename.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src-tauri/tauri.conf.json
+═══════════════════════════════════════════════════════════════
+
+1. Change the "bundle" section:
+   - Change "productName" at the top level from "Local AI Assistant" to "AudioService"
+   - Change "targets" in the bundle section from "all" to ["app"] for Windows portable.
+     Note: keep "all" for other platforms or handle per-platform.
+   
+   The updated bundle section should look like:
+
+   ```json
+   {
+     "$schema": "https://schema.tauri.app/config/2",
+     "productName": "AudioService",
+     "version": "0.1.0",
+     "identifier": "com.localai.assistant",
+     "build": {
+       "beforeDevCommand": "npm run dev",
+       "devUrl": "http://localhost:1420",
+       "beforeBuildCommand": "npm run build",
+       "frontendDist": "../dist"
+     },
+     "app": {
+       "windows": [
+         {
+           "title": "AudioService",
+           "width": 1200,
+           "height": 800,
+           "resizable": true,
+           "transparent": true,
+           "decorations": false,
+           "alwaysOnTop": true,
+           "skipTaskbar": true,
+           "shadow": false,
+           "visible": false,
+           "contentProtected": true,
+           "backgroundColor": "#00000000"
+         }
+       ],
+       "security": {
+         "csp": null
+       }
+     },
+     "bundle": {
+       "active": true,
+       "targets": ["app"],
+       "icon": [
+         "icons/32x32.png",
+         "icons/128x128.png",
+         "icons/128x128@2x.png",
+         "icons/icon.icns",
+         "icons/icon.ico"
+       ]
+     }
+   }
+   ```
+
+   Note: "targets": ["app"] produces the portable directory.
+   If you need to support macOS .app bundles or Linux AppImage as well,
+   use: "targets": ["app", "dmg", "appimage"] but for Windows portable
+   the "app" target is what matters.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src-tauri/Cargo.toml
+═══════════════════════════════════════════════════════════════
+
+1. Change the package name to match the neutral identity:
+
+   ```toml
+   [package]
+   name = "audio-service"
+   version = "0.1.0"
+   description = "Audio processing service"
+   authors = ["you"]
+   edition = "2021"
+   ```
+
+2. Add an explicit [[bin]] entry to control the output binary name:
+
+   ```toml
+   [[bin]]
+   name = "AudioService"
+   path = "src/main.rs"
+   ```
+
+   This ensures the final .exe is named "AudioService.exe" regardless of
+   the package name, and this is exactly what shows in Task Manager.
+
+3. The lib section stays the same (required for Tauri mobile builds):
+
+   ```toml
+   [lib]
+   name = "frontend_lib"
+   crate-type = ["staticlib", "cdylib", "rlib"]
+   ```
+
+   IMPORTANT: The lib name must remain "frontend_lib" — changing it would
+   break the Tauri mobile build hooks. Only change the [[bin]] name.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The "app" bundle target in Tauri 2.0 is the portable directory format.
+  Do NOT confuse it with the macOS .app bundle — in the Tauri bundle config
+  context, "app" means a portable executable directory on Windows.
+- After the build, the portable output will be at:
+    frontend/src-tauri/target/release/bundle/app/AudioService_0.1.0_x64/
+  This directory can be zipped into AudioService-portable-win.zip for distribution.
+- The window title ("AudioService") is set in tauri.conf.json under
+  app.windows[0].title. This is what appears in the taskbar if skipTaskbar is false.
+  Since skipTaskbar is true, the window won't appear in the taskbar at all.
+- Do NOT change the Tauri "identifier" (com.localai.assistant) — this is used
+  internally for the OS keychain (machine_id storage) and changing it would
+  break existing user sessions.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src-tauri/tauri.conf.json  (productName, window title, bundle targets)
+- frontend/src-tauri/Cargo.toml       (package name, add [[bin]] with AudioService)
+
+FILES TO CREATE:
+(none)
+
+Commit: "jules: P18-T1+T2 portable app build + neutral process name AudioService"
+Target branch: main

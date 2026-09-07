@@ -1,0 +1,119 @@
+TASK: P16-T2 — Wire Gemini Live into WebSocket Pipeline (app.py)
+
+PARALLEL BATCH: 3 — Run after Batch 2 merged. Safe alongside P15-T1 and P17-T3.
+Files touched: backend/app.py (existing startup + WS handler)
+NO overlap with P15-T1 (transcriber.py only) or P17-T3 (new Svelte file + Assistant.svelte).
+
+PREREQUISITES: P16-T1 (gemini_live_client.py) AND P16-T3 (config vars) must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Wire the GeminiLiveClient into app.py so that when LLM_PROVIDER=gemini,
+the system uses the unified Gemini Live pipeline instead of the separate
+Transcriber + LLMClient chain. All other providers (groq, ollama, etc.)
+continue using the existing pipeline unchanged.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py
+═══════════════════════════════════════════════════════════════
+
+1. Add import at the top:
+   ```python
+   from gemini_live_client import GeminiLiveClient
+   ```
+
+2. Add a global variable alongside `transcriber`, `llm_client`, `listener`:
+   ```python
+   gemini_live: GeminiLiveClient | None = None
+   ```
+
+3. In `startup_event()`, after the existing `transcriber.load()` and
+   `llm_client = await LLMClient.from_config()` calls, add:
+
+   ```python
+   # If Gemini Live mode: connect unified audio+LLM client
+   if config.LLM_PROVIDER.lower() == "gemini":
+       global gemini_live
+       gemini_live = GeminiLiveClient(
+           api_key=config.GEMINI_API_KEY,
+           model=config.GEMINI_LIVE_MODEL,
+           system_prompt=config.SYSTEM_PROMPT,
+           sample_rate=config.AUDIO_SAMPLE_RATE,
+       )
+       await gemini_live.connect()
+       print("✅ Gemini Live mode active — unified audio+LLM pipeline", file=sys.stderr)
+   ```
+
+4. In `shutdown_event()`, add:
+   ```python
+   if gemini_live:
+       await gemini_live.disconnect()
+   ```
+
+5. In the WebSocket handler, find the section where audio chunks are processed
+   and transcribed. Wrap it with a Gemini vs. standard provider check:
+
+   The existing flow roughly looks like:
+   ```python
+   # existing code:
+   transcript = await asyncio.to_thread(transcriber.transcribe, audio_buffer)
+   if transcript:
+       # ... filter, then call LLM stream ...
+   ```
+
+   Wrap with:
+   ```python
+   if gemini_live and gemini_live.is_connected:
+       # GEMINI LIVE MODE: send audio directly, receive transcript + response
+       await gemini_live.send_audio(audio_chunk_bytes)
+       if vad_end_of_turn:  # when VAD detects silence
+           await gemini_live.end_of_turn()
+           async for event in gemini_live.receive():
+               if event["type"] == "transcript":
+                   out_q.put_nowait({"type": "transcript", "text": event["text"]})
+               elif event["type"] == "token":
+                   out_q.put_nowait({"type": "token", "text": event["text"]})
+               elif event["type"] == "done":
+                   out_q.put_nowait({"type": "done"})
+                   break
+   else:
+       # STANDARD MODE: existing STT → LLM pipeline
+       transcript = await asyncio.to_thread(transcriber.transcribe, audio_buffer)
+       # ... rest of existing code unchanged ...
+   ```
+
+   NOTE: Study the actual app.py WebSocket handler carefully before editing.
+   The exact variable names and flow may differ. The goal is to:
+     - In Gemini mode: forward each audio chunk, trigger response on VAD silence
+     - In standard mode: call transcriber.transcribe() as before
+   Adapt the pseudo-code above to match the actual code structure.
+
+6. Also handle the click-to-send text messages in Gemini mode:
+   When a `{"type": "chat", "text": "..."}` message arrives on the WebSocket,
+   if Gemini Live is active, use `gemini_live.send_text(text)` instead of
+   the existing LLM client call.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `vad_end_of_turn` — look at how the existing smart_filter or VAD buffer
+  signals "the user has stopped speaking". The SilenceBuffer from smart_filter.py
+  likely has a method or property for this. Mirror that signal for Gemini.
+- If the Gemini connection drops mid-session, catch the exception and attempt
+  reconnect: `await gemini_live.connect()`. Add a try/except around the send.
+- The `audio_chunk_bytes` are raw PCM bytes from the audio listener. These
+  are the same bytes currently passed to transcriber.transcribe(). Pass them
+  directly to gemini_live.send_audio().
+- When Gemini Live is active, the `transcriber` is still initialized but never
+  called. This is fine — it loads quickly with no local model in Groq mode.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/app.py  (add GeminiLiveClient wiring in startup, shutdown, and WS handler)
+
+Commit: "jules: P16-T2 wire GeminiLiveClient into app.py WebSocket pipeline"
+Target branch: main

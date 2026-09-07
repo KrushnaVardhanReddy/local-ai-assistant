@@ -1,0 +1,113 @@
+TASK: P18-T3 — User-Configurable Process Name (settings.json)
+
+PARALLEL BATCH: 4 — After Batch 3. Safe alongside P15-T2, P15-T3, P16-T4, P17-T4.
+Files touched: frontend/src-tauri/src/lib.rs (read settings.json), new settings.json template
+PREREQUISITE: P18-T1+T2 must be merged (portable build + default neutral name).
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The default process name is "AudioService" (set in Cargo.toml [[bin]]). But
+advanced users may want to rename it to something even more neutral for their
+specific environment. Since we can't rename an EXE at runtime (Windows locks it),
+we instead allow the user to rename the EXE themselves AND set the window title
+and app title shown in the UI via a local settings.json file.
+
+This gives users a simple way to personalize stealth identity without rebuilding.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src-tauri/src/lib.rs
+═══════════════════════════════════════════════════════════════
+
+1. Add a function to read optional settings.json from the same directory as the EXE:
+
+```rust
+fn read_local_settings() -> serde_json::Value {
+    use std::fs;
+    // Look for settings.json next to the executable
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(dir) = exe_path.parent() {
+            let settings_path = dir.join("settings.json");
+            if settings_path.exists() {
+                if let Ok(content) = fs::read_to_string(&settings_path) {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                        return json;
+                    }
+                }
+            }
+        }
+    }
+    serde_json::Value::Object(serde_json::Map::new())
+}
+```
+
+2. In the `setup` closure of the `Builder::default()` call in lib.rs, read the
+   settings and apply the window title if APP_DISPLAY_NAME is set:
+
+```rust
+let settings = read_local_settings();
+let app_name = settings
+    .get("APP_DISPLAY_NAME")
+    .and_then(|v| v.as_str())
+    .unwrap_or("AudioService")
+    .to_string();
+
+// Apply to the main window
+if let Some(window) = app.get_webview_window("main") {
+    let _ = window.set_title(&app_name);
+}
+```
+
+3. Expose a Tauri command so the frontend can read the configured app name:
+
+```rust
+#[tauri::command]
+fn get_app_display_name() -> String {
+    let settings = read_local_settings();
+    settings
+        .get("APP_DISPLAY_NAME")
+        .and_then(|v| v.as_str())
+        .unwrap_or("AudioService")
+        .to_string()
+}
+```
+
+Register it in the invoke_handler:
+```rust
+.invoke_handler(tauri::generate_handler![
+    // ... existing commands ...
+    get_app_display_name,
+])
+```
+
+═══════════════════════════════════════════════════════════════
+NEW FILE: settings.json.example (repo root)
+═══════════════════════════════════════════════════════════════
+
+Create settings.json.example with documentation:
+
+```json
+{
+  "_comment": "Copy to settings.json next to AudioService.exe. Rename the .exe file to match APP_DISPLAY_NAME for full stealth.",
+  "APP_DISPLAY_NAME": "AudioService"
+}
+```
+
+Add settings.json to .gitignore (each user has their own — don't commit):
+```
+settings.json
+```
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src-tauri/src/lib.rs  (add read_local_settings, apply title, add command)
+- .gitignore                      (add settings.json)
+
+FILES TO CREATE:
+- settings.json.example          (documentation template)
+
+Commit: "jules: P18-T3 read settings.json for user-configurable process display name"
+Target branch: main

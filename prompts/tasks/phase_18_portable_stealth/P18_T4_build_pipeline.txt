@@ -1,0 +1,143 @@
+TASK: P18-T4 — Portable Build Pipeline (make build-portable)
+
+PARALLEL BATCH: 2 — Run after Batch 1 merged. Safe alongside P16-T3 and P17-T2.
+Files touched: Makefile, scripts/build.sh
+NO overlap with config.py, llm_client.py, or any frontend files.
+
+PREREQUISITE: P18-T1+T2 must be merged before this task.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a `make build-portable` target that:
+  1. Builds the Python backend into a single Windows EXE via PyInstaller
+  2. Builds the Tauri frontend as a portable directory
+  3. Packages both into a single distributable ZIP: AudioService-portable-win.zip
+
+This gives a one-command release build that produces a zero-install artifact.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: Makefile
+═══════════════════════════════════════════════════════════════
+
+Add these targets to the Makefile (append after the existing targets):
+
+```makefile
+# ─── Portable Build ────────────────────────────────────────────────────────────
+
+# Build portable Windows ZIP (run on Windows or via cross-compilation)
+build-portable:
+	@echo "Building portable Windows release..."
+	@bash scripts/build_portable.sh
+
+# Build backend EXE only (PyInstaller)
+build-backend-exe:
+	@echo "Building Python backend EXE..."
+	@cd backend && ../.venv/bin/pyinstaller \
+		--onefile \
+		--name AudioService-backend \
+		--add-data "*.py:." \
+		app.py
+	@echo "Backend EXE: backend/dist/AudioService-backend.exe"
+
+# Build Tauri portable only
+build-frontend-portable:
+	@echo "Building Tauri portable app..."
+	@cd frontend && npm run tauri build -- --target x86_64-pc-windows-msvc
+	@echo "Portable output: frontend/src-tauri/target/release/bundle/app/"
+```
+
+═══════════════════════════════════════════════════════════════
+NEW FILE: scripts/build_portable.sh
+═══════════════════════════════════════════════════════════════
+
+Create scripts/build_portable.sh:
+
+```bash
+#!/usr/bin/env bash
+# Build a portable Windows release: AudioService-portable-win.zip
+# Run from repo root. Requires: pyinstaller, cargo, tauri-cli, zip
+
+set -e
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DIST="$ROOT/dist/portable"
+VERSION=$(grep '"version"' "$ROOT/frontend/src-tauri/tauri.conf.json" | head -1 | grep -oP '[\d.]+')
+
+echo "═══════════════════════════════════════════"
+echo " AudioService Portable Build v$VERSION"
+echo "═══════════════════════════════════════════"
+
+# Clean
+rm -rf "$DIST"
+mkdir -p "$DIST"
+
+# 1. Build Python backend with PyInstaller
+echo "[1/3] Building backend EXE..."
+cd "$ROOT/backend"
+../.venv/bin/pyinstaller \
+    --onefile \
+    --name AudioService-backend \
+    --distpath "$DIST" \
+    --workpath /tmp/pyinstaller_build \
+    --specpath /tmp \
+    --noconfirm \
+    app.py
+echo "      ✅ Backend: $DIST/AudioService-backend.exe"
+
+# 2. Build Tauri portable app
+echo "[2/3] Building Tauri portable app..."
+cd "$ROOT/frontend"
+npm run tauri build -- --no-bundle 2>/dev/null || \
+    npm run tauri build
+TAURI_APP="$ROOT/frontend/src-tauri/target/release/bundle/app"
+if [ -d "$TAURI_APP" ]; then
+    cp -r "$TAURI_APP"/. "$DIST/"
+else
+    # Fallback: copy just the EXE from release
+    cp "$ROOT/frontend/src-tauri/target/release/AudioService.exe" "$DIST/"
+fi
+echo "      ✅ Frontend: $DIST/"
+
+# 3. Copy .env.local template (without secrets)
+echo "[3/3] Packaging..."
+cp "$ROOT/.env.local.example" "$DIST/.env.local" 2>/dev/null || \
+    grep -v "API_KEY\|SECRET\|KEY=" "$ROOT/.env.local" > "$DIST/.env.local"
+
+# Zip everything
+cd "$ROOT/dist"
+zip -r "AudioService-portable-win-v${VERSION}.zip" portable/
+echo ""
+echo "═══════════════════════════════════════════"
+echo " ✅ Release: dist/AudioService-portable-win-v${VERSION}.zip"
+echo "═══════════════════════════════════════════"
+```
+
+Make it executable:
+  chmod +x scripts/build_portable.sh
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- PyInstaller must be installed in the backend .venv:
+    cd backend && .venv/bin/pip install pyinstaller
+  Add pyinstaller to backend/requirements-dev.txt (not requirements.txt —
+  it's a build tool, not a runtime dependency).
+- The `--no-bundle` flag for tauri build skips installer creation, giving
+  just the raw EXE. This is what we want for portable.
+- The .env.local included in the ZIP strips API keys for security. Users
+  fill in their own GROQ_API_KEY / GEMINI_API_KEY after unzipping.
+- On Windows, run the build script in Git Bash or WSL. The resulting ZIP
+  works on any Windows 10/11 x64 machine with WebView2 installed.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- Makefile  (add build-portable, build-backend-exe, build-frontend-portable targets)
+
+FILES TO CREATE:
+- scripts/build_portable.sh  (full build script as described above)
+
+Commit: "jules: P18-T4 add portable build pipeline and make build-portable target"
+Target branch: main
