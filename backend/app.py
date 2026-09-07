@@ -26,7 +26,7 @@ from llm_client import LLMClient
 from rag import ingestor
 from rag import retriever
 from rag.web_search import search_web
-from smart_filter import SilenceBuffer, passes_filter
+from smart_filter import SilenceBuffer, passes_filter, passes_filter_for_speaker
 
 from session_manager import session as interview_session
 
@@ -232,6 +232,7 @@ async def ws_endpoint(websocket: WebSocket):
     is_streaming = asyncio.Event()  # Set when LLM is actively streaming
     pending_questions = asyncio.Queue()
     silence_buffer = SilenceBuffer()
+    chat_history = []
 
     async def async_sender():
         try:
@@ -317,24 +318,57 @@ async def ws_endpoint(websocket: WebSocket):
                     # If silent and we have audio, check timeout
                     if websocket.audio_buffer and (time.monotonic() - websocket.last_active_time) >= config.SILENCE_THRESHOLD_SECONDS:
                         # Reuse the last live transcript if available, avoiding redundant Whisper call
-                        if websocket.last_live_transcript:
-                            assembled = websocket.last_live_transcript
-                        else:
-                            assembled = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
-                        websocket.audio_buffer = b""
-                        websocket.last_active_time = time.monotonic()
-                        websocket.last_live_transcript = ""
-                        
-                        print(f"[VAD] Assembled: '{assembled}'", file=sys.stderr)
-                        
-                        if not assembled:
-                            continue
-                            
-                        should_send, reason = passes_filter(assembled)
-                        if not should_send:
-                            continue
+                        if config.STT_DIARIZE:
+                            segments = await asyncio.to_thread(transcriber.transcribe_with_speaker, websocket.audio_buffer)
+                            websocket.audio_buffer = b""
+                            websocket.last_active_time = time.monotonic()
+                            websocket.last_live_transcript = ""
 
-                        transcript = assembled
+                            has_candidate_transcript = False
+                            candidate_transcript = ""
+                            for seg in segments:
+                                speaker = seg.get("speaker")
+                                text = seg.get("text", "").strip()
+                                if not text:
+                                    continue
+
+                                if speaker == "INTERVIEWER":
+                                    context_msg = f"[Interviewer asked]: {text}"
+                                    chat_history.append({"role": "user", "content": context_msg})
+                                    for out_q in list(active_outbound_queues):
+                                        out_q.put_nowait({"type": "transcript", "text": f"🎤 {text}", "speaker": "interviewer"})
+                                else:
+                                    should_send, reason = passes_filter(text)
+                                    if should_send:
+                                        if candidate_transcript:
+                                            candidate_transcript += " "
+                                        candidate_transcript += text
+                                        has_candidate_transcript = True
+                                        for out_q in list(active_outbound_queues):
+                                            out_q.put_nowait({"type": "transcript", "text": text, "speaker": "candidate"})
+
+                            if not has_candidate_transcript:
+                                continue
+                            transcript = candidate_transcript
+                        else:
+                            if websocket.last_live_transcript:
+                                assembled = websocket.last_live_transcript
+                            else:
+                                assembled = await asyncio.to_thread(transcriber.transcribe, websocket.audio_buffer)
+                            websocket.audio_buffer = b""
+                            websocket.last_active_time = time.monotonic()
+                            websocket.last_live_transcript = ""
+
+                            print(f"[VAD] Assembled: '{assembled}'", file=sys.stderr)
+                            
+                            if not assembled:
+                                continue
+
+                            should_send, reason = passes_filter(assembled)
+                            if not should_send:
+                                continue
+
+                            transcript = assembled
                     else:
                         continue
 
@@ -393,10 +427,10 @@ async def ws_endpoint(websocket: WebSocket):
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "rag_sources", "sources": sources})
 
-                    messages = [
-                        {"role": "system", "content": system_content},
-                        {"role": "user", "content": transcript}
-                    ]
+                    messages = [{"role": "system", "content": system_content}]
+                    messages.extend(chat_history)
+                    messages.append({"role": "user", "content": transcript})
+                    chat_history.clear()
 
                     interview_session.start_turn(transcript)
                     is_streaming.set()
