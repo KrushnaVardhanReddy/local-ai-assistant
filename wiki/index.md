@@ -6,4 +6,5 @@ This is the catalog of everything in the wiki.
 - [log.md](log.md) - Chronological log of wiki changes
 
 ## Project Documentation
-- [No documents ingested yet]
+- [Competitors](competitors.md) - Analysis of commercial AI interview copilots and Parakeet's advantages
+- [LLM Wiki Implementations](llm-wiki-implementations.md) - Overview of popular LLM wiki frameworks (engram, obsidian, Tome, etc.)
