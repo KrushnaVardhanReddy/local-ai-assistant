@@ -41,8 +41,14 @@ REQUIREMENTS
      - Simulate `Ctrl+Shift+S` and verify it triggers the Vision Copilot screenshot logic.
      - Simulate `Ctrl+Shift+1` and verify it triggers the first Transcript Chip.
 
-3. Makefile Updates
-   - Add `make test-e2e` to trigger both backend (pytest) and frontend (playwright) tests headlessly.
+3. Tauri Backend Tests (Rust `cargo test` - frontend/src-tauri/src/)
+   Write exhaustive unit and integration tests for the Rust Tauri backend.
+   - Test IPC commands (e.g., screenshot capture to base64).
+   - Test that global stealth hotkeys correctly register and deregister.
+   - Verify window transparency and "always on top" behaviors via Tauri mock API.
 
-Commit: "jules: P23-T1 complete e2e testing suite via playwright and pytest"
+4. Makefile Updates
+   - Add `make test-e2e` to trigger backend (pytest), frontend (playwright), and Tauri (cargo test) headlessly.
+
+Commit: "jules: P23-T1 complete e2e testing suite with 100% coverage across pytest, playwright, and cargo"
 Target branch: main
