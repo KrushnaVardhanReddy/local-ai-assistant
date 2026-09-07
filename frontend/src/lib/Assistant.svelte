@@ -217,7 +217,7 @@
         <div
           role="button"
           tabindex="0"
-          class="chip-pill group flex items-center gap-1.5 px-3 py-1.5 rounded-full
+          class="chip-pill {chip.speaker === 'interviewer' ? 'chip-interviewer' : ''} group flex items-center gap-1.5 px-3 py-1.5 rounded-full
                  bg-white/8 border border-white/10 hover:bg-primary/20 hover:border-primary/40
                  transition-all duration-200 cursor-pointer whitespace-nowrap
                  animate-chip-in flex-shrink-0"
@@ -225,6 +225,11 @@
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') sendChip(chip); }}
           title="Click to send: {chip.text}"
         >
+          {#if chip.speaker === 'interviewer'}
+            <span class="speaker-badge interviewer-badge">🎤</span>
+          {:else if chip.speaker === 'candidate'}
+            <span class="speaker-badge candidate-badge">👤</span>
+          {/if}
           <span class="text-on-surface-variant text-[12px] font-body-sm max-w-[200px] truncate group-hover:text-primary transition-colors">
             {chip.text.length > 60 ? chip.text.slice(0, 60) + '…' : chip.text}
           </span>
@@ -480,5 +485,14 @@
 
   .animate-chip-in {
     animation: chipIn 0.25s ease-out;
+  }
+
+  .chip-interviewer {
+    border-color: rgba(99, 179, 237, 0.3);
+    background: rgba(99, 179, 237, 0.08);
+  }
+  .speaker-badge {
+    font-size: 11px;
+    flex-shrink: 0;
   }
 </style>
