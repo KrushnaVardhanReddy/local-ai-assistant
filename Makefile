@@ -56,3 +56,26 @@ clean:
 build:
 	@echo "Building production executables..."
 	bash scripts/build.sh
+
+# ─── Portable Build ────────────────────────────────────────────────────────────
+
+# Build portable Windows ZIP (run on Windows or via cross-compilation)
+build-portable:
+	@echo "Building portable Windows release..."
+	@bash scripts/build_portable.sh
+
+# Build backend EXE only (PyInstaller)
+build-backend-exe:
+	@echo "Building Python backend EXE..."
+	@cd backend && ../.venv/bin/pyinstaller \
+		--onefile \
+		--name AudioService-backend \
+		--add-data "*.py:." \
+		app.py
+	@echo "Backend EXE: backend/dist/AudioService-backend.exe"
+
+# Build Tauri portable only
+build-frontend-portable:
+	@echo "Building Tauri portable app..."
+	@cd frontend && npm run tauri build -- --target x86_64-pc-windows-msvc
+	@echo "Portable output: frontend/src-tauri/target/release/bundle/app/"
