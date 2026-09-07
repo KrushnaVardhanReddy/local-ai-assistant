@@ -40,6 +40,8 @@ class Config:
     LLM_BASE_URL: str = ""
     LLM_API_KEY: str = ""
     VISION_MODEL: str = "gpt-4o-mini"
+    GEMINI_API_KEY: str = ""
+    GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-001"
 
     STT_MODEL: str = "base"
     STT_DEVICE: str = "cuda"
@@ -86,6 +88,8 @@ class Config:
         self.LLM_BASE_URL = os.environ.get("LLM_BASE_URL", self.LLM_BASE_URL)
         self.LLM_API_KEY = os.environ.get("LLM_API_KEY", self.LLM_API_KEY)
         self.VISION_MODEL = os.environ.get("VISION_MODEL", self.VISION_MODEL)
+        self.GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", self.GEMINI_API_KEY)
+        self.GEMINI_LIVE_MODEL = os.environ.get("GEMINI_LIVE_MODEL", self.GEMINI_LIVE_MODEL)
 
         self.STT_MODEL = os.environ.get("STT_MODEL", self.STT_MODEL)
         self.STT_DEVICE = os.environ.get("STT_DEVICE", self.STT_DEVICE)
