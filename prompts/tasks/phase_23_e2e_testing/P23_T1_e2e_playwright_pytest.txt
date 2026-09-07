@@ -1,0 +1,32 @@
+TASK: P23-T1 — Comprehensive E2E Testing Suite (Playwright + Pytest)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build out a bulletproof End-to-End testing suite to ensure high reliability for the core AudioService pipeline. The suite must cover both frontend UI interactions via Playwright (mocking Tauri IPC if necessary) and backend WebSocket/HTTP endpoints via Pytest. 
+
+This ensures that the primary flows (Audio input → STT/Gemini → LLM reasoning → UI rendering) never regress.
+
+═══════════════════════════════════════════════════════════════
+REQUIREMENTS
+═══════════════════════════════════════════════════════════════
+1. Backend Integration Tests (tests/e2e/test_backend_e2e.py)
+   - Use Pytest and an asynchronous WebSocket client to connect to `/ws`.
+   - Send simulated raw audio bytes (or mock the audio packet format).
+   - Assert that the backend correctly routes the audio to the STT mock or Gemini Live mock.
+   - Assert that LLM responses stream back as proper WebSocket JSON frames (`{"type": "transcript", ...}`, `{"type": "llm_chunk", ...}`).
+   - Provide a mock for `llm_client.py` and `gemini_live_client.py` so tests can run offline in CI without hitting real API limits.
+
+2. Frontend UI Tests (frontend/e2e/assistant.spec.ts)
+   - Use Playwright to spin up the Svelte frontend.
+   - Test that the Settings Panel correctly loads `.env.local` defaults.
+   - Mock a WebSocket connection to simulate receiving a "transcript" event.
+   - Assert that the UI correctly generates a Transcript Chip in the UI.
+   - Simulate a click on the Transcript Chip and verify it sends a priority request payload over the mocked WebSocket.
+   - Verify that streaming markdown from the LLM correctly renders with `shiki` syntax highlighting (Phase 12 feature).
+
+3. Makefile Updates
+   - Add `make test-e2e` to trigger both backend and frontend tests headlessly.
+
+Commit: "jules: P23-T1 complete e2e testing suite via playwright and pytest"
+Target branch: main

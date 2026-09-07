@@ -310,3 +310,11 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P22-T1 | `frontend/src/lib/Settings.svelte`, `backend/config.py`, `backend/app.py` | **Job Context Injection:** Add a text area in Settings for the Job Description. The backend dynamically injects this into the LLM system prompt so all real-time answers are tailored specifically to the company and role requirements. | ⬜ | — |
+
+---
+
+## Phase 23 — Comprehensive E2E Testing Suite 🧪
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P23-T1 | `frontend/e2e/`, `tests/e2e/`, `Makefile` | **Playwright + Pytest E2E:** Build out comprehensive UI tests mocking Tauri IPC, and backend integration tests mocking WS connections to guarantee reliability before final release. | ⬜ | — |
