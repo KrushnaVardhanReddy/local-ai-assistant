@@ -1,0 +1,59 @@
+TASK: P7-T7 — Advanced Stealth Hotkeys (Chips & UI Control)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Ensure that the candidate never has to use their mouse to interact with the
+assistant during a live interview. 
+Add global shortcuts to trigger transcript chips (added in P14-T1).
+Since the app allows up to 6 chips, map `Ctrl+Shift+1` through `Ctrl+Shift+6` 
+to instantly send the corresponding chip to the LLM.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src-tauri/src/main.rs
+═══════════════════════════════════════════════════════════════
+
+1. In the global shortcut registration block, add registrations for 
+   `Ctrl+Shift+1` up to `Ctrl+Shift+6`.
+2. For each shortcut, emit a Tauri event like `"send-chip-1"`, `"send-chip-2"`, etc.
+
+```rust
+// Example
+app.global_shortcut_manager().register("Ctrl+Shift+1", move || {
+    let _ = app_handle.emit_all("send-chip-1", ());
+})?;
+// Repeat for 2 through 6
+```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/ws.svelte.ts OR Assistant.svelte
+═══════════════════════════════════════════════════════════════
+
+1. Add event listeners for `"send-chip-1"` through `"send-chip-6"`.
+2. When triggered, check if `wsState.pendingTranscripts` has an item at that index.
+3. If it does, call `sendChip(wsState.pendingTranscripts[index])`.
+
+```typescript
+import { listen } from '@tauri-apps/api/event';
+
+// Inside an initialization block or onMount in Assistant.svelte:
+for (let i = 1; i <= 6; i++) {
+  listen(`send-chip-${i}`, () => {
+    const chip = wsState.pendingTranscripts[i - 1];
+    if (chip) {
+      sendChip(chip);
+    }
+  });
+}
+```
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src-tauri/src/main.rs
+- frontend/src/lib/Assistant.svelte (or wherever chip sending logic lives)
+
+Commit: "jules: P7-T7 add advanced stealth hotkeys for transcript chips"
+Target branch: main

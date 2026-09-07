@@ -92,6 +92,7 @@
 | P7-T4 | `README.md` | Final pass — screenshots, install instructions | ✅ | #23 |
 | P7-T5 | `scripts/start_remote.sh`, `backend/app.py` | Remote Helper Mode — serve UI statically + Cloudflare tunnel | ✅ | #29 |
 | P7-T6 | `tests/`, `e2e/`, `playwright.config.ts` | E2E test suite — pytest API tests + Playwright frontend tests | ✅ | #30 |
+| P7-T7 | `frontend/src-tauri/src/main.rs`, `ws.ts` | Advanced Stealth Hotkeys — `Ctrl+Shift+1-6` to send pending transcript chips (P14). Map hidden inputs (e.g. arrow keys + Enter when UI hidden) to control Ghost Cursor for mouse-less selection. | ⬜ | — |
 
 ---
 
