@@ -11,7 +11,3 @@ Append-only chronological record of all changes to this wiki.
 - Synthesized and created `wiki/competitors.md`
 - Updated `wiki/index.md`
 
-## [2026-09-07] ingest | LLM Wiki Implementations
-- Saved raw user snippet to `wiki/raw/llm-wiki-implementations.txt`
-- Synthesized and created `wiki/llm-wiki-implementations.md`
-- Updated `wiki/index.md`
