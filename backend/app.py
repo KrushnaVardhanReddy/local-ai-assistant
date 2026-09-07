@@ -28,6 +28,8 @@ from rag import retriever
 from rag.web_search import search_web
 from smart_filter import SilenceBuffer, passes_filter
 
+from session_manager import session as interview_session
+
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -396,12 +398,15 @@ async def ws_endpoint(websocket: WebSocket):
                         {"role": "user", "content": transcript}
                     ]
 
+                    interview_session.start_turn(transcript)
                     is_streaming.set()
                     try:
                         print(f"[DEBUG] Calling LLM with {len(messages)} messages...", file=sys.stderr)
                         async for token in connection_llm_client.stream(messages):
+                            interview_session.append_response_token(token)
                             for out_q in list(active_outbound_queues):
                                 out_q.put_nowait({"type": "token", "text": token})
+                        interview_session.complete_turn()
                         print(f"[DEBUG] Finished calling LLM.", file=sys.stderr)
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "end"})
@@ -662,6 +667,21 @@ async def web_search_status():
 async def web_search_toggle():
     config.WEB_SEARCH_ENABLED = not config.WEB_SEARCH_ENABLED
     return {"enabled": config.WEB_SEARCH_ENABLED}
+
+
+@app.post("/session/end")
+async def end_session():
+    """Return full session data for scorecard generation."""
+    if not interview_session.has_data:
+        return JSONResponse({"error": "No session data available"}, status_code=404)
+    return JSONResponse(interview_session.export())
+
+
+@app.post("/session/clear")
+async def clear_session():
+    """Reset the session (start a new interview)."""
+    interview_session.clear()
+    return JSONResponse({"status": "cleared"})
 
 
 if __name__ == "__main__":
