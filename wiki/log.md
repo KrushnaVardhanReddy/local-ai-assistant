@@ -16,3 +16,8 @@ Append-only chronological record of all changes to this wiki.
 - Synthesized and created `wiki/project-structure.md` and `wiki/architecture.md`
 - Updated `wiki/index.md`
 
+## [2026-09-07] ingest | Project Roadmap and Handoff State
+- Copied `prompts/tasks.md`, `HANDOFF.md`, and `LAUNCH_POST.md` to `wiki/raw/`
+- Synthesized and created `wiki/roadmap.md`, `wiki/handoff-notes.md`, and `wiki/launch-strategy.md`
+- Updated `wiki/index.md`
+
