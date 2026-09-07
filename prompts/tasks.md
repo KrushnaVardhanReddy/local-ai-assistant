@@ -301,3 +301,11 @@
 |---|---|---|---|---|
 | P21-T1 | `frontend/src/lib/Settings.svelte`, `backend/config.py` | **Multilingual Support:** Add language override dropdown. Updates STT prompt and LLM system prompt to enforce target language. | ⬜ | — |
 | P21-T2 | `backend/app.py`, `frontend/src/lib/Assistant.svelte` | **Mock Interview Mode:** Toggle that flips the LLM from "Answerer" to "Interviewer". Uses Edge-TTS to speak questions aloud. Feeds user answers back for evaluation. | ⬜ | — |
+
+---
+
+## Phase 22 — Dynamic Job Context Grounding 🏢
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P22-T1 | `frontend/src/lib/Settings.svelte`, `backend/config.py`, `backend/app.py` | **Job Context Injection:** Add a text area in Settings for the Job Description. The backend dynamically injects this into the LLM system prompt so all real-time answers are tailored specifically to the company and role requirements. | ⬜ | — |
