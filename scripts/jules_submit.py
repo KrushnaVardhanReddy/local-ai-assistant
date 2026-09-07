@@ -92,18 +92,30 @@ Critical LLM rules:
 TASKS_DIR = os.path.join(REPO_ROOT, "prompts", "tasks")
 
 def _find_task_file(task_id: str) -> str:
-    """Find a prompt file matching e.g. 'P1-T1' → prompts/tasks/P1_T1_*.txt"""
+    """Find a prompt file matching e.g. 'P1-T1' → prompts/tasks/**/P1_T1_*.txt"""
     normalized = task_id.replace("-", "_").upper()
-    pattern = os.path.join(TASKS_DIR, f"{normalized}_*.txt")
-    matches = glob.glob(pattern)
+    
+    # Search recursively in subdirectories
+    pattern = os.path.join(TASKS_DIR, "**", f"{normalized}_*.txt")
+    matches = glob.glob(pattern, recursive=True)
+    
     if not matches:
-        # Fallback: exact filename match
-        exact = os.path.join(TASKS_DIR, f"{normalized}.txt")
-        if os.path.exists(exact):
-            return exact
-        print(f"❌ No prompt file found for task '{task_id}' in {TASKS_DIR}/")
+        # Fallback: exact filename match in any subdirectory
+        exact_pattern = os.path.join(TASKS_DIR, "**", f"{normalized}.txt")
+        exact_matches = glob.glob(exact_pattern, recursive=True)
+        if exact_matches:
+            return exact_matches[0]
+            
+        # Try finding if user passed the exact filename minus extension
+        file_pattern = os.path.join(TASKS_DIR, "**", f"{task_id}.txt")
+        file_matches = glob.glob(file_pattern, recursive=True)
+        if file_matches:
+            return file_matches[0]
+            
+        print(f"❌ No prompt file found for task '{task_id}' in {TASKS_DIR}/ (including subfolders)")
         print(f"   Expected pattern: {normalized}_<slug>.txt")
         sys.exit(1)
+        
     if len(matches) > 1:
         print(f"⚠️  Multiple files found for '{task_id}': {matches}")
         print(f"   Using: {matches[0]}")
@@ -111,10 +123,10 @@ def _find_task_file(task_id: str) -> str:
 
 def _find_phase_files(phase_num: int) -> list:
     """Find all prompt files for a given phase, sorted by task number."""
-    pattern = os.path.join(TASKS_DIR, f"P{phase_num}_T*.txt")
-    matches = sorted(glob.glob(pattern))
+    pattern = os.path.join(TASKS_DIR, "**", f"P{phase_num}_T*.txt")
+    matches = sorted(glob.glob(pattern, recursive=True))
     if not matches:
-        print(f"❌ No prompt files found for Phase {phase_num} in {TASKS_DIR}/")
+        print(f"❌ No prompt files found for Phase {phase_num} in {TASKS_DIR}/ (including subfolders)")
         sys.exit(1)
     return matches
 
