@@ -8,25 +8,41 @@ Build out a bulletproof End-to-End testing suite to ensure high reliability for 
 This ensures that the primary flows (Audio input → STT/Gemini → LLM reasoning → UI rendering) never regress.
 
 ═══════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════
 REQUIREMENTS
 ═══════════════════════════════════════════════════════════════
-1. Backend Integration Tests (tests/e2e/test_backend_e2e.py)
-   - Use Pytest and an asynchronous WebSocket client to connect to `/ws`.
-   - Send simulated raw audio bytes (or mock the audio packet format).
-   - Assert that the backend correctly routes the audio to the STT mock or Gemini Live mock.
-   - Assert that LLM responses stream back as proper WebSocket JSON frames (`{"type": "transcript", ...}`, `{"type": "llm_chunk", ...}`).
-   - Provide a mock for `llm_client.py` and `gemini_live_client.py` so tests can run offline in CI without hitting real API limits.
+1. Backend Integration Tests (Pytest - tests/e2e/test_backend_e2e.py)
+   Test EVERY HTTP endpoint and WebSocket interaction using `httpx` and an async WS client. Mock external LLM/STT APIs.
+   - `GET /health`: Verify 200 OK and correct JSON structure.
+   - `POST /session/end`: Verify it exports session history and generates a Scorecard JSON.
+   - `POST /session/clear`: Verify the in-memory `interview_session` singleton resets correctly.
+   - `POST /rag/upload`: Test file upload (PDF/TXT) and verify successful ChromaDB ingestion response.
+   - `GET /rag/search`: Verify semantic search returns top-K context chunks.
+   - `POST /vision/analyze`: Post a base64 image and verify the extracted LeetCode problem text is returned.
+   - `WebSocket /ws (Audio Ingestion)`: Send mock audio bytes, verify VAD intent filtering.
+   - `WebSocket /ws (LLM Output)`: Verify the backend emits `{"type": "transcript", ...}` and `{"type": "llm_chunk", ...}` JSON frames back to the client.
 
-2. Frontend UI Tests (frontend/e2e/assistant.spec.ts)
-   - Use Playwright to spin up the Svelte frontend.
-   - Test that the Settings Panel correctly loads `.env.local` defaults.
-   - Mock a WebSocket connection to simulate receiving a "transcript" event.
-   - Assert that the UI correctly generates a Transcript Chip in the UI.
-   - Simulate a click on the Transcript Chip and verify it sends a priority request payload over the mocked WebSocket.
-   - Verify that streaming markdown from the LLM correctly renders with `shiki` syntax highlighting (Phase 12 feature).
+2. Frontend UI Tests (Playwright - frontend/e2e/assistant.spec.ts)
+   Use Playwright to spin up the Svelte frontend and test EVERY interactive feature and button.
+   - **Settings Panel:** 
+     - Click the Settings gear icon, verify the panel slides out.
+     - Toggle the 'LLM_PROVIDER' and verify it saves.
+     - Change the 'Language Preference' dropdown.
+   - **Microphone UI:**
+     - Verify the mic status dot changes color based on state (Listening/Processing).
+   - **Transcript Chip Bar:**
+     - Mock a WS "transcript" event, verify the Chip appears in the UI.
+     - Click the Chip, verify the priority question is sent over the WS.
+     - Verify Chips auto-clear or can be manually dismissed.
+   - **The Brain Panel (Markdown rendering):**
+     - Inject a mock LLM response containing a python code block.
+     - Verify `shiki` syntax highlighting is applied to the DOM elements.
+   - **Stealth Hotkeys (Mocked Tauri IPC):**
+     - Simulate `Ctrl+Shift+S` and verify it triggers the Vision Copilot screenshot logic.
+     - Simulate `Ctrl+Shift+1` and verify it triggers the first Transcript Chip.
 
 3. Makefile Updates
-   - Add `make test-e2e` to trigger both backend and frontend tests headlessly.
+   - Add `make test-e2e` to trigger both backend (pytest) and frontend (playwright) tests headlessly.
 
 Commit: "jules: P23-T1 complete e2e testing suite via playwright and pytest"
 Target branch: main
