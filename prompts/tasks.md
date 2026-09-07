@@ -160,7 +160,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P13-T1 | `backend/audio_listener.py`, `backend/app.py`, `frontend/src/lib/Settings.svelte` | Audio device selector + Windows WASAPI loopback support | ⏳ | — |
+| P13-T1 | `backend/audio_listener.py`, `backend/app.py`, `frontend/src/lib/Settings.svelte` | Audio device selector + Windows WASAPI loopback support | ✅ | #50 |
 
 ---
 
