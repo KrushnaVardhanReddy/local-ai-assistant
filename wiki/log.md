@@ -21,3 +21,8 @@ Append-only chronological record of all changes to this wiki.
 - Synthesized and created `wiki/roadmap.md`, `wiki/handoff-notes.md`, and `wiki/launch-strategy.md`
 - Updated `wiki/index.md`
 
+## [2026-09-07] ingest | Adversarial Testing
+- Synthesized insights from the `InterviewIntegrityPlatform` repository
+- Created `wiki/adversarial-testing.md` to document the cat-and-mouse dynamic
+- Updated `wiki/index.md`
+
