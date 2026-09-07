@@ -1,5 +1,0 @@
-Top LLM Wiki Implementations
-engram: The preferred choice for developers and engineers who want a lightweight, file-based system integrated directly into a project repository. [[1](https://medium.com/@aitrends24/i-tested-5-llm-wiki-implementations-so-you-don-t-have-to-d68ba7cc9100)]
-obsidian-llm-wiki: The best native option if you want to use Obsidian to visually browse your AI-maintained knowledge graph. [[1](https://www.youtube.com/watch?v=iXd0t60YmMw&t=224), [2](https://medium.com/@aitrends24/i-tested-5-llm-wiki-implementations-so-you-don-t-have-to-d68ba7cc9100)]
-Tome: The top pick if polished, well-formatted output presentation is your primary goal. [[1](https://medium.com/@aitrends24/i-tested-5-llm-wiki-implementations-so-you-don-t-have-to-d68ba7cc9100)]
-nashsu/llm_wiki: A popular cross-platform desktop application approach that automatically turns local documents into an interlinked knowledge base.
