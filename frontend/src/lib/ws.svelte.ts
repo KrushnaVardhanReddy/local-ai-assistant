@@ -14,7 +14,7 @@ export const wsState = $state({
   ragSources: [] as string[],
   isPTTHeld: false,
   pttMode: false,
-  pendingTranscripts: [] as Array<{ id: number; text: string }>
+  pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>
 });
 
 let ws: WebSocket | null = null;
@@ -141,12 +141,14 @@ export function connect(url?: string): void {
             // Update in place (keeps position, refreshes)
             wsState.pendingTranscripts[existingIdx] = {
               id: wsState.pendingTranscripts[existingIdx].id,
-              text: data.text
+              text: data.text,
+              speaker: data.speaker ?? null
             };
           } else {
             wsState.pendingTranscripts.push({
               id: chipIdCounter++,
-              text: data.text
+              text: data.text,
+              speaker: data.speaker ?? null
             });
             // Keep max 6 chips — drop oldest
             if (wsState.pendingTranscripts.length > 6) {
@@ -249,7 +251,7 @@ export function sendChat(text: string): void {
 }
 
 
-export function sendChip(chip: { id: number; text: string }): void {
+export function sendChip(chip: { id: number; text: string; speaker?: "interviewer" | "candidate" | null }): void {
   sendChat(chip.text);
   wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
     (c) => c.id !== chip.id
