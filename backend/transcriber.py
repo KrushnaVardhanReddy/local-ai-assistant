@@ -14,12 +14,13 @@ class Transcriber:
     STT_PROVIDER=groq   → Groq Whisper API (cloud, ~200ms latency)
     """
 
-    def __init__(self, model_size: str, device: str, compute_type: str, provider: str = "local"):
+    def __init__(self, model_size: str, device: str, compute_type: str, provider: str = "local", diarize: bool = False):
         self.model_size = model_size
         self.device = device
         self.compute_type = compute_type
         self.provider = provider.lower()
         self.model = None  # only used for local provider
+        self.diarize = diarize
 
     # ------------------------------------------------------------------
     # Public API
@@ -30,6 +31,64 @@ class Transcriber:
             self._load_groq()
         else:
             self._load_local()
+
+    def transcribe_with_speaker(self, audio_bytes: bytes, channels: int = 1) -> list[dict]:
+        """
+        Returns list of dicts: [{"speaker": "INTERVIEWER"|"CANDIDATE", "text": "..."}]
+        When diarize=False or channels=1 without pyannote, returns single segment with speaker=None.
+        """
+        if not self.diarize:
+            text = self.transcribe(audio_bytes)
+            return [{"speaker": None, "text": text}] if text else []
+
+        # STEREO MODE: split L/R channels
+        if channels == 2:
+            return self._transcribe_stereo(audio_bytes)
+
+        # MONO MODE: use pyannote if available
+        return self._transcribe_diarized_mono(audio_bytes)
+
+    def _transcribe_stereo(self, audio_bytes: bytes) -> list[dict]:
+        """Split stereo PCM into L (interviewer) and R (candidate) channels."""
+        import numpy as np
+        if len(audio_bytes) % 4 != 0:
+            audio_bytes += b'\x00' * (4 - len(audio_bytes) % 4)
+
+        # Stereo 16-bit PCM: interleaved L, R, L, R ...
+        audio_np = np.frombuffer(audio_bytes, dtype=np.int16)
+        left = audio_np[0::2].astype(np.float32) / 32768.0   # Interviewer
+        right = audio_np[1::2].astype(np.float32) / 32768.0  # Candidate
+
+        results = []
+        for channel_audio, speaker in [(left, "INTERVIEWER"), (right, "CANDIDATE")]:
+            rms = np.sqrt(np.mean(channel_audio**2))
+            if rms < 0.01:  # silence gate
+                continue
+            # Re-encode to bytes for transcription
+            channel_bytes = (channel_audio * 32768).astype(np.int16).tobytes()
+            text = self.transcribe(channel_bytes)
+            if text:
+                results.append({"speaker": speaker, "text": text})
+        return results
+
+    def _transcribe_diarized_mono(self, audio_bytes: bytes) -> list[dict]:
+        """
+        Mono fallback: try pyannote diarization, else return undiarized.
+        Requires HF_TOKEN env var for pyannote model download.
+        """
+        try:
+            # Attempt pyannote (optional dep)
+            from pyannote.audio import Pipeline
+            import os
+            hf_token = os.environ.get("HF_TOKEN", "")
+            if not hf_token:
+                raise ImportError("HF_TOKEN not set")
+            # pyannote integration is complex — for now fall back gracefully
+            raise ImportError("pyannote mono diarization not yet implemented")
+        except (ImportError, Exception):
+            # Fallback: undiarized mono
+            text = self.transcribe(audio_bytes)
+            return [{"speaker": None, "text": text}] if text else []
 
     def transcribe(self, audio_bytes: bytes) -> str:
         if not audio_bytes:

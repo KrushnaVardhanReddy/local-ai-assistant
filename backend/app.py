@@ -113,7 +113,8 @@ async def startup_event():
         model_size=config.STT_MODEL,
         device=config.STT_DEVICE,
         compute_type=config.STT_COMPUTE_TYPE,
-        provider=config.STT_PROVIDER
+        provider=config.STT_PROVIDER,
+        diarize=config.STT_DIARIZE,
     )
     # This blocks, but it's startup so it's fine. Could also use asyncio.to_thread.
     transcriber.load()
