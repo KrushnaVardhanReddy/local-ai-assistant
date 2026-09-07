@@ -12,4 +12,5 @@ This is the catalog of everything in the wiki.
 - [Competitors](competitors.md) - Analysis of commercial AI interview copilots and Parakeet's advantages
 - [Launch Strategy](launch-strategy.md) - Marketing copy and feature highlights
 - [Handoff Notes](handoff-notes.md) - State of the project and next steps
+- [Adversarial Testing](adversarial-testing.md) - The cat-and-mouse dynamic with the Interview Integrity Platform
 
