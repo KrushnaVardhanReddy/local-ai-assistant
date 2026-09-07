@@ -150,6 +150,7 @@
 |---|---|---|---|---|
 | P12-T1 | `frontend/src/lib/markdownRenderer.ts`, `frontend/src/lib/Assistant.svelte` | Markdown + Shiki IDE-style syntax highlighting in The Brain panel | ⏳ | — |
 | P12-T2 | `backend/app.py`, `frontend/src/lib/Settings.svelte` | Language preference dropdown — injects code language into system prompt, auto-detected from resume | ⏳ | — |
+| P12-T3 | `frontend/src/app.css` | UI Polish: Stealth Text Contrast — add subtitle-style text shadows and sheer backdrop blur so text is readable over any IDE background | ⬜ | — |
 
 ---
 
