@@ -336,9 +336,9 @@
 
 <style>
   .glass-panel {
-      background: rgba(18, 18, 18, 0.92);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
       border: 1px solid rgba(255, 255, 255, 0.15);
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   }
@@ -353,6 +353,9 @@
       border-left: 1px solid rgba(255, 255, 255, 0.1);
       padding-left: 12px;
       margin-bottom: 16px;
+  }
+  .transcript-line p {
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8);
   }
   .hide-scrollbar::-webkit-scrollbar {
       display: none;
@@ -374,10 +377,12 @@
   }
   .response-content {
       font-size: 1rem;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8);
   }
   
   /* Shiki code block overrides — match our dark glass theme */
   .response-content :global(.shiki) {
+    text-shadow: none;
     border-radius: 8px;
     padding: 1rem;
     margin: 0.75rem 0;
