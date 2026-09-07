@@ -1,0 +1,77 @@
+TASK: P16-T4 — Settings UI: STT Provider Selector (hide for Gemini)
+
+PARALLEL BATCH: 4 — After Batch 3. Safe alongside P15-T2, P15-T3, P17-T4.
+Files touched: frontend/src/lib/Settings.svelte ONLY
+PREREQUISITE: P16-T3 (config vars) must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+In the Settings panel, when the user selects Gemini as their LLM provider:
+  - Hide the STT provider dropdown (Gemini handles STT internally)
+  - Show a "Gemini Live — unified audio mode" info badge instead
+
+For all other LLM providers, show the STT dropdown as normal:
+  Local (faster-whisper) / Groq Whisper
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Settings.svelte
+═══════════════════════════════════════════════════════════════
+
+1. Add a reactive variable for the current LLM provider selection:
+   ```typescript
+   let selectedLLMProvider = $state(currentSettings?.llm_provider ?? "groq");
+   ```
+   Wire it to the existing LLM provider dropdown using `bind:value`.
+
+2. In the STT section of the settings form, wrap the STT provider dropdown
+   in a conditional:
+   ```svelte
+   {#if selectedLLMProvider !== "gemini"}
+     <div class="input-group">
+       <label for="sttProvider">STT Provider</label>
+       <select id="sttProvider" bind:value={selectedSTTProvider} class="custom-select">
+         <option value="local">Local (faster-whisper)</option>
+         <option value="groq">Groq Whisper</option>
+       </select>
+     </div>
+   {:else}
+     <div class="gemini-live-badge">
+       <span class="material-symbols-outlined">bolt</span>
+       <div>
+         <strong>Gemini Live Mode</strong>
+         <p>Audio is processed directly by Gemini — no separate STT provider needed.</p>
+       </div>
+     </div>
+   {/if}
+   ```
+
+3. Add the badge CSS in <style>:
+   ```css
+   .gemini-live-badge {
+     display: flex;
+     align-items: flex-start;
+     gap: 10px;
+     background: rgba(99, 179, 237, 0.08);
+     border: 1px solid rgba(99, 179, 237, 0.2);
+     border-radius: 10px;
+     padding: 12px 16px;
+     color: rgba(255,255,255,0.7);
+     font-size: 13px;
+   }
+   .gemini-live-badge strong { color: #63b3ed; display: block; margin-bottom: 2px; }
+   .gemini-live-badge p { margin: 0; opacity: 0.7; font-size: 12px; }
+   ```
+
+4. When saving settings, if LLM provider is gemini, set stt_provider to "gemini"
+   automatically in the save payload so the backend config updates correctly.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src/lib/Settings.svelte  (conditional STT section + Gemini Live badge)
+
+Commit: "jules: P16-T4 hide STT selector in Settings when Gemini Live mode active"
+Target branch: main

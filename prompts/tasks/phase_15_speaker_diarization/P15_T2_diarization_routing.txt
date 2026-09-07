@@ -1,0 +1,78 @@
+TASK: P15-T2 — Diarization Routing in smart_filter.py + app.py
+
+PARALLEL BATCH: 4 — After Batch 3 merged. Safe alongside P15-T3, P16-T4, P17-T4.
+Files touched: backend/smart_filter.py, backend/app.py (WS handler diarization routing)
+PREREQUISITE: P15-T1 must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+When speaker diarization is active (STT_DIARIZE=true), route segments differently:
+  - [INTERVIEWER] speech → bypass the smart filter entirely, always send to LLM as context
+  - [CANDIDATE] speech → go through normal VAD/intent filter pipeline as before
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py (WebSocket handler)
+═══════════════════════════════════════════════════════════════
+
+In the WebSocket handler, after assembling the audio buffer and calling
+`transcriber.transcribe_with_speaker()` (added in P15-T1), add routing logic:
+
+```python
+if config.STT_DIARIZE:
+    segments = transcriber.transcribe_with_speaker(audio_buffer)
+    for seg in segments:
+        speaker = seg.get("speaker")
+        text = seg.get("text", "").strip()
+        if not text:
+            continue
+        if speaker == "INTERVIEWER":
+            # Bypass filter — interviewer speech always goes to LLM as context
+            context_msg = f"[Interviewer asked]: {text}"
+            # Add to LLM message history as user message (not triggering a full response)
+            # Just store it in context — future LLM calls will see it in history
+            messages.append({"role": "user", "content": context_msg})
+            # Broadcast transcript to frontend with speaker label
+            out_q.put_nowait({"type": "transcript", "text": f"🎤 {text}", "speaker": "interviewer"})
+        else:
+            # CANDIDATE: normal pipeline
+            if passes_filter(text):
+                # ... existing LLM call logic ...
+                out_q.put_nowait({"type": "transcript", "text": text, "speaker": "candidate"})
+else:
+    # Original single-speaker pipeline (unchanged)
+    transcript = await asyncio.to_thread(transcriber.transcribe, audio_buffer)
+    # ... existing code ...
+```
+
+Note: Study the existing WebSocket handler carefully. The above is pseudo-code.
+Integrate the routing into the actual flow — don't duplicate existing logic,
+just branch on `config.STT_DIARIZE` at the right point.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/smart_filter.py
+═══════════════════════════════════════════════════════════════
+
+Add a speaker-aware filter function:
+
+```python
+def passes_filter_for_speaker(text: str, speaker: str | None) -> bool:
+    """
+    When speaker is INTERVIEWER: always passes (return True).
+    When speaker is CANDIDATE or None: use normal passes_filter() logic.
+    """
+    if speaker == "INTERVIEWER":
+        return True
+    return passes_filter(text)
+```
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/app.py          (add diarization routing in WS handler)
+- backend/smart_filter.py (add passes_filter_for_speaker helper)
+
+Commit: "jules: P15-T2 route diarized speaker segments — interviewer bypasses intent filter"
+Target branch: main

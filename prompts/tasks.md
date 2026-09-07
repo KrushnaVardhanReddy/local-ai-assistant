@@ -172,3 +172,122 @@
 |---|---|---|---|---|
 | P14-T1 | `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Assistant.svelte` | Clickable transcript chip bar — accumulate, click-to-send, dismiss, auto-clear | ✅ | #36 |
 
+---
+
+## Phase 15 — Speaker Diarization (Dual-Voice Mode) 🎙️🎙️
+
+> Inspired by Project Parakeet. When loopback audio is active (Phase 13),
+> separate the interviewer's voice from the candidate's voice in the mixed stream.
+> Interviewer speech → routed as "question context" to LLM.
+> Candidate speech → optionally evaluated for answer quality.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P15-T1 | `backend/transcriber.py`, `backend/config.py` | Add `STT_DIARIZE=true` flag — use faster-whisper or pyannote speaker diarization on loopback stream to label each segment as `[INTERVIEWER]` or `[CANDIDATE]` | ⬜ | — |
+| P15-T2 | `backend/app.py`, `backend/smart_filter.py` | Route diarized segments differently — interviewer speech bypasses intent filter and is always forwarded as context; candidate speech goes through normal VAD pipeline | ⬜ | — |
+| P15-T3 | `frontend/src/lib/Assistant.svelte` | UI: Show speaker label badges on transcript chips (`👤 You` vs `🎤 Interviewer`) so user can tell the system is hearing both sides | ⬜ | — |
+
+---
+
+## Phase 16 — Gemini Live Mode (Unified Audio + LLM Pipeline) ⚡
+
+> Additive feature — does NOT replace the existing STT + LLM pipeline.
+> Two modes, user picks in Settings:
+>
+> **Mode A — Gemini Live** (`LLM_PROVIDER=gemini`):
+> Audio chunks stream directly into Gemini — no separate STT step.
+> Gemini handles transcription + reasoning in one unified call. Sub-200ms.
+>
+> **Mode B — Everything else** (Ollama / Groq / OpenAI / LM Studio):
+> Existing pipeline unchanged: STT_PROVIDER (local / groq) → LLM_PROVIDER.
+> User picks STT and LLM independently.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P16-T1 | `backend/gemini_live_client.py` | New `GeminiLiveClient` class — streams 500ms PCM audio chunks to Gemini Live API via `google-genai` SDK, returns transcription + LLM response tokens in a single stream. Activated only when `LLM_PROVIDER=gemini`. | ⬜ | — |
+| P16-T2 | `backend/app.py` | In WebSocket handler: detect `LLM_PROVIDER=gemini` at startup and swap the `transcriber → llm_client` chain for `GeminiLiveClient`. All other providers continue through the existing pipeline untouched. | ⬜ | — |
+| P16-T3 | `backend/config.py`, `.env.local` | Add `GEMINI_API_KEY` and `GEMINI_LIVE_MODEL` config vars (default: `gemini-2.0-flash-live`). Document both modes in README. | ⬜ | — |
+| P16-T4 | `frontend/src/lib/Settings.svelte` | Settings panel: when `LLM_PROVIDER=gemini` is selected, hide the STT provider dropdown (not needed) and show a "Gemini Live — unified audio mode" badge. For all other LLM providers, show STT selector as normal. | ⬜ | — |
+
+---
+
+## Phase 17 — Session Intelligence & Export 📊
+
+> End-of-session features inspired by Project Parakeet's instant scorecard concept.
+> The moment you close a session, a full structured debrief is ready —
+> transcript with speaker labels, answer quality scores, missed topics, follow-up suggestions.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P17-T1 | `backend/app.py`, `backend/session_manager.py` | Session manager — accumulate full conversation (questions, answers, timestamps) in memory per WebSocket session. Add `POST /session/end` endpoint that returns structured JSON. | ⬜ | — |
+| P17-T2 | `backend/app.py`, `backend/llm_client.py` | Scorecard generation — on `POST /session/end`, send full transcript to LLM with a scorecard prompt: rate each answer (1–5), flag gaps, suggest what should have been said | ⬜ | — |
+| P17-T3 | `frontend/src/lib/Assistant.svelte`, `frontend/src/lib/SessionReport.svelte` | Session Report panel — triggered by `Ctrl+Shift+E` or button. Renders the scorecard as a formatted report with per-question breakdown. Has a copy-to-clipboard button. | ⬜ | — |
+| P17-T4 | `backend/app.py` | Live Answer Coaching — after candidate finishes speaking (VAD silence detected), optionally send the answer to a fast LLM call and stream back a brief coaching hint: "✅ Good — also mention X" or "⚠️ Incomplete — you missed Y" | ⬜ | — |
+
+---
+
+## Phase 18 — Portable App & Stealth Identity 🕵️📦
+
+> No installer, no Add/Remove Programs entry, no obvious process name.
+> User downloads a ZIP, unzips, double-clicks — app runs immediately.
+> Process name in Task Manager is configurable so it doesn't betray itself
+> during a live interview if the candidate opens Task Manager or appwiz.cpl.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P18-T1 | `frontend/src-tauri/tauri.conf.json` | Switch Windows bundle target to portable — no NSIS installer, no registry writes, no appwiz.cpl entry. Output: a ZIP of `AppName.exe` + `resources/`. User unzips and runs directly. | ⬜ | — |
+| P18-T2 | `frontend/src-tauri/Cargo.toml`, `tauri.conf.json` | Change default `productName` to a neutral name (e.g. `"AudioService"`). This controls the EXE filename, Task Manager process name, and window title. | ⬜ | — |
+| P18-T3 | `frontend/src-tauri/tauri.conf.json`, `backend/config.py` | User-configurable process alias — read `APP_DISPLAY_NAME` from `.env.local` or a local `settings.json` at launch. Lets each user personalise their own process name without rebuilding. | ⬜ | — |
+| P18-T4 | `scripts/build.sh`, `Makefile` | Update build pipeline: `make build-portable` target — runs PyInstaller on backend → Tauri portable build → zips both into a single `parakeet-portable-win.zip` release artifact. | ⬜ | — |
+
+---
+
+## Phase 19 — Pricing Tiers & Billing 💰
+
+> Three paid tiers + a free demo layer.
+> All tiers are BYOK — user supplies their own API keys.
+> Platform cost = auth/billing infra only (no GPU/API spend per user).
+>
+> | Tier | Price | Limit | Notes |
+> |---|---|---|---|
+> | **Demo** | Free | 3 questions or 15 min | No account needed, referral link |
+> | **Pay-as-you-go** | $5 / session | 1 session = 90 min | Session token expires after 90 min |
+> | **Monthly** | $19 / month | Unlimited sessions | Cancel anytime — main recurring revenue |
+> | **Founding Member** | $49 one-time | Unlimited, while supported | Early adopter deal, not marketed as "lifetime" |
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P19-T1 | `web/src/routes/pricing/` | Public pricing page — show all 4 tiers with a comparison table. CTA buttons link to Stripe checkout. | ⬜ | — |
+| P19-T2 | `web/src/routes/api/billing/`, `backend/auth.py` | Stripe integration: `price_payg` ($5 one-time session token), `price_monthly` ($19/mo sub), `price_founding` ($49 one-time). Webhook updates user's `plan` field in Supabase on payment success. | ⬜ | — |
+| P19-T3 | `backend/auth.py`, `backend/app.py` | Session token enforcement — Pay-as-you-go users get a JWT with `expires_at = now + 90min`. Backend validates on every WebSocket message. When token expires, send `{"type": "session_expired"}` to frontend. | ⬜ | — |
+| P19-T4 | `frontend/src/lib/Assistant.svelte` | Session expiry UI — when `session_expired` event received, show a non-intrusive overlay: "Session ended — extend for $5 or upgrade to Monthly". Has a direct Stripe payment link. | ⬜ | — |
+| P19-T5 | `web/src/routes/demo/` | Demo / Referral mode — every user gets a unique referral link (`parakeet.app/ref/[code]`). New visitor clicks link → gets 15 min free demo. Track referral source + conversion in Supabase (`referrals` table: referrer_id, referee_id, status, converted_at). | ⬜ | — |
+| P19-T6 | `backend/auth.py` | Plan-based feature gating — `demo`: 3 question limit + watermark; `payg`: full session, no coaching; `monthly`/`founding`: all features including Live Answer Coaching (P17-T4) and Session Report (P17-T3). | ⬜ | — |
+| P19-T7 | `backend/auth.py`, `web/src/routes/api/referral/` | Referral reward system — when a referred user completes signup AND uses their first demo session, the referrer automatically receives +15 min of demo credit added to their account (`demo_credits_minutes` in Supabase). No cap — each successful referral = +15 min. Paid users bank the credits for when friends haven't upgraded yet. Send referrer a notification email: "Your friend joined — you earned 15 bonus minutes! 🎉" | ⬜ | — |
+
+---
+
+## Phase 20 — Anti-Sharing: Device Lock & Session Enforcement 🔐
+
+> Prevents credential sharing between users.
+> Infrastructure is already partially built:
+> - `lib.rs` → `get_machine_id()` generates a per-machine UUID stored in OS keyring ✅
+> - `ws.svelte.ts` → sends `machine_id` on every WebSocket auth handshake ✅
+> - Just needs backend enforcement + Supabase schema.
+>
+> **Device limits per plan:**
+> | Plan | Max Registered Devices | Concurrent Sessions |
+> |---|---|---|
+> | Demo | 1 (machine-bound, no login) | 1 |
+> | Pay-as-you-go | 1 | 1 |
+> | Monthly | 2 | 1 |
+> | Founding Member | 3 | 1 |
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P20-T1 | `backend/supabase_schema.sql` | Add `user_devices` table: `(user_id, machine_id, device_label, registered_at, last_seen_at)`. Add `active_session_id` column to `users` table to track current live session. | ⬜ | — |
+| P20-T2 | `backend/auth.py` | Device registration — on first WebSocket auth from an unknown `machine_id`, check device count against plan limit. If under limit: register device and allow. If at limit: reject with `{"type": "device_limit_reached", "max": N}` — user must remove a device from dashboard first. | ⬜ | — |
+| P20-T3 | `backend/auth.py`, `backend/app.py` | Concurrent session lock — on WebSocket connect, write `active_session_id = new_session_uuid` to Supabase. If account already has a different `active_session_id`, reject new connection with `{"type": "already_active"}`. On disconnect, clear `active_session_id`. | ⬜ | — |
+| P20-T4 | `web/src/routes/dashboard/devices/` | Device management page — lists all registered devices with label, last-seen date. User can remove a device (frees up a slot). Useful when switching machines legitimately. | ⬜ | — |
+| P20-T5 | `frontend/src/lib/Assistant.svelte`, `frontend/src/lib/auth.svelte.ts` | Handle rejection events in frontend: `device_limit_reached` → show "Max devices reached, manage at dashboard.parakeet.app/devices"; `already_active` → show "Another session is already active — close it first or wait 5 minutes for it to expire automatically." | ⬜ | — |
+

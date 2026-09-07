@@ -1,0 +1,168 @@
+TASK: P15-T1 — Speaker Diarization Backend (transcriber.py + config.py)
+
+PARALLEL BATCH: 3 — Run after Batch 2 merged. Safe alongside P16-T2 and P17-T3.
+Files touched: backend/transcriber.py, backend/config.py (new field only — STT_DIARIZE)
+NO overlap with P16-T2 (app.py only) or P17-T3 (new Svelte file + Assistant.svelte).
+
+PREREQUISITE: P13-T1 (audio loopback) should be merged first for diarization to be useful.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+When the user captures loopback audio (system audio), the mixed stream contains
+both the interviewer's voice and the candidate's voice. This task adds optional
+speaker diarization to `Transcriber` so each transcribed segment is tagged
+as [INTERVIEWER] or [CANDIDATE], enabling the app to route them differently.
+
+Controlled by a new config flag: STT_DIARIZE=true (default: false).
+When false, transcriber behaves exactly as before — no change to existing behavior.
+
+═══════════════════════════════════════════════════════════════
+APPROACH
+═══════════════════════════════════════════════════════════════
+Use faster-whisper's built-in word-level timestamps + pyannote.audio for
+speaker diarization. Since pyannote requires a HuggingFace token for its
+pretrained models, provide a simpler fallback: use simple energy-based
+channel separation when the audio is stereo (L=interviewer, R=candidate).
+
+Two diarization modes (auto-selected):
+1. STEREO MODE (preferred): If audio is 2-channel, split L/R and label each.
+   L channel → [INTERVIEWER], R channel → [CANDIDATE].
+   This is the clean approach for setups where interviewer audio comes through
+   headphones (routed to loopback left) and mic is right channel.
+
+2. MONO/PYANNOTE MODE: If audio is 1-channel, use pyannote speaker diarization
+   (requires HF_TOKEN env var). Falls back to no diarization if pyannote
+   is unavailable.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/config.py
+═══════════════════════════════════════════════════════════════
+
+Add ONE new field to the Config dataclass after STT_PROVIDER:
+  ```python
+  STT_DIARIZE: bool = False
+  ```
+
+Add ONE line to __post_init__:
+  ```python
+  self.STT_DIARIZE = os.environ.get("STT_DIARIZE", "false").lower() == "true"
+  ```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/transcriber.py
+═══════════════════════════════════════════════════════════════
+
+1. Update `__init__` to accept `diarize: bool = False`:
+   ```python
+   def __init__(self, model_size, device, compute_type, provider="local", diarize=False):
+       ...
+       self.diarize = diarize
+   ```
+
+2. Add a new public method `transcribe_with_speaker()` that returns a list of
+   diarized segments instead of a single string. When diarize=False, this
+   method falls back to the regular transcribe() and wraps in a single segment.
+
+   ```python
+   def transcribe_with_speaker(self, audio_bytes: bytes, channels: int = 1) -> list[dict]:
+       """
+       Returns list of dicts: [{"speaker": "INTERVIEWER"|"CANDIDATE", "text": "..."}]
+       When diarize=False or channels=1 without pyannote, returns single segment with speaker=None.
+       """
+       if not self.diarize:
+           text = self.transcribe(audio_bytes)
+           return [{"speaker": None, "text": text}] if text else []
+
+       # STEREO MODE: split L/R channels
+       if channels == 2:
+           return self._transcribe_stereo(audio_bytes)
+
+       # MONO MODE: use pyannote if available
+       return self._transcribe_diarized_mono(audio_bytes)
+
+   def _transcribe_stereo(self, audio_bytes: bytes) -> list[dict]:
+       """Split stereo PCM into L (interviewer) and R (candidate) channels."""
+       import numpy as np
+       if len(audio_bytes) % 4 != 0:
+           audio_bytes += b'\x00' * (4 - len(audio_bytes) % 4)
+
+       # Stereo 16-bit PCM: interleaved L, R, L, R ...
+       audio_np = np.frombuffer(audio_bytes, dtype=np.int16)
+       left = audio_np[0::2].astype(np.float32) / 32768.0   # Interviewer
+       right = audio_np[1::2].astype(np.float32) / 32768.0  # Candidate
+
+       results = []
+       for channel_audio, speaker in [(left, "INTERVIEWER"), (right, "CANDIDATE")]:
+           rms = np.sqrt(np.mean(channel_audio**2))
+           if rms < 0.01:  # silence gate
+               continue
+           # Re-encode to bytes for transcription
+           channel_bytes = (channel_audio * 32768).astype(np.int16).tobytes()
+           text = self.transcribe(channel_bytes)
+           if text:
+               results.append({"speaker": speaker, "text": text})
+       return results
+
+   def _transcribe_diarized_mono(self, audio_bytes: bytes) -> list[dict]:
+       """
+       Mono fallback: try pyannote diarization, else return undiarized.
+       Requires HF_TOKEN env var for pyannote model download.
+       """
+       try:
+           # Attempt pyannote (optional dep)
+           from pyannote.audio import Pipeline
+           import os
+           hf_token = os.environ.get("HF_TOKEN", "")
+           if not hf_token:
+               raise ImportError("HF_TOKEN not set")
+           # pyannote integration is complex — for now fall back gracefully
+           raise ImportError("pyannote mono diarization not yet implemented")
+       except (ImportError, Exception):
+           # Fallback: undiarized mono
+           text = self.transcribe(audio_bytes)
+           return [{"speaker": None, "text": text}] if text else []
+   ```
+
+3. The existing `transcribe()` method is UNCHANGED. All existing callers
+   continue to work exactly as before.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py (MINOR ADDITION ONLY)
+═══════════════════════════════════════════════════════════════
+
+Pass `diarize=config.STT_DIARIZE` to the Transcriber constructor in startup_event():
+```python
+transcriber = Transcriber(
+    model_size=config.STT_MODEL,
+    device=config.STT_DEVICE,
+    compute_type=config.STT_COMPUTE_TYPE,
+    provider=config.STT_PROVIDER,
+    diarize=config.STT_DIARIZE,  # ← ADD THIS LINE
+)
+```
+
+That is the ONLY change to app.py in this task.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The stereo mode is the practical path for Windows WASAPI loopback where the
+  user can configure audio routing to put interviewer audio on L and mic on R.
+- Do NOT add pyannote to requirements.txt as a hard dependency — it's 2GB+
+  and most users won't need it. Keep it as an optional import.
+- The `transcribe_with_speaker()` return value (list of dicts) is designed so
+  that when diarize=False, caller code can simply check `segment["speaker"]`
+  being None and treat it as normal undiarized output.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/transcriber.py  (add diarize param + transcribe_with_speaker() + helper methods)
+- backend/config.py       (add STT_DIARIZE field + __post_init__ line)
+- backend/app.py          (add diarize=config.STT_DIARIZE to Transcriber constructor — ONE LINE)
+
+Commit: "jules: P15-T1 add speaker diarization backend with stereo channel splitting"
+Target branch: main

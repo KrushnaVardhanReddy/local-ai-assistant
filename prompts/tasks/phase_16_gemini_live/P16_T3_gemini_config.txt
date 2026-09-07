@@ -1,0 +1,70 @@
+TASK: P16-T3 — Gemini Live Config Vars & .env.local
+
+PARALLEL BATCH: 2 — Run after Batch 1 is merged. Safe to run alongside P17-T2 and P18-T4.
+Files touched: backend/config.py (new fields only), .env.local (new vars appended)
+NO overlap with P17-T2 (llm_client.py only) or P18-T4 (Makefile/build.sh only).
+
+PREREQUISITE: P16-T1 must be merged before this task.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add configuration support for Gemini Live so users can set their API key and
+preferred model via .env.local, consistent with how GROQ_API_KEY and other
+providers are configured in the existing config system.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/config.py
+═══════════════════════════════════════════════════════════════
+
+1. In the Config dataclass (the @dataclass class Config section), add these
+   two new fields AFTER the existing VISION_MODEL field:
+
+   ```python
+   GEMINI_API_KEY: str = ""
+   GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-001"
+   ```
+
+2. In the `__post_init__` method, add these two lines AFTER the existing
+   `self.VISION_MODEL = os.environ.get(...)` line:
+
+   ```python
+   self.GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", self.GEMINI_API_KEY)
+   self.GEMINI_LIVE_MODEL = os.environ.get("GEMINI_LIVE_MODEL", self.GEMINI_LIVE_MODEL)
+   ```
+
+3. In the PROVIDER_CONFIG dict at the top of config.py, add the gemini entry
+   if it doesn't already exist (check first — it may already be there):
+   ```python
+   "gemini": {"url": "https://generativelanguage.googleapis.com/v1beta/openai/", "key_env": "GEMINI_API_KEY"},
+   ```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: .env.local
+═══════════════════════════════════════════════════════════════
+
+Append these lines to the end of .env.local:
+
+```
+# Gemini Live Configuration (unified audio+LLM — no separate STT needed)
+# Get free API key from: https://aistudio.google.com/apikey
+# Set LLM_PROVIDER=gemini to activate Gemini Live mode
+# GEMINI_API_KEY=your_key_here
+GEMINI_LIVE_MODEL=gemini-2.0-flash-live-001
+```
+
+Note: Leave GEMINI_API_KEY commented out by default — users must fill it in.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/config.py   (add GEMINI_API_KEY + GEMINI_LIVE_MODEL fields + __post_init__ lines)
+- .env.local          (append Gemini config block at end of file)
+
+FILES TO CREATE:
+(none)
+
+Commit: "jules: P16-T3 add GEMINI_API_KEY and GEMINI_LIVE_MODEL config support"
+Target branch: main

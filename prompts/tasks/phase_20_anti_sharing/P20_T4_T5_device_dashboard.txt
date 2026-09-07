@@ -1,0 +1,149 @@
+TASK: P20-T4+T5 — Device Management Dashboard + Frontend Rejection Handling
+
+PARALLEL BATCH: 5 — After P20-T2+T3 merged. Can run after P20-T2+T3 since different files.
+Files touched: web/src/routes/dashboard/devices/ (NEW), frontend/src/lib/Assistant.svelte (small addition)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+P20-T4: Web dashboard page where users can view and remove registered devices.
+P20-T5: Frontend handles device_limit_reached and already_active WS events gracefully.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: web/src/routes/dashboard/devices/+page.svelte (NEW)
+═══════════════════════════════════════════════════════════════
+
+Create a SvelteKit page that:
+1. Fetches user's registered devices from Supabase `user_devices` table
+2. Shows each device: name, last_seen_at (relative time), machine_id (truncated)
+3. "Remove" button per device — deletes from user_devices table
+4. Shows device count vs plan limit (e.g., "2 / 2 devices — upgrade for more")
+
+```svelte
+<script lang="ts">
+  import { supabase } from '$lib/supabase';
+  import { onMount } from 'svelte';
+
+  let devices = [];
+  let loading = true;
+  let planLimit = 1;
+
+  onMount(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Fetch devices
+    const { data } = await supabase
+      .from('user_devices')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('last_seen_at', { ascending: false });
+    devices = data || [];
+
+    // Fetch plan limit
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('plan')
+      .eq('id', user.id)
+      .single();
+    const plan = profile?.plan || 'demo';
+    const limits = { demo: 1, payg: 1, monthly: 2, founding: 3 };
+    planLimit = limits[plan] || 1;
+
+    loading = false;
+  });
+
+  async function removeDevice(deviceId) {
+    await supabase.from('user_devices').delete().eq('id', deviceId);
+    devices = devices.filter(d => d.id !== deviceId);
+  }
+
+  function relativeTime(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
+</script>
+
+<svelte:head><title>Registered Devices — Parakeet</title></svelte:head>
+
+<div class="devices-page">
+  <h1>Registered Devices</h1>
+  <p class="subtitle">{devices.length} / {planLimit} devices registered</p>
+
+  {#if loading}
+    <div class="loading">Loading...</div>
+  {:else if devices.length === 0}
+    <div class="empty">No devices registered yet. Open the app to register this device.</div>
+  {:else}
+    <div class="devices-list">
+      {#each devices as device}
+        <div class="device-card">
+          <div class="device-info">
+            <span class="device-icon">💻</span>
+            <div>
+              <div class="device-name">{device.device_label}</div>
+              <div class="device-meta">Last seen: {relativeTime(device.last_seen_at)} · ID: {device.machine_id.slice(0, 8)}...</div>
+            </div>
+          </div>
+          <button class="remove-btn" on:click={() => removeDevice(device.id)}>Remove</button>
+        </div>
+      {/each}
+    </div>
+  {/if}
+</div>
+
+<style>
+  .devices-page { max-width: 640px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 24px; font-weight: 700; color: #e2e8f0; margin: 0 0 8px; }
+  .subtitle { color: rgba(255,255,255,0.4); font-size: 14px; margin: 0 0 32px; }
+  .device-card {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 16px 20px; margin-bottom: 12px;
+  }
+  .device-info { display: flex; align-items: center; gap: 14px; }
+  .device-icon { font-size: 24px; }
+  .device-name { font-size: 15px; font-weight: 600; color: #e2e8f0; }
+  .device-meta { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+  .remove-btn {
+    background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171; border-radius: 8px; padding: 6px 16px; cursor: pointer; font-size: 13px;
+  }
+  .remove-btn:hover { background: rgba(239, 68, 68, 0.2); }
+</style>
+```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Assistant.svelte (P20-T5)
+═══════════════════════════════════════════════════════════════
+
+In the WebSocket message handler (ws.svelte.ts or Assistant.svelte), handle
+the new rejection message types:
+
+In ws.svelte.ts ws.onmessage handler, add:
+```typescript
+} else if (data.type === "device_limit_reached") {
+  wsState.error = `Device limit reached (max ${data.max}). Visit parakeet.app/dashboard/devices to manage your devices.`;
+} else if (data.type === "already_active") {
+  wsState.error = "Another session is active. Close your other device or wait 5 minutes.";
+}
+```
+
+These will show as error banners in the existing error display area in Assistant.svelte.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- web/src/routes/dashboard/devices/+page.svelte  (device management page)
+
+FILES TO MODIFY:
+- frontend/src/lib/ws.svelte.ts  (handle device_limit_reached + already_active events)
+
+Commit: "jules: P20-T4+T5 device management dashboard + frontend rejection handling"
+Target branch: main
