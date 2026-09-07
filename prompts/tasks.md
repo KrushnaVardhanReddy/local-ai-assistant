@@ -150,7 +150,7 @@
 |---|---|---|---|---|
 | P12-T1 | `frontend/src/lib/markdownRenderer.ts`, `frontend/src/lib/Assistant.svelte` | Markdown + Shiki IDE-style syntax highlighting in The Brain panel | ⏳ | — |
 | P12-T2 | `backend/app.py`, `frontend/src/lib/Settings.svelte` | Language preference dropdown — injects code language into system prompt, auto-detected from resume | ⏳ | — |
-| P12-T3 | `frontend/src/app.css` | UI Polish: Stealth Text Contrast — add subtitle-style text shadows and sheer backdrop blur so text is readable over any IDE background | ⬜ | — |
+| P12-T3 | `frontend/src/app.css` | UI Polish: Stealth Text Contrast — add subtitle-style text shadows and sheer backdrop blur so text is readable over any IDE background | ⏳ | — |
 
 ---
 
@@ -208,7 +208,7 @@
 |---|---|---|---|---|
 | P16-T1 | `backend/gemini_live_client.py` | New `GeminiLiveClient` class — streams 500ms PCM audio chunks to Gemini Live API via `google-genai` SDK, returns transcription + LLM response tokens in a single stream. Activated only when `LLM_PROVIDER=gemini`. | ⬜ | — |
 | P16-T2 | `backend/app.py` | In WebSocket handler: detect `LLM_PROVIDER=gemini` at startup and swap the `transcriber → llm_client` chain for `GeminiLiveClient`. All other providers continue through the existing pipeline untouched. | ⬜ | — |
-| P16-T3 | `backend/config.py`, `.env.local` | Add `GEMINI_API_KEY` and `GEMINI_LIVE_MODEL` config vars (default: `gemini-2.0-flash-live`). Document both modes in README. | ⬜ | — |
+| P16-T3 | `backend/config.py`, `.env.local` | Add `GEMINI_API_KEY` and `GEMINI_LIVE_MODEL` config vars (default: `gemini-2.0-flash-live`). Document both modes in README. | ✅ | #46 |
 | P16-T4 | `frontend/src/lib/Settings.svelte` | Settings panel: when `LLM_PROVIDER=gemini` is selected, hide the STT provider dropdown (not needed) and show a "Gemini Live — unified audio mode" badge. For all other LLM providers, show STT selector as normal. | ⬜ | — |
 
 ---
@@ -222,7 +222,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P17-T1 | `backend/app.py`, `backend/session_manager.py` | Session manager — accumulate full conversation (questions, answers, timestamps) in memory per WebSocket session. Add `POST /session/end` endpoint that returns structured JSON. | ⬜ | — |
-| P17-T2 | `backend/app.py`, `backend/llm_client.py` | Scorecard generation — on `POST /session/end`, send full transcript to LLM with a scorecard prompt: rate each answer (1–5), flag gaps, suggest what should have been said | ⬜ | — |
+| P17-T2 | `backend/app.py`, `backend/llm_client.py` | Scorecard generation — on `POST /session/end`, send full transcript to LLM with a scorecard prompt: rate each answer (1–5), flag gaps, suggest what should have been said | ✅ | #45 |
 | P17-T3 | `frontend/src/lib/Assistant.svelte`, `frontend/src/lib/SessionReport.svelte` | Session Report panel — triggered by `Ctrl+Shift+E` or button. Renders the scorecard as a formatted report with per-question breakdown. Has a copy-to-clipboard button. | ⬜ | — |
 | P17-T4 | `backend/app.py` | Live Answer Coaching — after candidate finishes speaking (VAD silence detected), optionally send the answer to a fast LLM call and stream back a brief coaching hint: "✅ Good — also mention X" or "⚠️ Incomplete — you missed Y" | ⬜ | — |
 
@@ -240,7 +240,7 @@
 | P18-T1 | `frontend/src-tauri/tauri.conf.json` | Switch Windows bundle target to portable — no NSIS installer, no registry writes, no appwiz.cpl entry. Output: a ZIP of `AppName.exe` + `resources/`. User unzips and runs directly. | ⬜ | — |
 | P18-T2 | `frontend/src-tauri/Cargo.toml`, `tauri.conf.json` | Change default `productName` to a neutral name (e.g. `"AudioService"`). This controls the EXE filename, Task Manager process name, and window title. | ⬜ | — |
 | P18-T3 | `frontend/src-tauri/tauri.conf.json`, `backend/config.py` | User-configurable process alias — read `APP_DISPLAY_NAME` from `.env.local` or a local `settings.json` at launch. Lets each user personalise their own process name without rebuilding. | ⬜ | — |
-| P18-T4 | `scripts/build.sh`, `Makefile` | Update build pipeline: `make build-portable` target — runs PyInstaller on backend → Tauri portable build → zips both into a single `parakeet-portable-win.zip` release artifact. | ⬜ | — |
+| P18-T4 | `scripts/build.sh`, `Makefile` | Update build pipeline: `make build-portable` target — runs PyInstaller on backend → Tauri portable build → zips both into a single `parakeet-portable-win.zip` release artifact. | ✅ | #44 |
 
 ---
 
