@@ -1,0 +1,26 @@
+TASK: P12-T3 — UI Polish: Stealth Text Contrast (Subtitle Effect)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Because the Tauri window uses `transparent: true`, the text in the Assistant
+often becomes unreadable if the application behind it (like an IDE or browser)
+has a similar background color to the text.
+
+We need to ensure all text in the main Assistant UI remains readable against ANY
+background color (white, black, or code editor backgrounds) without removing the
+stealthy transparency of the window itself.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/app.css OR Assistant.svelte
+═══════════════════════════════════════════════════════════════
+1. Apply a strong CSS `text-shadow` to the main text elements (transcripts and
+   LLM responses) so that they have a solid dark outline. 
+   Example: `text-shadow: 1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8);`
+2. Optional: Add a very sheer, heavily blurred backdrop to the main `.panels` 
+   container. (e.g. `background: rgba(0, 0, 0, 0.15); backdrop-filter: blur(2px);`) 
+   so there is just enough contrast to read the text, but the window still looks
+   transparent to the naked eye.
+
+Commit: "jules: P12-T3 add text-shadows and backdrop blur for stealth visibility"
+Target branch: main
