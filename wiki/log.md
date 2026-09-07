@@ -11,3 +11,8 @@ Append-only chronological record of all changes to this wiki.
 - Synthesized and created `wiki/competitors.md`
 - Updated `wiki/index.md`
 
+## [2026-09-07] ingest | Project README
+- Copied `README.md` to `wiki/raw/README.md`
+- Synthesized and created `wiki/project-structure.md` and `wiki/architecture.md`
+- Updated `wiki/index.md`
+
