@@ -671,10 +671,21 @@ async def web_search_toggle():
 
 @app.post("/session/end")
 async def end_session():
-    """Return full session data for scorecard generation."""
+    """Return full session data + AI-generated scorecard."""
     if not interview_session.has_data:
         return JSONResponse({"error": "No session data available"}, status_code=404)
-    return JSONResponse(interview_session.export())
+
+    session_data = interview_session.export()
+
+    if llm_client:
+        scorecard = await llm_client.generate_scorecard(session_data)
+    else:
+        scorecard = {"error": "LLM client not initialized"}
+
+    return JSONResponse({
+        "session": session_data,
+        "scorecard": scorecard,
+    })
 
 
 @app.post("/session/clear")
