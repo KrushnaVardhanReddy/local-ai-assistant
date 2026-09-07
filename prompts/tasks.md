@@ -185,9 +185,9 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P15-T1 | `backend/transcriber.py`, `backend/config.py` | Add `STT_DIARIZE=true` flag — use faster-whisper or pyannote speaker diarization on loopback stream to label each segment as `[INTERVIEWER]` or `[CANDIDATE]` | ⏳ | — |
-| P15-T2 | `backend/app.py`, `backend/smart_filter.py` | Route diarized segments differently — interviewer speech bypasses intent filter and is always forwarded as context; candidate speech goes through normal VAD pipeline | ⏳ | — |
-| P15-T3 | `frontend/src/lib/Assistant.svelte` | UI: Show speaker label badges on transcript chips (`👤 You` vs `🎤 Interviewer`) so user can tell the system is hearing both sides | ⏳ | — |
+| P15-T1 | `backend/transcriber.py`, `backend/config.py` | Add `STT_DIARIZE=true` flag — use faster-whisper or pyannote speaker diarization on loopback stream to label each segment as `[INTERVIEWER]` or `[CANDIDATE]` | ✅ | #53 |
+| P15-T2 | `backend/app.py`, `backend/smart_filter.py` | Route diarized segments differently — interviewer speech bypasses intent filter and is always forwarded as context; candidate speech goes through normal VAD pipeline | ✅ | #52 |
+| P15-T3 | `frontend/src/lib/Assistant.svelte` | UI: Show speaker label badges on transcript chips (`👤 You` vs `🎤 Interviewer`) so user can tell the system is hearing both sides | ✅ | #51 |
 
 ---
 
@@ -206,10 +206,10 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P16-T1 | `backend/gemini_live_client.py` | New `GeminiLiveClient` class — streams 500ms PCM audio chunks to Gemini Live API via `google-genai` SDK, returns transcription + LLM response tokens in a single stream. Activated only when `LLM_PROVIDER=gemini`. | ⬜ | — |
-| P16-T2 | `backend/app.py` | In WebSocket handler: detect `LLM_PROVIDER=gemini` at startup and swap the `transcriber → llm_client` chain for `GeminiLiveClient`. All other providers continue through the existing pipeline untouched. | ⬜ | — |
+| P16-T1 | `backend/gemini_live_client.py` | New `GeminiLiveClient` class — streams 500ms PCM audio chunks to Gemini Live API via `google-genai` SDK, returns transcription + LLM response tokens in a single stream. Activated only when `LLM_PROVIDER=gemini`. | ⏳ | — |
+| P16-T2 | `backend/app.py` | In WebSocket handler: detect `LLM_PROVIDER=gemini` at startup and swap the `transcriber → llm_client` chain for `GeminiLiveClient`. All other providers continue through the existing pipeline untouched. | ⏳ | — |
 | P16-T3 | `backend/config.py`, `.env.local` | Add `GEMINI_API_KEY` and `GEMINI_LIVE_MODEL` config vars (default: `gemini-2.0-flash-live`). Document both modes in README. | ✅ | #46 |
-| P16-T4 | `frontend/src/lib/Settings.svelte` | Settings panel: when `LLM_PROVIDER=gemini` is selected, hide the STT provider dropdown (not needed) and show a "Gemini Live — unified audio mode" badge. For all other LLM providers, show STT selector as normal. | ⬜ | — |
+| P16-T4 | `frontend/src/lib/Settings.svelte` | Settings panel: when `LLM_PROVIDER=gemini` is selected, hide the STT provider dropdown (not needed) and show a "Gemini Live — unified audio mode" badge. For all other LLM providers, show STT selector as normal. | ⏳ | — |
 
 ---
 
