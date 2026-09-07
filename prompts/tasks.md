@@ -185,9 +185,9 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P15-T1 | `backend/transcriber.py`, `backend/config.py` | Add `STT_DIARIZE=true` flag — use faster-whisper or pyannote speaker diarization on loopback stream to label each segment as `[INTERVIEWER]` or `[CANDIDATE]` | ⬜ | — |
-| P15-T2 | `backend/app.py`, `backend/smart_filter.py` | Route diarized segments differently — interviewer speech bypasses intent filter and is always forwarded as context; candidate speech goes through normal VAD pipeline | ⬜ | — |
-| P15-T3 | `frontend/src/lib/Assistant.svelte` | UI: Show speaker label badges on transcript chips (`👤 You` vs `🎤 Interviewer`) so user can tell the system is hearing both sides | ⬜ | — |
+| P15-T1 | `backend/transcriber.py`, `backend/config.py` | Add `STT_DIARIZE=true` flag — use faster-whisper or pyannote speaker diarization on loopback stream to label each segment as `[INTERVIEWER]` or `[CANDIDATE]` | ⏳ | — |
+| P15-T2 | `backend/app.py`, `backend/smart_filter.py` | Route diarized segments differently — interviewer speech bypasses intent filter and is always forwarded as context; candidate speech goes through normal VAD pipeline | ⏳ | — |
+| P15-T3 | `frontend/src/lib/Assistant.svelte` | UI: Show speaker label badges on transcript chips (`👤 You` vs `🎤 Interviewer`) so user can tell the system is hearing both sides | ⏳ | — |
 
 ---
 
