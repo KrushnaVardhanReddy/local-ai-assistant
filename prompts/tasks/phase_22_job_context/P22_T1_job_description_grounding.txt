@@ -1,0 +1,49 @@
+TASK: P22-T1 — Dynamic Job Context Grounding (Job Description Injection)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Instead of just relying on the user's resume and a generic system prompt, 
+allow the user to paste the target Job Description (JD) into the Settings UI. 
+The backend dynamically injects this JD into the LLM's system prompt. 
+
+This ensures that during a live interview, the AI tailors every answer to the 
+specific requirements, tech stack, and cultural keywords of the target company,
+making the answers significantly higher quality and less generic.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/config.py
+═══════════════════════════════════════════════════════════════
+1. Add `JOB_DESCRIPTION: str = ""` to the `Config` dataclass.
+2. Ensure the save/load mechanism in backend (if any) persists this, 
+   or allow it to be passed dynamically via a new API endpoint.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py
+═══════════════════════════════════════════════════════════════
+1. Create a new endpoint `POST /config/job-description` that receives 
+   `{"text": "..."}` and updates `config.JOB_DESCRIPTION`.
+2. When constructing the system prompt for the `LLMClient` (or Gemini Live),
+   dynamically append the Job Description context:
+   
+   ```python
+   base_prompt = config.SYSTEM_PROMPT
+   if config.JOB_DESCRIPTION:
+       base_prompt += (
+           "\n\n--- TARGET JOB DESCRIPTION ---\n"
+           "Tailor all of your answers specifically to the following job description. "
+           "Highlight relevant skills, match the tone, and prioritize the exact technologies mentioned:\n"
+           f"{config.JOB_DESCRIPTION}\n"
+       )
+   ```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Settings.svelte
+═══════════════════════════════════════════════════════════════
+1. In the Settings modal, add a new section for "Interview Context".
+2. Add a `<textarea>` bound to `jobDescription`.
+3. Add a "Save Context" button that calls `POST http://127.0.0.1:8765/config/job-description`.
+4. Ensure the UI provides a success toast/indicator when saved.
+
+Commit: "jules: P22-T1 add dynamic Job Description grounding to LLM prompt"
+Target branch: main
