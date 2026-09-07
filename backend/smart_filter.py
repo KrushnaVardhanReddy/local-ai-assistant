@@ -106,3 +106,12 @@ class SilenceBuffer:
     def is_empty(self) -> bool:
         with self._lock:
             return len(self._buffer) == 0
+
+def passes_filter_for_speaker(text: str, speaker: str | None) -> tuple[bool, str]:
+    """
+    When speaker is INTERVIEWER: always passes (return True).
+    When speaker is CANDIDATE or None: use normal passes_filter() logic.
+    """
+    if speaker == "INTERVIEWER":
+        return True, "interviewer_bypass"
+    return passes_filter(text)
