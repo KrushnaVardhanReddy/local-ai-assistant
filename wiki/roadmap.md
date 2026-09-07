@@ -11,11 +11,11 @@ This document outlines the master task list for the Local AI Assistant, broken d
 - **Phase 12 (UX Polish)**: Syntax highlighting for code, language preference controls, and stealth UI contrast.
 - **Phase 13 (Audio Routing)**: Audio loopback (hearing the interviewer's voice).
 
-## Phase 14: Interview UX (⏳ In Progress)
+## Phase 14-15: Interview UX & Advanced Audio (⏳ In Progress)
 - **Phase 14**: Transcript Chip bar (clickable priority questions).
-
-## Phase 15-23: Advanced Features (⬜ Pending)
 - **Phase 15**: Speaker Diarization (separating interviewer vs candidate voices).
+
+## Phase 16-23: Advanced Features (⬜ Pending)
 - **Phase 16**: Gemini Live Mode integration for sub-second, STT-less reasoning.
 - **Phase 17**: Session scorecards and real-time coaching.
 - **Phase 18**: Portable App packaging (no installation required).
