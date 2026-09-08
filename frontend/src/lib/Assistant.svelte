@@ -5,6 +5,8 @@
   import { authState } from "$lib/auth.svelte";
 
   let showSessionReport = $state(false);
+  let starPrimed = $state(false);
+  let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
 
   function handleMockModeToggle() {
     const isNowEnabled = !wsState.isMockMode;
@@ -113,6 +115,7 @@
       unlistenScrollDown.then(f => f());
       unlistenScrollUp.then(f => f());
       unlistenClickthrough.then(f => f());
+      if (starPrimedTimer) clearTimeout(starPrimedTimer);
     };
   });
 
@@ -228,6 +231,22 @@
     const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
     fetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
   }
+
+  function triggerStarPreset() {
+    // Send the STAR primer as a silent chat message
+    sendChat(
+      "For your next response only, structure your answer using the STAR " +
+      "method with bold section headers: **Situation** → **Task** → " +
+      "**Action** → **Result**. Keep each section concise (2-3 sentences). " +
+      "After this response, return to your normal answering style."
+    );
+    // Activate visual primed state for 3s
+    starPrimed = true;
+    if (starPrimedTimer) clearTimeout(starPrimedTimer);
+    starPrimedTimer = setTimeout(() => {
+      starPrimed = false;
+    }, 3000);
+  }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -290,6 +309,20 @@
         disabled={wsState.plan === 'demo' || wsState.plan === 'payg'}
       >
         <span class="material-symbols-outlined text-[20px]" data-icon="screenshot_monitor">screenshot_monitor</span>
+      </button>
+      <!-- STAR Method Preset -->
+      <button
+        aria-label="STAR Method Preset"
+        title="Prime next answer with STAR format (Situation → Task → Action → Result)"
+        class="flex items-center gap-1 px-2.5 py-1 rounded-full
+               transition-colors pointer-events-auto text-[11px] font-bold
+               tracking-wider border
+               {starPrimed
+                 ? 'text-yellow-300 bg-yellow-400/15 border-yellow-400/40 animate-pulse'
+                 : 'text-on-surface-variant hover:text-yellow-300 hover:bg-yellow-400/10 border-transparent hover:border-yellow-400/20'}"
+        onclick={triggerStarPreset}
+      >
+        STAR
       </button>
       <button
         id="session-report-btn"
