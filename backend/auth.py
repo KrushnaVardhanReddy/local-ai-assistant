@@ -1,3 +1,4 @@
+import uuid
 import jwt
 import datetime
 import httpx
@@ -156,3 +157,116 @@ async def process_referral_reward(stripe_customer_id: str) -> None:
 
         patch_referral_resp = await client.patch(referrals_url, headers=headers, params=update_referral_params, json=update_referral_payload)
         patch_referral_resp.raise_for_status()
+import datetime
+import uuid
+
+async def check_and_register_device(user_id: str, machine_id: str) -> dict:
+    url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1"
+    headers = {
+        "apikey": config.SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        # Get user's plan
+        profile_resp = await client.get(f"{url}/profiles", headers=headers, params={"id": f"eq.{user_id}", "select": "plan"})
+        profile_resp.raise_for_status()
+        profile_data = profile_resp.json()
+        plan = profile_data[0].get("plan", "demo") if profile_data else "demo"
+
+        # Get device limit for this plan
+        limit_resp = await client.get(f"{url}/plan_device_limits", headers=headers, params={"plan": f"eq.{plan}", "select": "max_devices"})
+        limit_resp.raise_for_status()
+        limit_data = limit_resp.json()
+        max_devices = limit_data[0].get("max_devices", 1) if limit_data else 1
+
+        # Check existing devices
+        existing_resp = await client.get(f"{url}/user_devices", headers=headers, params={"user_id": f"eq.{user_id}", "select": "machine_id"})
+        existing_resp.raise_for_status()
+        existing_data = existing_resp.json()
+        existing_ids = [d["machine_id"] for d in (existing_data or [])]
+
+        if machine_id in existing_ids:
+            # Known device — update last_seen and allow
+            await client.patch(
+                f"{url}/user_devices",
+                headers=headers,
+                params={"user_id": f"eq.{user_id}", "machine_id": f"eq.{machine_id}"},
+                json={"last_seen_at": datetime.datetime.utcnow().isoformat()}
+            )
+            return {"allowed": True}
+
+        if len(existing_ids) >= max_devices:
+            return {"allowed": False, "reason": "device_limit_reached", "max": max_devices}
+
+        # New device — register it
+        await client.post(
+            f"{url}/user_devices",
+            headers=headers,
+            json={
+                "user_id": user_id,
+                "machine_id": machine_id,
+                "device_label": "New Device",
+                "registered_at": datetime.datetime.utcnow().isoformat(),
+                "last_seen_at": datetime.datetime.utcnow().isoformat(),
+            }
+        )
+        return {"allowed": True}
+
+async def acquire_session_lock(user_id: str) -> dict:
+    url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1"
+    headers = {
+        "apikey": config.SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        # Check for existing active session
+        profile_resp = await client.get(f"{url}/profiles", headers=headers, params={"id": f"eq.{user_id}", "select": "active_session_id,active_session_at"})
+        profile_resp.raise_for_status()
+        profile_data = profile_resp.json()
+
+        if profile_data:
+            profile = profile_data[0]
+            if profile.get("active_session_id"):
+                session_at_str = profile.get("active_session_at")
+                if session_at_str:
+                    # Parse iso format taking into account 'Z'
+                    session_at = datetime.datetime.fromisoformat(session_at_str.replace("Z", "+00:00"))
+                    age_minutes = (datetime.datetime.now(datetime.timezone.utc) - session_at).total_seconds() / 60.0
+                    if age_minutes < 5:
+                        return {"acquired": False, "reason": "already_active"}
+
+        # Acquire the lock
+        new_session_id = str(uuid.uuid4())
+        await client.patch(
+            f"{url}/profiles",
+            headers=headers,
+            params={"id": f"eq.{user_id}"},
+            json={
+                "active_session_id": new_session_id,
+                "active_session_at": datetime.datetime.utcnow().isoformat()
+            }
+        )
+        return {"acquired": True, "session_id": new_session_id}
+
+async def release_session_lock(user_id: str) -> None:
+    url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1"
+    headers = {
+        "apikey": config.SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        await client.patch(
+            f"{url}/profiles",
+            headers=headers,
+            params={"id": f"eq.{user_id}"},
+            json={
+                "active_session_id": None,
+                "active_session_at": None
+            }
+        )
