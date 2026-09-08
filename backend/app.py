@@ -847,5 +847,27 @@ async def clear_session():
     return JSONResponse({"status": "cleared"})
 
 
+class InternalPlanUpdateModel(BaseModel):
+    user_id: str
+    plan: str
+
+@app.post("/api/internal/billing/update_plan")
+async def internal_update_plan(body: InternalPlanUpdateModel, request: Request):
+    from auth import update_user_plan, grant_payg_session
+    secret = request.headers.get("x-internal-secret")
+    if not secret or secret != config.SUPABASE_SERVICE_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    try:
+        if body.plan == "payg":
+            await grant_payg_session(body.user_id)
+            await update_user_plan(body.user_id, body.plan)
+        else:
+            await update_user_plan(body.user_id, body.plan)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     uvicorn.run("app:app", host=config.WS_HOST, port=config.WS_PORT, reload=False)
