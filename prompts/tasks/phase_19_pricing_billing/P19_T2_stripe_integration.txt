@@ -1,0 +1,51 @@
+TASK: P19-T2 — Stripe Billing Integration & Webhooks
+
+PARALLEL BATCH: 5 — Run sequentially or alongside P19-T1 (no direct file overlaps with T1).
+Files touched: web/src/routes/api/billing/+server.ts (new), backend/auth.py
+
+PREREQUISITE: Phase 18 must be completed.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement Stripe integration to handle checkout sessions and webhooks for the paid tiers of the Local AI Assistant platform.
+Update the user's plan in Supabase via backend/auth.py when a successful payment webhook is received.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: web/src/routes/api/billing/+server.ts
+═══════════════════════════════════════════════════════════════
+
+Create the webhook handler `web/src/routes/api/billing/+server.ts` (or backend equivalent if needed):
+1. Listen for Stripe events: `checkout.session.completed` and `invoice.payment_succeeded`.
+2. Extract the user ID from the Stripe payload's metadata or customer email mapping.
+3. Determine the plan based on the product/price ID:
+   - `price_payg`: $5 one-time payment for a 90-minute session.
+   - `price_monthly`: $19/mo subscription.
+   - `price_founding`: $49 one-time payment.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/auth.py
+═══════════════════════════════════════════════════════════════
+
+Update the Supabase logic to allow modifying a user's plan:
+1. Add a helper function `update_user_plan(user_id: str, new_plan: str)` which updates the `plan` field in the user's Supabase record (e.g. to `payg`, `monthly`, or `founding`).
+2. Add a helper function `grant_payg_session(user_id: str)` if tracking session credits.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Ensure Stripe SDK is installed and Stripe API keys are read from environment variables.
+- Supabase updates must be performed using the Supabase Service Role key since this is a backend operation.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/auth.py
+
+FILES TO CREATE:
+- web/src/routes/api/billing/+server.ts
+
+Commit: "jules: P19-T2 add Stripe webhooks and Supabase plan sync"
+Target branch: main
