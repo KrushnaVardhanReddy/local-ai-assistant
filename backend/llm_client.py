@@ -63,6 +63,12 @@ class LLMClient:
                                 choices = chunk.get("choices", [])
                                 if choices:
                                     delta = choices[0].get("delta", {})
+                                    
+                                    # Handle DeepSeek/reasoning models
+                                    reasoning = delta.get("reasoning")
+                                    if reasoning:
+                                        yield reasoning
+                                        
                                     content = delta.get("content")
                                     if content is not None:
                                         yield content
