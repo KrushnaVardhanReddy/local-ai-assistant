@@ -17,6 +17,7 @@
   let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
   let isDevModeChecked = $state(false);
   let preferredLanguage = $state(localStorage.getItem("preferred_language") || "");
+  let currentLLMProvider = $state("auto");
 
   // Audio state
   let audioDevices = $state<Array<{id: number, name: string, is_loopback_capable: boolean}>>([]);
@@ -36,6 +37,14 @@
   let resumeFilename = $state("");
 
   onMount(async () => {
+    try {
+      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const healthRes = await fetch(`${apiUrl}/health`);
+      if (healthRes.ok) {
+        const healthData = await healthRes.json();
+        currentLLMProvider = healthData.llm_provider;
+      }
+    } catch (e) { console.error("Failed to load health", e); }
     try {
       const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
       const res = await fetch(`${apiUrl}/api/system_prompt`);
@@ -255,6 +264,16 @@
         {/each}
       </select>
     </div>
+
+    {#if currentLLMProvider === "gemini"}
+      <div class="gemini-live-badge">
+        <span class="material-symbols-outlined">bolt</span>
+        <div>
+          <strong>Gemini Live Mode</strong>
+          <p>Audio is processed directly by Gemini — no separate STT provider needed.</p>
+        </div>
+      </div>
+    {/if}
 
     <div class="input-group">
       <label for="preferredLanguage">Code Language Preference</label>
@@ -582,4 +601,20 @@
   .extract-btn {
     margin-top: 0.5rem;
   }
+
+  .gemini-live-badge {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: rgba(99, 179, 237, 0.08);
+    border: 1px solid rgba(99, 179, 237, 0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+    margin-bottom: 1rem;
+  }
+  .gemini-live-badge strong { color: #63b3ed; display: block; margin-bottom: 2px; }
+  .gemini-live-badge p { margin: 0; opacity: 0.7; font-size: 12px; }
+
 </style>
