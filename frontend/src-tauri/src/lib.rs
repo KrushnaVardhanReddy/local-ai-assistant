@@ -160,6 +160,11 @@ fn get_app_display_name() -> String {
         .to_string()
 }
 
+#[tauri::command]
+fn set_clickthrough(window: tauri::WebviewWindow, enable: bool) -> Result<(), String> {
+    window.set_ignore_cursor_events(enable).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -237,6 +242,12 @@ pub fn run() {
                 }
             }).expect("failed to register Ctrl+Shift+X shortcut");
 
+            app.global_shortcut().on_shortcut("Ctrl+Shift+M", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("toggle-clickthrough", ());
+                }
+            }).expect("failed to register Ctrl+Shift+M shortcut");
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -248,7 +259,8 @@ pub fn run() {
             load_token,
             delete_token,
             get_machine_id,
-            get_app_display_name
+            get_app_display_name,
+            set_clickthrough
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

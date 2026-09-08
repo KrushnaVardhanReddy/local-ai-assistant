@@ -4,6 +4,9 @@
   import SessionReport from './SessionReport.svelte';
 
   let showSessionReport = $state(false);
+  let liveEarsCollapsed = $state(false);
+  let brainCollapsed = $state(false);
+  let clickthrough = $state(false);
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -73,10 +76,15 @@
       }
     });
 
+    const unlistenClickthrough = listen("toggle-clickthrough", () => {
+      toggleClickthrough();
+    });
+
     return () => {
       unlisten.then(f => f());
       unlistenScrollDown.then(f => f());
       unlistenScrollUp.then(f => f());
+      unlistenClickthrough.then(f => f());
     };
   });
 
@@ -124,6 +132,26 @@
     if (e.ctrlKey && e.shiftKey && e.key === 'E') {
       e.preventDefault();
       showSessionReport = !showSessionReport;
+    }
+    if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+      e.preventDefault();
+      liveEarsCollapsed = !liveEarsCollapsed;
+    }
+    if (e.ctrlKey && e.shiftKey && e.key === 'B') {
+      e.preventDefault();
+      brainCollapsed = !brainCollapsed;
+    }
+  }
+
+  async function toggleClickthrough() {
+    clickthrough = !clickthrough;
+    if (!isBrowser) {
+      try {
+        await invoke('set_clickthrough', { enable: clickthrough });
+      } catch (e) {
+        console.error('set_clickthrough failed:', e);
+        clickthrough = !clickthrough; // revert on error
+      }
     }
   }
 
@@ -217,6 +245,16 @@
       <button aria-label="Clear Context" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto" onclick={clearHistory}>
         <span class="material-symbols-outlined text-[20px]" data-icon="mop">mop</span>
       </button>
+      <!-- Click-through toggle -->
+      <button
+        aria-label="Toggle Click-Through"
+        title="Click-Through Mode (Ctrl+Shift+M) — lets you click apps behind the overlay"
+        class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto
+               {clickthrough ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
+        onclick={toggleClickthrough}
+      >
+        <span class="material-symbols-outlined text-[20px]">{clickthrough ? 'mouse' : 'back_hand'}</span>
+      </button>
       <!-- Separator -->
       <div class="w-px h-5 bg-white/10 mx-1"></div>
       <!-- Hide window (Ctrl+Shift+Space to restore) -->
@@ -281,15 +319,28 @@
   <!-- Main Content Grid -->
   <main class="flex-1 flex gap-container-padding w-full max-w-7xl mx-auto h-[calc(100vh-120px)] pb-6">
     <!-- Left Panel: Live Ears (Transcription) -->
-    <aside class="live-ears-panel glass-panel pointer-events-auto w-1/3 rounded-[24px] flex flex-col overflow-hidden transition-transform duration-300 shadow-2xl">
+    <aside
+      class="live-ears-panel glass-panel pointer-events-auto rounded-[24px] flex flex-col overflow-hidden shadow-2xl
+             transition-all duration-300 ease-in-out
+             {liveEarsCollapsed ? 'w-0 opacity-0 p-0 min-w-0 border-0' : brainCollapsed ? 'w-full' : 'w-1/3'}"
+      style="{liveEarsCollapsed ? 'pointer-events:none;' : ''}"
+    >
       <!-- Panel Header -->
-      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20" onmousedown={startDrag} style="cursor: grab;">
-        <div class="flex items-center gap-2 pointer-events-none">
+      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 flex-shrink-0" onmousedown={startDrag} style="cursor: grab;">
+        <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="hearing">hearing</span>
           <h2 class="font-label-caps text-label-caps text-on-surface-variant tracking-wider">Live Ears</h2>
         </div>
+        <button
+          class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant/60 hover:text-primary transition-colors pointer-events-auto flex-shrink-0"
+          onclick={() => liveEarsCollapsed = !liveEarsCollapsed}
+          title="Collapse Live Ears (Ctrl+Shift+L)"
+          aria-label="Collapse Live Ears"
+        >
+          <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+        </button>
       </div>
-      
+
       <!-- Panel Body (Live STT) -->
       <div class="flex-1 p-6 overflow-y-auto hide-scrollbar flex flex-col gap-4 font-body-sm text-body-sm text-on-surface-variant/80" bind:this={contentEl}>
         {#if !wsState.transcript}
@@ -307,22 +358,50 @@
       </div>
     </aside>
 
+    <!-- Expand Live Ears button (shown when collapsed) -->
+    {#if liveEarsCollapsed}
+      <button
+        class="self-center flex-shrink-0 w-8 h-16 glass-panel rounded-xl flex items-center justify-center pointer-events-auto
+               text-on-surface-variant/50 hover:text-primary hover:bg-white/10 transition-all duration-200 shadow-xl border border-white/5"
+        onclick={() => liveEarsCollapsed = false}
+        title="Expand Live Ears (Ctrl+Shift+L)"
+        aria-label="Expand Live Ears"
+      >
+        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+      </button>
+    {/if}
+
     <!-- Right Panel: The Brain (AI Insights) -->
-    <section class="brain-panel glass-panel pointer-events-auto w-2/3 rounded-[24px] flex flex-col overflow-hidden shadow-2xl relative">
+    <section
+      class="brain-panel glass-panel pointer-events-auto rounded-[24px] flex flex-col overflow-hidden shadow-2xl relative
+             transition-all duration-300 ease-in-out
+             {brainCollapsed ? 'w-0 opacity-0 p-0 min-w-0 border-0' : liveEarsCollapsed ? 'w-full' : 'w-2/3'}"
+      style="{brainCollapsed ? 'pointer-events:none;' : ''}"
+    >
       <!-- Ambient Glow effect for the brain panel -->
       <div class="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none"></div>
-      
+
       <!-- Panel Header -->
-      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 z-10" onmousedown={startDrag} style="cursor: grab;">
-        <div class="flex items-center gap-2 pointer-events-none">
+      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 z-10 flex-shrink-0" onmousedown={startDrag} style="cursor: grab;">
+        <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[20px]" data-icon="memory">memory</span>
           <h2 class="font-label-caps text-label-caps text-primary tracking-wider text-glow">The Brain</h2>
         </div>
-        {#if wsState.ragSources && wsState.ragSources.length > 0}
-          <div class="text-[10px] text-secondary font-mono-data">
-            🔍 Sources: {wsState.ragSources.join(' · ')}
-          </div>
-        {/if}
+        <div class="flex items-center gap-2">
+          {#if wsState.ragSources && wsState.ragSources.length > 0}
+            <div class="text-[10px] text-secondary font-mono-data">
+              🔍 Sources: {wsState.ragSources.join(' · ')}
+            </div>
+          {/if}
+          <button
+            class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant/60 hover:text-primary transition-colors pointer-events-auto"
+            onclick={() => brainCollapsed = !brainCollapsed}
+            title="Collapse Brain Panel (Ctrl+Shift+B)"
+            aria-label="Collapse Brain Panel"
+          >
+            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+          </button>
+        </div>
       </div>
 
       <!-- Panel Body (Insights & Suggestions) -->
@@ -356,6 +435,19 @@
         </div>
       {/if}
     </section>
+
+    <!-- Expand Brain button (shown when collapsed) -->
+    {#if brainCollapsed}
+      <button
+        class="self-center flex-shrink-0 w-8 h-16 glass-panel rounded-xl flex items-center justify-center pointer-events-auto
+               text-on-surface-variant/50 hover:text-primary hover:bg-white/10 transition-all duration-200 shadow-xl border border-white/5"
+        onclick={() => brainCollapsed = false}
+        title="Expand Brain Panel (Ctrl+Shift+B)"
+        aria-label="Expand Brain Panel"
+      >
+        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+      </button>
+    {/if}
   </main>
 
   {#if showSessionReport}
