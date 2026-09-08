@@ -261,11 +261,11 @@
 |---|---|---|---|---|
 | P19-T1 | `web/src/routes/pricing/` | Public pricing page — show all 4 tiers with a comparison table. CTA buttons link to Stripe checkout. | ✅ | #61 |
 | P19-T2 | `web/src/routes/api/billing/`, `backend/auth.py` | Stripe integration: `price_payg` ($5 one-time session token), `price_monthly` ($19/mo sub), `price_founding` ($49 one-time). Webhook updates user's `plan` field in Supabase on payment success. | ✅ | #62 |
-| P19-T3 | `backend/auth.py`, `backend/app.py` | Session token enforcement — Pay-as-you-go users get a JWT with `expires_at = now + 90min`. Backend validates on every WebSocket message. When token expires, send `{"type": "session_expired"}` to frontend. | ⏳ | — |
-| P19-T4 | `frontend/src/lib/Assistant.svelte` | Session expiry UI — when `session_expired` event received, show a non-intrusive overlay: "Session ended — extend for $5 or upgrade to Monthly". Has a direct Stripe payment link. | ⏳ | — |
-| P19-T5 | `web/src/routes/demo/` | Demo / Referral mode — every user gets a unique referral link (`parakeet.app/ref/[code]`). New visitor clicks link → gets 15 min free demo. Track referral source + conversion in Supabase (`referrals` table: referrer_id, referee_id, status, converted_at). | ⏳ | — |
-| P19-T6 | `backend/auth.py` | Plan-based feature gating — `demo`: 3 question limit + watermark; `payg`: full session, no coaching; `monthly`/`founding`: all features including Live Answer Coaching (P17-T4) and Session Report (P17-T3). | ⬜ | — |
-| P19-T7 | `backend/auth.py`, `web/src/routes/api/referral/` | Referral reward system — when a referred user completes signup AND uses their first demo session, the referrer automatically receives +15 min of demo credit added to their account (`demo_credits_minutes` in Supabase). No cap — each successful referral = +15 min. Paid users bank the credits for when friends haven't upgraded yet. Send referrer a notification email: "Your friend joined — you earned 15 bonus minutes! 🎉" | ⬜ | — |
+| P19-T3 | `backend/auth.py`, `backend/app.py` | Session token enforcement — Pay-as-you-go users get a JWT with `expires_at = now + 90min`. Backend validates on every WebSocket message. When token expires, send `{"type": "session_expired"}` to frontend. | ✅ | #65 |
+| P19-T4 | `frontend/src/lib/Assistant.svelte` | Session expiry UI — when `session_expired` event received, show a non-intrusive overlay: "Session ended — extend for $5 or upgrade to Monthly". Has a direct Stripe payment link. | ✅ | #65 |
+| P19-T5 | `web/src/routes/demo/` | Demo / Referral mode — every user gets a unique referral link (`parakeet.app/ref/[code]`). New visitor clicks link → gets 15 min free demo. Track referral source + conversion in Supabase (`referrals` table: referrer_id, referee_id, status, converted_at). | ✅ | #67 |
+| P19-T6 | `backend/auth.py` | Plan-based feature gating — `demo`: 3 question limit + watermark; `payg`: full session, no coaching; `monthly`/`founding`: all features including Live Answer Coaching (P17-T4) and Session Report (P17-T3). | ✅ | #66 |
+| P19-T7 | `backend/auth.py`, `web/src/routes/api/referral/` | Referral reward system — when a referred user completes signup AND uses their first demo session, the referrer automatically receives +15 min of demo credit added to their account (`demo_credits_minutes` in Supabase). No cap — each successful referral = +15 min. Paid users bank the credits for when friends haven't upgraded yet. Send referrer a notification email: "Your friend joined — you earned 15 bonus minutes! 🎉" | ✅ | #67 |
 
 ---
 
@@ -287,11 +287,11 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P20-T1 | `backend/supabase_schema.sql` | Add `user_devices` table: `(user_id, machine_id, device_label, registered_at, last_seen_at)`. Add `active_session_id` column to `users` table to track current live session. | ⬜ | — |
-| P20-T2 | `backend/auth.py` | Device registration — on first WebSocket auth from an unknown `machine_id`, check device count against plan limit. If under limit: register device and allow. If at limit: reject with `{"type": "device_limit_reached", "max": N}` — user must remove a device from dashboard first. | ⬜ | — |
-| P20-T3 | `backend/auth.py`, `backend/app.py` | Concurrent session lock — on WebSocket connect, write `active_session_id = new_session_uuid` to Supabase. If account already has a different `active_session_id`, reject new connection with `{"type": "already_active"}`. On disconnect, clear `active_session_id`. | ⬜ | — |
-| P20-T4 | `web/src/routes/dashboard/devices/` | Device management page — lists all registered devices with label, last-seen date. User can remove a device (frees up a slot). Useful when switching machines legitimately. | ⬜ | — |
-| P20-T5 | `frontend/src/lib/Assistant.svelte`, `frontend/src/lib/auth.svelte.ts` | Handle rejection events in frontend: `device_limit_reached` → show "Max devices reached, manage at dashboard.parakeet.app/devices"; `already_active` → show "Another session is already active — close it first or wait 5 minutes for it to expire automatically." | ⬜ | — |
+| P20-T1 | `backend/supabase_schema.sql` | Add `user_devices` table: `(user_id, machine_id, device_label, registered_at, last_seen_at)`. Add `active_session_id` column to `users` table to track current live session. | ✅ | #69 |
+| P20-T2 | `backend/auth.py` | Device registration — on first WebSocket auth from an unknown `machine_id`, check device count against plan limit. If under limit: register device and allow. If at limit: reject with `{"type": "device_limit_reached", "max": N}` — user must remove a device from dashboard first. | ✅ | #70 |
+| P20-T3 | `backend/auth.py`, `backend/app.py` | Concurrent session lock — on WebSocket connect, write `active_session_id = new_session_uuid` to Supabase. If account already has a different `active_session_id`, reject new connection with `{"type": "already_active"}`. On disconnect, clear `active_session_id`. | ✅ | #70 |
+| P20-T4 | `web/src/routes/dashboard/devices/` | Device management page — lists all registered devices with label, last-seen date. User can remove a device (frees up a slot). Useful when switching machines legitimately. | ✅ | #68 |
+| P20-T5 | `frontend/src/lib/Assistant.svelte`, `frontend/src/lib/auth.svelte.ts` | Handle rejection events in frontend: `device_limit_reached` → show "Max devices reached, manage at dashboard.parakeet.app/devices"; `already_active` → show "Another session is already active — close it first or wait 5 minutes for it to expire automatically." | ✅ | #68 |
 
 
 ---
@@ -300,8 +300,8 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P21-T1 | `frontend/src/lib/Settings.svelte`, `backend/config.py` | **Multilingual Support:** Add language override dropdown. Updates STT prompt and LLM system prompt to enforce target language. | ⬜ | — |
-| P21-T2 | `backend/app.py`, `frontend/src/lib/Assistant.svelte` | **Mock Interview Mode:** Toggle that flips the LLM from "Answerer" to "Interviewer". Uses Edge-TTS to speak questions aloud. Feeds user answers back for evaluation. | ⬜ | — |
+| P21-T1 | `frontend/src/lib/Settings.svelte`, `backend/config.py` | **Multilingual Support:** Add language override dropdown. Updates STT prompt and LLM system prompt to enforce target language. | ✅ | #72 |
+| P21-T2 | `backend/app.py`, `frontend/src/lib/Assistant.svelte` | **Mock Interview Mode:** Toggle that flips the LLM from "Answerer" to "Interviewer". Uses Edge-TTS to speak questions aloud. Feeds user answers back for evaluation. | ✅ | #73 |
 
 ---
 
@@ -309,7 +309,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P22-T1 | `frontend/src/lib/Settings.svelte`, `backend/config.py`, `backend/app.py` | **Job Context Injection:** Add a text area in Settings for the Job Description. The backend dynamically injects this into the LLM system prompt so all real-time answers are tailored specifically to the company and role requirements. | ⬜ | — |
+| P22-T1 | `frontend/src/lib/Settings.svelte`, `backend/config.py`, `backend/app.py` | **Job Context Injection:** Add a text area in Settings for the Job Description. The backend dynamically injects this into the LLM system prompt so all real-time answers are tailored specifically to the company and role requirements. | ✅ | #71 |
 
 ---
 
@@ -317,4 +317,12 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P23-T1 | `frontend/e2e/`, `tests/e2e/`, `Makefile` | **Playwright + Pytest E2E:** Build out comprehensive UI tests mocking Tauri IPC, and backend integration tests mocking WS connections to guarantee reliability before final release. | ⬜ | — |
+| P23-T1 | `frontend/e2e/`, `tests/e2e/`, `Makefile` | **Playwright + Pytest E2E:** Build out comprehensive UI tests mocking Tauri IPC, and backend integration tests mocking WS connections to guarantee reliability before final release. | ✅ | #74 |
+
+---
+
+## Phase 24 — Lifetime BYOK 🔑
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P24-T1 | `frontend/src/lib/Settings.svelte`, `backend/app.py` | **Bring Your Own Key:** Adds a UI toggle for lifetime users to supply their own Gemini API key, stored securely in `localStorage` and sent over WS. | ✅ | #75 |
