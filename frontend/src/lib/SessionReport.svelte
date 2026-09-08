@@ -15,6 +15,42 @@
   let roleName = $state("");
   let showEmailMeta = $state(false);
 
+  let showHistory = $state(false);
+  let historyEntries = $state<any[]>([]);
+  let isLoadingHistory = $state(false);
+
+  async function loadHistory() {
+    if (historyEntries.length > 0) return; // already loaded
+    isLoadingHistory = true;
+    try {
+      const resp = await fetch("http://127.0.0.1:8765/session/history");
+      if (resp.ok) {
+        historyEntries = await resp.json();
+      }
+    } catch (_) {
+      // History is best-effort — silently fail
+    } finally {
+      isLoadingHistory = false;
+    }
+  }
+
+  function buildSparkline(scores: number[]): string {
+    if (scores.length < 2) return "";
+    const W = 120, H = 32, pad = 4;
+    const min = Math.min(...scores, 0);
+    const max = Math.max(...scores, 10);
+    const range = max - min || 1;
+    const pts = scores.map((s, i) => {
+      const x = pad + (i / (scores.length - 1)) * (W - pad * 2);
+      const y = H - pad - ((s - min) / range) * (H - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`
+      + `<polyline points="${pts.join(" ")}" fill="none" stroke="rgba(78,222,163,0.8)" stroke-width="1.5" stroke-linejoin="round"/>`
+      + `<circle cx="${pts[pts.length-1].split(",")[0]}" cy="${pts[pts.length-1].split(",")[1]}" r="2.5" fill="rgb(78,222,163)"/>`
+      + `</svg>`;
+  }
+
   const VERDICT_COLORS: Record<string, string> = {
     Good: "text-green-400 bg-green-400/10 border-green-400/30",
     Partial: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
@@ -294,6 +330,88 @@
             </div>
           {/if}
         </div>
+
+        <!-- Past Sessions / Trend View -->
+        <div class="mt-6 border-t border-white/10 pt-6">
+          <button
+            class="w-full flex items-center justify-between text-left group"
+            onclick={() => { showHistory = !showHistory; if (showHistory) loadHistory(); }}
+          >
+            <h3 class="text-sm font-semibold text-on-background/90 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-primary">trending_up</span>
+              Past Sessions
+              {#if historyEntries.length > 0}
+                <span class="text-[10px] text-on-surface-variant/50 font-normal">
+                  ({historyEntries.length} sessions)
+                </span>
+              {/if}
+            </h3>
+            <span class="material-symbols-outlined text-[18px] text-on-surface-variant/40
+                         group-hover:text-primary transition-colors">
+              {showHistory ? 'expand_less' : 'expand_more'}
+            </span>
+          </button>
+
+          {#if showHistory}
+            <div class="mt-4">
+              {#if isLoadingHistory}
+                <div class="flex items-center gap-2 text-on-surface-variant/50 text-xs py-4">
+                  <span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                  Loading history...
+                </div>
+              {:else if historyEntries.length === 0}
+                <p class="text-on-surface-variant/40 text-xs py-4 text-center">
+                  No past sessions yet. Complete more interviews to see your trend.
+                </p>
+              {:else}
+                <!-- Sparkline trend -->
+                <div class="flex items-center gap-3 mb-4 p-3 bg-white/3 rounded-xl border border-white/5">
+                  <div>
+                    {@html buildSparkline(historyEntries.slice(0, 20).map(e => e.overall_score).reverse())}
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-on-surface-variant/50 uppercase tracking-wider">Score Trend</p>
+                    <p class="text-sm font-semibold text-on-background">
+                      {(historyEntries.slice(0,5).reduce((a,e) => a + e.overall_score, 0) / Math.min(historyEntries.length, 5)).toFixed(1)}/10
+                      <span class="text-[10px] font-normal text-on-surface-variant/50">avg (last 5)</span>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Session list -->
+                <div class="flex flex-col gap-2 max-h-64 overflow-y-auto hide-scrollbar">
+                  {#each historyEntries.slice(0, 15) as entry, i}
+                    <div class="p-3 rounded-xl bg-white/3 border border-white/5
+                                hover:bg-white/5 transition-colors">
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-[10px] text-on-surface-variant/50">
+                          {new Date(entry.date_iso).toLocaleDateString(undefined,
+                            { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span class="text-sm font-bold {entry.overall_score >= 8 ? 'text-green-400' : entry.overall_score >= 6 ? 'text-yellow-400' : 'text-orange-400'}">
+                          {entry.overall_score}/10
+                        </span>
+                      </div>
+                      {#if entry.strengths?.length}
+                        <p class="text-[11px] text-green-400/80 truncate">
+                          ✓ {entry.strengths[0]}
+                        </p>
+                      {/if}
+                      {#if entry.gaps?.length}
+                        <p class="text-[11px] text-orange-400/70 truncate">
+                          ✗ {entry.gaps[0]}
+                        </p>
+                      {/if}
+                      <p class="text-[10px] text-on-surface-variant/40 mt-1">
+                        {entry.turn_count} questions · {Math.round(entry.duration_s / 60)}min
+                      </p>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </div>
       {/if}
     </div>
   </div>
@@ -452,4 +570,6 @@
     cursor: pointer;
     font-size: 13px;
   }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
 </style>
