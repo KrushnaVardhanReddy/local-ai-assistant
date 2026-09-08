@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from config import config, PROVIDER_CONFIG
 import stripe_webhook
 from audio_listener import AudioListener, get_audio_devices
-from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan, check_and_register_device, acquire_session_lock, release_session_lock
+from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan, check_and_register_device, acquire_session_lock, release_session_lock, increment_and_check_monthly_sessions
 from keys import key_store
 from transcriber import Transcriber
 from llm_client import LLMClient
@@ -218,6 +218,8 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
                     await websocket.close(code=1008, reason="Device limit reached")
                     return
 
+                user_plan = await get_user_plan(user_id)
+
                 # P20: Concurrent session lock
                 session_result = await acquire_session_lock(user_id)
                 if not session_result["acquired"]:
@@ -231,6 +233,19 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
                 websocket._session_lock_id = session_result["session_id"]
                 websocket._user_id_for_lock = user_id
 
+                # P19: Check Monthly Session Cap
+                if user_plan == "monthly" and not custom_key:
+                    cap_result = await increment_and_check_monthly_sessions(user_id, user_plan)
+                    if not cap_result["allowed"]:
+                        # Release the lock since we're denying access
+                        await release_session_lock(user_id)
+                        await websocket.send_json({
+                            "type": "auth_error",
+                            "message": "You have reached your 15-session monthly limit. To get unlimited sessions, switch to BYOK (Bring Your Own Key) in settings."
+                        })
+                        await websocket.close(code=1008, reason="Monthly cap reached")
+                        return
+
             if not key_store:
                 await websocket.close(code=1008, reason="Key store not configured")
                 return
@@ -241,7 +256,8 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
                 await websocket.close(code=1008, reason=str(e))
                 return
 
-            user_plan = await get_user_plan(user_id)
+            if not user_plan or user_plan == "demo":
+                user_plan = await get_user_plan(user_id)
             payg_token = None
             if user_plan == "payg":
                 payg_token = create_payg_session_token(user_id)
