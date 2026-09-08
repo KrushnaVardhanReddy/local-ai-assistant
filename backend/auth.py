@@ -103,3 +103,56 @@ async def get_user_plan(user_id: str) -> str:
         if data and len(data) > 0:
             return data[0].get("plan", "unknown")
         return "unknown"
+
+async def process_referral_reward(stripe_customer_id: str) -> None:
+    """Checks if the user has an associated referral, adds a $5 credit (1 payg_session) to the referrer, and marks the referral as converted."""
+    url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1/profiles"
+    headers = {
+        "apikey": config.SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        # First, find the user_id for the given stripe_customer_id
+        profile_params = {"stripe_customer_id": f"eq.{stripe_customer_id}", "select": "id"}
+        profile_resp = await client.get(url, headers=headers, params=profile_params)
+        profile_resp.raise_for_status()
+        profile_data = profile_resp.json()
+
+        if not profile_data or len(profile_data) == 0:
+            return
+
+        user_id = profile_data[0].get("id")
+
+        # Check if this user was referred
+        referrals_url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1/referrals"
+        referral_params = {
+            "referee_id": f"eq.{user_id}",
+            "status": "neq.converted",
+            "select": "id,referrer_id"
+        }
+
+        referral_resp = await client.get(referrals_url, headers=headers, params=referral_params)
+        referral_resp.raise_for_status()
+        referral_data = referral_resp.json()
+
+        if not referral_data or len(referral_data) == 0:
+            return
+
+        referral_id = referral_data[0].get("id")
+        referrer_id = referral_data[0].get("referrer_id")
+
+        # Add $5 credit to the referrer's account (1 payg_session)
+        # Using grant_payg_session which already increments payg_sessions by 1
+        await grant_payg_session(referrer_id)
+
+        # Mark the referral as converted
+        update_referral_payload = {
+            "status": "converted",
+            "converted_at": datetime.datetime.utcnow().isoformat()
+        }
+        update_referral_params = {"id": f"eq.{referral_id}"}
+
+        patch_referral_resp = await client.patch(referrals_url, headers=headers, params=update_referral_params, json=update_referral_payload)
+        patch_referral_resp.raise_for_status()
