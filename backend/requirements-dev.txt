@@ -1,2 +1,5 @@
 pyinstaller
-pytest\npytest-httpx\npytest-asyncio\nrespx
+pytest
+pytest-httpx
+pytest-asyncio
+respx
