@@ -1,0 +1,60 @@
+TASK: P7-T7 — Advanced Stealth Hotkeys & Cheatsheet UI
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement advanced, mouse-less hotkeys for power users to navigate 
+and interact with the assistant entirely via the keyboard. Include 
+an in-app stealthy UI "cheatsheet" so users don't forget the hotkeys.
+
+Key behaviors:
+  1. Add a small "⌨️" (keyboard) icon button to the top toolbar in 
+     `Assistant.svelte`.
+  2. Clicking this button opens a sleek, glassmorphism modal/overlay 
+     *inside* the main window. Because it's inside the main window, 
+     it automatically inherits our Tauri `WDA_EXCLUDEFROMCAPTURE` 
+     stealth protections.
+  3. The cheatsheet UI should display a clean table of the active hotkeys:
+     - `Ctrl+Shift+Space` — Push to Talk
+     - `Ctrl+Shift+S` — Screenshot Vision
+     - `Ctrl+Shift+1` through `6` — Send Transcript Chip
+     - `Ctrl+Shift+Up/Down` — Scroll Answer
+  4. Register the new global hotkeys (`Ctrl+Shift+1` through `6`) in 
+     Tauri (`main.rs`) and emit them to the frontend.
+  5. In `Assistant.svelte` (or `ws.svelte.ts`), listen for these hotkey 
+     events and trigger the `sendPendingTranscript(index)` function 
+     (e.g., pressing `Ctrl+Shift+2` sends the 2nd pending transcript 
+     chip to the LLM).
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- The UI modal must live in `Assistant.svelte` so it stays hidden from 
+  screen sharing. Do NOT spawn a new Tauri window.
+- The modal should look premium: use `bg-surface-variant/90`, 
+  `backdrop-blur-md`, subtle borders, and clear typography.
+- Global Hotkeys must be registered in Rust (`main.rs`) using the 
+  existing `global-shortcut` plugin.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: src-tauri/src/main.rs (MODIFY)
+   - Add `CmdOrCtrl+Shift+1` through `CmdOrCtrl+Shift+6` to the 
+     global shortcut manager initialization.
+   - When triggered, emit an event like `hotkey_transcript_1`, 
+     `hotkey_transcript_2`, etc., to the frontend.
+
+2. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+   - Add the state variable: `let showHotkeys = $state(false);`
+   - Add the "⌨️" button to the top toolbar next to the Settings/Report icons.
+   - Add the modal UI that overlays the chat area when `showHotkeys` is true. 
+     It should include a close button or close when clicking outside.
+   - Listen for the `hotkey_transcript_X` Tauri events using `listen()`.
+   - When received, call the existing `sendTranscriptChip(index)` logic 
+     (or whatever the equivalent function is named from Phase 14). Note 
+     that the hotkeys are 1-indexed (1-6), but the array is 0-indexed (0-5).
+
+Commit: "jules: P7-T7 add advanced stealth hotkeys and UI cheatsheet"
+Target branch: main

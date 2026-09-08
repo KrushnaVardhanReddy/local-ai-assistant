@@ -92,7 +92,7 @@
 | P7-T4 | `README.md` | Final pass — screenshots, install instructions | ✅ | #23 |
 | P7-T5 | `scripts/start_remote.sh`, `backend/app.py` | Remote Helper Mode — serve UI statically + Cloudflare tunnel | ✅ | #29 |
 | P7-T6 | `tests/`, `e2e/`, `playwright.config.ts` | E2E test suite — pytest API tests + Playwright frontend tests | ✅ | #30 |
-| P7-T7 | `frontend/src-tauri/src/main.rs`, `ws.ts` | Advanced Stealth Hotkeys — `Ctrl+Shift+1-6` to send pending transcript chips (P14). Map hidden inputs (e.g. arrow keys + Enter when UI hidden) to control Ghost Cursor for mouse-less selection. | ⬜ | — |
+| P7-T7 | `src-tauri/src/main.rs`, `Assistant.svelte` | Advanced Stealth Hotkeys & UI — Add `Ctrl+Shift+1-6` to send pending transcript chips (P14). Adds an in-app glassmorphism "cheatsheet" modal via a toolbar button so users can reference the hotkeys safely (inherits stealth properties). | ⬜ | — |
 
 ---
 
@@ -264,7 +264,7 @@
 | P19-T3 | `backend/auth.py`, `backend/app.py` | Session token enforcement — Pay-as-you-go users get a JWT with `expires_at = now + 90min`. Backend validates on every WebSocket message. When token expires, send `{"type": "session_expired"}` to frontend. | ✅ | #65 |
 | P19-T4 | `frontend/src/lib/Assistant.svelte` | Session expiry UI — when `session_expired` event received, show a non-intrusive overlay: "Session ended — extend for $5 or upgrade to Monthly". Has a direct Stripe payment link. | ✅ | #65 |
 | P19-T5 | `web/src/routes/demo/` | Demo / Referral mode — every user gets a unique referral link (`parakeet.app/ref/[code]`). New visitor clicks link → gets 15 min free demo. Track referral source + conversion in Supabase (`referrals` table: referrer_id, referee_id, status, converted_at). | ✅ | #67 |
-| P19-T6 | `backend/auth.py` | Plan-based feature gating — `demo`: 3 question limit + watermark; `payg`: full session, no coaching; `monthly`/`founding`: all features including Live Answer Coaching (P17-T4) and Session Report (P17-T3). | ✅ | #66 |
+| P19-T6 | `backend/auth.py`, `backend/app.py` | **Monthly Session Cap:** Implements a soft cap of 15 sessions/month for 'monthly' plan users (bypassed if custom BYOK key provided). Closes WS connection with 1008 if exceeded. | ✅ | #79 |
 | P19-T7 | `backend/auth.py`, `web/src/routes/api/referral/` | Referral reward system — when a referred user completes signup AND uses their first demo session, the referrer automatically receives +15 min of demo credit added to their account (`demo_credits_minutes` in Supabase). No cap — each successful referral = +15 min. Paid users bank the credits for when friends haven't upgraded yet. Send referrer a notification email: "Your friend joined — you earned 15 bonus minutes! 🎉" | ✅ | #67 |
 
 ---
@@ -337,9 +337,9 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P25-T1 | `frontend/src/lib/Assistant.svelte` | **STAR Preset Button:** Adds a "STAR" pill button to the toolbar. One click primes the LLM to format its next response using the Situation → Task → Action → Result framework. Button glows yellow for 3s to confirm activation. Closes gap vs Parakeet AI's built-in STAR structuring. | ⬜ | — |
-| P25-T2 | `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Assistant.svelte` | **Catch Me Up:** Rolling transcript history buffer (last 10 entries). A history icon button in The Brain panel header summarizes the full conversation on demand. Closes Cluely's "What did I miss?" feature. | ⬜ | — |
-| P25-T3 | `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Post-Interview Email Draft:** New `POST /session/email-draft` endpoint generates a personalized 3-paragraph thank-you email from the session scorecard. Rendered in an editable textarea with copy button in the Session Report panel. Closes Cluely's auto-email feature. | ⬜ | — |
-| P25-T4 | `backend/history_store.py` [NEW], `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Session History & Score Trends:** New `backend/history_store.py` persists lightweight scorecard summaries to a local JSON file after each session. New `GET /session/history` endpoint. Session Report panel gets a collapsible "Past Sessions" section with SVG sparkline score trend + per-session cards. Closes Sensei AI's primary differentiator. | ⬜ | — |
+| P25-T1 | `frontend/src/lib/Assistant.svelte` | **STAR Preset Button:** Adds a "STAR" pill button to the toolbar. One click primes the LLM to format its next response using the Situation → Task → Action → Result framework. Button glows yellow for 3s to confirm activation. Closes gap vs Parakeet AI's built-in STAR structuring. | ✅ | #77 |
+| P25-T2 | `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Assistant.svelte` | **Catch Me Up:** Rolling transcript history buffer (last 10 entries). A history icon button in The Brain panel header summarizes the full conversation on demand. Closes Cluely's "What did I miss?" feature. | ✅ | #78 |
+| P25-T3 | `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Post-Interview Email Draft:** New `POST /session/email-draft` endpoint generates a personalized 3-paragraph thank-you email from the session scorecard. Rendered in an editable textarea with copy button in the Session Report panel. Closes Cluely's auto-email feature. | ✅ | #76 |
+| P25-T4 | `backend/history_store.py` [NEW], `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Session History & Score Trends:** New `backend/history_store.py` persists lightweight scorecard summaries to a local JSON file after each session. New `GET /session/history` endpoint. Session Report panel gets a collapsible "Past Sessions" section with SVG sparkline score trend + per-session cards. Closes Sensei AI's primary differentiator. | ✅ | #80 |
 
 
