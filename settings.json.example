@@ -1,0 +1,4 @@
+{
+  "_comment": "Copy to settings.json next to AudioService.exe. Rename the .exe file to match APP_DISPLAY_NAME for full stealth.",
+  "APP_DISPLAY_NAME": "AudioService"
+}
