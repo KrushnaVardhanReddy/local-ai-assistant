@@ -46,6 +46,9 @@ e2e:
 	@echo "Running E2E tests..."
 	bash scripts/run_e2e.sh
 
+# Run comprehensive E2E tests across all layers
+test-e2e: e2e
+
 # Clean up caches and node_modules
 clean:
 	rm -rf backend/.venv backend/__pycache__
