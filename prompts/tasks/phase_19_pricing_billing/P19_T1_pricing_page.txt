@@ -1,0 +1,56 @@
+TASK: P19-T1 — Public Pricing Page
+
+PARALLEL BATCH: 5 — Run sequentially or alongside P19-T2 (no direct file overlaps with T2).
+Files touched: web/src/routes/pricing/+page.svelte (new)
+
+PREREQUISITE: Phase 18 must be completed.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build a public pricing page for the Local AI Assistant platform. 
+This will display all 4 available tiers (Demo, Pay-as-you-go, Monthly, and Founding Member) in a modern comparison table.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: web/src/routes/pricing/+page.svelte
+═══════════════════════════════════════════════════════════════
+
+Create the main pricing page `web/src/routes/pricing/+page.svelte`.
+It should have a clean, dark-mode aesthetic consistent with the rest of the app.
+
+Display the following 4 tiers:
+1. **Demo**
+   - Price: Free
+   - Features: 3 questions or 15 min limit
+   - Notes: No account needed, uses referral link
+
+2. **Pay-as-you-go**
+   - Price: $5 / session
+   - Features: 1 session = 90 min. Session token expires after 90 min.
+
+3. **Monthly**
+   - Price: $19 / month
+   - Features: Unlimited sessions. Cancel anytime.
+
+4. **Founding Member**
+   - Price: $49 one-time
+   - Features: Unlimited, while supported. Early adopter deal.
+
+Add CTA (Call to Action) buttons for each tier. For the paid tiers, leave them as placeholder links to `/api/billing/...` or `/checkout/...` for now.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- Use a responsive grid (e.g., `grid-cols-1 md:grid-cols-2 lg:grid-cols-4`).
+- Highlight the "Monthly" tier as the recommended option.
+- Use generic Tailwind styling if custom CSS classes aren't available.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY / CREATE:
+- web/src/routes/pricing/+page.svelte (create)
+
+Commit: "jules: P19-T1 build public pricing page UI"
+Target branch: main
