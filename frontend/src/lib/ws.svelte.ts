@@ -17,7 +17,8 @@ export const wsState = $state({
   pttMode: false,
   pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>,
   plan: "unknown",
-  isMockMode: false
+  isMockMode: false,
+  transcriptHistory: [] as string[]
 });
 
 let ws: WebSocket | null = null;
@@ -41,6 +42,7 @@ function initListeners() {
     wsState.isThinking = false;
     wsState.ragSources = [];
     wsState.pendingTranscripts = [];
+    wsState.transcriptHistory = [];
     fetch('http://127.0.0.1:8765/history/clear', { method: 'POST' }).catch(console.error);
   });
 }
@@ -140,6 +142,18 @@ export function connect(url?: string): void {
       switch (data.type) {
         case "transcript":
           wsState.transcript = data.text;
+
+          // Accumulate rolling transcript history (max 10 entries)
+          if (data.text && data.text.trim().length > 3) {
+            // Avoid duplicating the last entry
+            const last = wsState.transcriptHistory[wsState.transcriptHistory.length - 1];
+            if (last !== data.text) {
+              wsState.transcriptHistory.push(data.text);
+              if (wsState.transcriptHistory.length > 10) {
+                wsState.transcriptHistory.shift();
+              }
+            }
+          }
 
           // Accumulate as a clickable chip (deduplicate identical text)
           const existingIdx = wsState.pendingTranscripts.findIndex(
