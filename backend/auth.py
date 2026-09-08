@@ -270,3 +270,42 @@ async def release_session_lock(user_id: str) -> None:
                 "active_session_at": None
             }
         )
+
+async def increment_and_check_monthly_sessions(user_id: str, plan: str) -> dict:
+    """
+    Checks if a 'monthly' plan user has exceeded the 15 session cap.
+    If not, increments their session count.
+    Other plans bypass this check.
+    """
+    if plan != "monthly":
+        return {"allowed": True}
+
+    url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1/profiles"
+    headers = {
+        "apikey": config.SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json"
+    }
+    params = {"id": f"eq.{user_id}", "select": "monthly_sessions_used"}
+
+    async with httpx.AsyncClient() as client:
+        # Get current usage
+        resp = await client.get(url, headers=headers, params=params)
+        resp.raise_for_status()
+        data = resp.json()
+
+        if not data or len(data) == 0:
+            return {"allowed": False, "reason": "Profile not found"}
+
+        used = data[0].get("monthly_sessions_used") or 0
+
+        if used >= 15:
+            return {"allowed": False, "reason": "Monthly session limit reached (15/15)."}
+
+        # Increment usage
+        update_payload = {"monthly_sessions_used": used + 1}
+        update_params = {"id": f"eq.{user_id}"}
+        patch_resp = await client.patch(url, headers=headers, params=update_params, json=update_payload)
+        patch_resp.raise_for_status()
+
+        return {"allowed": True}
