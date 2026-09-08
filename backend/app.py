@@ -76,6 +76,11 @@ active_ws_queues = set()
 # Set of active per-connection asyncio.Queue objects for outbound JSON messages
 active_outbound_queues = set()
 
+def is_reasoning_model(model_name: str) -> bool:
+    """Checks if a model string typically represents a reasoning model."""
+    name = model_name.lower()
+    return "o1" in name or "o3" in name or "r1" in name
+
 def _audio_loop(listener: AudioListener, sync_queue: queue.Queue):
     """Background thread to capture audio chunks."""
     while True:
@@ -173,6 +178,7 @@ async def ws_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     connection_llm_client = llm_client
+    user_plan = "demo"
 
     if config.SUPABASE_JWT_SECRET:
         try:
@@ -200,6 +206,9 @@ async def ws_endpoint(websocket: WebSocket):
             payg_token = None
             if user_plan == "payg":
                 payg_token = create_payg_session_token(user_id)
+
+            # Immediately send plan to the connecting client
+            await websocket.send_json({"type": "plan", "plan": user_plan})
 
             # Determine LLM provider from stored keys
             providers_to_check = ["openai", "groq", "gemini", "anthropic"]
@@ -495,6 +504,11 @@ async def ws_endpoint(websocket: WebSocket):
                     continue
 
                 if transcript:
+                    # Plan verification: restricted models
+                    if user_plan in ["demo", "payg"] and is_reasoning_model(connection_llm_client.model):
+                        outbound_queue.put_nowait({"type": "error", "message": "Reasoning models require a Monthly or Founding plan."})
+                        continue
+
                     # Clear queue backlog
                     while not ws_queue.empty():
                         try:
@@ -684,8 +698,25 @@ async def clear_history():
 class VisionModel(BaseModel):
     image_base64: str
 
+async def get_optional_user_id(request: Request) -> str | None:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split(" ")[1]
+    try:
+        return get_user_id(token)
+    except AuthError:
+        return None
+
 @app.post("/vision/analyze")
-async def analyze_vision(body: VisionModel):
+async def analyze_vision(body: VisionModel, user_id: str | None = Depends(get_optional_user_id)):
+    user_plan = "demo"
+    if config.SUPABASE_JWT_SECRET and user_id:
+        user_plan = await get_user_plan(user_id)
+
+    if user_plan in ["demo", "payg"]:
+        return JSONResponse({"status": "error", "message": "Vision features require a Monthly or Founding plan."}, status_code=403)
+
     async def process_vision():
         vision_client = await LLMClient.from_config(is_vision=True)
         prompt = "Extract any coding problems, technical questions, or architecture diagrams from this screenshot. Provide a structured approach, pseudocode, and edge cases. Do not write the full code."
