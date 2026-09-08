@@ -11,6 +11,7 @@ export const wsState = $state({
   isAnalyzingScreen: false,
   isConnected: false,
   error: null as string | null,
+  sessionExpired: false,
   ragSources: [] as string[],
   isPTTHeld: false,
   pttMode: false,
@@ -155,6 +156,10 @@ export function connect(url?: string): void {
               wsState.pendingTranscripts.shift();
             }
           }
+          break;
+        case "session_expired":
+          wsState.sessionExpired = true;
+          wsState.isListening = false;
           break;
         case "message_start":
           wsState.response = "";

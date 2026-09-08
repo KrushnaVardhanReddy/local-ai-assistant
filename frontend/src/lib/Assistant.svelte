@@ -365,6 +365,40 @@
   {/if}
 </div>
 
+
+
+{#if wsState.sessionExpired}
+  <div class="fixed inset-0 z-[9999] pointer-events-auto flex items-center justify-center bg-black/80 backdrop-blur-md">
+    <div class="glass-panel p-8 rounded-2xl max-w-md w-full text-center flex flex-col items-center gap-6 shadow-2xl border border-white/10 relative overflow-hidden">
+      <!-- Background Glow -->
+      <div class="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent pointer-events-none"></div>
+
+      <div class="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 mb-2">
+        <span class="material-symbols-outlined text-[32px]">hourglass_disabled</span>
+      </div>
+
+      <h2 class="text-xl font-headline-md text-on-background tracking-wide">
+        Session ended — extend for $5 or upgrade to Monthly
+      </h2>
+
+      <p class="text-on-surface-variant text-body-sm font-body-sm">
+        Your current session limit has been reached. Choose an option below to continue using the Local AI Assistant.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 w-full mt-4">
+        <a href="/pricing" target="_blank" rel="noopener noreferrer"
+           class="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 text-on-surface-variant font-label-caps text-label-caps tracking-wider uppercase text-center flex items-center justify-center gap-2">
+          $5 Extension
+        </a>
+        <a href="/pricing" target="_blank" rel="noopener noreferrer"
+           class="flex-1 py-3 px-4 rounded-xl bg-primary hover:bg-primary/90 text-background font-label-caps text-label-caps tracking-wider uppercase font-bold transition-all duration-200 text-center flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(78,222,163,0.3)] hover:shadow-[0_0_30px_rgba(78,222,163,0.5)]">
+          Upgrade to Monthly
+        </a>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
   .glass-panel {
       background: rgba(0, 0, 0, 0.15);
