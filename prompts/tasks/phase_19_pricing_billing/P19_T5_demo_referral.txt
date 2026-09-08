@@ -1,0 +1,37 @@
+TASK: P19-T5 — Demo / Referral Mode
+
+PARALLEL BATCH: 6 — Run sequentially or alongside P19-T3, T4.
+Files touched: web/src/routes/demo/+page.svelte (new), web/src/routes/api/demo/+server.ts (new)
+
+PREREQUISITE: Phase 18 must be completed.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a referral and demo system. Every user gets a unique referral link (`parakeet.app/ref/[code]`). 
+New visitors clicking this link get a 15-minute free demo.
+Referral sources and conversions must be tracked in Supabase.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: web/src/routes/demo/
+═══════════════════════════════════════════════════════════════
+
+1. Add a page or API endpoint to handle `/ref/[code]` routes.
+2. When a visitor lands with a valid referral code, log the referral in Supabase (`referrals` table: referrer_id, referee_id (if they sign up), status, converted_at).
+3. Grant the visitor a 15-minute free demo session token.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The referral table schema might need to be created if it doesn't exist (you can assume Supabase schema will be handled or provide the SQL schema comment in code).
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY / CREATE:
+- web/src/routes/demo/+page.svelte (or `[code]/+page.svelte`)
+- web/src/routes/api/demo/+server.ts (if needed)
+
+Commit: "jules: P19-T5 add demo referral mode"
+Target branch: main

@@ -1,0 +1,36 @@
+TASK: P19-T4 — Session Expiry UI Overlay
+
+PARALLEL BATCH: 6 — Run sequentially or alongside P19-T3 (no direct file overlaps with T3).
+Files touched: frontend/src/lib/Assistant.svelte
+
+PREREQUISITE: Phase 18 must be completed.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement the frontend handling for the `session_expired` WebSocket event.
+Show a clean, non-intrusive UI overlay prompting the user to extend their session or upgrade.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Assistant.svelte
+═══════════════════════════════════════════════════════════════
+
+1. Add a WebSocket event listener to catch `{"type": "session_expired"}`.
+2. When received, lock the UI (or stop further microphone streaming) and display a modal/overlay with the message:
+   "Session ended — extend for $5 or upgrade to Monthly"
+3. Include direct Stripe payment links (or buttons linking to the `/pricing` page) for the two options.
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The UI should match the dark-mode stealth aesthetics. Use a blurred backdrop or a clean floating dialog.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src/lib/Assistant.svelte
+
+Commit: "jules: P19-T4 add session expiry UI overlay"
+Target branch: main
