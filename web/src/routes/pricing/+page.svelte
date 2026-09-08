@@ -22,36 +22,61 @@
   </div>
 
   <div class="pricing-grid">
+    <!-- Demo Tier -->
     <div class="pricing-card">
-      <h2>Free / Self-Hosted</h2>
-      <div class="price">$0<span>/forever</span></div>
-      <p class="description">Download the desktop app. Run any local model. No account needed.</p>
+      <h2>Demo</h2>
+      <div class="price">Free</div>
+      <p class="description">No account needed, uses referral link.</p>
 
       <ul class="feature-list">
-        <li>✓ Connect to Ollama & LM Studio</li>
-        <li>✓ Stealth mode & keyboard shortcuts</li>
-        <li>✓ Local history storage</li>
-        <li>✓ Community support</li>
+        <li>✓ 3 questions</li>
+        <li>✓ or 15 min limit</li>
       </ul>
 
-      <a href="/download" class="btn btn-secondary btn-full">Download Free</a>
+      <a href="/demo" class="btn btn-secondary btn-full">Try Demo</a>
     </div>
 
-    <div class="pricing-card pro">
-      <div class="popular-badge">Most Popular</div>
-      <h2>Pro</h2>
-      <div class="price">$12<span>/mo</span></div>
-      <p class="description">Dashboard, encrypted API key sync, usage analytics.</p>
+    <!-- Pay-as-you-go Tier -->
+    <div class="pricing-card">
+      <h2>Pay-as-you-go</h2>
+      <div class="price">$5<span>/session</span></div>
+      <p class="description">Perfect for occasional use.</p>
 
       <ul class="feature-list">
-        <li>✓ Everything in Free</li>
-        <li>✓ Cloud dashboard access</li>
-        <li>✓ Encrypted API key sync across devices</li>
-        <li>✓ Usage analytics & insights</li>
-        <li>✓ Priority email support</li>
+        <li>✓ 1 session = 90 min</li>
+        <li>✓ Session token expires after 90 min</li>
       </ul>
 
-      <a href={env.PUBLIC_STRIPE_PRO_LINK || "#"} class="btn btn-primary btn-full">Get Started</a>
+      <a href="/checkout/pay-as-you-go" class="btn btn-secondary btn-full">Buy Session</a>
+    </div>
+
+    <!-- Monthly Tier -->
+    <div class="pricing-card pro">
+      <div class="popular-badge">Recommended</div>
+      <h2>Monthly</h2>
+      <div class="price">$19<span>/mo</span></div>
+      <p class="description">For regular users.</p>
+
+      <ul class="feature-list">
+        <li>✓ Unlimited sessions</li>
+        <li>✓ Cancel anytime</li>
+      </ul>
+
+      <a href="/checkout/monthly" class="btn btn-primary btn-full">Subscribe</a>
+    </div>
+
+    <!-- Founding Member Tier -->
+    <div class="pricing-card">
+      <h2>Founding Member</h2>
+      <div class="price">$49<span>/one-time</span></div>
+      <p class="description">Early adopter deal.</p>
+
+      <ul class="feature-list">
+        <li>✓ Unlimited sessions</li>
+        <li>✓ Valid while supported</li>
+      </ul>
+
+      <a href="/checkout/founding-member" class="btn btn-secondary btn-full">Become a Founder</a>
     </div>
   </div>
 </main>
@@ -116,7 +141,7 @@
   }
 
   main {
-    max-width: 1000px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 4rem 2rem;
   }
@@ -148,6 +173,12 @@
     }
   }
 
+  @media (min-width: 1024px) {
+    .pricing-grid {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+  }
+
   .pricing-card {
     background-color: var(--surface);
     border: var(--border);
@@ -164,7 +195,7 @@
   }
 
   .price {
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 700;
     margin: 1rem 0;
   }
