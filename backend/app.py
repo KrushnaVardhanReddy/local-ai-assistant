@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from config import config, PROVIDER_CONFIG
 import stripe_webhook
 from audio_listener import AudioListener, get_audio_devices
-from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan
+from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan, check_and_register_device, acquire_session_lock, release_session_lock
 from keys import key_store
 from transcriber import Transcriber
 from llm_client import LLMClient
@@ -190,9 +190,34 @@ async def ws_endpoint(websocket: WebSocket):
                 await websocket.close(code=1008, reason="Invalid auth message")
                 return
 
-            token = auth_msg["token"]
-            machine_id = auth_msg["machine_id"]
+            token = auth_msg.get("token")
+            machine_id = auth_msg.get("machine_id", "")
             user_id = get_user_id(token)
+
+            # P20: Device registration check
+            if machine_id and config.SUPABASE_URL:
+                device_result = await check_and_register_device(user_id, machine_id)
+                if not device_result["allowed"]:
+                    await websocket.send_json({
+                        "type": "device_limit_reached",
+                        "max": device_result.get("max", 1),
+                        "message": f"Device limit reached ({device_result.get('max', 1)} max). Remove a device at your dashboard."
+                    })
+                    await websocket.close(code=1008, reason="Device limit reached")
+                    return
+
+                # P20: Concurrent session lock
+                session_result = await acquire_session_lock(user_id)
+                if not session_result["acquired"]:
+                    await websocket.send_json({
+                        "type": "already_active",
+                        "message": "Another session is already active. Close it or wait 5 minutes for it to expire."
+                    })
+                    await websocket.close(code=1008, reason="Session already active")
+                    return
+
+                websocket._session_lock_id = session_result["session_id"]
+                websocket._user_id_for_lock = user_id
 
             if not key_store:
                 await websocket.close(code=1008, reason="Key store not configured")
@@ -633,6 +658,13 @@ async def ws_endpoint(websocket: WebSocket):
         sender_task.cancel()
         receiver_task.cancel()
         validator_task.cancel()
+
+        # P20: Release session lock
+        if hasattr(websocket, "_user_id_for_lock") and config.SUPABASE_URL:
+            try:
+                await release_session_lock(websocket._user_id_for_lock)
+            except Exception as e:
+                print(f"Error releasing session lock: {e}", file=sys.stderr)
         if ws_queue in active_ws_queues:
             active_ws_queues.remove(ws_queue)
         if outbound_queue in active_outbound_queues:
