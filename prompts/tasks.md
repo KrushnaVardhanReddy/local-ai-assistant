@@ -221,7 +221,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P17-T1 | `backend/app.py`, `backend/session_manager.py` | Session manager — accumulate full conversation (questions, answers, timestamps) in memory per WebSocket session. Add `POST /session/end` endpoint that returns structured JSON. | ⏳ | — |
+| P17-T1 | `backend/app.py`, `backend/session_manager.py` | Session manager — accumulate full conversation (questions, answers, timestamps) in memory per WebSocket session. Add `POST /session/end` endpoint that returns structured JSON. | ✅ | #45 |
 | P17-T2 | `backend/app.py`, `backend/llm_client.py` | Scorecard generation — on `POST /session/end`, send full transcript to LLM with a scorecard prompt: rate each answer (1–5), flag gaps, suggest what should have been said | ✅ | #45 |
 | P17-T3 | `frontend/src/lib/Assistant.svelte`, `frontend/src/lib/SessionReport.svelte` | Session Report panel — triggered by `Ctrl+Shift+E` or button. Renders the scorecard as a formatted report with per-question breakdown. Has a copy-to-clipboard button. | ⬜ | — |
 | P17-T4 | `backend/app.py` | Live Answer Coaching — after candidate finishes speaking (VAD silence detected), optionally send the answer to a fast LLM call and stream back a brief coaching hint: "✅ Good — also mention X" or "⚠️ Incomplete — you missed Y" | ⬜ | — |
