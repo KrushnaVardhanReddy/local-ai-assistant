@@ -1081,6 +1081,64 @@ async def clear_session():
     return JSONResponse({"status": "cleared"})
 
 
+class EmailDraftRequest(BaseModel):
+    session: dict
+    scorecard: dict
+    interviewer_name: str = ""
+    company_name: str = ""
+    role_name: str = ""
+
+
+@app.post("/session/email-draft")
+async def generate_email_draft(body: EmailDraftRequest):
+    """Generate a post-interview follow-up email using the session scorecard."""
+    if not body.session or not body.scorecard:
+        return JSONResponse({"error": "Session data required"}, status_code=400)
+
+    # Build a concise summary for the prompt
+    strengths = ", ".join(body.scorecard.get("strengths", [])[:3]) or "my technical responses"
+    topics = []
+    for turn in body.session.get("turns", [])[:5]:
+        q = turn.get("question", turn.get("transcript", ""))
+        if q:
+            topics.append(q[:80])
+    topic_str = topics[0] if topics else "the technical topics we discussed"
+
+    interviewer = body.interviewer_name or "the interviewer"
+    company = body.company_name or "your company"
+    role = body.role_name or "the role"
+
+    prompt = (
+        f"Write a concise, professional post-interview thank-you email.\n"
+        f"Interviewer: {interviewer}\n"
+        f"Company: {company}\n"
+        f"Role: {role}\n"
+        f"Key topic discussed: {topic_str}\n"
+        f"Candidate's strengths shown: {strengths}\n\n"
+        f"Requirements:\n"
+        f"- 3 short paragraphs only\n"
+        f"- Para 1: Thank them and express enthusiasm for the role\n"
+        f"- Para 2: Reference a specific topic from the interview to show engagement\n"
+        f"- Para 3: Reiterate interest and next steps\n"
+        f"- Tone: warm, professional, confident — NOT sycophantic\n"
+        f"- Subject line at the very top (format: Subject: ...)\n"
+        f"- Plain text only, no markdown\n"
+        f"Output ONLY the email (subject + body). No preamble."
+    )
+
+    if not llm_client:
+        return JSONResponse({"error": "LLM client not initialized"}, status_code=503)
+
+    try:
+        messages = [{"role": "user", "content": prompt}]
+        full_text = ""
+        async for token in llm_client.stream(messages):
+            full_text += token
+        return JSONResponse({"email": full_text})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 class InternalPlanUpdateModel(BaseModel):
     user_id: str
     plan: str
