@@ -6,6 +6,15 @@
   let scorecard = $state<any>(null);
   let session = $state<any>(null);
 
+  let emailDraft = $state<string | null>(null);
+  let isGeneratingEmail = $state(false);
+  let emailError = $state<string | null>(null);
+
+  let interviewerName = $state("");
+  let companyName = $state("");
+  let roleName = $state("");
+  let showEmailMeta = $state(false);
+
   const VERDICT_COLORS: Record<string, string> = {
     Good: "text-green-400 bg-green-400/10 border-green-400/30",
     Partial: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
@@ -49,6 +58,40 @@
       ),
     ];
     navigator.clipboard.writeText(lines.join("\n"));
+  }
+
+  async function generateEmailDraft() {
+    if (!session || !scorecard) return;
+    isGeneratingEmail = true;
+    emailError = null;
+    try {
+      const resp = await fetch("http://127.0.0.1:8765/session/email-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session,
+          scorecard,
+          interviewer_name: interviewerName,
+          company_name: companyName,
+          role_name: roleName,
+        }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        emailError = data.error || "Failed to generate email";
+        return;
+      }
+      const data = await resp.json();
+      emailDraft = data.email;
+    } catch (e) {
+      emailError = "Could not connect to backend";
+    } finally {
+      isGeneratingEmail = false;
+    }
+  }
+
+  function copyEmail() {
+    if (emailDraft) navigator.clipboard.writeText(emailDraft);
   }
 
   // Load report on mount
@@ -149,6 +192,107 @@
               {/if}
             </div>
           {/each}
+        </div>
+
+        <!-- Email Draft Section -->
+        <div class="mt-6 border-t border-white/10 pt-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-on-background/90 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-secondary">mail</span>
+              Follow-Up Email Draft
+            </h3>
+            <button
+              class="text-[10px] text-on-surface-variant/50 hover:text-primary transition-colors"
+              onclick={() => showEmailMeta = !showEmailMeta}
+            >
+              {showEmailMeta ? 'Hide options ▲' : 'Add details ▼'}
+            </button>
+          </div>
+
+          {#if showEmailMeta}
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Interviewer name"
+                bind:value={interviewerName}
+                class="bg-white/5 border border-white/10 rounded-lg px-3 py-2
+                       text-on-background text-xs focus:outline-none
+                       focus:border-primary/40 transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="Company name"
+                bind:value={companyName}
+                class="bg-white/5 border border-white/10 rounded-lg px-3 py-2
+                       text-on-background text-xs focus:outline-none
+                       focus:border-primary/40 transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="Role / position"
+                bind:value={roleName}
+                class="bg-white/5 border border-white/10 rounded-lg px-3 py-2
+                       text-on-background text-xs focus:outline-none
+                       focus:border-primary/40 transition-colors"
+              />
+            </div>
+          {/if}
+
+          {#if !emailDraft}
+            <button
+              class="w-full py-2.5 px-4 rounded-xl bg-secondary/10 border border-secondary/20
+                     hover:bg-secondary/20 hover:border-secondary/40 text-secondary
+                     text-sm font-medium transition-all duration-200 flex items-center
+                     justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              onclick={generateEmailDraft}
+              disabled={isGeneratingEmail}
+            >
+              {#if isGeneratingEmail}
+                <span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                Generating...
+              {:else}
+                <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                Draft Follow-Up Email
+              {/if}
+            </button>
+          {/if}
+
+          {#if emailError}
+            <p class="text-red-400 text-xs mt-2">{emailError}</p>
+          {/if}
+
+          {#if emailDraft}
+            <div class="relative mt-3">
+              <textarea
+                bind:value={emailDraft}
+                class="w-full h-52 bg-white/5 border border-white/10 rounded-xl
+                       p-4 text-on-background/90 text-sm font-mono leading-relaxed
+                       resize-none focus:outline-none focus:border-primary/40
+                       focus:bg-white/8 transition-colors"
+                spellcheck="true"
+              ></textarea>
+              <div class="flex gap-2 mt-2">
+                <button
+                  class="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 border
+                         border-white/10 hover:border-white/20 text-on-surface-variant
+                         hover:text-on-background text-xs font-medium transition-all
+                         flex items-center justify-center gap-1.5"
+                  onclick={copyEmail}
+                >
+                  <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                  Copy Email
+                </button>
+                <button
+                  class="py-2 px-4 rounded-xl bg-white/5 hover:bg-white/10 border
+                         border-white/10 text-on-surface-variant/60 text-xs
+                         transition-all"
+                  onclick={() => { emailDraft = null; }}
+                >
+                  Regenerate
+                </button>
+              </div>
+            </div>
+          {/if}
         </div>
       {/if}
     </div>
