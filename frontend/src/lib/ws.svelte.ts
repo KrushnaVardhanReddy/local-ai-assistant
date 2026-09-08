@@ -15,7 +15,8 @@ export const wsState = $state({
   ragSources: [] as string[],
   isPTTHeld: false,
   pttMode: false,
-  pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>
+  pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>,
+  plan: "unknown"
 });
 
 let ws: WebSocket | null = null;
@@ -175,6 +176,9 @@ export function connect(url?: string): void {
           break;
         case "end":
           wsState.isThinking = false;
+          break;
+        case "plan":
+          wsState.plan = data.plan;
           break;
         case "error":
           if (data.message && data.message.includes("Token expired") && supabase) {
