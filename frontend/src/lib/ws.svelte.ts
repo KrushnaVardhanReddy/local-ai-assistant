@@ -192,6 +192,12 @@ export function connect(url?: string): void {
             wsState.isThinking = false;
           }
           break;
+        case "device_limit_reached":
+          wsState.error = `Device limit reached (max ${data.max}). Visit parakeet.app/dashboard/devices to manage your devices.`;
+          break;
+        case "already_active":
+          wsState.error = "Another session is active. Close your other device or wait 5 minutes.";
+          break;
         default:
           console.warn("Unknown message type:", data.type);
       }
