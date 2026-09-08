@@ -2,6 +2,7 @@
   import { wsState, sendChat, sendChip, dismissChip, clearAllChips } from "$lib/ws.svelte";
   import { onMount } from "svelte";
   import SessionReport from './SessionReport.svelte';
+  import { authState } from "$lib/auth.svelte";
 
   let showSessionReport = $state(false);
   let liveEarsCollapsed = $state(false);
@@ -56,18 +57,32 @@
 
     const unlisten = listen("trigger-vision", async () => {
       if (wsState.isAnalyzingScreen) return;
+      if (wsState.plan === "demo" || wsState.plan === "payg") {
+        wsState.error = "Vision features require a Monthly or Founding plan.";
+        return;
+      }
 
       wsState.isAnalyzingScreen = true;
       try {
         const base64Image = await invoke<string>("capture_screen");
 
-        await fetch(`${apiUrl}/vision/analyze`, {
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json"
+        };
+        if (authState.accessToken) {
+          headers["Authorization"] = `Bearer ${authState.accessToken}`;
+        }
+
+        const res = await fetch(`${apiUrl}/vision/analyze`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers,
           body: JSON.stringify({ image_base64: base64Image })
         });
+
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          wsState.error = json.message || "Vision request failed";
+        }
 
       } catch (e) {
         console.error("Failed to capture screen or send to backend:", e);
@@ -157,19 +172,34 @@
 
   function triggerVision() {
     if (!wsState.isAnalyzingScreen && !isBrowser) {
+      if (wsState.plan === "demo" || wsState.plan === "payg") {
+        wsState.error = "Vision features require a Monthly or Founding plan.";
+        return;
+      }
+
       // Dispatch a synthetic event that the backend/Tauri bridge will pick up
       // Or just invoke directly here if we are not relying on the global hotkey
       invoke<string>("capture_screen").then(async (base64Image) => {
         wsState.isAnalyzingScreen = true;
         const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
         try {
-          await fetch(`${apiUrl}/vision/analyze`, {
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json"
+          };
+          if (authState.accessToken) {
+            headers["Authorization"] = `Bearer ${authState.accessToken}`;
+          }
+
+          const res = await fetch(`${apiUrl}/vision/analyze`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
+            headers,
             body: JSON.stringify({ image_base64: base64Image })
           });
+
+          if (!res.ok) {
+            const json = await res.json().catch(() => ({}));
+            wsState.error = json.message || "Vision request failed";
+          }
         } finally {
           wsState.isAnalyzingScreen = false;
         }
@@ -231,7 +261,13 @@
 
     <!-- Trailing Actions -->
     <div class="flex items-center gap-2">
-      <button aria-label="Screenshot" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto {wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : ''}" onclick={triggerVision}>
+      <button
+        aria-label="Screenshot"
+        title={wsState.plan === 'demo' || wsState.plan === 'payg' ? 'Vision features require a Monthly or Founding plan.' : 'Screenshot'}
+        class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto {(wsState.plan === 'demo' || wsState.plan === 'payg') ? 'opacity-50 cursor-not-allowed text-on-surface-variant' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary ' + (wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : '')}"
+        onclick={triggerVision}
+        disabled={wsState.plan === 'demo' || wsState.plan === 'payg'}
+      >
         <span class="material-symbols-outlined text-[20px]" data-icon="screenshot_monitor">screenshot_monitor</span>
       </button>
       <button
