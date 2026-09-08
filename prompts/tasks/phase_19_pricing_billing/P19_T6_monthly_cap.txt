@@ -1,0 +1,164 @@
+TASK: P19-T6 — Monthly Session Cap (Downside Protection)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement a monthly soft cap (e.g., 15 sessions) for users on the 
+"monthly" plan to protect against API credit abuse.
+
+Currently, the system enforces 1 concurrent session and limits active 
+devices, but a user on a $19/mo plan could run 100 interviews in a 
+month, costing us more in API credits than they paid.
+
+This task adds logic to track and enforce a `monthly_sessions_used` 
+limit. If a monthly user exceeds 15 sessions in their billing cycle, 
+the WebSocket connection is rejected with a friendly error telling 
+them to upgrade to a BYOK (Bring Your Own Key) plan for unlimited usage.
+
+Key behaviors:
+  1. Add a new `increment_and_check_monthly_sessions(user_id: str, plan: str)`
+     function to `auth.py`.
+  2. If the user's plan is "monthly", check if `monthly_sessions_used >= 15`.
+     - If yes, return `{"allowed": False}`.
+     - If no, increment `monthly_sessions_used` by 1 and return `{"allowed": True}`.
+  3. If the plan is "founding", "lifetime", or "payg", bypass the check 
+     and return `{"allowed": True}` (PAYG has its own token system, and 
+     lifetime/founding might have different rules or BYOK enforced).
+  4. In `app.py`, when a WebSocket connects (around the same place 
+     `acquire_session_lock` is called), call this new check. If it 
+     fails, close the websocket with code 1008 and a clear error message.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Backend ONLY. Modify `backend/auth.py` and `backend/app.py`.
+- Do NOT touch frontend code.
+- Assumes the Supabase `profiles` table has a `monthly_sessions_used` 
+  integer column (default 0).
+- Only enforce the 15 session limit for `plan == 'monthly'`.
+- Use the existing `httpx.AsyncClient` pattern in `auth.py` to talk 
+  to Supabase REST API via `config.SUPABASE_SERVICE_KEY`.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+
+BACKEND — backend/auth.py (273 lines):
+  - Handles all Supabase REST API interactions (e.g., `check_and_register_device`, 
+    `acquire_session_lock`, `get_user_plan`).
+  - Uses `httpx.AsyncClient` and authenticates using the service key header:
+    `"apikey": config.SUPABASE_SERVICE_KEY`, `"Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}"`.
+
+BACKEND — backend/app.py (1108 lines):
+  - WebSocket connection logic starts around line 186: `@app.websocket("/ws")`.
+  - Inside the connection loop, after authenticating the token (around line 200), 
+    the system checks `user_plan = await get_user_plan(user_id)`.
+  - Shortly after, it acquires the session lock: `session_result = await acquire_session_lock(user_id)`.
+  - We should perform the monthly cap check RIGHT AFTER checking the session lock.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/auth.py (MODIFY)
+
+   Add the following new async function at the bottom of the file:
+
+   ```python
+   async def increment_and_check_monthly_sessions(user_id: str, plan: str) -> dict:
+       """
+       Checks if a 'monthly' plan user has exceeded the 15 session cap.
+       If not, increments their session count.
+       Other plans bypass this check.
+       """
+       if plan != "monthly":
+           return {"allowed": True}
+
+       url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1/profiles"
+       headers = {
+           "apikey": config.SUPABASE_SERVICE_KEY,
+           "Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}",
+           "Content-Type": "application/json"
+       }
+       params = {"id": f"eq.{user_id}", "select": "monthly_sessions_used"}
+
+       async with httpx.AsyncClient() as client:
+           # Get current usage
+           resp = await client.get(url, headers=headers, params=params)
+           resp.raise_for_status()
+           data = resp.json()
+
+           if not data or len(data) == 0:
+               return {"allowed": False, "reason": "Profile not found"}
+
+           used = data[0].get("monthly_sessions_used") or 0
+
+           if used >= 15:
+               return {"allowed": False, "reason": "Monthly session limit reached (15/15)."}
+
+           # Increment usage
+           update_payload = {"monthly_sessions_used": used + 1}
+           update_params = {"id": f"eq.{user_id}"}
+           patch_resp = await client.patch(url, headers=headers, params=update_params, json=update_payload)
+           patch_resp.raise_for_status()
+
+           return {"allowed": True}
+   ```
+
+2. FILE: backend/app.py (MODIFY)
+
+   a. Update the import from `auth` (around line 23) to include the new function:
+      ```python
+      from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan, check_and_register_device, acquire_session_lock, release_session_lock, increment_and_check_monthly_sessions
+      ```
+
+   b. In the `@app.websocket("/ws")` route, find where the `acquire_session_lock` is called (around line 220).
+      Right BELOW the lock check (and below where it checks device limits if present), add the monthly cap check:
+
+      ```python
+                  # ... existing session_lock check ...
+                  session_result = await acquire_session_lock(user_id)
+                  if not session_result["acquired"]:
+                      await websocket.send_json({
+                          "type": "auth_error",
+                          "message": "Another session is already active. Close it or wait 5 minutes for it to expire."
+                      })
+                      await websocket.close(code=1008, reason="Concurrent session")
+                      return
+                  websocket._session_lock_id = session_result["session_id"]
+
+                  # P19: Check Monthly Session Cap
+                  if user_plan == "monthly" and not custom_key:
+                      cap_result = await increment_and_check_monthly_sessions(user_id, user_plan)
+                      if not cap_result["allowed"]:
+                          # Release the lock since we're denying access
+                          await release_session_lock(user_id)
+                          await websocket.send_json({
+                              "type": "auth_error",
+                              "message": "You have reached your 15-session monthly limit. To get unlimited sessions, switch to BYOK (Bring Your Own Key) in settings."
+                          })
+                          await websocket.close(code=1008, reason="Monthly cap reached")
+                          return
+      ```
+      *Note: We only check the cap if `not custom_key`. If they provided a custom BYOK key, it costs us nothing, so we don't cap them.*
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The check ensures we only block if the user has NO custom key and IS on the "monthly" plan.
+- We MUST release the session lock if the cap check fails, otherwise their account gets stuck locked for 5 minutes.
+- The `auth_error` message is sent before `websocket.close()` so the frontend can display it cleanly (the UI handles `auth_error` messages by showing them in the overlay).
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+(none)
+
+FILES TO MODIFY:
+- backend/auth.py
+- backend/app.py
+
+Commit: "jules: P19-T6 implement monthly session cap (15) for monthly plan to prevent abuse"
+Target branch: main
