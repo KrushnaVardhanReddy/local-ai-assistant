@@ -17,6 +17,7 @@
   let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
   let isDevModeChecked = $state(false);
   let preferredLanguage = $state(localStorage.getItem("preferred_language") || "");
+  let interviewLanguage = $state(localStorage.getItem("interview_language") || "auto");
   let currentLLMProvider = $state("auto");
 
   // Audio state
@@ -81,6 +82,14 @@
         const data = await resLang.json();
         if (data.language) {
           preferredLanguage = data.language;
+        }
+      }
+
+      const resInterviewLang = await fetch(`${apiUrl}/api/interview_language`);
+      if (resInterviewLang.ok) {
+        const data = await resInterviewLang.json();
+        if (data.language) {
+          interviewLanguage = data.language;
         }
       }
     } catch (e) {
@@ -153,6 +162,7 @@
   async function handleSaveSettings() {
     localStorage.setItem("backend_url", backendUrl);
     localStorage.setItem("preferred_language", preferredLanguage);
+    localStorage.setItem("interview_language", interviewLanguage);
     reconnect(backendUrl);
     try {
       await invoke("toggle_stealth", { enable: !isDevModeChecked });
@@ -166,6 +176,11 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language: preferredLanguage })
+      });
+      await fetch(`${apiUrl}/api/interview_language`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language: interviewLanguage })
       });
     } catch (e) {
       console.error("Failed to save language preference", e);
@@ -274,6 +289,19 @@
         </div>
       </div>
     {/if}
+
+    <div class="input-group">
+      <label for="interviewLanguage">Interview Language (STT & LLM Override)</label>
+      <select id="interviewLanguage" bind:value={interviewLanguage} class="custom-select">
+        <option value="auto">Auto-Detect</option>
+        <option value="en">English (en)</option>
+        <option value="es">Spanish (es)</option>
+        <option value="fr">French (fr)</option>
+        <option value="de">German (de)</option>
+        <option value="hi">Hindi (hi)</option>
+        <option value="zh">Mandarin (zh)</option>
+      </select>
+    </div>
 
     <div class="input-group">
       <label for="preferredLanguage">Code Language Preference</label>

@@ -77,11 +77,17 @@ class Config:
 
     COACHING_ENABLED: bool = False
 
+    LANGUAGE_OVERRIDE: str = "auto"
+
     def __post_init__(self):
         # Override fields with os.environ
         self.RAG_ENABLED = os.environ.get("RAG_ENABLED", "true").lower() == "true"
         self.WEB_SEARCH_ENABLED = os.environ.get("WEB_SEARCH_ENABLED", "false").lower() == "true"
         self.SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", self.SYSTEM_PROMPT)
+        self.LANGUAGE_OVERRIDE = os.environ.get("LANGUAGE_OVERRIDE", self.LANGUAGE_OVERRIDE)
+
+        if self.LANGUAGE_OVERRIDE != "auto":
+            self.SYSTEM_PROMPT += f" You must respond entirely in the {self.LANGUAGE_OVERRIDE} language, except for code snippets."
 
         self.SILENCE_THRESHOLD_SECONDS = float(os.environ.get("SILENCE_THRESHOLD_SECONDS", self.SILENCE_THRESHOLD_SECONDS))
         self.MIN_WORDS = int(os.environ.get("MIN_WORDS", self.MIN_WORDS))
