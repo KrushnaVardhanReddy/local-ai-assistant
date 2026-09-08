@@ -1,0 +1,22 @@
+TASK: P19-T7 — Referral Reward System
+
+PARALLEL BATCH: 6
+Files touched: backend/stripe_webhook.py, backend/auth.py
+
+PREREQUISITE: Phase 19 T6 must be completed.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement the bonus credit mechanism for successful referrals.
+
+When a referred user upgrades to a paid plan (detected via Stripe webhook), the referrer should receive a bonus credit.
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+- backend/stripe_webhook.py: When a subscription creation event is received, check if the user has an associated referral in Supabase. If yes, add a $5 credit to the referrer's account and mark the referral as converted.
+- backend/auth.py: Add helper functions for managing referral credits in Supabase.
+
+Commit: "jules: P19-T7 add referral reward mechanism"
+Target branch: main

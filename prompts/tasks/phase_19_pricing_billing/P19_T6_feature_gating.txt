@@ -1,0 +1,24 @@
+TASK: P19-T6 — Feature Gating
+
+PARALLEL BATCH: 6
+Files touched: backend/app.py, frontend/src/lib/Assistant.svelte
+
+PREREQUISITE: Phase 19 T3-T5 must be completed.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement plan-based feature gating for 'demo', 'payg', 'monthly', and 'founding' plans.
+
+1. 'demo' plan: Limited to standard models (no reasoning models), no vision processing.
+2. 'payg' plan: Standard models + basic features.
+3. 'monthly' / 'founding': Full access including vision capabilities and reasoning models.
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+- backend/app.py: Check user plan in websocket endpoint and apply model/feature restrictions. Send an error event to the frontend if a user attempts to use a restricted feature (like Vision).
+- frontend/src/lib/Assistant.svelte: Disable UI elements (like screen sharing/camera) if the user's plan doesn't support them.
+
+Commit: "jules: P19-T6 implement plan-based feature gating"
+Target branch: main
