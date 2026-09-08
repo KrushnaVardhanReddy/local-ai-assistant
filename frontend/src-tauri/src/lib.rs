@@ -265,3 +265,57 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn test_in_memory_keychain_logic() {
+        // Set env var to force in-memory keychain for testing
+        env::set_var("SKIP_KEYCHAIN", "1");
+        assert!(use_in_memory_keychain());
+
+        // Reset state
+        {
+            let mut mem_token = IN_MEMORY_TOKEN.lock().unwrap();
+            *mem_token = None;
+            let mut mem_id = IN_MEMORY_MACHINE_ID.lock().unwrap();
+            *mem_id = None;
+        }
+
+        // Test save & load token
+        assert!(load_token().is_err());
+        assert!(save_token("test-token-123".to_string()).is_ok());
+        assert_eq!(load_token().unwrap(), "test-token-123");
+
+        // Test delete token
+        assert!(delete_token().is_ok());
+        assert!(load_token().is_err());
+
+        // Test get_machine_id
+        let id1 = get_machine_id().unwrap();
+        assert!(!id1.is_empty());
+
+        let id2 = get_machine_id().unwrap();
+        assert_eq!(id1, id2); // Should return the same ID
+    }
+
+    #[test]
+    fn test_capture_screen_is_result() {
+        // We just ensure it compiles and either succeeds or fails properly
+        // rather than failing outright because we might not have a display in CI
+        let result = capture_screen();
+        match result {
+            Ok(base64_str) => {
+                assert!(base64_str.starts_with("data:image/jpeg;base64,"));
+            }
+            Err(e) => {
+                // In headless environments without X11/Wayland, it might fail to find monitors.
+                // We just verify it returns a clean string error.
+                assert!(!e.is_empty());
+            }
+        }
+    }
+}
