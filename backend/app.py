@@ -189,6 +189,7 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
 
     connection_llm_client = llm_client
     user_plan = "demo"
+    payg_token = None  # always bound; set below if user is on payg plan
     websocket.is_mock_mode = False
     websocket.gemini_live = None
 
