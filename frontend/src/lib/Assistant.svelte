@@ -1,6 +1,9 @@
 <script lang="ts">
   import { wsState, sendChat, sendChip, dismissChip, clearAllChips } from "$lib/ws.svelte";
   import { onMount } from "svelte";
+  import SessionReport from './SessionReport.svelte';
+
+  let showSessionReport = $state(false);
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -117,6 +120,13 @@
     }
   }
 
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+      e.preventDefault();
+      showSessionReport = !showSessionReport;
+    }
+  }
+
   function triggerVision() {
     if (!wsState.isAnalyzingScreen && !isBrowser) {
       // Dispatch a synthetic event that the backend/Tauri bridge will pick up
@@ -148,6 +158,8 @@
     fetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
   }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark" id="dashboard-overlay">
   <!-- Top Toolbar -->
@@ -193,6 +205,14 @@
     <div class="flex items-center gap-2">
       <button aria-label="Screenshot" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto {wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : ''}" onclick={triggerVision}>
         <span class="material-symbols-outlined text-[20px]" data-icon="screenshot_monitor">screenshot_monitor</span>
+      </button>
+      <button
+        id="session-report-btn"
+        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
+        onclick={() => showSessionReport = true}
+        title="Session Report (Ctrl+Shift+E)"
+      >
+        <span class="material-symbols-outlined text-[20px]">analytics</span>
       </button>
       <button aria-label="Clear Context" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto" onclick={clearHistory}>
         <span class="material-symbols-outlined text-[20px]" data-icon="mop">mop</span>
@@ -337,6 +357,12 @@
       {/if}
     </section>
   </main>
+
+  {#if showSessionReport}
+    <div class="pointer-events-auto">
+      <SessionReport onClose={() => showSessionReport = false} />
+    </div>
+  {/if}
 </div>
 
 <style>
