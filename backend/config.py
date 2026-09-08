@@ -76,6 +76,7 @@ class Config:
     SMART_FILTER_ENABLED: bool = True
 
     COACHING_ENABLED: bool = False
+    JOB_DESCRIPTION: str = ""
 
     def __post_init__(self):
         # Override fields with os.environ
