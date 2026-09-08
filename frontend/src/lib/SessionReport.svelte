@@ -1,0 +1,311 @@
+<script lang="ts">
+  let { onClose }: { onClose: () => void } = $props();
+
+  let isLoading = $state(false);
+  let error = $state<string | null>(null);
+  let scorecard = $state<any>(null);
+  let session = $state<any>(null);
+
+  const VERDICT_COLORS: Record<string, string> = {
+    Good: "text-green-400 bg-green-400/10 border-green-400/30",
+    Partial: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
+    Incomplete: "text-orange-400 bg-orange-400/10 border-orange-400/30",
+    "Off-topic": "text-red-400 bg-red-400/10 border-red-400/30",
+  };
+
+  async function loadReport() {
+    isLoading = true;
+    error = null;
+    try {
+      const resp = await fetch("http://127.0.0.1:8765/session/end", { method: "POST" });
+      if (!resp.ok) {
+        const data = await resp.json();
+        error = data.error || "Failed to generate report";
+        return;
+      }
+      const data = await resp.json();
+      session = data.session;
+      scorecard = data.scorecard;
+    } catch (e) {
+      error = "Could not connect to backend";
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  function copyToClipboard() {
+    if (!scorecard) return;
+    const lines = [
+      `Interview Scorecard — ${new Date().toLocaleDateString()}`,
+      `Overall Score: ${scorecard.overall_score}/10`,
+      ``,
+      `Summary: ${scorecard.overall_summary}`,
+      ``,
+      `Strengths: ${scorecard.strengths?.join(", ")}`,
+      `Gaps: ${scorecard.gaps?.join(", ")}`,
+      ``,
+      ...(scorecard.turns || []).map((t: any) =>
+        `Q${t.turn + 1}: ${t.verdict} (${t.score}/5)\n  Good: ${t.what_was_good}\n  Missing: ${t.what_was_missing || "—"}`
+      ),
+    ];
+    navigator.clipboard.writeText(lines.join("\n"));
+  }
+
+  // Load report on mount
+  $effect(() => {
+    loadReport();
+  });
+
+  function scoreColor(score: number): string {
+    if (score >= 8) return "text-green-400";
+    if (score >= 5) return "text-yellow-400";
+    return "text-red-400";
+  }
+</script>
+
+<div class="report-overlay" role="dialog" aria-modal="true">
+  <div class="report-panel">
+    <!-- Header -->
+    <div class="report-header">
+      <div class="report-title">
+        <span class="material-symbols-outlined text-primary">analytics</span>
+        <h2>Session Report</h2>
+        {#if session}
+          <span class="session-meta">{session.turn_count} questions · {Math.round(session.session_duration_s / 60)}m</span>
+        {/if}
+      </div>
+      <div class="header-actions">
+        {#if scorecard}
+          <button class="action-btn" onclick={copyToClipboard} title="Copy to clipboard">
+            <span class="material-symbols-outlined">content_copy</span>
+          </button>
+        {/if}
+        <button class="action-btn close-btn" onclick={onClose} title="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="report-body">
+      {#if isLoading}
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Generating scorecard...</p>
+        </div>
+      {:else if error}
+        <div class="error-state">
+          <span class="material-symbols-outlined">error</span>
+          <p>{error}</p>
+          <button class="retry-btn" onclick={loadReport}>Retry</button>
+        </div>
+      {:else if scorecard}
+        <!-- Overall Score -->
+        <div class="overall-score-card">
+          <div class="score-number {scoreColor(scorecard.overall_score)}">
+            {scorecard.overall_score}<span class="score-denom">/10</span>
+          </div>
+          <p class="overall-summary">{scorecard.overall_summary}</p>
+        </div>
+
+        <!-- Strengths & Gaps -->
+        <div class="strengths-gaps-grid">
+          <div class="sg-section">
+            <h3>✅ Strengths</h3>
+            <ul>
+              {#each scorecard.strengths || [] as s}
+                <li>{s}</li>
+              {/each}
+            </ul>
+          </div>
+          <div class="sg-section">
+            <h3>⚠️ Gaps</h3>
+            <ul>
+              {#each scorecard.gaps || [] as g}
+                <li>{g}</li>
+              {/each}
+            </ul>
+          </div>
+        </div>
+
+        <!-- Per-Turn Breakdown -->
+        <div class="turns-list">
+          {#each scorecard.turns || [] as turn}
+            <div class="turn-card">
+              <div class="turn-header">
+                <span class="turn-label">Q{turn.turn + 1}</span>
+                <span class="verdict-badge {VERDICT_COLORS[turn.verdict] || ''}">{turn.verdict}</span>
+                <span class="turn-score">{turn.score}/5</span>
+              </div>
+              {#if session?.turns?.[turn.turn]}
+                <p class="turn-transcript">"{session.turns[turn.turn].transcript}"</p>
+              {/if}
+              <p class="turn-good">👍 {turn.what_was_good}</p>
+              {#if turn.what_was_missing}
+                <p class="turn-missing">⚠️ {turn.what_was_missing}</p>
+              {/if}
+              {#if turn.suggested_addition}
+                <p class="turn-suggestion">💡 Should have said: <em>{turn.suggested_addition}</em></p>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  </div>
+</div>
+
+<style>
+  .report-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .report-panel {
+    background: rgba(15, 15, 25, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+  }
+
+  .report-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+
+  .report-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .report-title h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin: 0;
+  }
+
+  .session-meta {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.06);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  .header-actions { display: flex; gap: 8px; }
+
+  .action-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    transition: all 0.2s;
+  }
+  .action-btn:hover { background: rgba(255,255,255,0.12); color: white; }
+
+  .report-body { overflow-y: auto; padding: 24px; flex: 1; }
+
+  .loading-state, .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 0;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: #63b3ed;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .overall-score-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .score-number {
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .score-denom { font-size: 24px; opacity: 0.5; }
+
+  .overall-summary { color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.6; margin: 0; }
+
+  .strengths-gaps-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .sg-section {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .sg-section h3 { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: rgba(255,255,255,0.8); }
+  .sg-section ul { margin: 0; padding-left: 16px; }
+  .sg-section li { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 4px; }
+
+  .turns-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .turn-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .turn-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .turn-label { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); min-width: 28px; }
+  .verdict-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid; font-weight: 600; }
+  .turn-score { font-size: 13px; color: rgba(255,255,255,0.4); margin-left: auto; }
+
+  .turn-transcript { font-size: 12px; color: rgba(255,255,255,0.4); font-style: italic; margin: 0 0 8px; }
+  .turn-good { font-size: 13px; color: rgba(255,255,255,0.7); margin: 4px 0; }
+  .turn-missing { font-size: 13px; color: rgba(251, 191, 36, 0.8); margin: 4px 0; }
+  .turn-suggestion { font-size: 13px; color: rgba(147, 197, 253, 0.8); margin: 4px 0; }
+  .turn-suggestion em { font-style: normal; }
+
+  .retry-btn {
+    background: rgba(99, 179, 237, 0.15);
+    border: 1px solid rgba(99, 179, 237, 0.3);
+    color: #63b3ed;
+    border-radius: 8px;
+    padding: 8px 20px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+</style>
