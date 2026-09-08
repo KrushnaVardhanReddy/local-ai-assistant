@@ -1,0 +1,85 @@
+TASK: P24-T1 — Lifetime BYOK (Bring Your Own Key)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement a "Bring Your Own Key" (BYOK) system strictly for users on the 'lifetime' billing plan. This enables power users to pay a one-time software fee and use their own Gemini API key for zero ongoing costs on our side. 
+
+For maximum privacy, the custom API key must NEVER be stored in the backend database. It must be saved locally in the browser (`localStorage`) and transmitted securely via the WebSocket connection headers/payload during authentication.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Settings.svelte
+═══════════════════════════════════════════════════════════════
+
+1. Add a new state variable to read/write `custom_gemini_key` from `localStorage`:
+```svelte
+let customGeminiKey = $state(localStorage.getItem("custom_gemini_key") || "");
+```
+
+2. Add a new input group in the Settings panel for the Custom API Key.
+   This should ONLY be enabled if the user's plan is 'lifetime'. If they are not on the lifetime plan, disable it and add a small note explaining it requires a Lifetime subscription.
+
+```html
+<div class="input-group">
+  <label for="customGeminiKey">Custom Gemini API Key (Lifetime Tier Only)</label>
+  <input 
+    type="password" 
+    id="customGeminiKey" 
+    bind:value={customGeminiKey} 
+    placeholder="AIzaSy..." 
+    disabled={authState.plan !== 'lifetime'}
+  />
+  {#if authState.plan !== 'lifetime'}
+    <span class="text-xs text-red-400 mt-1">Requires Lifetime Subscription.</span>
+  {/if}
+  <span class="text-xs text-gray-500 mt-1">Key is stored locally and never saved to our database.</span>
+</div>
+```
+
+3. Update the `handleSaveSettings` function to save the key to `localStorage`.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/ws.svelte.ts
+═══════════════════════════════════════════════════════════════
+
+When establishing the WebSocket connection, include the `custom_gemini_key` in the connection URL query parameters, so the backend can extract it during handshake.
+
+```typescript
+const customKey = localStorage.getItem("custom_gemini_key") || "";
+const wsUrl = `${url}?token=${session.access_token}&custom_key=${encodeURIComponent(customKey)}`;
+ws = new WebSocket(wsUrl);
+```
+
+*(Note: Adjust the WS connection logic to append `&custom_key=...` safely depending on how the URL is constructed).*
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py
+═══════════════════════════════════════════════════════════════
+
+1. In the WebSocket endpoint `async def websocket_endpoint(websocket: WebSocket, token: str = None, custom_key: str = None):`
+   - Extract the `custom_key` query parameter.
+   - When calling `check_and_register_device(user.id, ...)` or retrieving the profile, check the user's plan.
+   - If `plan == 'lifetime'` and `custom_key` is provided, store this key in the WebSocket connection state (e.g., attach it to the `ConnectionManager` for that specific websocket).
+
+2. Modify `manager.connect` or wherever you track active websockets to store the `custom_key` associated with the connection.
+```python
+# e.g. mapping websocket to a dict of { "user_id": ..., "custom_key": ... }
+```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/transcriber.py (or LLM Client)
+═══════════════════════════════════════════════════════════════
+
+1. Update the `GeminiClient` (or wherever `google.genai` is initialized) to accept an optional `api_key` override.
+2. In `app.py`, when handling the `process_audio` or LLM chat logic, check if the current WebSocket session has a `custom_key`.
+3. If a `custom_key` exists (and user is verified lifetime), instantiate the Gemini client using that key.
+4. If no custom key exists, fall back to `config.GEMINI_API_KEY`.
+
+═══════════════════════════════════════════════════════════════
+REQUIREMENTS & GUARDRAILS
+═══════════════════════════════════════════════════════════════
+- Do NOT alter the database schema or add a column for the custom key in Supabase.
+- Only allow the custom key to be used if the user's plan is strictly `'lifetime'`. If a payg/demo user tries to hack the WS by sending a custom key, the backend must ignore it and use the default key.
+
+Commit: "jules: P24-T1 add local BYOK support for lifetime subscribers #74"
+Target branch: main
