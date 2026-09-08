@@ -259,11 +259,11 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P19-T1 | `web/src/routes/pricing/` | Public pricing page — show all 4 tiers with a comparison table. CTA buttons link to Stripe checkout. | ⏳ | — |
-| P19-T2 | `web/src/routes/api/billing/`, `backend/auth.py` | Stripe integration: `price_payg` ($5 one-time session token), `price_monthly` ($19/mo sub), `price_founding` ($49 one-time). Webhook updates user's `plan` field in Supabase on payment success. | ⏳ | — |
-| P19-T3 | `backend/auth.py`, `backend/app.py` | Session token enforcement — Pay-as-you-go users get a JWT with `expires_at = now + 90min`. Backend validates on every WebSocket message. When token expires, send `{"type": "session_expired"}` to frontend. | ⬜ | — |
-| P19-T4 | `frontend/src/lib/Assistant.svelte` | Session expiry UI — when `session_expired` event received, show a non-intrusive overlay: "Session ended — extend for $5 or upgrade to Monthly". Has a direct Stripe payment link. | ⬜ | — |
-| P19-T5 | `web/src/routes/demo/` | Demo / Referral mode — every user gets a unique referral link (`parakeet.app/ref/[code]`). New visitor clicks link → gets 15 min free demo. Track referral source + conversion in Supabase (`referrals` table: referrer_id, referee_id, status, converted_at). | ⬜ | — |
+| P19-T1 | `web/src/routes/pricing/` | Public pricing page — show all 4 tiers with a comparison table. CTA buttons link to Stripe checkout. | ✅ | #61 |
+| P19-T2 | `web/src/routes/api/billing/`, `backend/auth.py` | Stripe integration: `price_payg` ($5 one-time session token), `price_monthly` ($19/mo sub), `price_founding` ($49 one-time). Webhook updates user's `plan` field in Supabase on payment success. | ✅ | #62 |
+| P19-T3 | `backend/auth.py`, `backend/app.py` | Session token enforcement — Pay-as-you-go users get a JWT with `expires_at = now + 90min`. Backend validates on every WebSocket message. When token expires, send `{"type": "session_expired"}` to frontend. | ⏳ | — |
+| P19-T4 | `frontend/src/lib/Assistant.svelte` | Session expiry UI — when `session_expired` event received, show a non-intrusive overlay: "Session ended — extend for $5 or upgrade to Monthly". Has a direct Stripe payment link. | ⏳ | — |
+| P19-T5 | `web/src/routes/demo/` | Demo / Referral mode — every user gets a unique referral link (`parakeet.app/ref/[code]`). New visitor clicks link → gets 15 min free demo. Track referral source + conversion in Supabase (`referrals` table: referrer_id, referee_id, status, converted_at). | ⏳ | — |
 | P19-T6 | `backend/auth.py` | Plan-based feature gating — `demo`: 3 question limit + watermark; `payg`: full session, no coaching; `monthly`/`founding`: all features including Live Answer Coaching (P17-T4) and Session Report (P17-T3). | ⬜ | — |
 | P19-T7 | `backend/auth.py`, `web/src/routes/api/referral/` | Referral reward system — when a referred user completes signup AND uses their first demo session, the referrer automatically receives +15 min of demo credit added to their account (`demo_credits_minutes` in Supabase). No cap — each successful referral = +15 min. Paid users bank the credits for when friends haven't upgraded yet. Send referrer a notification email: "Your friend joined — you earned 15 bonus minutes! 🎉" | ⬜ | — |
 
