@@ -228,8 +228,27 @@
     wsState.response = "";
     wsState.ragSources = [];
     wsState.pendingTranscripts = [];
+    wsState.transcriptHistory = [];
     const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
     fetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
+  }
+
+  function triggerCatchMeUp() {
+    if (wsState.isThinking) return;
+    const history = wsState.transcriptHistory;
+    if (!history || history.length === 0) {
+      wsState.error = "No conversation history yet — start speaking first.";
+      setTimeout(() => { wsState.error = null; }, 3000);
+      return;
+    }
+    const historyText = history
+      .map((t, i) => `${i + 1}. "${t}"`)
+      .join("\n");
+    sendChat(
+      `Here is the conversation transcript so far:\n${historyText}\n\n` +
+      `Give me a concise 3-5 bullet point summary of the key topics, ` +
+      `questions, and decisions discussed. Be brief and actionable.`
+    );
   }
 
   function triggerStarPreset() {
@@ -524,6 +543,20 @@
               🔍 Sources: {wsState.ragSources.join(' · ')}
             </div>
           {/if}
+          <!-- Catch Me Up -->
+          <button
+            class="w-7 h-7 flex items-center justify-center rounded-full
+                   hover:bg-white/10 transition-colors pointer-events-auto
+                   {wsState.isThinking || wsState.transcriptHistory.length === 0
+                     ? 'text-on-surface-variant/30 cursor-not-allowed'
+                     : 'text-on-surface-variant/60 hover:text-secondary'}"
+            title="Catch me up — summarize conversation so far"
+            aria-label="Catch Me Up"
+            onclick={triggerCatchMeUp}
+            disabled={wsState.isThinking || wsState.transcriptHistory.length === 0}
+          >
+            <span class="material-symbols-outlined text-[18px]">history</span>
+          </button>
           <button
             class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant/60 hover:text-primary transition-colors pointer-events-auto"
             onclick={() => brainCollapsed = !brainCollapsed}
