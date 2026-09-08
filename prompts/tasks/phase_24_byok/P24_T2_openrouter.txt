@@ -1,0 +1,84 @@
+TASK: P24-T2 — OpenRouter BYOK Support
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add OpenRouter as a supported Bring Your Own Key (BYOK) provider.
+
+OpenRouter provides a unified API to access almost every major model 
+(GPT-4, Claude 3.5, Llama 3, DeepSeek) through a single API key. Since 
+their API is 100% OpenAI-compatible, adding support just requires pointing 
+the standard OpenAI client to the OpenRouter base URL and letting the 
+user specify which model string they want to use.
+
+Key behaviors:
+  1. Frontend: In `Settings.svelte`, add "OpenRouter" to the provider 
+     dropdown list alongside OpenAI, Anthropic, Gemini, and Groq.
+  2. Frontend: When OpenRouter is selected, show an additional input 
+     field for the user to specify the "Model ID" (e.g., 
+     `anthropic/claude-3.5-sonnet`, `meta-llama/llama-3-70b-instruct`).
+     Default it to `anthropic/claude-3.5-sonnet:beta`.
+  3. Backend: In `keys.py`, accept and store the openrouter key.
+  4. Backend: In `llm_client.py`, when initializing the `openai` provider 
+     BUT the provider string is `openrouter`, use the `openai` python 
+     package but set `base_url="https://openrouter.ai/api/v1"` and use 
+     the user-provided model ID.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- The OpenRouter integration MUST use the official `openai` python package 
+  (already installed). Do not install new packages.
+- Frontend uses Svelte 5 runes (`$state`).
+- The OpenRouter model string must be sent along with the key to the 
+  backend, or passed during initialization so the backend knows which 
+  OpenRouter model to call.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/Settings.svelte`: Contains the existing BYOK UI. 
+  It has a `provider` dropdown and a `key` input.
+- `backend/app.py`: Routes `/api/keys/{provider}` to save keys.
+- `backend/llm_client.py`: The `LLMClient` class initializes different 
+  clients based on the `provider` argument. It already handles `openai`, 
+  `anthropic`, `gemini`, and `groq`.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/Settings.svelte (MODIFY)
+   - Add `"openrouter"` to the `providers` array.
+   - Add a new state variable: `let openRouterModel = $state("anthropic/claude-3.5-sonnet:beta");`
+   - In the UI, if `selectedProvider === "openrouter"`, show a secondary 
+     text input for the Model ID.
+   - When saving/testing the key via the `/api/keys/openrouter` endpoint, 
+     pass the model in the JSON body alongside the key if necessary, OR 
+     we can just pass it during the chat session. Actually, the easiest 
+     way is to just store the model string in `localStorage` in the frontend 
+     and pass it to the WebSocket as part of the initial connection or 
+     auth payload.
+
+   *(Jules: Please review `Settings.svelte` and `ws.svelte.ts` to see how 
+   custom keys are currently passed to the backend, and extend it to 
+   include the custom openrouter model string).*
+
+2. FILE: backend/llm_client.py (MODIFY)
+   - Update `__init__` to handle `provider == "openrouter"`.
+   - For OpenRouter, instantiate the `AsyncOpenAI` client like this:
+     ```python
+     self.client = AsyncOpenAI(
+         api_key=api_key,
+         base_url="https://openrouter.ai/api/v1"
+     )
+     ```
+   - Update `stream()` and `chat_complete()` to use the specific 
+     OpenRouter model (passed from the frontend or defaulted).
+
+3. FILE: backend/app.py & backend/keys.py (MODIFY IF NEEDED)
+   - Ensure the `/api/keys/{provider}` endpoints and `KeyStore` accept 
+     `openrouter` as a valid provider name.
+
+Commit: "jules: P24-T2 add OpenRouter BYOK support"
+Target branch: main
