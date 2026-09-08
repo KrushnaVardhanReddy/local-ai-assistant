@@ -204,6 +204,7 @@ async def ws_endpoint(websocket: WebSocket):
 
     connection_llm_client = llm_client
     user_plan = "demo"
+    websocket.is_mock_mode = False
 
     if config.SUPABASE_JWT_SECRET:
         try:
@@ -380,6 +381,49 @@ async def ws_endpoint(websocket: WebSocket):
                 # Await next audio chunk or chat message with 5s timeout
                 chunk = await asyncio.wait_for(ws_queue.get(), timeout=5.0)
 
+                if isinstance(chunk, dict) and chunk.get("type") == "mock_mode_toggle":
+                    websocket.is_mock_mode = chunk.get("enabled", False)
+                    if websocket.is_mock_mode:
+                        # Clear session and start mock interview
+                        interview_session.clear()
+                        from mock_interviewer import MockInterviewer
+                        mock_interviewer = MockInterviewer(connection_llm_client)
+
+                        # Trigger the first question
+                        async def _send_initial_question():
+                            try:
+                                for out_q in list(active_outbound_queues):
+                                    out_q.put_nowait({"type": "message_start"})
+
+                                q_text = ""
+                                import app as app_module
+                                resume_ctx = getattr(app_module, "candidate_context", "")
+
+                                async for token in mock_interviewer.get_next_question(resume_context=resume_ctx):
+                                    q_text += token
+                                    for out_q in list(active_outbound_queues):
+                                        out_q.put_nowait({"type": "token", "text": token})
+
+                                interview_session.start_turn("Hi, I'm ready to start the mock interview.", speaker="user")
+                                interview_session.append_response_token(q_text)
+                                interview_session.complete_turn()
+
+                                for out_q in list(active_outbound_queues):
+                                    out_q.put_nowait({"type": "end"})
+
+                                audio_base64 = await mock_interviewer.generate_audio(q_text)
+                                if audio_base64:
+                                    for out_q in list(active_outbound_queues):
+                                        out_q.put_nowait({"type": "mock_audio", "data": audio_base64})
+
+                            except Exception as e:
+                                print(f"Mock Init Error: {e}", file=sys.stderr)
+                                for out_q in list(active_outbound_queues):
+                                    out_q.put_nowait({"type": "error", "message": f"Mock Init Error: {str(e)}"})
+
+                        asyncio.create_task(_send_initial_question())
+                    continue
+
                 if isinstance(chunk, dict) and chunk.get("type") == "chat":
                     transcript = chunk.get("text", "")
                     if gemini_live:
@@ -554,6 +598,49 @@ async def ws_endpoint(websocket: WebSocket):
                     continue
 
                 if transcript:
+                    if getattr(websocket, "is_mock_mode", False):
+                        # MOCK MODE ROUTING
+                        for out_q in list(active_outbound_queues):
+                            out_q.put_nowait({"type": "transcript", "text": transcript})
+                            out_q.put_nowait({"type": "message_start"})
+
+                        is_streaming.set()
+                        try:
+                            from mock_interviewer import MockInterviewer
+                            mock_interviewer = MockInterviewer(connection_llm_client)
+
+                            import app as app_module
+                            resume_ctx = getattr(app_module, "candidate_context", "")
+
+                            interview_session.start_turn(transcript, speaker="user")
+                            q_text = ""
+                            async for token in mock_interviewer.get_next_question(transcript, resume_context=resume_ctx):
+                                q_text += token
+                                interview_session.append_response_token(token)
+                                for out_q in list(active_outbound_queues):
+                                    out_q.put_nowait({"type": "token", "text": token})
+
+                            interview_session.complete_turn()
+                            for out_q in list(active_outbound_queues):
+                                out_q.put_nowait({"type": "end"})
+
+                            audio_base64 = await mock_interviewer.generate_audio(q_text)
+                            if audio_base64:
+                                for out_q in list(active_outbound_queues):
+                                    out_q.put_nowait({"type": "mock_audio", "data": audio_base64})
+
+                        except Exception as e:
+                            print(f"Mock LLM Stream Error: {e}", file=sys.stderr)
+                            for out_q in list(active_outbound_queues):
+                                out_q.put_nowait({"type": "error", "message": f"LLM Error: {str(e)}"})
+                        finally:
+                            is_streaming.clear()
+                            if not pending_questions.empty():
+                                next_q = pending_questions.get_nowait()
+                                ws_queue.put_nowait({"type": "chat", "text": next_q})
+
+                        continue
+
                     # Plan verification: restricted models
                     if user_plan in ["demo", "payg"] and is_reasoning_model(connection_llm_client.model):
                         outbound_queue.put_nowait({"type": "error", "message": "Reasoning models require a Monthly or Founding plan."})

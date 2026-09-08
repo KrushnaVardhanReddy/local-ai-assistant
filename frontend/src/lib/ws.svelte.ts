@@ -16,7 +16,8 @@ export const wsState = $state({
   isPTTHeld: false,
   pttMode: false,
   pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>,
-  plan: "unknown"
+  plan: "unknown",
+  isMockMode: false
 });
 
 let ws: WebSocket | null = null;
@@ -177,6 +178,16 @@ export function connect(url?: string): void {
         case "end":
           wsState.isThinking = false;
           break;
+        case "mock_audio":
+          if (data.data) {
+            try {
+              const audio = new Audio(`data:audio/mp3;base64,${data.data}`);
+              audio.play().catch(e => console.error("Failed to play mock audio:", e));
+            } catch (e) {
+              console.error("Failed to parse mock audio:", e);
+            }
+          }
+          break;
         case "plan":
           wsState.plan = data.plan;
           break;
@@ -262,6 +273,13 @@ export function sendChat(text: string): void {
     ws.send(JSON.stringify({ type: "chat", text }));
   } else {
     console.error("WebSocket is not connected. Cannot send chat message.");
+  }
+}
+
+export function toggleMockMode(enabled: boolean): void {
+  wsState.isMockMode = enabled;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "mock_mode_toggle", enabled }));
   }
 }
 
