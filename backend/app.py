@@ -23,6 +23,7 @@ from auth import get_user_id, AuthError
 from keys import key_store
 from transcriber import Transcriber
 from llm_client import LLMClient
+from gemini_live_client import GeminiLiveClient
 from rag import ingestor
 from rag import retriever
 from rag.web_search import search_web
@@ -61,6 +62,7 @@ if os.path.exists(frontend_dist):
 transcriber = None
 llm_client = None
 listener = None
+gemini_live: GeminiLiveClient | None = None
 sync_queue = queue.Queue()
 candidate_context: str = ""
 preferred_language: str = ""
@@ -123,6 +125,18 @@ async def startup_event():
     llm_client = await LLMClient.from_config()
     print(f"LLM Client loaded with provider: {llm_client.provider}", file=sys.stderr)
 
+    # If Gemini Live mode: connect unified audio+LLM client
+    if config.LLM_PROVIDER.lower() == "gemini":
+        global gemini_live
+        gemini_live = GeminiLiveClient(
+            api_key=config.GEMINI_API_KEY,
+            model=config.GEMINI_LIVE_MODEL,
+            system_prompt=config.SYSTEM_PROMPT,
+            sample_rate=config.AUDIO_SAMPLE_RATE,
+        )
+        await gemini_live.connect()
+        print("✅ Gemini Live mode active — unified audio+LLM pipeline", file=sys.stderr)
+
     # 3. Start AudioListener
     listener = AudioListener(config.AUDIO_SAMPLE_RATE, config.AUDIO_CHUNK_SECONDS)
     listener.start()
@@ -137,6 +151,8 @@ async def startup_event():
 async def shutdown_event():
     if listener:
         listener.stop()
+    if gemini_live:
+        await gemini_live.disconnect()
 
 
 class LanguagePreference(BaseModel):
@@ -282,6 +298,32 @@ async def ws_endpoint(websocket: WebSocket):
 
                 if isinstance(chunk, dict) and chunk.get("type") == "chat":
                     transcript = chunk.get("text", "")
+                    if gemini_live:
+                        if not gemini_live.is_connected:
+                            try:
+                                await gemini_live.connect()
+                            except Exception as e:
+                                print(f"Failed to reconnect Gemini Live: {e}", file=sys.stderr)
+
+                        if gemini_live.is_connected:
+                            try:
+                                await gemini_live.send_text(transcript)
+                                for out_q in list(active_outbound_queues):
+                                    out_q.put_nowait({"type": "message_start"})
+                                async for event in gemini_live.receive():
+                                    if event["type"] == "transcript":
+                                        for out_q in list(active_outbound_queues):
+                                            out_q.put_nowait({"type": "transcript", "text": event["text"]})
+                                    elif event["type"] == "token":
+                                        for out_q in list(active_outbound_queues):
+                                            out_q.put_nowait({"type": "token", "text": event["text"]})
+                                    elif event["type"] == "done":
+                                        for out_q in list(active_outbound_queues):
+                                            out_q.put_nowait({"type": "end"})
+                                        break
+                                transcript = None
+                            except Exception as e:
+                                print(f"Error communicating with Gemini Live: {e}", file=sys.stderr)
                 else:
                     import numpy as np
                     import time
@@ -297,27 +339,72 @@ async def ws_endpoint(websocket: WebSocket):
                     if rms >= 0.01:
                         websocket.audio_buffer += chunk
                         websocket.last_active_time = time.monotonic()
-                        
-                        # Generate live transcript for the growing buffer (max 30s to prevent overflow)
-                        if len(websocket.audio_buffer) > 16000 * 2 * 30: # 30 seconds max
-                            websocket.audio_buffer = websocket.audio_buffer[-16000 * 2 * 30:]
+
+                        if gemini_live:
+                            if not gemini_live.is_connected:
+                                try:
+                                    await gemini_live.connect()
+                                except Exception as e:
+                                    print(f"Failed to reconnect Gemini Live: {e}", file=sys.stderr)
+
+                            if gemini_live.is_connected:
+                                try:
+                                    await gemini_live.send_audio(chunk)
+                                except Exception as e:
+                                    print(f"Error communicating with Gemini Live: {e}", file=sys.stderr)
+                                continue
                             
-                        if len(websocket.audio_buffer) > 0 and not websocket.is_transcribing:
-                            websocket.is_transcribing = True
-                            try:
-                                # Only transcribe the last 5 seconds for live preview, not the whole buffer
-                                tail = websocket.audio_buffer[-16000 * 2 * 5:]
-                                live_transcript = await asyncio.to_thread(transcriber.transcribe, tail)
-                                if live_transcript and live_transcript != websocket.last_live_transcript:
-                                    websocket.last_live_transcript = live_transcript
-                                    for out_q in list(active_outbound_queues):
-                                        out_q.put_nowait({"type": "transcript", "text": live_transcript})
-                            finally:
-                                websocket.is_transcribing = False
+                            # Generate live transcript for the growing buffer (max 30s to prevent overflow)
+                            if len(websocket.audio_buffer) > 16000 * 2 * 30: # 30 seconds max
+                                websocket.audio_buffer = websocket.audio_buffer[-16000 * 2 * 30:]
+
+                            if len(websocket.audio_buffer) > 0 and not websocket.is_transcribing:
+                                websocket.is_transcribing = True
+                                try:
+                                    # Only transcribe the last 5 seconds for live preview, not the whole buffer
+                                    tail = websocket.audio_buffer[-16000 * 2 * 5:]
+                                    live_transcript = await asyncio.to_thread(transcriber.transcribe, tail)
+                                    if live_transcript and live_transcript != websocket.last_live_transcript:
+                                        websocket.last_live_transcript = live_transcript
+                                        for out_q in list(active_outbound_queues):
+                                            out_q.put_nowait({"type": "transcript", "text": live_transcript})
+                                finally:
+                                    websocket.is_transcribing = False
                         continue
 
                     # If silent and we have audio, check timeout
                     if websocket.audio_buffer and (time.monotonic() - websocket.last_active_time) >= config.SILENCE_THRESHOLD_SECONDS:
+                        if gemini_live:
+                            if not gemini_live.is_connected:
+                                try:
+                                    await gemini_live.connect()
+                                except Exception as e:
+                                    print(f"Failed to reconnect Gemini Live: {e}", file=sys.stderr)
+
+                            if gemini_live.is_connected:
+                                websocket.audio_buffer = b""
+                                websocket.last_active_time = time.monotonic()
+
+                                try:
+                                    await gemini_live.end_of_turn()
+                                    for out_q in list(active_outbound_queues):
+                                        out_q.put_nowait({"type": "message_start"})
+
+                                    async for event in gemini_live.receive():
+                                        if event["type"] == "transcript":
+                                            for out_q in list(active_outbound_queues):
+                                                out_q.put_nowait({"type": "transcript", "text": event["text"]})
+                                        elif event["type"] == "token":
+                                            for out_q in list(active_outbound_queues):
+                                                out_q.put_nowait({"type": "token", "text": event["text"]})
+                                        elif event["type"] == "done":
+                                            for out_q in list(active_outbound_queues):
+                                                out_q.put_nowait({"type": "end"})
+                                            break
+                                except Exception as e:
+                                    print(f"Error communicating with Gemini Live: {e}", file=sys.stderr)
+                                continue
+
                         # Reuse the last live transcript if available, avoiding redundant Whisper call
                         if config.STT_DIARIZE:
                             segments = await asyncio.to_thread(transcriber.transcribe_with_speaker, websocket.audio_buffer)
