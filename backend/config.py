@@ -74,6 +74,8 @@ class Config:
     MIN_WORDS: int = 4
     SMART_FILTER_ENABLED: bool = True
 
+    COACHING_ENABLED: bool = False
+
     def __post_init__(self):
         # Override fields with os.environ
         self.RAG_ENABLED = os.environ.get("RAG_ENABLED", "true").lower() == "true"
@@ -83,6 +85,8 @@ class Config:
         self.SILENCE_THRESHOLD_SECONDS = float(os.environ.get("SILENCE_THRESHOLD_SECONDS", self.SILENCE_THRESHOLD_SECONDS))
         self.MIN_WORDS = int(os.environ.get("MIN_WORDS", self.MIN_WORDS))
         self.SMART_FILTER_ENABLED = os.environ.get("SMART_FILTER_ENABLED", "true").lower() == "true"
+
+        self.COACHING_ENABLED = os.environ.get("COACHING_ENABLED", "false").lower() == "true"
 
         self.LLM_PROVIDER = os.environ.get("LLM_PROVIDER", self.LLM_PROVIDER)
         self.LLM_MODEL = os.environ.get("LLM_MODEL", self.LLM_MODEL)
