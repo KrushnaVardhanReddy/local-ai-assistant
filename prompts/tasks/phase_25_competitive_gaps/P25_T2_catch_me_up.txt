@@ -1,0 +1,237 @@
+TASK: P25-T2 — "Catch Me Up" Button (Competitive Gap vs Cluely)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a "Catch Me Up" feature — a button that, when clicked, asks the LLM
+to summarize everything said in the last N transcript turns so the user
+can quickly recover context after dropping focus during a meeting or
+interview.
+
+This is Cluely's #1 differentiating feature. The implementation is
+simple: it reads the accumulated transcript history from the Live Ears
+panel and sends a summary request to the LLM via the existing sendChat()
+pipeline.
+
+Key behaviors:
+  1. A "⏪ Catch Up" button appears in The Brain panel header (right side),
+     next to the existing collapse button.
+  2. When clicked, it sends a chat message to the LLM:
+     "Here is the conversation so far. Give me a concise 3-5 bullet
+      summary of what has been discussed: [transcript history]"
+  3. The transcript history used is `wsState.transcriptHistory` — a new
+     rolling buffer of the last 10 transcript strings we will add to
+     wsState in ws.svelte.ts.
+  4. If there is no history yet, show a brief error:
+     "No conversation history yet — start speaking first."
+  5. The button shows a loading spinner while the LLM is responding
+     (wsState.isThinking is true).
+  6. The button is disabled while wsState.isThinking is true.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Changes are FRONTEND ONLY. Do NOT modify any backend files.
+- Use Svelte 5 runes ($state, $derived) — NOT Svelte 4 stores.
+- `transcriptHistory` must be a simple string array, max 10 entries.
+  It must NOT replace the existing `wsState.transcript` field.
+- The "Catch Up" button must use the same visual style as the existing
+  Brain panel header collapse button.
+- The button must be pointer-events-auto and work in both Tauri and
+  browser (Remote Helper) modes.
+- Do NOT break the existing transcript display, chip bar, or any other
+  existing functionality.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/ws.svelte.ts` (307 lines):
+  - `wsState` is a `$state({...})` reactive object. Current fields:
+    transcript, response, isListening, isThinking, isConnected, error,
+    ragSources, isPTTHeld, pttMode, isMockMode, pendingTranscripts, plan.
+  - `sendChat(text: string)` sends `{ type: "chat", text }` over WebSocket,
+    bypassing all audio pipeline filters. Use this for the catch-up query.
+  - The `ws.onmessage` handler has a "transcript" case that currently does:
+    ```typescript
+    case "transcript":
+      wsState.transcript = data.text;
+      // ... chip accumulation logic ...
+      break;
+    ```
+    We will add transcript history accumulation here.
+
+- `frontend/src/lib/Assistant.svelte` (816 lines):
+  - Imports at line 2:
+    `import { wsState, sendChat, sendChip, dismissChip, clearAllChips, toggleMockMode } from "$lib/ws.svelte";`
+  - The Brain panel header (around line 483) looks like:
+    ```svelte
+    <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 z-10 flex-shrink-0" ...>
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-[20px]">memory</span>
+        <h2 class="font-label-caps text-label-caps text-primary tracking-wider text-glow">The Brain</h2>
+      </div>
+      <div class="flex items-center gap-2">
+        {#if wsState.ragSources && wsState.ragSources.length > 0}
+          <div class="text-[10px] text-secondary font-mono-data">
+            🔍 Sources: {wsState.ragSources.join(' · ')}
+          </div>
+        {/if}
+        <button ... onclick={() => brainCollapsed = !brainCollapsed} ...>
+          <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+        </button>
+      </div>
+    </div>
+    ```
+  - The Catch Up button should be inserted INSIDE the right `<div class="flex items-center gap-2">`,
+    BEFORE the collapse button.
+  - Brain panel header button pattern (follow exactly):
+    ```svelte
+    <button
+      class="w-7 h-7 flex items-center justify-center rounded-full
+             hover:bg-white/10 text-on-surface-variant/60 hover:text-primary
+             transition-colors pointer-events-auto"
+      title="Tooltip"
+      aria-label="Aria label"
+      onclick={handlerFn}
+    >
+      <span class="material-symbols-outlined text-[18px]">icon_name</span>
+    </button>
+    ```
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/ws.svelte.ts (MODIFY)
+
+   a. Add `transcriptHistory` field to `wsState`:
+      ```typescript
+      // inside the $state({...}) object, add:
+      transcriptHistory: [] as string[],
+      ```
+
+   b. In the "transcript" case of ws.onmessage, AFTER the existing
+      `wsState.transcript = data.text;` line, add:
+      ```typescript
+      // Accumulate rolling transcript history (max 10 entries)
+      if (data.text && data.text.trim().length > 3) {
+        // Avoid duplicating the last entry
+        const last = wsState.transcriptHistory[wsState.transcriptHistory.length - 1];
+        if (last !== data.text) {
+          wsState.transcriptHistory.push(data.text);
+          if (wsState.transcriptHistory.length > 10) {
+            wsState.transcriptHistory.shift();
+          }
+        }
+      }
+      ```
+
+   c. In the "panic-clear" listener, also clear transcript history:
+      ```typescript
+      wsState.transcriptHistory = [];
+      ```
+
+   d. In the existing `clearAllChips()` function or wherever history
+      is cleared (the clearHistory function in Assistant.svelte calls
+      `fetch('/history/clear')`), also reset transcriptHistory via the
+      wsState. Add to wsState directly where panic-clear is handled.
+
+2. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+
+   a. Add the handler function (add before the closing </script> tag,
+      around line 231):
+      ```typescript
+      function triggerCatchMeUp() {
+        if (wsState.isThinking) return;
+        const history = wsState.transcriptHistory;
+        if (!history || history.length === 0) {
+          wsState.error = "No conversation history yet — start speaking first.";
+          setTimeout(() => { wsState.error = null; }, 3000);
+          return;
+        }
+        const historyText = history
+          .map((t, i) => `${i + 1}. "${t}"`)
+          .join("\n");
+        sendChat(
+          `Here is the conversation transcript so far:\n${historyText}\n\n` +
+          `Give me a concise 3-5 bullet point summary of the key topics, ` +
+          `questions, and decisions discussed. Be brief and actionable.`
+        );
+      }
+      ```
+
+   b. Add the Catch Me Up button in The Brain panel header. Insert it
+      inside the right `<div class="flex items-center gap-2">`, BEFORE
+      the collapse chevron button:
+      ```svelte
+      <!-- Catch Me Up -->
+      <button
+        class="w-7 h-7 flex items-center justify-center rounded-full
+               hover:bg-white/10 transition-colors pointer-events-auto
+               {wsState.isThinking || wsState.transcriptHistory.length === 0
+                 ? 'text-on-surface-variant/30 cursor-not-allowed'
+                 : 'text-on-surface-variant/60 hover:text-secondary'}"
+        title="Catch me up — summarize conversation so far"
+        aria-label="Catch Me Up"
+        onclick={triggerCatchMeUp}
+        disabled={wsState.isThinking || wsState.transcriptHistory.length === 0}
+      >
+        <span class="material-symbols-outlined text-[18px]">history</span>
+      </button>
+      ```
+
+   c. Also clear transcriptHistory in the clearHistory() function:
+      ```typescript
+      function clearHistory() {
+        wsState.transcript = "";
+        wsState.response = "";
+        wsState.ragSources = [];
+        wsState.pendingTranscripts = [];
+        wsState.transcriptHistory = [];   // ← ADD THIS LINE
+        const apiUrl = isBrowser ? ... : "http://127.0.0.1:8765";
+        fetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
+      }
+      ```
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The `transcriptHistory` is a client-side rolling buffer. It does NOT
+  need to be persisted to the backend — it lives only for the current
+  WebSocket session.
+- Use Material Symbols icon `history` (a clock with an arrow) for the
+  Catch Up button. This is already loaded in the app.
+- The button is disabled when isThinking (LLM busy) or when there's no
+  history yet — both indicated by muted color and `cursor-not-allowed`.
+- The LLM prompt deliberately says "3-5 bullet points" to keep the
+  summary short and scannable during an active interview.
+- Deduplication (checking `last !== data.text`) prevents the same
+  sentence being stored multiple times when the STT backend streams
+  the same partial transcript multiple times.
+
+═══════════════════════════════════════════════════════════════
+VISUAL REFERENCE
+═══════════════════════════════════════════════════════════════
+
+The Brain panel header (right side):
+
+  Before:  [ 🔍 Sources: ... ]  [ > ]
+  After:   [ 🔍 Sources: ... ]  [ 🕐 ]  [ > ]
+                                    ↑ Catch Up button (history icon)
+                                      - Greyed out when no history
+                                      - Teal/secondary color when available
+                                      - Disabled while LLM is thinking
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+(none)
+
+FILES TO MODIFY:
+- frontend/src/lib/ws.svelte.ts
+- frontend/src/lib/Assistant.svelte
+
+Commit: "jules: P25-T2 add catch-me-up summary button to Brain panel"
+Target branch: main

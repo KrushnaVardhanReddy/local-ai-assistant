@@ -1,0 +1,390 @@
+TASK: P25-T3 — Post-Interview Email Draft (Competitive Gap vs Cluely)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add an "Email Draft" section to the existing SessionReport.svelte
+component. After the session scorecard is loaded, the user can click
+"Draft Follow-Up Email" to generate a professional post-interview
+thank-you / follow-up email based on the session transcript and
+scorecard. The draft is rendered in an editable textarea and can be
+copied to clipboard with one click.
+
+This closes a key gap vs Cluely, which auto-generates follow-up emails
+from meeting context. Our version is interview-specific and uses the
+scorecard as source data — making it more personalized than Cluely's
+generic templates.
+
+Key behaviors:
+  1. In SessionReport.svelte, after the scorecard section, show a
+     "Draft Follow-Up Email" button.
+  2. When clicked, send a POST request to the NEW backend endpoint
+     `POST /session/email-draft` which generates the email via LLM.
+  3. The generated email renders in a styled `<textarea>` (editable,
+     so the user can tweak it before sending).
+  4. A "Copy Email" button copies the draft to clipboard.
+  5. The generated email should be a professional 3-paragraph thank-you
+     email: opens with gratitude, references a specific topic from the
+     session, closes with enthusiasm about the role.
+  6. Show a loading spinner while generating (separate from the scorecard
+     loading state — the email is generated on demand, not on load).
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Frontend changes: SessionReport.svelte ONLY. Do NOT touch Assistant.svelte.
+- Backend changes: backend/app.py ONLY. Add ONE new endpoint.
+  Do NOT touch session_manager.py, llm_client.py, or any other file.
+- Use Svelte 5 runes ($state) — NOT Svelte 4 stores.
+- The email textarea must be styled to match the dark glass theme
+  (dark background, light text, rounded border).
+- The endpoint must NOT re-generate the scorecard — it receives
+  the session data already loaded in the frontend and just generates
+  the email text.
+- The endpoint must handle the case where session data is empty and
+  return a 400 error with a clear message.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+
+BACKEND — backend/app.py (1108 lines):
+  - All routes are registered with `@app.get/post(...)`.
+  - The LLM client is available as the module-level `llm_client` object.
+    It has a `stream_tokens(messages: list, ...)` async generator method
+    and a `chat_complete(messages: list)` async method.
+  - The session manager is imported as:
+    `from session_manager import session as interview_session`
+  - The existing `/session/end` endpoint (line 1058) returns:
+    ```json
+    {
+      "session": { "turns": [...], "duration_seconds": N },
+      "scorecard": { "overall_score": N, "overall_summary": "...",
+                     "strengths": [...], "gaps": [...], "turns": [...] }
+    }
+    ```
+  - Relevant imports already present in app.py:
+    `from fastapi.responses import JSONResponse`
+    `from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException`
+    `from pydantic import BaseModel`
+
+FRONTEND — frontend/src/lib/SessionReport.svelte (312 lines):
+  - Svelte 5 component with `$props()`, `$state`, `$effect`.
+  - `let { onClose }: { onClose: () => void } = $props();`
+  - Existing state: `isLoading`, `error`, `scorecard`, `session`.
+  - `loadReport()` calls `POST /session/end` and populates scorecard+session.
+  - `copyToClipboard()` copies scorecard text to clipboard.
+  - The scorecard section is the last major content block before the
+    action buttons at the bottom.
+  - Styling uses Tailwind utility classes + inline dark glass styles.
+    Dark textarea example matching the existing theme:
+    ```svelte
+    <textarea
+      class="w-full h-48 bg-white/5 border border-white/10 rounded-xl
+             p-4 text-on-background text-sm font-mono leading-relaxed
+             resize-none focus:outline-none focus:border-primary/40
+             focus:bg-white/8 transition-colors"
+    />
+    ```
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/app.py (MODIFY)
+
+   Add the following new Pydantic model and endpoint AFTER the existing
+   `/session/clear` endpoint (after line 1081), before the
+   `InternalPlanUpdateModel` class:
+
+   a. Add Pydantic request model:
+      ```python
+      class EmailDraftRequest(BaseModel):
+          session: dict
+          scorecard: dict
+          interviewer_name: str = ""
+          company_name: str = ""
+          role_name: str = ""
+      ```
+
+   b. Add the endpoint:
+      ```python
+      @app.post("/session/email-draft")
+      async def generate_email_draft(body: EmailDraftRequest):
+          """Generate a post-interview follow-up email using the session scorecard."""
+          if not body.session or not body.scorecard:
+              return JSONResponse({"error": "Session data required"}, status_code=400)
+
+          # Build a concise summary for the prompt
+          strengths = ", ".join(body.scorecard.get("strengths", [])[:3]) or "my technical responses"
+          topics = []
+          for turn in body.session.get("turns", [])[:5]:
+              q = turn.get("question", "")
+              if q:
+                  topics.append(q[:80])
+          topic_str = topics[0] if topics else "the technical topics we discussed"
+
+          interviewer = body.interviewer_name or "the interviewer"
+          company = body.company_name or "your company"
+          role = body.role_name or "the role"
+
+          prompt = (
+              f"Write a concise, professional post-interview thank-you email.\n"
+              f"Interviewer: {interviewer}\n"
+              f"Company: {company}\n"
+              f"Role: {role}\n"
+              f"Key topic discussed: {topic_str}\n"
+              f"Candidate's strengths shown: {strengths}\n\n"
+              f"Requirements:\n"
+              f"- 3 short paragraphs only\n"
+              f"- Para 1: Thank them and express enthusiasm for the role\n"
+              f"- Para 2: Reference a specific topic from the interview to show engagement\n"
+              f"- Para 3: Reiterate interest and next steps\n"
+              f"- Tone: warm, professional, confident — NOT sycophantic\n"
+              f"- Subject line at the very top (format: Subject: ...)\n"
+              f"- Plain text only, no markdown\n"
+              f"Output ONLY the email (subject + body). No preamble."
+          )
+
+          if not llm_client:
+              return JSONResponse({"error": "LLM client not initialized"}, status_code=503)
+
+          try:
+              messages = [{"role": "user", "content": prompt}]
+              email_text = await llm_client.chat_complete(messages)
+              return JSONResponse({"email": email_text})
+          except Exception as e:
+              return JSONResponse({"error": str(e)}, status_code=500)
+      ```
+
+   IMPORTANT: Check if `llm_client.chat_complete()` exists. If the
+   LLMClient class only has `stream_tokens()`, implement the endpoint
+   using `stream_tokens()` and accumulate the full string before returning:
+   ```python
+   full_text = ""
+   async for token in llm_client.stream_tokens(messages):
+       full_text += token
+   return JSONResponse({"email": full_text})
+   ```
+
+2. FILE: frontend/src/lib/SessionReport.svelte (MODIFY)
+
+   a. Add new state variables after the existing state declarations
+      (after line ~7):
+      ```typescript
+      let emailDraft = $state<string | null>(null);
+      let isGeneratingEmail = $state(false);
+      let emailError = $state<string | null>(null);
+
+      // Optional metadata for a more personalized email
+      let interviewerName = $state("");
+      let companyName = $state("");
+      let roleName = $state("");
+      let showEmailMeta = $state(false);
+      ```
+
+   b. Add the email generation function (after `copyToClipboard()`):
+      ```typescript
+      async function generateEmailDraft() {
+        if (!session || !scorecard) return;
+        isGeneratingEmail = true;
+        emailError = null;
+        try {
+          const resp = await fetch("http://127.0.0.1:8765/session/email-draft", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session,
+              scorecard,
+              interviewer_name: interviewerName,
+              company_name: companyName,
+              role_name: roleName,
+            }),
+          });
+          if (!resp.ok) {
+            const data = await resp.json();
+            emailError = data.error || "Failed to generate email";
+            return;
+          }
+          const data = await resp.json();
+          emailDraft = data.email;
+        } catch (e) {
+          emailError = "Could not connect to backend";
+        } finally {
+          isGeneratingEmail = false;
+        }
+      }
+
+      function copyEmail() {
+        if (emailDraft) navigator.clipboard.writeText(emailDraft);
+      }
+      ```
+
+   c. Add the Email Draft UI section in the template. Insert it AFTER the
+      scorecard/per-question breakdown section and BEFORE the action
+      buttons at the bottom. The section should only render when
+      `scorecard` is loaded:
+
+      ```svelte
+      <!-- Email Draft Section -->
+      {#if scorecard}
+        <div class="mt-6 border-t border-white/10 pt-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-on-background/90 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px] text-secondary">mail</span>
+              Follow-Up Email Draft
+            </h3>
+            <button
+              class="text-[10px] text-on-surface-variant/50 hover:text-primary transition-colors"
+              onclick={() => showEmailMeta = !showEmailMeta}
+            >
+              {showEmailMeta ? 'Hide options ▲' : 'Add details ▼'}
+            </button>
+          </div>
+
+          {#if showEmailMeta}
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Interviewer name"
+                bind:value={interviewerName}
+                class="bg-white/5 border border-white/10 rounded-lg px-3 py-2
+                       text-on-background text-xs focus:outline-none
+                       focus:border-primary/40 transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="Company name"
+                bind:value={companyName}
+                class="bg-white/5 border border-white/10 rounded-lg px-3 py-2
+                       text-on-background text-xs focus:outline-none
+                       focus:border-primary/40 transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="Role / position"
+                bind:value={roleName}
+                class="bg-white/5 border border-white/10 rounded-lg px-3 py-2
+                       text-on-background text-xs focus:outline-none
+                       focus:border-primary/40 transition-colors"
+              />
+            </div>
+          {/if}
+
+          {#if !emailDraft}
+            <button
+              class="w-full py-2.5 px-4 rounded-xl bg-secondary/10 border border-secondary/20
+                     hover:bg-secondary/20 hover:border-secondary/40 text-secondary
+                     text-sm font-medium transition-all duration-200 flex items-center
+                     justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              onclick={generateEmailDraft}
+              disabled={isGeneratingEmail}
+            >
+              {#if isGeneratingEmail}
+                <span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                Generating...
+              {:else}
+                <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+                Draft Follow-Up Email
+              {/if}
+            </button>
+          {/if}
+
+          {#if emailError}
+            <p class="text-red-400 text-xs mt-2">{emailError}</p>
+          {/if}
+
+          {#if emailDraft}
+            <div class="relative mt-3">
+              <textarea
+                bind:value={emailDraft}
+                class="w-full h-52 bg-white/5 border border-white/10 rounded-xl
+                       p-4 text-on-background/90 text-sm font-mono leading-relaxed
+                       resize-none focus:outline-none focus:border-primary/40
+                       focus:bg-white/8 transition-colors"
+                spellcheck="true"
+              ></textarea>
+              <div class="flex gap-2 mt-2">
+                <button
+                  class="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 border
+                         border-white/10 hover:border-white/20 text-on-surface-variant
+                         hover:text-on-background text-xs font-medium transition-all
+                         flex items-center justify-center gap-1.5"
+                  onclick={copyEmail}
+                >
+                  <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                  Copy Email
+                </button>
+                <button
+                  class="py-2 px-4 rounded-xl bg-white/5 hover:bg-white/10 border
+                         border-white/10 text-on-surface-variant/60 text-xs
+                         transition-all"
+                  onclick={() => { emailDraft = null; }}
+                >
+                  Regenerate
+                </button>
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
+      ```
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- The email textarea uses `bind:value={emailDraft}` making it editable —
+  the user can tweak the draft before copying. This is intentional.
+- The "Regenerate" button sets emailDraft = null, which hides the textarea
+  and shows the "Draft Follow-Up Email" button again.
+- Material Symbols `mail` and `auto_awesome` and `content_copy` and
+  `progress_activity` are all already loaded in the app via the existing
+  Google Fonts Material Symbols import.
+- The optional metadata (interviewer name, company, role) improves email
+  quality but is NOT required — the LLM uses sensible fallbacks.
+- The "Add details ▼" toggle keeps the UI clean by default.
+- The `secondary` color in the button (`text-secondary`, `bg-secondary/10`)
+  matches the teal/green palette established in the app, distinguishing
+  this feature from the primary (blue) action buttons.
+- If llm_client.chat_complete() does not exist, use stream_tokens() and
+  accumulate as described in the backend deliverable note above.
+
+═══════════════════════════════════════════════════════════════
+VISUAL REFERENCE
+═══════════════════════════════════════════════════════════════
+
+SessionReport panel (bottom section):
+
+  ┌──────────────────────────────────────────────────────────┐
+  │ 📊 Session Scorecard                            [Copy]   │
+  │  Q1: Good (4/5) — ...                                    │
+  │  Q2: Partial (3/5) — ...                                 │
+  ├──────────────────────────────────────────────────────────┤
+  │ ✉ Follow-Up Email Draft           [Add details ▼]        │
+  │                                                          │
+  │  [ ✨ Draft Follow-Up Email ]                            │
+  │                                                          │
+  │  ← After clicking: →                                     │
+  │  ┌────────────────────────────────────────────────────┐  │
+  │  │ Subject: Thank you for your time, [Name]           │  │
+  │  │                                                    │  │
+  │  │ Dear [Interviewer],                                │  │
+  │  │ Thank you for taking the time to speak with me...  │  │
+  │  │ [editable textarea]                                │  │
+  │  └────────────────────────────────────────────────────┘  │
+  │  [ 📋 Copy Email ]  [ Regenerate ]                        │
+  └──────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+(none)
+
+FILES TO MODIFY:
+- backend/app.py
+- frontend/src/lib/SessionReport.svelte
+
+Commit: "jules: P25-T3 add post-interview email draft to session report"
+Target branch: main

@@ -326,3 +326,19 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P24-T1 | `frontend/src/lib/Settings.svelte`, `backend/app.py` | **Bring Your Own Key:** Adds a UI toggle for lifetime users to supply their own Gemini API key, stored securely in `localStorage` and sent over WS. | ✅ | #75 |
+
+---
+
+## Phase 25 — Competitive Gap Closures 🏆
+
+> Three targeted features that close the remaining gaps vs Parakeet AI and Cluely.
+> Each is small and self-contained — frontend-only or a single endpoint.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P25-T1 | `frontend/src/lib/Assistant.svelte` | **STAR Preset Button:** Adds a "STAR" pill button to the toolbar. One click primes the LLM to format its next response using the Situation → Task → Action → Result framework. Button glows yellow for 3s to confirm activation. Closes gap vs Parakeet AI's built-in STAR structuring. | ⬜ | — |
+| P25-T2 | `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Assistant.svelte` | **Catch Me Up:** Rolling transcript history buffer (last 10 entries). A history icon button in The Brain panel header summarizes the full conversation on demand. Closes Cluely's "What did I miss?" feature. | ⬜ | — |
+| P25-T3 | `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Post-Interview Email Draft:** New `POST /session/email-draft` endpoint generates a personalized 3-paragraph thank-you email from the session scorecard. Rendered in an editable textarea with copy button in the Session Report panel. Closes Cluely's auto-email feature. | ⬜ | — |
+| P25-T4 | `backend/history_store.py` [NEW], `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Session History & Score Trends:** New `backend/history_store.py` persists lightweight scorecard summaries to a local JSON file after each session. New `GET /session/history` endpoint. Session Report panel gets a collapsible "Past Sessions" section with SVG sparkline score trend + per-session cards. Closes Sensei AI's primary differentiator. | ⬜ | — |
+
+

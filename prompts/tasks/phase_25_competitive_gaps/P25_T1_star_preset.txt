@@ -1,0 +1,176 @@
+TASK: P25-T1 — STAR Method Preset Button (Competitive Gap vs Parakeet AI)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a "STAR" preset button to the top toolbar in Assistant.svelte.
+When clicked, it sends a hidden chat message to the LLM instructing it
+to format its NEXT response using the STAR method (Situation, Task,
+Action, Result) — the behavioral interview framework used by top-tier
+tech companies like Google, Meta, and Amazon.
+
+This is a direct competitive gap vs Parakeet AI which has STAR
+structuring built-in. We are adding it as a one-click toolbar toggle.
+
+Key behaviors:
+  1. A "STAR" button appears in the toolbar between the vision/screenshot
+     button and the session report button.
+  2. When clicked, it sends a silent preflight chat message:
+     "For your next response only, structure your answer using the STAR
+      method: Situation → Task → Action → Result. Keep each section
+      concise and use bold section headers."
+  3. The button visually activates (glowing accent state) for 3 seconds
+     then resets — indicating "STAR mode is primed for the next answer".
+  4. A small tooltip on hover reads: "Prime next answer with STAR format".
+  5. This is FRONTEND ONLY — the message is sent via the existing
+     sendChat() function which already bypasses all backend filters.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- ALL changes are FRONTEND ONLY. Do NOT modify any backend files.
+- Use Svelte 5 runes ($state) — NOT Svelte 4 stores.
+- The button must use the same icon style as other toolbar action buttons
+  (w-8 h-8 rounded-full flex items-center justify-center) and use a
+  Material Symbols icon.
+- The label "STAR" should appear as a small text badge, not just an icon,
+  since there's no single Material Symbols icon for "STAR method".
+- Do NOT break existing toolbar layout. The toolbar is a flex row — just
+  insert the new button in the correct position.
+- The button must work in both Tauri desktop mode AND browser mode.
+- Do NOT add any new backend endpoints, config variables, or Python files.
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+- `frontend/src/lib/ws.svelte.ts` (307 lines):
+  - `sendChat(text: string)` sends `{ type: "chat", text }` over the
+    WebSocket, bypassing ALL backend filter layers (silence buffer, busy
+    guard, intent heuristic). This is the correct function to use.
+  - `wsState` is a `$state({...})` reactive object. Its fields include:
+    isListening, isConnected, isThinking, transcript, response, plan,
+    isMockMode, pendingTranscripts, ragSources, error, isPTTHeld, pttMode.
+
+- `frontend/src/lib/Assistant.svelte` (816 lines):
+  - Imports at line 2:
+    `import { wsState, sendChat, sendChip, dismissChip, clearAllChips, toggleMockMode } from "$lib/ws.svelte";`
+  - Uses Svelte 5 $state: `let showSessionReport = $state(false);`,
+    `let liveEarsCollapsed = $state(false);`, `let clickthrough = $state(false);`
+  - The top toolbar is a `<header class="toolbar glass-pill ...">` at line ~237.
+  - Toolbar button pattern (follow this exactly):
+    ```svelte
+    <button
+      aria-label="Button Label"
+      title="Tooltip text"
+      class="w-8 h-8 flex items-center justify-center rounded-full
+             hover:bg-white/10 text-on-surface-variant hover:text-primary
+             transition-colors pointer-events-auto"
+      onclick={handlerFn}
+    >
+      <span class="material-symbols-outlined text-[18px]">icon_name</span>
+    </button>
+    ```
+  - The Mock Interview toggle button (around line 279) uses an active state
+    class pattern: `{wsState.isMockMode ? 'text-green-400 animate-pulse bg-green-400/10' : 'hover:text-primary'}`.
+    Follow this exact pattern for the STAR button's active state.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+
+   a. Add a new state variable after the existing $state declarations
+      (around line 23):
+      ```typescript
+      let starPrimed = $state(false);
+      let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
+      ```
+
+   b. Add the handler function (add before the closing </script> tag,
+      around line 231):
+      ```typescript
+      function triggerStarPreset() {
+        // Send the STAR primer as a silent chat message
+        sendChat(
+          "For your next response only, structure your answer using the STAR " +
+          "method with bold section headers: **Situation** → **Task** → " +
+          "**Action** → **Result**. Keep each section concise (2-3 sentences). " +
+          "After this response, return to your normal answering style."
+        );
+        // Activate visual primed state for 3s
+        starPrimed = true;
+        if (starPrimedTimer) clearTimeout(starPrimedTimer);
+        starPrimedTimer = setTimeout(() => {
+          starPrimed = false;
+        }, 3000);
+      }
+      ```
+
+   c. Add the STAR button in the toolbar. Insert it BEFORE the session
+      report button and AFTER the vision/screenshot button. Find the block
+      of action buttons on the right side of the toolbar and add:
+      ```svelte
+      <!-- STAR Method Preset -->
+      <button
+        aria-label="STAR Method Preset"
+        title="Prime next answer with STAR format (Situation → Task → Action → Result)"
+        class="flex items-center gap-1 px-2.5 py-1 rounded-full
+               transition-colors pointer-events-auto text-[11px] font-bold
+               tracking-wider border
+               {starPrimed
+                 ? 'text-yellow-300 bg-yellow-400/15 border-yellow-400/40 animate-pulse'
+                 : 'text-on-surface-variant hover:text-yellow-300 hover:bg-yellow-400/10 border-transparent hover:border-yellow-400/20'}"
+        onclick={triggerStarPreset}
+      >
+        STAR
+      </button>
+      ```
+
+   d. Clean up the timer on component destroy. Add inside the existing
+      onMount return / cleanup block (or as a new onDestroy if not present):
+      ```typescript
+      // inside onMount's return cleanup function:
+      if (starPrimedTimer) clearTimeout(starPrimedTimer);
+      ```
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `sendChat()` already bypasses all audio pipeline filters and goes
+  directly to the LLM. The STAR primer will be treated as a high-priority
+  user instruction by the LLM.
+- The 3-second visual "primed" state reassures the user the primer was
+  sent, without cluttering the UI permanently.
+- `animate-pulse` gives a subtle breathing glow, matching the existing
+  mock-mode button style.
+- The button is text-only ("STAR") not icon-only — this makes it
+  immediately understood by a stressed interview candidate.
+- The yellow color palette (`text-yellow-300`, `bg-yellow-400`) is
+  deliberately different from primary (blue/green) to signal "formatting
+  mode", not "send" mode.
+
+═══════════════════════════════════════════════════════════════
+VISUAL REFERENCE
+═══════════════════════════════════════════════════════════════
+Toolbar (right action group):
+
+  Normal state:
+  [ 🎤 Mock ] [ 📷 Vision ] [ STAR ] [ 📊 Report ] [ 🧹 Clear ] | [ 👁 ] [✕]
+
+  After click (3 seconds):
+  [ 🎤 Mock ] [ 📷 Vision ] [✨STAR✨] [ 📊 Report ] [ 🧹 Clear ] | [ 👁 ] [✕]
+                                ↑ yellow glow + pulse
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+(none)
+
+FILES TO MODIFY:
+- frontend/src/lib/Assistant.svelte
+
+Commit: "jules: P25-T1 add STAR method preset button to toolbar"
+Target branch: main
