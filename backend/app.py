@@ -64,7 +64,6 @@ if os.path.exists(frontend_dist):
 transcriber = None
 llm_client = None
 listener = None
-gemini_live: GeminiLiveClient | None = None
 sync_queue = queue.Queue()
 candidate_context: str = ""
 preferred_language: str = ""
@@ -132,18 +131,6 @@ async def startup_event():
     llm_client = await LLMClient.from_config()
     print(f"LLM Client loaded with provider: {llm_client.provider}", file=sys.stderr)
 
-    # If Gemini Live mode: connect unified audio+LLM client
-    if config.LLM_PROVIDER.lower() == "gemini":
-        global gemini_live
-        gemini_live = GeminiLiveClient(
-            api_key=config.GEMINI_API_KEY,
-            model=config.GEMINI_LIVE_MODEL,
-            system_prompt=config.SYSTEM_PROMPT,
-            sample_rate=config.AUDIO_SAMPLE_RATE,
-        )
-        await gemini_live.connect()
-        print("✅ Gemini Live mode active — unified audio+LLM pipeline", file=sys.stderr)
-
     # 3. Start AudioListener
     listener = AudioListener(config.AUDIO_SAMPLE_RATE, config.AUDIO_CHUNK_SECONDS)
     listener.start()
@@ -158,8 +145,6 @@ async def startup_event():
 async def shutdown_event():
     if listener:
         listener.stop()
-    if gemini_live:
-        await gemini_live.disconnect()
 
 
 class LanguagePreference(BaseModel):
@@ -199,12 +184,13 @@ async def get_interview_language():
     return {"language": config.LANGUAGE_OVERRIDE}
 
 @app.websocket("/ws")
-async def ws_endpoint(websocket: WebSocket):
+async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
     await websocket.accept()
 
     connection_llm_client = llm_client
     user_plan = "demo"
     websocket.is_mock_mode = False
+    websocket.gemini_live = None
 
     if config.SUPABASE_JWT_SECRET:
         try:
@@ -257,6 +243,13 @@ async def ws_endpoint(websocket: WebSocket):
             payg_token = None
             if user_plan == "payg":
                 payg_token = create_payg_session_token(user_id)
+
+            if user_plan == "lifetime" and custom_key:
+                websocket.custom_key = custom_key
+            else:
+                websocket.custom_key = None
+
+            connection_llm_client = await LLMClient.from_config(api_key_override=getattr(websocket, "custom_key", None))
 
             # Immediately send plan to the connecting client
             await websocket.send_json({"type": "plan", "plan": user_plan})
@@ -426,19 +419,26 @@ async def ws_endpoint(websocket: WebSocket):
 
                 if isinstance(chunk, dict) and chunk.get("type") == "chat":
                     transcript = chunk.get("text", "")
-                    if gemini_live:
-                        if not gemini_live.is_connected:
+                    if config.LLM_PROVIDER.lower() == "gemini":
+                        if getattr(websocket, "gemini_live", None) is None:
+                            websocket.gemini_live = GeminiLiveClient(
+                                api_key=getattr(websocket, "custom_key", None) or config.GEMINI_API_KEY,
+                                model=config.GEMINI_LIVE_MODEL,
+                                system_prompt=config.SYSTEM_PROMPT,
+                                sample_rate=config.AUDIO_SAMPLE_RATE,
+                            )
+                        if not websocket.gemini_live.is_connected:
                             try:
-                                await gemini_live.connect()
+                                await websocket.gemini_live.connect()
                             except Exception as e:
                                 print(f"Failed to reconnect Gemini Live: {e}", file=sys.stderr)
 
-                        if gemini_live.is_connected:
+                        if websocket.gemini_live.is_connected:
                             try:
-                                await gemini_live.send_text(transcript)
+                                await websocket.gemini_live.send_text(transcript)
                                 for out_q in list(active_outbound_queues):
                                     out_q.put_nowait({"type": "message_start"})
-                                async for event in gemini_live.receive():
+                                async for event in websocket.gemini_live.receive():
                                     if event["type"] == "transcript":
                                         for out_q in list(active_outbound_queues):
                                             out_q.put_nowait({"type": "transcript", "text": event["text"]})
@@ -468,16 +468,23 @@ async def ws_endpoint(websocket: WebSocket):
                         websocket.audio_buffer += chunk
                         websocket.last_active_time = time.monotonic()
 
-                        if gemini_live:
-                            if not gemini_live.is_connected:
+                        if config.LLM_PROVIDER.lower() == "gemini":
+                            if getattr(websocket, "gemini_live", None) is None:
+                                websocket.gemini_live = GeminiLiveClient(
+                                    api_key=getattr(websocket, "custom_key", None) or config.GEMINI_API_KEY,
+                                    model=config.GEMINI_LIVE_MODEL,
+                                    system_prompt=config.SYSTEM_PROMPT,
+                                    sample_rate=config.AUDIO_SAMPLE_RATE,
+                                )
+                            if not websocket.gemini_live.is_connected:
                                 try:
-                                    await gemini_live.connect()
+                                    await websocket.gemini_live.connect()
                                 except Exception as e:
                                     print(f"Failed to reconnect Gemini Live: {e}", file=sys.stderr)
 
-                            if gemini_live.is_connected:
+                            if websocket.gemini_live.is_connected:
                                 try:
-                                    await gemini_live.send_audio(chunk)
+                                    await websocket.gemini_live.send_audio(chunk)
                                 except Exception as e:
                                     print(f"Error communicating with Gemini Live: {e}", file=sys.stderr)
                                 continue
@@ -502,23 +509,30 @@ async def ws_endpoint(websocket: WebSocket):
 
                     # If silent and we have audio, check timeout
                     if websocket.audio_buffer and (time.monotonic() - websocket.last_active_time) >= config.SILENCE_THRESHOLD_SECONDS:
-                        if gemini_live:
-                            if not gemini_live.is_connected:
+                        if config.LLM_PROVIDER.lower() == "gemini":
+                            if getattr(websocket, "gemini_live", None) is None:
+                                websocket.gemini_live = GeminiLiveClient(
+                                    api_key=getattr(websocket, "custom_key", None) or config.GEMINI_API_KEY,
+                                    model=config.GEMINI_LIVE_MODEL,
+                                    system_prompt=config.SYSTEM_PROMPT,
+                                    sample_rate=config.AUDIO_SAMPLE_RATE,
+                                )
+                            if not websocket.gemini_live.is_connected:
                                 try:
-                                    await gemini_live.connect()
+                                    await websocket.gemini_live.connect()
                                 except Exception as e:
                                     print(f"Failed to reconnect Gemini Live: {e}", file=sys.stderr)
 
-                            if gemini_live.is_connected:
+                            if websocket.gemini_live.is_connected:
                                 websocket.audio_buffer = b""
                                 websocket.last_active_time = time.monotonic()
 
                                 try:
-                                    await gemini_live.end_of_turn()
+                                    await websocket.gemini_live.end_of_turn()
                                     for out_q in list(active_outbound_queues):
                                         out_q.put_nowait({"type": "message_start"})
 
-                                    async for event in gemini_live.receive():
+                                    async for event in websocket.gemini_live.receive():
                                         if event["type"] == "transcript":
                                             for out_q in list(active_outbound_queues):
                                                 out_q.put_nowait({"type": "transcript", "text": event["text"]})
@@ -772,6 +786,9 @@ async def ws_endpoint(websocket: WebSocket):
         except:
             pass
     finally:
+        if getattr(websocket, "gemini_live", None):
+            await websocket.gemini_live.disconnect()
+
         sender_task.cancel()
         receiver_task.cancel()
         validator_task.cancel()

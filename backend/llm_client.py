@@ -192,10 +192,12 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
             yield token
 
     @classmethod
-    async def from_config(cls, is_vision: bool = False) -> "LLMClient":
+    async def from_config(cls, is_vision: bool = False, api_key_override: str = None) -> "LLMClient":
         llm_config = config.resolved_llm()
         base_url = llm_config.get("base_url", "")
         api_key = llm_config.get("api_key", "")
+        if api_key_override:
+            api_key = api_key_override
         provider = llm_config.get("provider", "")
         model = config.VISION_MODEL if is_vision else config.LLM_MODEL
 

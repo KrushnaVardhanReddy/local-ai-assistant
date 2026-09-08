@@ -97,6 +97,11 @@ export function connect(url?: string): void {
     targetUrl = targetUrl.replace(/\/?$/, '/ws');
   }
 
+  const customKey = localStorage.getItem("custom_gemini_key") || "";
+  if (customKey) {
+    targetUrl = `${targetUrl}?custom_key=${encodeURIComponent(customKey)}`;
+  }
+
   lastUrl = targetUrl;
   intentionalClose = false;
   wsState.error = null;

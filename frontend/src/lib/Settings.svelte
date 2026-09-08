@@ -15,6 +15,7 @@
   // New settings state
   let showSettings = $state(false);
   let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
+  let customGeminiKey = $state(localStorage.getItem("custom_gemini_key") || "");
   let isDevModeChecked = $state(false);
   let preferredLanguage = $state(localStorage.getItem("preferred_language") || "");
   let interviewLanguage = $state(localStorage.getItem("interview_language") || "auto");
@@ -188,6 +189,7 @@
     localStorage.setItem("backend_url", backendUrl);
     localStorage.setItem("preferred_language", preferredLanguage);
     localStorage.setItem("interview_language", interviewLanguage);
+    localStorage.setItem("custom_gemini_key", customGeminiKey);
     reconnect(backendUrl);
     try {
       await invoke("toggle_stealth", { enable: !isDevModeChecked });
@@ -326,6 +328,21 @@
         <option value="hi">Hindi (hi)</option>
         <option value="zh">Mandarin (zh)</option>
       </select>
+    </div>
+
+    <div class="input-group">
+      <label for="customGeminiKey">Custom Gemini API Key (Lifetime Tier Only)</label>
+      <input
+        type="password"
+        id="customGeminiKey"
+        bind:value={customGeminiKey}
+        placeholder="AIzaSy..."
+        disabled={authState.plan !== 'lifetime'}
+      />
+      {#if authState.plan !== 'lifetime'}
+        <span class="text-xs text-red-400 mt-1">Requires Lifetime Subscription.</span>
+      {/if}
+      <span class="text-xs text-gray-500 mt-1">Key is stored locally and never saved to our database.</span>
     </div>
 
     <div class="input-group">
