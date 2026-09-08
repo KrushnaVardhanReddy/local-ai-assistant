@@ -1,0 +1,434 @@
+TASK: P25-T4 — Session History & Score Trend Tracking (Competitive Gap vs Sensei AI)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add persistent session history tracking so users can see their interview
+performance trend over time — their scores across multiple sessions,
+their recurring strengths, and their recurring gaps.
+
+This closes the gap vs Sensei AI whose primary differentiator is
+"skill trend tracking across multiple sessions." Every other competitor
+(Parakeet, LockedIn, Interview Coder) only shows per-session results.
+
+The implementation uses a local JSON file (`~/.local/share/parakeet/history.json`
+on Linux/Mac, `%APPDATA%/parakeet/history.json` on Windows) to persist
+scorecard summaries. No database, no Supabase — fully local and offline.
+This fits the BYOK/privacy-first philosophy of the product.
+
+Key behaviors:
+  1. When `/session/end` is called and a scorecard is generated, the
+     backend automatically appends a summary entry to the history file.
+  2. A new `GET /session/history` endpoint returns the last 20 session
+     summaries sorted newest-first.
+  3. In the SessionReport.svelte component, below the email draft section,
+     add a "Past Sessions" collapsible section showing a sparkline-style
+     score trend and a list of past session cards.
+  4. Each past session card shows: date, overall score (N/10), top
+     strength, top gap, and turn count.
+  5. The trend is visualized as a simple SVG sparkline (score over time)
+     rendered inline — no external chart library needed.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Backend: Add ONE new file `backend/history_store.py` and modify
+  `backend/app.py` only. Do NOT modify session_manager.py.
+- Frontend: Modify `frontend/src/lib/SessionReport.svelte` only.
+- Storage: Plain JSON file. No SQLite, no Supabase, no external deps.
+- The history file must be created automatically if it doesn't exist.
+- Each history entry stores ONLY a lightweight summary (not the full
+  transcript) to keep the file small:
+  { date_iso, overall_score, turn_count, duration_s, strengths[], gaps[] }
+- Cap history at 50 entries (drop oldest when full).
+- The history feature must be ADDITIVE — if the history file doesn't
+  exist or is corrupt, the app continues working normally (just no history).
+- The sparkline is pure SVG, no external library. Keep it under 30 lines.
+- Use Svelte 5 runes ($state, $effect) — NOT Svelte 4 stores.
+- The "Past Sessions" section is collapsed by default (toggle to expand).
+
+═══════════════════════════════════════════════════════════════
+CONTEXT — EXISTING REPO LAYOUT & ARCHITECTURE
+═══════════════════════════════════════════════════════════════
+
+BACKEND — backend/app.py (1108 lines):
+  - The `/session/end` endpoint is at line 1058. It calls:
+      `scorecard = await llm_client.generate_scorecard(session_data)`
+    and returns `{ "session": session_data, "scorecard": scorecard }`.
+    We will add history persistence INSIDE this endpoint, after the
+    scorecard is generated, before returning.
+  - Scorecard structure returned by generate_scorecard():
+    ```python
+    {
+      "overall_score": int,          # 1-10
+      "overall_summary": str,
+      "strengths": list[str],        # e.g. ["Clear communication", "STAR usage"]
+      "gaps": list[str],             # e.g. ["Missed edge cases", "No complexity analysis"]
+      "turns": list[dict]            # per-turn breakdown
+    }
+    ```
+  - Session data structure from session_manager.export():
+    ```python
+    {
+      "session_started_at": float,   # Unix timestamp
+      "session_duration_s": int,
+      "turn_count": int,
+      "turns": list[dict]
+    }
+    ```
+  - Standard imports already in app.py: `import json`, `import os`,
+    `from fastapi.responses import JSONResponse`, `from pydantic import BaseModel`.
+
+FRONTEND — frontend/src/lib/SessionReport.svelte (312 lines, after P25-T3):
+  - Svelte 5 component using $props(), $state, $effect.
+  - After P25-T3 is merged, it will have:
+    - Scorecard section
+    - Email Draft section (added by P25-T3)
+  - Add the "Past Sessions" section AFTER the Email Draft section and
+    BEFORE the bottom action buttons.
+  - Existing `loadReport()` function fetches `POST /session/end`.
+  - Follow existing styling: dark glass cards, Tailwind classes, no
+    external CSS imports.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/history_store.py (CREATE NEW)
+
+   Create this file at `backend/history_store.py`:
+
+   ```python
+   """
+   HistoryStore — Lightweight local JSON persistence for session scorecard history.
+
+   Stores a rolling log of the last MAX_ENTRIES session summaries in a
+   platform-appropriate user data directory. No database required.
+   """
+   import json
+   import os
+   import time
+   from pathlib import Path
+
+   MAX_ENTRIES = 50
+
+
+   def _get_history_path() -> Path:
+       """Return platform-appropriate path for the history JSON file."""
+       if os.name == "nt":  # Windows
+           base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+       else:  # Linux / macOS
+           base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+       data_dir = base / "parakeet"
+       data_dir.mkdir(parents=True, exist_ok=True)
+       return data_dir / "history.json"
+
+
+   def append_session(scorecard: dict, session_data: dict) -> None:
+       """
+       Append a lightweight summary of a completed session to the history file.
+       Silently no-ops if the file cannot be written (e.g., permissions).
+       """
+       try:
+           path = _get_history_path()
+           # Load existing entries
+           entries = []
+           if path.exists():
+               try:
+                   entries = json.loads(path.read_text(encoding="utf-8"))
+                   if not isinstance(entries, list):
+                       entries = []
+               except (json.JSONDecodeError, OSError):
+                   entries = []
+
+           # Build lightweight summary
+           entry = {
+               "date_iso": time.strftime(
+                   "%Y-%m-%dT%H:%M:%S",
+                   time.localtime(session_data.get("session_started_at", time.time()))
+               ),
+               "overall_score": scorecard.get("overall_score", 0),
+               "turn_count": session_data.get("turn_count", 0),
+               "duration_s": session_data.get("session_duration_s", 0),
+               "strengths": scorecard.get("strengths", [])[:2],   # top 2 only
+               "gaps": scorecard.get("gaps", [])[:2],              # top 2 only
+               "overall_summary": scorecard.get("overall_summary", "")[:200],
+           }
+
+           entries.append(entry)
+
+           # Cap at MAX_ENTRIES — drop oldest
+           if len(entries) > MAX_ENTRIES:
+               entries = entries[-MAX_ENTRIES:]
+
+           path.write_text(json.dumps(entries, indent=2, ensure_ascii=False), encoding="utf-8")
+       except Exception:
+           pass  # History is best-effort — never crash the main flow
+
+
+   def load_history() -> list[dict]:
+       """
+       Return the last MAX_ENTRIES session summaries, newest first.
+       Returns empty list if the file doesn't exist or is corrupt.
+       """
+       try:
+           path = _get_history_path()
+           if not path.exists():
+               return []
+           entries = json.loads(path.read_text(encoding="utf-8"))
+           if not isinstance(entries, list):
+               return []
+           return list(reversed(entries))  # newest first
+       except Exception:
+           return []
+   ```
+
+2. FILE: backend/app.py (MODIFY)
+
+   a. Add the import at the top of the file (after the existing imports,
+      around line 35):
+      ```python
+      from history_store import append_session, load_history
+      ```
+
+   b. In the `/session/end` endpoint (line 1058), AFTER the scorecard
+      is generated and BEFORE the `return JSONResponse(...)`, add:
+      ```python
+      # Persist summary to local history file (best-effort, never raises)
+      append_session(scorecard, session_data)
+      ```
+      The full updated endpoint should look like:
+      ```python
+      @app.post("/session/end")
+      async def end_session():
+          """Return full session data + AI-generated scorecard."""
+          if not interview_session.has_data:
+              return JSONResponse({"error": "No session data available"}, status_code=404)
+
+          session_data = interview_session.export()
+
+          if llm_client:
+              scorecard = await llm_client.generate_scorecard(session_data)
+          else:
+              scorecard = {"error": "LLM client not initialized"}
+
+          # Persist summary to local history file (best-effort, never raises)
+          append_session(scorecard, session_data)
+
+          return JSONResponse({
+              "session": session_data,
+              "scorecard": scorecard,
+          })
+      ```
+
+   c. Add the new history endpoint AFTER the `/session/clear` endpoint
+      (after line 1081):
+      ```python
+      @app.get("/session/history")
+      async def get_session_history():
+          """Return the last 50 session summaries, newest first."""
+          return JSONResponse(load_history())
+      ```
+
+3. FILE: frontend/src/lib/SessionReport.svelte (MODIFY)
+
+   a. Add new state variables after the existing state declarations:
+      ```typescript
+      let showHistory = $state(false);
+      let historyEntries = $state<any[]>([]);
+      let isLoadingHistory = $state(false);
+
+      async function loadHistory() {
+        if (historyEntries.length > 0) return; // already loaded
+        isLoadingHistory = true;
+        try {
+          const resp = await fetch("http://127.0.0.1:8765/session/history");
+          if (resp.ok) {
+            historyEntries = await resp.json();
+          }
+        } catch (_) {
+          // History is best-effort — silently fail
+        } finally {
+          isLoadingHistory = false;
+        }
+      }
+      ```
+
+   b. Add a helper function for SVG sparkline generation:
+      ```typescript
+      function buildSparkline(scores: number[]): string {
+        if (scores.length < 2) return "";
+        const W = 120, H = 32, pad = 4;
+        const min = Math.min(...scores, 0);
+        const max = Math.max(...scores, 10);
+        const range = max - min || 1;
+        const pts = scores.map((s, i) => {
+          const x = pad + (i / (scores.length - 1)) * (W - pad * 2);
+          const y = H - pad - ((s - min) / range) * (H - pad * 2);
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        });
+        return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`
+          + `<polyline points="${pts.join(" ")}" fill="none" stroke="rgba(78,222,163,0.8)" stroke-width="1.5" stroke-linejoin="round"/>`
+          + `<circle cx="${pts[pts.length-1].split(",")[0]}" cy="${pts[pts.length-1].split(",")[1]}" r="2.5" fill="rgb(78,222,163)"/>`
+          + `</svg>`;
+      }
+      ```
+
+   c. Add the Past Sessions section in the template. Insert it AFTER
+      the Email Draft section (added by P25-T3) and BEFORE the bottom
+      action buttons. Use `{@html}` to render the SVG sparkline:
+
+      ```svelte
+      <!-- Past Sessions / Trend View -->
+      <div class="mt-6 border-t border-white/10 pt-6">
+        <button
+          class="w-full flex items-center justify-between text-left group"
+          onclick={() => { showHistory = !showHistory; if (showHistory) loadHistory(); }}
+        >
+          <h3 class="text-sm font-semibold text-on-background/90 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[16px] text-primary">trending_up</span>
+            Past Sessions
+            {#if historyEntries.length > 0}
+              <span class="text-[10px] text-on-surface-variant/50 font-normal">
+                ({historyEntries.length} sessions)
+              </span>
+            {/if}
+          </h3>
+          <span class="material-symbols-outlined text-[18px] text-on-surface-variant/40
+                       group-hover:text-primary transition-colors">
+            {showHistory ? 'expand_less' : 'expand_more'}
+          </span>
+        </button>
+
+        {#if showHistory}
+          <div class="mt-4">
+            {#if isLoadingHistory}
+              <div class="flex items-center gap-2 text-on-surface-variant/50 text-xs py-4">
+                <span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                Loading history...
+              </div>
+            {:else if historyEntries.length === 0}
+              <p class="text-on-surface-variant/40 text-xs py-4 text-center">
+                No past sessions yet. Complete more interviews to see your trend.
+              </p>
+            {:else}
+              <!-- Sparkline trend -->
+              <div class="flex items-center gap-3 mb-4 p-3 bg-white/3 rounded-xl border border-white/5">
+                <div>
+                  {@html buildSparkline(historyEntries.slice(0, 20).map(e => e.overall_score).reverse())}
+                </div>
+                <div>
+                  <p class="text-[10px] text-on-surface-variant/50 uppercase tracking-wider">Score Trend</p>
+                  <p class="text-sm font-semibold text-on-background">
+                    {(historyEntries.slice(0,5).reduce((a,e) => a + e.overall_score, 0) / Math.min(historyEntries.length, 5)).toFixed(1)}/10
+                    <span class="text-[10px] font-normal text-on-surface-variant/50">avg (last 5)</span>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Session list -->
+              <div class="flex flex-col gap-2 max-h-64 overflow-y-auto hide-scrollbar">
+                {#each historyEntries.slice(0, 15) as entry, i}
+                  <div class="p-3 rounded-xl bg-white/3 border border-white/5
+                              hover:bg-white/5 transition-colors">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-[10px] text-on-surface-variant/50">
+                        {new Date(entry.date_iso).toLocaleDateString(undefined,
+                          { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <span class="text-sm font-bold {entry.overall_score >= 8 ? 'text-green-400' : entry.overall_score >= 6 ? 'text-yellow-400' : 'text-orange-400'}">
+                        {entry.overall_score}/10
+                      </span>
+                    </div>
+                    {#if entry.strengths?.length}
+                      <p class="text-[11px] text-green-400/80 truncate">
+                        ✓ {entry.strengths[0]}
+                      </p>
+                    {/if}
+                    {#if entry.gaps?.length}
+                      <p class="text-[11px] text-orange-400/70 truncate">
+                        ✗ {entry.gaps[0]}
+                      </p>
+                    {/if}
+                    <p class="text-[10px] text-on-surface-variant/40 mt-1">
+                      {entry.turn_count} questions · {Math.round(entry.duration_s / 60)}min
+                    </p>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </div>
+      ```
+
+═══════════════════════════════════════════════════════════════
+IMPLEMENTATION HINTS
+═══════════════════════════════════════════════════════════════
+- `append_session()` uses a bare `except Exception: pass` at the top level
+  so a history write failure NEVER crashes `/session/end`. This is critical.
+- The sparkline renders the last 20 sessions in chronological order
+  (oldest left, newest right). We call `.reverse()` on the reversed
+  `historyEntries` (which are newest-first) to restore chronological order.
+- Color thresholds for scores: ≥8 green, ≥6 yellow, <6 orange.
+  These match the existing `scoreColor()` function already in SessionReport.
+- `hide-scrollbar` is already defined in Assistant.svelte's CSS. Since
+  SessionReport.svelte is a separate component, define it locally:
+  ```css
+  <style>
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+  </style>
+  ```
+- Material Symbols icons used: `trending_up`, `expand_more`, `expand_less`,
+  `progress_activity`. All are already loaded globally.
+- The history is loaded lazily (only when the user expands the section)
+  to keep the initial report load fast.
+- If P25-T3 (Email Draft) has NOT yet been merged, add the Past Sessions
+  section directly after the per-question scorecard breakdown.
+
+═══════════════════════════════════════════════════════════════
+VISUAL REFERENCE
+═══════════════════════════════════════════════════════════════
+
+SessionReport panel (bottom area, after scorecard and email draft):
+
+  ┌──────────────────────────────────────────────────────────┐
+  │ 📈 Past Sessions  (12 sessions)              [ ▼ ]       │
+  └──────────────────────────────────────────────────────────┘
+
+  After expanding:
+  ┌──────────────────────────────────────────────────────────┐
+  │ 📈 Past Sessions  (12 sessions)              [ ▲ ]       │
+  │                                                          │
+  │  [~~~~~~~∿/‾] Score Trend   7.4/10 avg (last 5)         │
+  │                                                          │
+  │  ┌─────────────────────────────────────────────────┐     │
+  │  │ Sep 8, 3:40 PM                          8/10    │     │
+  │  │ ✓ Clear technical explanations                  │     │
+  │  │ ✗ Missed edge cases                             │     │
+  │  │ 6 questions · 22min                             │     │
+  │  ├─────────────────────────────────────────────────┤     │
+  │  │ Sep 7, 11:15 AM                         6/10    │     │
+  │  │ ✓ Good STAR structure                           │     │
+  │  │ ✗ No complexity analysis                        │     │
+  │  │ 5 questions · 18min                             │     │
+  │  └─────────────────────────────────────────────────┘     │
+  └──────────────────────────────────────────────────────────┘
+
+The sparkline is a simple green polyline: scores plotted left (oldest)
+to right (newest), with a green dot on the most recent score.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/history_store.py   ← New lightweight JSON persistence module
+
+FILES TO MODIFY:
+- backend/app.py             ← Import history_store, call append_session, add GET endpoint
+- frontend/src/lib/SessionReport.svelte  ← Add Past Sessions section
+
+Commit: "jules: P25-T4 add session history store and score trend view"
+Target branch: main
