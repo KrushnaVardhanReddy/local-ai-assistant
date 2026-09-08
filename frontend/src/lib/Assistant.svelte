@@ -234,7 +234,7 @@
 
 <div class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark" id="dashboard-overlay">
   <!-- Top Toolbar -->
-  <header class="toolbar glass-pill pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" onmousedown={startDrag}>
+  <header class="toolbar glass-pill {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" onmousedown={startDrag}>
     <!-- Brand / Primary Action -->
     <div class="flex items-center gap-4 pointer-events-none">
       <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">Local AI</span>
@@ -418,7 +418,7 @@
     {:else}
     <!-- Left Panel: Live Ears (Transcription) -->
     <aside
-      class="live-ears-panel glass-panel pointer-events-auto rounded-[24px] flex flex-col overflow-hidden shadow-2xl
+      class="live-ears-panel glass-panel {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto rounded-[24px] flex flex-col overflow-hidden shadow-2xl
              transition-all duration-300 ease-in-out
              {liveEarsCollapsed ? 'w-0 opacity-0 p-0 min-w-0 border-0' : brainCollapsed ? 'w-full' : 'w-1/3'}"
       style="{liveEarsCollapsed ? 'pointer-events:none;' : ''}"
@@ -471,7 +471,7 @@
 
     <!-- Right Panel: The Brain (AI Insights) -->
     <section
-      class="brain-panel glass-panel pointer-events-auto rounded-[24px] flex flex-col overflow-hidden shadow-2xl relative
+      class="brain-panel glass-panel {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto rounded-[24px] flex flex-col overflow-hidden shadow-2xl relative
              transition-all duration-300 ease-in-out
              {brainCollapsed ? 'w-0 opacity-0 p-0 min-w-0 border-0' : liveEarsCollapsed ? 'w-full' : 'w-2/3'}"
       style="{brainCollapsed ? 'pointer-events:none;' : ''}"
@@ -513,7 +513,7 @@
         {#if wsState.response || wsState.isThinking}
           <div class="flex-1 flex flex-col gap-4">
             <div class="group flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 cursor-default relative">
-              <div class="ml-1 response-content text-on-surface-variant leading-relaxed prose prose-invert prose-sm max-w-none">
+              <div class="ml-1 response-content leading-relaxed prose prose-invert max-w-none">
                 {@html renderedResponse}
                 {#if wsState.isThinking}
                   <span class="inline-block w-1.5 h-4 bg-primary align-middle animate-pulse ml-1"></span>
@@ -592,11 +592,22 @@
 
 <style>
   .glass-panel {
-      background: rgba(0, 0, 0, 0.15);
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      background: rgba(10, 10, 14, 0.88);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+      transition: background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* Click-through mode: ultra-transparent so you can read/edit behind the overlay */
+  .glass-panel.clickthrough-mode,
+  .glass-pill.clickthrough-mode {
+      background: rgba(0, 0, 0, 0.08) !important;
+      backdrop-filter: blur(3px) !important;
+      -webkit-backdrop-filter: blur(3px) !important;
+      border-color: rgba(255, 255, 255, 0.06) !important;
+      box-shadow: none !important;
   }
   .glass-pill {
       background: rgba(18, 18, 18, 0.95);
@@ -611,7 +622,7 @@
       margin-bottom: 16px;
   }
   .transcript-line p {
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
   }
   .hide-scrollbar::-webkit-scrollbar {
       display: none;
@@ -632,20 +643,73 @@
       animation: shimmer 2s infinite;
   }
   .response-content {
-      font-size: 1rem;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.8), -1px -1px 2px rgba(0,0,0,0.8);
+      font-size: 1.05rem;
+      line-height: 1.75;
+      color: rgba(240, 240, 248, 0.97);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
   }
   
   /* Shiki code block overrides — match our dark glass theme */
+  .response-content :global(.code-block-wrapper) {
+    position: relative;
+    margin: 1rem 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+
+  .response-content :global(.code-block-header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.9rem;
+    background: rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .response-content :global(.code-copy-btn) {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.5);
+    border-radius: 4px;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.68rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .response-content :global(.code-copy-btn:hover) {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.9);
+    border-color: rgba(255,255,255,0.3);
+  }
+
   .response-content :global(.shiki) {
     text-shadow: none;
-    border-radius: 8px;
-    padding: 1rem;
-    margin: 0.75rem 0;
-    font-size: 0.85rem;
-    line-height: 1.6;
+    border-radius: 0;
+    padding: 1.1rem 1.2rem;
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.7;
     overflow-x: auto;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: none;
+    background: rgba(8, 10, 18, 0.97) !important;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  .response-content :global(.shiki code) {
+    font-family: inherit;
+    font-size: inherit;
+    background: none !important;
+    padding: 0;
+    color: inherit;
   }
 
   /* Copy button container for code blocks */
@@ -665,8 +729,9 @@
 
   /* Paragraph spacing */
   .response-content :global(p) {
-    margin: 0.5rem 0;
-    line-height: 1.65;
+    margin: 0.6rem 0;
+    line-height: 1.75;
+    color: rgba(235, 235, 245, 0.95);
   }
 
   /* Bullet / ordered lists */
@@ -677,8 +742,9 @@
   }
 
   .response-content :global(li) {
-    margin: 0.25rem 0;
-    line-height: 1.55;
+    margin: 0.3rem 0;
+    line-height: 1.7;
+    color: rgba(225, 225, 240, 0.92);
   }
 
   /* Bold text */

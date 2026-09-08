@@ -26,11 +26,28 @@ renderer.code = async ({ text, lang }: { text: string; lang?: string | undefined
   const validLang = highlighter.getLoadedLanguages().includes(lang ?? '')
     ? lang!
     : 'text';
-  const html = highlighter.codeToHtml(text, {
+
+  const highlighted = highlighter.codeToHtml(text, {
     lang: validLang,
     theme: 'tokyo-night',
   });
-  return html;
+
+  const label = validLang === 'text' ? 'code' : validLang;
+  // Escape backticks and backslashes for safe inline onclick embedding
+  const escaped = text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
+  return `<div class="code-block-wrapper">
+  <div class="code-block-header">
+    <span>${label}</span>
+    <button class="code-copy-btn" onclick="(function(btn){
+      navigator.clipboard.writeText(\`${escaped}\`).then(()=>{
+        btn.textContent='Copied!';
+        setTimeout(()=>btn.textContent='Copy',1500);
+      });
+    })(this)">Copy</button>
+  </div>
+  ${highlighted}
+</div>`;
 };
 marked.use({ renderer });
 
