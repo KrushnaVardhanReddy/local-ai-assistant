@@ -36,6 +36,10 @@
   let resumeStatus = $state("");
   let resumeFilename = $state("");
 
+  // Job Description state
+  let jobDescription = $state("");
+  let jobDescriptionStatus = $state("");
+
   onMount(async () => {
     try {
       const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
@@ -116,6 +120,27 @@
       console.error("Error reading file", error);
       resumeStatus = "❌ Error reading file content.";
       resumeRawText = "";
+    }
+  }
+
+  async function saveJobDescription() {
+    if (!jobDescription) return;
+    jobDescriptionStatus = "⏳ Saving job description...";
+    try {
+      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const res = await fetch(`${apiUrl}/config/job-description`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: jobDescription })
+      });
+      if (res.ok) {
+        jobDescriptionStatus = "✅ Job description saved and active";
+      } else {
+        jobDescriptionStatus = "❌ Failed to save job description";
+      }
+    } catch (e) {
+      console.error("Failed to save job description", e);
+      jobDescriptionStatus = "❌ Network error";
     }
   }
 
@@ -300,6 +325,22 @@
     </div>
 
     <button class="btn-primary save-btn" onclick={handleSaveSettings} data-testid="settings-save-btn">Save & Reconnect</button>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="resume-section">
+    <div class="section-label">Interview Context</div>
+    <div class="input-group">
+      <label for="jobDescription">Target Job Description</label>
+      <textarea id="jobDescription" bind:value={jobDescription} rows="4" placeholder="Paste the job description here..."></textarea>
+    </div>
+    {#if jobDescriptionStatus}
+      <div class="status-indicator">{jobDescriptionStatus}</div>
+    {/if}
+    <button class="btn-primary extract-btn" disabled={!jobDescription} onclick={saveJobDescription}>
+      Save Context
+    </button>
   </div>
 
   <hr class="divider" />
@@ -553,9 +594,19 @@
     color: white;
   }
 
-  .input-group input:focus, .custom-select:focus {
+  .input-group input:focus, .input-group textarea:focus, .custom-select:focus {
     outline: none;
     border-color: #007bff;
+  }
+
+  .input-group textarea {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #444;
+    background: #222;
+    color: white;
+    resize: vertical;
+    font-family: inherit;
   }
 
   .custom-select {

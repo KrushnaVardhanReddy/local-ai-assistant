@@ -571,6 +571,13 @@ async def ws_endpoint(websocket: WebSocket):
                     combined_context = "\n\n".join(filter(None, [rag_context, web_context]))
 
                     system_content = config.SYSTEM_PROMPT
+                    if config.JOB_DESCRIPTION:
+                        system_content += (
+                            "\n\n--- TARGET JOB DESCRIPTION ---\n"
+                            "Tailor all of your answers specifically to the following job description. "
+                            "Highlight relevant skills, match the tone, and prioritize the exact technologies mentioned:\n"
+                            f"{config.JOB_DESCRIPTION}\n"
+                        )
                     if candidate_context:
                         system_content += f"\n\nCandidate profile: {candidate_context}"
                     if preferred_language:
@@ -838,6 +845,14 @@ async def extract_resume(body: ResumeModel):
 async def get_resume_context():
     return {"context": candidate_context}
 
+
+class JobDescriptionModel(BaseModel):
+    text: str
+
+@app.post("/config/job-description")
+async def update_job_description(body: JobDescriptionModel):
+    config.JOB_DESCRIPTION = body.text
+    return {"status": "success"}
 
 class PromptModel(BaseModel):
     prompt: str
