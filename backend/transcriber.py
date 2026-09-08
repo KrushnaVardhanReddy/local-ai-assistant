@@ -32,23 +32,23 @@ class Transcriber:
         else:
             self._load_local()
 
-    def transcribe_with_speaker(self, audio_bytes: bytes, channels: int = 1) -> list[dict]:
+    def transcribe_with_speaker(self, audio_bytes: bytes, channels: int = 1, language: str | None = None) -> list[dict]:
         """
         Returns list of dicts: [{"speaker": "INTERVIEWER"|"CANDIDATE", "text": "..."}]
         When diarize=False or channels=1 without pyannote, returns single segment with speaker=None.
         """
         if not self.diarize:
-            text = self.transcribe(audio_bytes)
+            text = self.transcribe(audio_bytes, language=language)
             return [{"speaker": None, "text": text}] if text else []
 
         # STEREO MODE: split L/R channels
         if channels == 2:
-            return self._transcribe_stereo(audio_bytes)
+            return self._transcribe_stereo(audio_bytes, language=language)
 
         # MONO MODE: use pyannote if available
-        return self._transcribe_diarized_mono(audio_bytes)
+        return self._transcribe_diarized_mono(audio_bytes, language=language)
 
-    def _transcribe_stereo(self, audio_bytes: bytes) -> list[dict]:
+    def _transcribe_stereo(self, audio_bytes: bytes, language: str | None = None) -> list[dict]:
         """Split stereo PCM into L (interviewer) and R (candidate) channels."""
         import numpy as np
         if len(audio_bytes) % 4 != 0:
@@ -66,12 +66,12 @@ class Transcriber:
                 continue
             # Re-encode to bytes for transcription
             channel_bytes = (channel_audio * 32768).astype(np.int16).tobytes()
-            text = self.transcribe(channel_bytes)
+            text = self.transcribe(channel_bytes, language=language)
             if text:
                 results.append({"speaker": speaker, "text": text})
         return results
 
-    def _transcribe_diarized_mono(self, audio_bytes: bytes) -> list[dict]:
+    def _transcribe_diarized_mono(self, audio_bytes: bytes, language: str | None = None) -> list[dict]:
         """
         Mono fallback: try pyannote diarization, else return undiarized.
         Requires HF_TOKEN env var for pyannote model download.
@@ -87,10 +87,10 @@ class Transcriber:
             raise ImportError("pyannote mono diarization not yet implemented")
         except (ImportError, Exception):
             # Fallback: undiarized mono
-            text = self.transcribe(audio_bytes)
+            text = self.transcribe(audio_bytes, language=language)
             return [{"speaker": None, "text": text}] if text else []
 
-    def transcribe(self, audio_bytes: bytes) -> str:
+    def transcribe(self, audio_bytes: bytes, language: str | None = None) -> str:
         if not audio_bytes:
             return ""
 
@@ -102,9 +102,9 @@ class Transcriber:
             return ""
 
         if self.provider == "groq":
-            return self._transcribe_groq(audio_bytes, audio_np)
+            return self._transcribe_groq(audio_bytes, audio_np, language=language)
         else:
-            return self._transcribe_local(audio_np)
+            return self._transcribe_local(audio_np, language=language)
 
     # ------------------------------------------------------------------
     # Local (faster-whisper) backend
@@ -140,17 +140,23 @@ class Transcriber:
         elapsed = time.perf_counter() - start
         print(f"✅ STT model loaded in {elapsed:.2f}s on {self.device} ({cpu_threads} threads)", file=sys.stderr)
 
-    def _transcribe_local(self, audio_np: np.ndarray) -> str:
+    def _transcribe_local(self, audio_np: np.ndarray, language: str | None = None) -> str:
         if not self.model:
             raise RuntimeError("Model not loaded. Call load() first.")
 
+        lang = language if language else (config.LANGUAGE_OVERRIDE if config.LANGUAGE_OVERRIDE != "auto" else None)
+
         start = time.perf_counter()
-        segments, _ = self.model.transcribe(
-            audio_np,
-            beam_size=1,
-            language="en",
-            condition_on_previous_text=False
-        )
+
+        # pass language explicitly as None to trigger auto-detection if needed
+        transcribe_kwargs = {
+            "beam_size": 1,
+            "condition_on_previous_text": False
+        }
+        if lang:
+            transcribe_kwargs["language"] = lang
+
+        segments, _ = self.model.transcribe(audio_np, **transcribe_kwargs)
         text = " ".join(seg.text for seg in segments).strip()
         if not text:
             return ""
@@ -180,7 +186,7 @@ class Transcriber:
 
         print(f"✅ STT provider: Groq ({self._groq_model}) — no local model needed", file=sys.stderr)
 
-    def _transcribe_groq(self, audio_bytes: bytes, audio_np: np.ndarray) -> str:
+    def _transcribe_groq(self, audio_bytes: bytes, audio_np: np.ndarray, language: str | None = None) -> str:
         import httpx
 
         # Wrap raw PCM in a WAV container so Groq can decode it
@@ -193,13 +199,19 @@ class Transcriber:
         wav_bytes = wav_buf.getvalue()
 
         start = time.perf_counter()
+        lang = language if language else (config.LANGUAGE_OVERRIDE if config.LANGUAGE_OVERRIDE != "auto" else "en")
+
+        data_payload = {"model": self._groq_model, "response_format": "json"}
+        if lang:
+            data_payload["language"] = lang
+
         try:
             with httpx.Client(timeout=10) as client:
                 resp = client.post(
                     "https://api.groq.com/openai/v1/audio/transcriptions",
                     headers={"Authorization": f"Bearer {self._groq_api_key}"},
                     files={"file": ("audio.wav", wav_bytes, "audio/wav")},
-                    data={"model": self._groq_model, "language": "en", "response_format": "json"},
+                    data=data_payload,
                 )
                 if resp.status_code != 200:
                     print(f"[Groq STT] Error {resp.status_code}: {resp.text}", file=sys.stderr)

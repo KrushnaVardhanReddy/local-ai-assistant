@@ -175,6 +175,29 @@ async def set_language(body: LanguagePreference):
 async def get_language():
     return {"language": preferred_language}
 
+class InterviewLanguage(BaseModel):
+    language: str
+
+@app.post("/api/interview_language")
+async def set_interview_language(body: InterviewLanguage):
+    old_override = config.LANGUAGE_OVERRIDE
+    config.LANGUAGE_OVERRIDE = body.language
+
+    # Remove previous override string if present
+    override_str_format = " You must respond entirely in the {lang} language, except for code snippets."
+    if old_override != "auto":
+        old_str = override_str_format.format(lang=old_override)
+        config.SYSTEM_PROMPT = config.SYSTEM_PROMPT.replace(old_str, "")
+
+    if config.LANGUAGE_OVERRIDE != "auto":
+        config.SYSTEM_PROMPT += override_str_format.format(lang=config.LANGUAGE_OVERRIDE)
+
+    return {"status": "ok", "language": config.LANGUAGE_OVERRIDE}
+
+@app.get("/api/interview_language")
+async def get_interview_language():
+    return {"language": config.LANGUAGE_OVERRIDE}
+
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket):
     await websocket.accept()
