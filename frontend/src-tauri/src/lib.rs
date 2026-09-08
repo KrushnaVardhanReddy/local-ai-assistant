@@ -7,6 +7,24 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use std::io::Cursor;
 use image::{DynamicImage, RgbaImage};
 
+fn read_local_settings() -> serde_json::Value {
+    use std::fs;
+    // Look for settings.json next to the executable
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(dir) = exe_path.parent() {
+            let settings_path = dir.join("settings.json");
+            if settings_path.exists() {
+                if let Ok(content) = fs::read_to_string(&settings_path) {
+                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                        return json;
+                    }
+                }
+            }
+        }
+    }
+    serde_json::Value::Object(serde_json::Map::new())
+}
+
 static STEALTH_ENABLED: AtomicBool = AtomicBool::new(false);
 static IN_MEMORY_TOKEN: Mutex<Option<String>> = Mutex::new(None);
 static IN_MEMORY_MACHINE_ID: Mutex<Option<String>> = Mutex::new(None);
@@ -132,6 +150,16 @@ fn get_machine_id() -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn get_app_display_name() -> String {
+    let settings = read_local_settings();
+    settings
+        .get("APP_DISPLAY_NAME")
+        .and_then(|v| v.as_str())
+        .unwrap_or("AudioService")
+        .to_string()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -140,7 +168,15 @@ pub fn run() {
         .setup(|app| {
             hide_from_dock();
 
+            let settings = read_local_settings();
+            let app_name = settings
+                .get("APP_DISPLAY_NAME")
+                .and_then(|v| v.as_str())
+                .unwrap_or("AudioService")
+                .to_string();
+
             if let Some(win) = app.get_webview_window("main") {
+                let _ = win.set_title(&app_name);
                 // contentProtected: true in tauri.conf.json already applies protection
                 // declaratively before this point, but we set it explicitly here too
                 // as a belt-and-suspenders guarantee before the window is shown.
@@ -211,7 +247,8 @@ pub fn run() {
             save_token,
             load_token,
             delete_token,
-            get_machine_id
+            get_machine_id,
+            get_app_display_name
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
