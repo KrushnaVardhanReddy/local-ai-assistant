@@ -31,6 +31,7 @@ from rag.web_search import search_web
 from smart_filter import SilenceBuffer, passes_filter, passes_filter_for_speaker
 
 from session_manager import session as interview_session
+from history_store import append_session, load_history
 
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -1068,6 +1069,9 @@ async def end_session():
     else:
         scorecard = {"error": "LLM client not initialized"}
 
+    # Persist summary to local history file (best-effort, never raises)
+    append_session(scorecard, session_data)
+
     return JSONResponse({
         "session": session_data,
         "scorecard": scorecard,
@@ -1079,6 +1083,12 @@ async def clear_session():
     """Reset the session (start a new interview)."""
     interview_session.clear()
     return JSONResponse({"status": "cleared"})
+
+
+@app.get("/session/history")
+async def get_session_history():
+    """Return the last 50 session summaries, newest first."""
+    return JSONResponse(load_history())
 
 
 class EmailDraftRequest(BaseModel):
