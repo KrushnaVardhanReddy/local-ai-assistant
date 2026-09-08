@@ -522,9 +522,11 @@ async def ws_endpoint(websocket: WebSocket):
 
                     interview_session.start_turn(transcript)
                     is_streaming.set()
+                    full_response = ""
                     try:
                         print(f"[DEBUG] Calling LLM with {len(messages)} messages...", file=sys.stderr)
                         async for token in connection_llm_client.stream(messages):
+                            full_response += token
                             interview_session.append_response_token(token)
                             for out_q in list(active_outbound_queues):
                                 out_q.put_nowait({"type": "token", "text": token})
@@ -532,6 +534,34 @@ async def ws_endpoint(websocket: WebSocket):
                         print(f"[DEBUG] Finished calling LLM.", file=sys.stderr)
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "end"})
+
+                        # Live Answer Coaching (optional — COACHING_ENABLED=true)
+                        if config.COACHING_ENABLED and transcript:
+                            async def _send_coaching():
+                                coaching_prompt = (
+                                    f"The interview question/context was: {transcript}\n"
+                                    f"The AI suggested this answer: {full_response}\n\n"
+                                    "In ONE sentence max, give the candidate a coaching tip: "
+                                    "what was good, and what key point they should add next time. "
+                                    "Start with ✅ if mostly complete or ⚠️ if incomplete. "
+                                    "Be extremely concise — max 20 words."
+                                )
+                                coaching_msgs = [
+                                    {"role": "system", "content": "You are a brief interview coach. One sentence only."},
+                                    {"role": "user", "content": coaching_prompt},
+                                ]
+                                coaching_text = ""
+                                try:
+                                    # Assuming llm_client has stream method. Using connection_llm_client to match main call
+                                    async for token in connection_llm_client.stream(coaching_msgs):
+                                        coaching_text += token
+                                    if coaching_text.strip():
+                                        for out_q in list(active_outbound_queues):
+                                            out_q.put_nowait({"type": "coaching", "text": coaching_text.strip()})
+                                except Exception as ce:
+                                    print(f"Coaching stream error: {ce}", file=sys.stderr)
+
+                            asyncio.create_task(_send_coaching())
                     except Exception as e:
                         print(f"LLM Stream Error: {e}", file=sys.stderr)
                         for out_q in list(active_outbound_queues):
