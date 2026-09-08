@@ -19,7 +19,7 @@ from pydantic import BaseModel
 
 from config import config, PROVIDER_CONFIG
 from audio_listener import AudioListener, get_audio_devices
-from auth import get_user_id, AuthError
+from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan
 from keys import key_store
 from transcriber import Transcriber
 from llm_client import LLMClient
@@ -196,6 +196,11 @@ async def ws_endpoint(websocket: WebSocket):
                 await websocket.close(code=1008, reason=str(e))
                 return
 
+            user_plan = await get_user_plan(user_id)
+            payg_token = None
+            if user_plan == "payg":
+                payg_token = create_payg_session_token(user_id)
+
             # Determine LLM provider from stored keys
             providers_to_check = ["openai", "groq", "gemini", "anthropic"]
             found_key = None
@@ -287,8 +292,28 @@ async def ws_endpoint(websocket: WebSocket):
         except Exception as e:
             print(f"Error in async_receiver: {e}", file=sys.stderr)
 
+    async def session_validator():
+        try:
+            while True:
+                await asyncio.sleep(10)
+                if payg_token:
+                    try:
+                        verify_payg_session_token(payg_token)
+                    except AuthError as e:
+                        print(f"Session expired: {e}", file=sys.stderr)
+                        await outbound_queue.put({"type": "session_expired"})
+                        # wait briefly for message to flush
+                        await asyncio.sleep(0.5)
+                        await websocket.close(code=1008, reason="Session expired")
+                        return
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            print(f"Error in session_validator: {e}", file=sys.stderr)
+
     sender_task = asyncio.create_task(async_sender())
     receiver_task = asyncio.create_task(async_receiver())
+    validator_task = asyncio.create_task(session_validator())
 
     try:
         while True:
@@ -591,6 +616,7 @@ async def ws_endpoint(websocket: WebSocket):
     finally:
         sender_task.cancel()
         receiver_task.cancel()
+        validator_task.cancel()
         if ws_queue in active_ws_queues:
             active_ws_queues.remove(ws_queue)
         if outbound_queue in active_outbound_queues:
