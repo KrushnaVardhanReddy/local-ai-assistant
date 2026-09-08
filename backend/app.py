@@ -18,6 +18,7 @@ from fastapi import Request, HTTPException, Depends, Response
 from pydantic import BaseModel
 
 from config import config, PROVIDER_CONFIG
+import stripe_webhook
 from audio_listener import AudioListener, get_audio_devices
 from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan
 from keys import key_store
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
     await shutdown_event()
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(stripe_webhook.router)
 
 app.add_middleware(
     CORSMiddleware,

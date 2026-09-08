@@ -59,6 +59,7 @@ class Config:
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_KEY: str = ""
     ENCRYPTION_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
 
     CHROMA_DIR: str = ""
     UPLOAD_DIR: str = ""
@@ -112,6 +113,7 @@ class Config:
         self.SUPABASE_URL = os.environ.get("SUPABASE_URL", self.SUPABASE_URL)
         self.SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", self.SUPABASE_SERVICE_KEY)
         self.ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY", self.ENCRYPTION_KEY)
+        self.STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", self.STRIPE_WEBHOOK_SECRET)
 
         self.CHROMA_DIR = os.environ.get("CHROMA_DIR", "./data/chroma")
         self.UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "./data/uploads")
