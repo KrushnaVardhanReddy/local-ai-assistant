@@ -1,10 +1,23 @@
 <script lang="ts">
-  import { wsState, sendChat, sendChip, dismissChip, clearAllChips } from "$lib/ws.svelte";
+  import { wsState, sendChat, sendChip, dismissChip, clearAllChips, toggleMockMode } from "$lib/ws.svelte";
   import { onMount } from "svelte";
   import SessionReport from './SessionReport.svelte';
   import { authState } from "$lib/auth.svelte";
 
   let showSessionReport = $state(false);
+
+  function handleMockModeToggle() {
+    const isNowEnabled = !wsState.isMockMode;
+    toggleMockMode(isNowEnabled);
+    if (isNowEnabled) {
+      // Start microphone for hands-free mock interview
+      fetch('http://127.0.0.1:8765/ptt/start', { method: 'POST' }).catch(console.error);
+    } else {
+      showSessionReport = true;
+      // Stop microphone
+      fetch('http://127.0.0.1:8765/ptt/stop', { method: 'POST' }).catch(console.error);
+    }
+  }
   let liveEarsCollapsed = $state(false);
   let brainCollapsed = $state(false);
   let clickthrough = $state(false);
@@ -262,6 +275,14 @@
     <!-- Trailing Actions -->
     <div class="flex items-center gap-2">
       <button
+        id="mock-mode-btn"
+        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant transition-colors pointer-events-auto {wsState.isMockMode ? 'text-green-400 animate-pulse bg-green-400/10' : 'hover:text-primary'}"
+        onclick={handleMockModeToggle}
+        title={wsState.isMockMode ? "Stop Mock Interview" : "Start Mock Interview Practice"}
+      >
+        <span class="material-symbols-outlined text-[20px]">record_voice_over</span>
+      </button>
+      <button
         aria-label="Screenshot"
         title={wsState.plan === 'demo' || wsState.plan === 'payg' ? 'Vision features require a Monthly or Founding plan.' : 'Screenshot'}
         class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto {(wsState.plan === 'demo' || wsState.plan === 'payg') ? 'opacity-50 cursor-not-allowed text-on-surface-variant' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary ' + (wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : '')}"
@@ -354,6 +375,47 @@
 
   <!-- Main Content Grid -->
   <main class="flex-1 flex gap-container-padding w-full max-w-7xl mx-auto h-[calc(100vh-120px)] pb-6">
+    {#if wsState.isMockMode}
+    <section class="glass-panel pointer-events-auto rounded-[24px] flex flex-col justify-center items-center w-full shadow-2xl relative p-12 overflow-hidden border border-green-500/30">
+      <div class="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent pointer-events-none"></div>
+      <div class="flex items-center gap-3 mb-6 z-10">
+        <span class="material-symbols-outlined text-green-400 text-4xl animate-pulse">record_voice_over</span>
+        <h2 class="text-3xl font-headline-md text-green-400 tracking-wider">Mock Interview Mode</h2>
+      </div>
+
+      <div class="z-10 text-center max-w-3xl flex-1 flex flex-col justify-center w-full">
+        {#if wsState.isThinking && !wsState.response}
+          <div class="text-on-surface-variant/70 text-xl animate-pulse">
+            The interviewer is thinking...
+          </div>
+        {:else if wsState.response || wsState.isThinking}
+          <div class="text-2xl text-on-background/90 leading-relaxed font-medium mb-8">
+            {wsState.response}
+          </div>
+        {:else}
+          <div class="text-on-surface-variant/70 text-xl">
+            Listening to your answer...
+          </div>
+        {/if}
+
+        {#if wsState.transcript}
+          <div class="mt-8 p-6 rounded-2xl bg-white/5 border border-white/10 text-left">
+            <span class="block text-secondary/70 font-mono-data text-mono-data mb-2 text-sm uppercase tracking-widest">You said:</span>
+            <p class="text-lg text-on-surface-variant leading-relaxed">{wsState.transcript}</p>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Generating Indicator -->
+      {#if wsState.isThinking}
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/5 z-20">
+          <div class="h-full bg-green-400/40 w-1/3 rounded-r-full relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+          </div>
+        </div>
+      {/if}
+    </section>
+    {:else}
     <!-- Left Panel: Live Ears (Transcription) -->
     <aside
       class="live-ears-panel glass-panel pointer-events-auto rounded-[24px] flex flex-col overflow-hidden shadow-2xl
@@ -483,6 +545,7 @@
       >
         <span class="material-symbols-outlined text-[18px]">chevron_left</span>
       </button>
+    {/if}
     {/if}
   </main>
 
