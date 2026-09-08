@@ -237,8 +237,8 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P18-T1 | `frontend/src-tauri/tauri.conf.json` | Switch Windows bundle target to portable — no NSIS installer, no registry writes, no appwiz.cpl entry. Output: a ZIP of `AppName.exe` + `resources/`. User unzips and runs directly. | ⏳ | — |
-| P18-T2 | `frontend/src-tauri/Cargo.toml`, `tauri.conf.json` | Change default `productName` to a neutral name (e.g. `"AudioService"`). This controls the EXE filename, Task Manager process name, and window title. | ⏳ | — |
+| P18-T1 | `frontend/src-tauri/tauri.conf.json` | Switch Windows bundle target to portable — no NSIS installer, no registry writes, no appwiz.cpl entry. Output: a ZIP of `AppName.exe` + `resources/`. User unzips and runs directly. | ✅ | #41 |
+| P18-T2 | `frontend/src-tauri/Cargo.toml`, `tauri.conf.json` | Change default `productName` to a neutral name (e.g. `"AudioService"`). This controls the EXE filename, Task Manager process name, and window title. | ✅ | #41 |
 | P18-T3 | `frontend/src-tauri/tauri.conf.json`, `backend/config.py` | User-configurable process alias — read `APP_DISPLAY_NAME` from `.env.local` or a local `settings.json` at launch. Lets each user personalise their own process name without rebuilding. | ⬜ | — |
 | P18-T4 | `scripts/build.sh`, `Makefile` | Update build pipeline: `make build-portable` target — runs PyInstaller on backend → Tauri portable build → zips both into a single `parakeet-portable-win.zip` release artifact. | ✅ | #44 |
 
