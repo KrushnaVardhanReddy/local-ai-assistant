@@ -15,7 +15,9 @@
   // New settings state
   let showSettings = $state(false);
   let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
-  let customGeminiKey = $state(localStorage.getItem("custom_gemini_key") || "");
+  let selectedProvider = $state(localStorage.getItem("custom_provider") || "auto");
+  let customApiKey = $state(localStorage.getItem("custom_api_key") || "");
+  let openRouterModel = $state(localStorage.getItem("openrouter_model") || "anthropic/claude-3.5-sonnet:beta");
   let isDevModeChecked = $state(false);
   let preferredLanguage = $state(localStorage.getItem("preferred_language") || "");
   let interviewLanguage = $state(localStorage.getItem("interview_language") || "auto");
@@ -189,7 +191,9 @@
     localStorage.setItem("backend_url", backendUrl);
     localStorage.setItem("preferred_language", preferredLanguage);
     localStorage.setItem("interview_language", interviewLanguage);
-    localStorage.setItem("custom_gemini_key", customGeminiKey);
+    localStorage.setItem("custom_provider", selectedProvider);
+    localStorage.setItem("custom_api_key", customApiKey);
+    localStorage.setItem("openrouter_model", openRouterModel);
     reconnect(backendUrl);
     try {
       await invoke("toggle_stealth", { enable: !isDevModeChecked });
@@ -331,19 +335,46 @@
     </div>
 
     <div class="input-group">
-      <label for="customGeminiKey">Custom Gemini API Key (Lifetime Tier Only)</label>
-      <input
-        type="password"
-        id="customGeminiKey"
-        bind:value={customGeminiKey}
-        placeholder="AIzaSy..."
-        disabled={authState.plan !== 'lifetime'}
-      />
-      {#if authState.plan !== 'lifetime'}
-        <span class="text-xs text-red-400 mt-1">Requires Lifetime Subscription.</span>
-      {/if}
-      <span class="text-xs text-gray-500 mt-1">Key is stored locally and never saved to our database.</span>
+      <label for="selectedProvider">Custom LLM Provider (Lifetime Tier Only)</label>
+      <select id="selectedProvider" bind:value={selectedProvider} class="custom-select" disabled={authState.plan !== 'lifetime'}>
+        <option value="auto">Auto (Default)</option>
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="gemini">Gemini</option>
+        <option value="groq">Groq</option>
+        <option value="openrouter">OpenRouter</option>
+      </select>
     </div>
+
+    {#if selectedProvider !== 'auto'}
+      <div class="input-group">
+        <label for="customApiKey">Custom API Key</label>
+        <input
+          type="password"
+          id="customApiKey"
+          bind:value={customApiKey}
+          placeholder="sk-..."
+          disabled={authState.plan !== 'lifetime'}
+        />
+        <span class="text-xs text-gray-500 mt-1">Key is stored locally and never saved to our database.</span>
+      </div>
+    {/if}
+
+    {#if selectedProvider === 'openrouter'}
+      <div class="input-group">
+        <label for="openRouterModel">OpenRouter Model ID</label>
+        <input
+          type="text"
+          id="openRouterModel"
+          bind:value={openRouterModel}
+          placeholder="anthropic/claude-3.5-sonnet:beta"
+          disabled={authState.plan !== 'lifetime'}
+        />
+      </div>
+    {/if}
+    {#if authState.plan !== 'lifetime'}
+      <span class="text-xs text-red-400 mt-1">Custom models require a Lifetime Subscription.</span>
+    {/if}
 
     <div class="input-group">
       <label for="preferredLanguage">Code Language Preference</label>
