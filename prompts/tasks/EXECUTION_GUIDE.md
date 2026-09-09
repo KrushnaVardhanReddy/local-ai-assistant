@@ -32,6 +32,8 @@ Wait for ALL tasks in a batch to be merged before starting the next batch.
 python3 scripts/jules_submit.py --task P26-T1
 python3 scripts/jules_submit.py --task P26-T2
 python3 scripts/jules_submit.py --task P26-T3
+# After P26-T3 and P26-T4 merged:
+python3 scripts/jules_submit.py --task P26-T5
 ```
 
 ---
@@ -53,9 +55,12 @@ python3 scripts/jules_submit.py --task P27-T1
 python3 scripts/jules_submit.py --task P27-T2
 # After P27-T2 merged:
 python3 scripts/jules_submit.py --task P27-T3
+# After P27-T3 merged:
+python3 scripts/jules_submit.py --task P27-T4
 ```
 
 | 🟡 3rd | `phase_27_voice_mode/P27_T3_voice_mode_ui` | Glowing orb UI | `frontend/src/lib/Assistant.svelte` only |
+| 🟢 4th | `phase_27_voice_mode/P27_T4_e2e_tests` | E2E Tests | `frontend/e2e/`, `tests/e2e/` |
 
 ---
 
@@ -68,6 +73,7 @@ python3 scripts/jules_submit.py --task P27-T3
 | 🔴 2nd | `phase_28_agentic/P28_T2_os_tool_pack` | 6 built-in OS tools | `backend/tools/open_app.py`, `type_text.py`, `get_clipboard.py`, `set_clipboard.py`, `web_search.py`, `show_notification.py` (ALL NEW) |
 | 🔴 3rd | `phase_28_agentic/P28_T3_agentic_loop` | Agent loop + UI toggle | `backend/app.py`, `frontend/src/lib/Assistant.svelte` |
 | 🔴 4th | `phase_28_agentic/P28_T4_mcp_support` | MCP Client Integration | `backend/mcp/client.py` (NEW), `backend/tools/registry.py`, `backend/config.py`, `frontend/src/lib/Settings.svelte` |
+| 🟢 5th | `phase_28_agentic/P28_T5_e2e_tests` | E2E Tests | `tests/e2e/` |
 
 ⚠️ P28 tasks MUST be submitted in strict order (T1 → T2 → T3 → T4). Each depends on the previous.
 P28-T2 is fully safe to parallelize with any Phase 26 tasks (only creates new files).
@@ -81,6 +87,8 @@ python3 scripts/jules_submit.py --task P28-T2
 python3 scripts/jules_submit.py --task P28-T3
 # After P28-T3 merged:
 python3 scripts/jules_submit.py --task P28-T4
+# After P28-T4 merged:
+python3 scripts/jules_submit.py --task P28-T5
 ```
 
 ---
@@ -93,6 +101,7 @@ python3 scripts/jules_submit.py --task P28-T4
 | 🔴 1st | `phase_29_resume_builder/P29_T1_resume_gen_api` | Backend LLM Generation API | `backend/resume_builder.py` (NEW), `backend/app.py` |
 | 🔴 2nd | `phase_29_resume_builder/P29_T2_resume_editor_ui` | Frontend Resume Editor | `frontend/src/lib/ResumeBuilder.svelte` (NEW), `frontend/src/lib/Assistant.svelte` |
 | 🟡 3rd | `phase_29_resume_builder/P29_T3_pdf_export` | 5-10 CSS Templates & PDF Export | `frontend/src/lib/resume-styles.css` (NEW), `frontend/src/lib/ResumeBuilder.svelte` |
+| 🟢 4th | `phase_29_resume_builder/P29_T4_e2e_tests` | E2E Tests | `frontend/e2e/`, `tests/e2e/` |
 
 ⚠️ P29-T1 and P29-T2 can be submitted in parallel (backend vs frontend). Submit P29-T3 sequentially after P29-T2 merges.
 
@@ -101,5 +110,7 @@ python3 scripts/jules_submit.py --task P29-T1
 python3 scripts/jules_submit.py --task P29-T2
 # After P29-T2 merged:
 python3 scripts/jules_submit.py --task P29-T3
+# After P29-T3 merged:
+python3 scripts/jules_submit.py --task P29-T4
 ```
 

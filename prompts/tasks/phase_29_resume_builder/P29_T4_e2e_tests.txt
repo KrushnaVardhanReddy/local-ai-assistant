@@ -1,0 +1,17 @@
+TASK: P29-T4 — Resume Builder E2E Tests
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Write E2E tests to guarantee the stability of Phase 29 features.
+
+DELIVERABLES:
+1. `tests/e2e/test_resume_builder.py`: Pytest tests for the 
+   `POST /resume/tailor` endpoint.
+2. `frontend/e2e/resume_builder.spec.ts`: Playwright tests for the 
+   dual-pane editor, theme dropdown, and verifying the PDF export 
+   button triggers `window.print()`.
+3. Verify tests pass.
+
+Commit: "jules: P29-T4 add resume builder e2e tests"
+Target branch: main
