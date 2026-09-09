@@ -72,8 +72,8 @@
 |---|---|---|---|---|
 | P29-T1 | `backend/resume_builder.py`, `backend/app.py` | **Resume Generation API:** Endpoint that uses the LLM to output a perfectly tailored Markdown resume. | ✅ | — |
 | P29-T2 | `frontend/src/lib/ResumeBuilder.svelte` | **Resume Editor UI:** Dual-pane view with a Markdown editor on the left and a live preview on the right. | ✅ | — |
-| P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ⏳ | — |
-| P29-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Resume Builder. | ⬜ | — |
+| P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ✅ | — |
+| P29-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Resume Builder. | ⏳ | — |
 
 ---
 
@@ -96,8 +96,8 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P31-T1 | `backend/app.py`, `backend/config.py` | **Freemium Engine:** Lock LLM chat, summary, and CRM sync behind a subscription check. Force free users to strictly use local STT (`faster-whisper` or `parakeet`) and disable cloud LLM endpoints. | ⬜ | — |
-| P31-T2 | `backend/audio_listener.py` | **Multi-Engine Local STT:** Allow power users to select their local STT engine in settings. Support `faster-whisper` (universal/CPU/Mac) and Nvidia `parakeet` (for RTX GPU owners). | ⬜ | — |
+| P31-T1 | `backend/app.py`, `backend/config.py` | **Freemium Engine:** Lock LLM chat, summary, and CRM sync behind a subscription check. Force free users to strictly use local STT (`faster-whisper` or `parakeet`) and disable cloud LLM endpoints. | ⏳ | — |
+| P31-T2 | `backend/audio_listener.py` | **Multi-Engine Local STT:** Allow power users to select their local STT engine in settings. Support `faster-whisper` (universal/CPU/Mac) and Nvidia `parakeet` (for RTX GPU owners). | ⏳ | — |
 
 ---
 
