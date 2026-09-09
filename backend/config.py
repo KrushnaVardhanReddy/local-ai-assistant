@@ -81,6 +81,9 @@ class Config:
 
     LANGUAGE_OVERRIDE: str = "auto"
 
+    SMOLLM2_ENABLED: bool = False
+    SMOLLM2_MODEL_PATH: str = "./models/smollm2-135m-instruct-q4_k_m.gguf"
+
     AGENT_MODE_ENABLED: bool = False
     FORCE_PRO_MODE: bool = False
 
@@ -101,6 +104,9 @@ class Config:
         self.COACHING_ENABLED = os.environ.get("COACHING_ENABLED", "false").lower() == "true"
         self.AGENT_MODE_ENABLED = os.environ.get("AGENT_MODE_ENABLED", "false").lower() == "true"
         self.FORCE_PRO_MODE = os.environ.get("FORCE_PRO_MODE", "false").lower() == "true"
+
+        self.SMOLLM2_ENABLED = os.environ.get("SMOLLM2_ENABLED", "false").lower() == "true"
+        self.SMOLLM2_MODEL_PATH = os.environ.get("SMOLLM2_MODEL_PATH", self.SMOLLM2_MODEL_PATH)
 
         self.LLM_PROVIDER = os.environ.get("LLM_PROVIDER", self.LLM_PROVIDER)
         self.LLM_MODEL = os.environ.get("LLM_MODEL", self.LLM_MODEL)
