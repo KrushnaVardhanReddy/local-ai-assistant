@@ -3,7 +3,8 @@
     { name: 'OpenAI', icon: 'O', key: 'sk-...abcd' },
     { name: 'Groq', icon: 'G', key: 'gsk-...efgh' },
     { name: 'Gemini', icon: 'G', key: null },
-    { name: 'Anthropic', icon: 'A', key: null }
+    { name: 'Anthropic', icon: 'A', key: null },
+    { name: 'OpenRouter', icon: 'O', key: null }
   ]);
 
   async function testConnection(provider: string) {
