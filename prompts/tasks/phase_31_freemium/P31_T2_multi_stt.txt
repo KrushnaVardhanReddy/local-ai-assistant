@@ -1,0 +1,47 @@
+TASK: P31-T2 — Multi-Engine Local STT
+
+PARALLEL BATCH: 1 — Start of Phase 31.
+Files touched: backend/audio_listener.py, frontend/src/lib/Settings.svelte
+PREREQUISITE: None.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Allow users to select which local STT engine to use:
+- faster-whisper (universal, works on CPU and Mac)
+- parakeet (Nvidia NeMo Parakeet model, requires RTX GPU)
+
+The selected engine should be sent to the backend and stored in config.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Settings.svelte
+═══════════════════════════════════════════════════════════════
+1. Add a new dropdown in the settings modal for "Local STT Engine":
+   ```svelte
+   <div class="input-group">
+     <label for="localSttEngine">Local STT Engine</label>
+     <select id="localSttEngine" bind:value={localSttEngine} class="custom-select">
+       <option value="faster-whisper">Faster-Whisper (Universal)</option>
+       <option value="parakeet">Nvidia Parakeet (RTX GPUs only)</option>
+     </select>
+   </div>
+   ```
+2. Include `local_stt_engine` in the payload when saving settings to the backend.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/audio_listener.py
+═══════════════════════════════════════════════════════════════
+1. Update the `Transcriber` class (or whatever initializes the model) to check `config.LOCAL_STT_ENGINE`.
+2. If it is `parakeet`, load the Parakeet model (mock or real if NeMo is installed).
+3. Otherwise, default to `faster-whisper`.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src/lib/Settings.svelte (Add dropdown)
+- backend/audio_listener.py (Model selection logic)
+
+Commit: "jules: P31-T2 add multi-engine local STT support (faster-whisper vs parakeet)"
+Target branch: main
