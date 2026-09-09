@@ -1,0 +1,70 @@
+import os
+import sys
+from typing import Optional
+from config import config
+
+_instance: Optional["LocalIntelligence"] = None
+
+def get_local_intelligence() -> "LocalIntelligence":
+    global _instance
+    if _instance is None:
+        _instance = LocalIntelligence()
+    return _instance
+
+class LocalIntelligence:
+    def __init__(self):
+        self._llm = None
+        self._enabled = config.SMOLLM2_ENABLED
+        if self._enabled:
+            self._load_model()
+
+    def _load_model(self):
+        try:
+            from llama_cpp import Llama
+            model_path = config.SMOLLM2_MODEL_PATH
+            if not os.path.exists(model_path):
+                print(f"[SmolLM2] Model not found at {model_path}. Disabling.", file=sys.stderr)
+                self._enabled = False
+                return
+            self._llm = Llama(
+                model_path=model_path,
+                n_ctx=512,
+                n_threads=4,
+                embedding=True,
+                verbose=False,
+            )
+            print(f"[SmolLM2] Local intelligence loaded from {model_path}", file=sys.stderr)
+        except ImportError:
+            print("[SmolLM2] llama-cpp-python not installed. Disabling.", file=sys.stderr)
+            self._enabled = False
+        except Exception as e:
+            print(f"[SmolLM2] Failed to load model: {e}", file=sys.stderr)
+            self._enabled = False
+
+    def is_complete(self, text: str) -> bool:
+        """Returns True if the transcript is a complete thought. Falls back to True if disabled."""
+        if not self._enabled or self._llm is None:
+            return True
+        prompt = (
+            f"<|system|>You are a turn-detection classifier. Reply with exactly one word.<|end|>\n"
+            f"<|user|>Transcript: \"{text}\"\n"
+            f"Is this a complete thought? Reply COMPLETE or INCOMPLETE.<|end|>\n"
+            f"<|assistant|>"
+        )
+        try:
+            output = self._llm(prompt, max_tokens=5, temperature=0.0, stop=["\n", "<"])
+            answer = output["choices"][0]["text"].strip().upper()
+            return "COMPLETE" in answer
+        except Exception as e:
+            print(f"[SmolLM2] is_complete error: {e}", file=sys.stderr)
+            return True
+
+    def encode(self, text: str) -> list:
+        """Returns a semantic embedding vector. Returns empty list if disabled."""
+        if not self._enabled or self._llm is None:
+            return []
+        try:
+            return self._llm.embed(text)
+        except Exception as e:
+            print(f"[SmolLM2] encode error: {e}", file=sys.stderr)
+            return []
