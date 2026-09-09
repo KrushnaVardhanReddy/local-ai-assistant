@@ -31,7 +31,7 @@
 | P26-T1 | `backend/auth.py`, `backend/app.py`, `frontend/src/routes/login/+page.svelte` | **SSO Integration:** Integrate SAML/SSO via Supabase for enterprise login, auto-provisioning a Seat based on the email domain. | ✅ | — |
 | P26-T2 | `frontend/src/lib/AdminDashboard.svelte` | **Seat Management:** Simple admin panel for the Org Admin to view active seats, invite via email, and instantly revoke API access. | ✅ | — |
 | P26-T3 | `backend/rag/` | **Team Knowledge Base:** Expand RAG to allow uploading company-wide Playbooks/Docs to a shared vector database. | ✅ | — |
-| P26-T4 | `frontend/src/lib/SessionReport.svelte` | **Universal Export Menu:** Add an export dropdown menu containing "Copy to Clipboard", "Download as Markdown", and "Draft as Email" options in the Session Report panel. | ⬜ | — |
+| P26-T4 | `frontend/src/lib/SessionReport.svelte` | **Universal Export Menu:** Add an export dropdown menu containing "Copy to Clipboard", "Download as Markdown", and "Draft as Email" options in the Session Report panel. | ⏳ | — |
 | P26-T5 | `web/tests/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Enterprise B2B features. | ⬜ | — |
 
 ---
@@ -116,3 +116,17 @@
 | P32-T5 | `frontend/src/lib/Assistant.svelte` | **Cache UI Controls:** Add a "Cache" section in the settings panel showing cache stats (e.g. "47 answers cached — ~12,000 tokens saved"). Include a red "Clear Cache" button that calls the `DELETE /api/cache` endpoint with a confirmation dialog. | ⬜ | — |
 | P32-T6 | `tests/test_local_intelligence.py`, `tests/test_qa_cache.py` | **Unit Tests:** Tests for turn-detection accuracy (COMPLETE/INCOMPLETE), cache hit/miss logic, similarity threshold, and cache clearing via the API endpoint. | ⬜ | — |
 | P32-T7 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Cache UI (stats display, Clear Cache button, confirmation dialog). Pytest integration tests for `GET /api/cache/stats` and `DELETE /api/cache` endpoints. | ⬜ | — |
+
+---
+
+## Phase 33 — Native Mobile App (Capacitor) 📱
+
+> Wraps our existing Svelte web app into a native iOS and Android application using Ionic Capacitor.
+> Enables native mobile distribution (App Store / Play Store) with full access to device hardware.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P33-T1 | `capacitor.config.ts`, `package.json` | **Capacitor Scaffolding:** Install `@capacitor/core` and `@capacitor/cli`. Initialize the project and add iOS and Android targets. Configure SvelteKit adapter-static for native builds. | ⬜ | — |
+| P33-T2 | `frontend/src/lib/audio/` | **Native Microphone:** Replace the Web Audio API with `@capacitor-community/microphone` for seamless audio capture on mobile devices without browser permission prompts. | ⬜ | — |
+| P33-T3 | `frontend/src/lib/audio/` | **Background Audio Plugin:** Integrate a Capacitor background task plugin so the assistant can continue listening for the wake word even when the phone screen is locked. | ⬜ | — |
+| P33-T4 | `frontend/e2e/` | **Mobile E2E Tests:** Add mobile viewport emulation to Playwright tests to ensure the UI remains responsive and functional on smaller screens. | ⬜ | — |
