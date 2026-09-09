@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from config import config, PROVIDER_CONFIG
 import stripe_webhook
+import resume_builder
 from audio_listener import AudioListener, get_audio_devices
 from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan, check_and_register_device, acquire_session_lock, release_session_lock, increment_and_check_monthly_sessions
 from keys import key_store
@@ -942,6 +943,19 @@ async def analyze_vision(body: VisionModel, user_id: str | None = Depends(get_op
     # Start the processing as a background task so the POST endpoint returns immediately
     asyncio.create_task(process_vision())
     return {"status": "processing started"}
+
+
+class TailorResumeModel(BaseModel):
+    base_resume: str
+    job_description: str
+
+@app.post("/resume/tailor")
+async def tailor_resume(body: TailorResumeModel):
+    try:
+        markdown = await resume_builder.generate_tailored_resume(llm_client, body.base_resume, body.job_description)
+        return {"markdown": markdown}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class ResumeModel(BaseModel):
