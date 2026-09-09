@@ -8,6 +8,11 @@
 	let errorMsg = $state('');
 	let loading = $state(false);
 
+	let showSso = $state(false);
+	let ssoEmail = $state('');
+	let ssoLoading = $state(false);
+	let ssoError = $state('');
+
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		errorMsg = '';
@@ -46,6 +51,40 @@
 		} catch (error: any) {
 			errorMsg = error.message;
 			loading = false;
+		}
+	}
+
+	async function handleSsoSubmit(event: Event) {
+		event.preventDefault();
+		ssoError = '';
+		ssoLoading = true;
+
+		try {
+			if (!ssoEmail || !ssoEmail.includes('@')) {
+				throw new Error('Please enter a valid work email.');
+			}
+			const domain = ssoEmail.split('@')[1];
+
+			const res = await fetch('/api/enterprise/sso-init', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ domain })
+			});
+
+			const data = await res.json();
+			if (!res.ok) {
+				throw new Error(data.error || 'Failed to initialize SSO.');
+			}
+
+			if (data.url) {
+				window.location.href = data.url;
+			} else {
+				throw new Error('Invalid SSO response.');
+			}
+		} catch (error: any) {
+			ssoError = error.message;
+		} finally {
+			ssoLoading = false;
 		}
 	}
 </script>
@@ -107,6 +146,29 @@
 
 		{#if errorMsg}
 			<div class="error">{errorMsg}</div>
+		{/if}
+
+		<div class="divider">
+			<span>Enterprise</span>
+		</div>
+
+		{#if !showSso}
+			<button class="btn-google" onclick={() => showSso = true} disabled={loading}>
+				Sign in with SSO
+			</button>
+		{:else}
+			<form onsubmit={handleSsoSubmit} class="form sso-form">
+				<div class="form-group">
+					<label for="sso-email">Work email</label>
+					<input type="email" id="sso-email" bind:value={ssoEmail} placeholder="you@acme.com" required />
+				</div>
+				<button type="submit" class="btn-primary" disabled={ssoLoading}>
+					{ssoLoading ? 'Redirecting...' : 'Continue with SSO'}
+				</button>
+				{#if ssoError}
+					<div class="error">{ssoError}</div>
+				{/if}
+			</form>
 		{/if}
 	</div>
 </div>
@@ -278,5 +340,13 @@
 		border-radius: 4px;
 		font-size: 0.875rem;
 		text-align: center;
+	}
+
+	.sso-form {
+		margin-top: 1rem;
+		padding: 1rem;
+		background-color: #f9fafb;
+		border: 1px solid #e5e7eb;
+		border-radius: 4px;
 	}
 </style>
