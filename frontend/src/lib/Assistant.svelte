@@ -2,9 +2,11 @@
   import { wsState, sendChat, sendChip, dismissChip, clearAllChips, toggleMockMode } from "$lib/ws.svelte";
   import { onMount } from "svelte";
   import SessionReport from './SessionReport.svelte';
+  import ResumeBuilder from './ResumeBuilder.svelte';
   import { authState } from "$lib/auth.svelte";
 
   let showSessionReport = $state(false);
+  let currentView = $state<'interview' | 'resume'>('interview');
   let showHotkeys = $state(false);
   let starPrimed = $state(false);
   let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
@@ -385,6 +387,16 @@
       >
         <span class="material-symbols-outlined text-[20px]">analytics</span>
       </button>
+
+      <button
+        aria-label="Toggle Resume Builder"
+        title={currentView === 'interview' ? 'Switch to Resume Builder' : 'Switch to Live Interview'}
+        class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto {currentView === 'resume' ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
+        onclick={() => currentView = currentView === 'interview' ? 'resume' : 'interview'}
+      >
+        <span class="material-symbols-outlined text-[20px]">{currentView === 'resume' ? 'edit_document' : 'description'}</span>
+      </button>
+
       <button aria-label="Clear Context" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto" onclick={clearHistory}>
         <span class="material-symbols-outlined text-[20px]" data-icon="mop">mop</span>
       </button>
@@ -461,7 +473,10 @@
 
   <!-- Main Content Grid -->
   <main class="flex-1 flex gap-container-padding w-full max-w-7xl mx-auto h-[calc(100vh-120px)] pb-6">
-    {#if wsState.isMockMode}
+    {#if currentView === 'resume'}
+      <ResumeBuilder />
+    {:else}
+      {#if wsState.isMockMode}
     <section class="glass-panel pointer-events-auto rounded-[24px] flex flex-col justify-center items-center w-full shadow-2xl relative p-12 overflow-hidden border border-green-500/30">
       <div class="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent pointer-events-none"></div>
       <div class="flex items-center gap-3 mb-6 z-10">
@@ -645,6 +660,7 @@
       >
         <span class="material-symbols-outlined text-[18px]">chevron_left</span>
       </button>
+    {/if}
     {/if}
     {/if}
   </main>
