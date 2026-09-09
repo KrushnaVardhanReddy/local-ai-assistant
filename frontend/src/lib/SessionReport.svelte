@@ -5,6 +5,8 @@
   let error = $state<string | null>(null);
   let scorecard = $state<any>(null);
   let session = $state<any>(null);
+  let showExportMenu = $state(false);
+  let showCopiedToast = $state(false);
 
   let emailDraft = $state<string | null>(null);
   let isGeneratingEmail = $state(false);
@@ -78,22 +80,55 @@
     }
   }
 
-  function copyToClipboard() {
-    if (!scorecard) return;
+  function getReportMarkdown() {
+    if (!scorecard) return "";
     const lines = [
-      `Interview Scorecard — ${new Date().toLocaleDateString()}`,
-      `Overall Score: ${scorecard.overall_score}/10`,
+      `# Interview Scorecard — ${new Date().toLocaleDateString()}`,
       ``,
-      `Summary: ${scorecard.overall_summary}`,
+      `**Overall Score:** ${scorecard.overall_score}/10`,
       ``,
-      `Strengths: ${scorecard.strengths?.join(", ")}`,
-      `Gaps: ${scorecard.gaps?.join(", ")}`,
+      `**Summary:** ${scorecard.overall_summary}`,
       ``,
+      `**Strengths:** ${scorecard.strengths?.join(", ") || "None"}`,
+      `**Gaps:** ${scorecard.gaps?.join(", ") || "None"}`,
+      ``,
+      `## Turns Breakdown`,
       ...(scorecard.turns || []).map((t: any) =>
-        `Q${t.turn + 1}: ${t.verdict} (${t.score}/5)\n  Good: ${t.what_was_good}\n  Missing: ${t.what_was_missing || "—"}`
+        `### Q${t.turn + 1}: ${t.verdict} (${t.score}/5)\n- **Good:** ${t.what_was_good}\n- **Missing:** ${t.what_was_missing || "—"}`
       ),
     ];
-    navigator.clipboard.writeText(lines.join("\n"));
+    return lines.join("\n");
+  }
+
+  function copyToClipboard() {
+    const md = getReportMarkdown();
+    if (!md) return;
+    navigator.clipboard.writeText(md);
+    showCopiedToast = true;
+    setTimeout(() => showCopiedToast = false, 2000);
+    showExportMenu = false;
+  }
+
+  function downloadMarkdown() {
+    const md = getReportMarkdown();
+    if (!md) return;
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "session-report.md";
+    a.click();
+    URL.revokeObjectURL(url);
+    showExportMenu = false;
+  }
+
+  function draftEmail() {
+    const md = getReportMarkdown();
+    if (!md) return;
+    const subject = encodeURIComponent("Session Report");
+    const body = encodeURIComponent(md);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    showExportMenu = false;
   }
 
   async function generateEmailDraft() {
@@ -155,9 +190,34 @@
       </div>
       <div class="header-actions">
         {#if scorecard}
-          <button class="action-btn" onclick={copyToClipboard} title="Copy to clipboard">
-            <span class="material-symbols-outlined">content_copy</span>
-          </button>
+          <div class="relative">
+            <button class="action-btn flex items-center gap-2 px-3 py-1.5" onclick={() => showExportMenu = !showExportMenu} title="Export Report">
+              <span class="material-symbols-outlined text-[18px]">ios_share</span>
+              <span class="text-sm font-medium">Export</span>
+            </button>
+            {#if showExportMenu}
+              <div class="fixed inset-0 z-40" aria-label="Close export menu" role="button" tabindex="0" onclick={() => showExportMenu = false} onkeydown={(e) => e.key === 'Escape' && (showExportMenu = false)}></div>
+              <div class="absolute right-0 top-full mt-2 w-48 bg-[#1a1a2e]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 flex flex-col">
+                <button class="px-4 py-3 text-left text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2" onclick={copyToClipboard}>
+                  <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                  Copy to Clipboard
+                </button>
+                <button class="px-4 py-3 text-left text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2" onclick={downloadMarkdown}>
+                  <span class="material-symbols-outlined text-[16px]">download</span>
+                  Download as Markdown
+                </button>
+                <button class="px-4 py-3 text-left text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2" onclick={draftEmail}>
+                  <span class="material-symbols-outlined text-[16px]">mail</span>
+                  Draft as Email
+                </button>
+              </div>
+            {/if}
+            {#if showCopiedToast}
+              <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-green-500/20 border border-green-500/30 text-green-400 text-xs px-3 py-1.5 rounded-lg whitespace-nowrap z-50 shadow-lg">
+                Copied to clipboard!
+              </div>
+            {/if}
+          </div>
         {/if}
         <button class="action-btn close-btn" onclick={onClose} title="Close">
           <span class="material-symbols-outlined">close</span>
