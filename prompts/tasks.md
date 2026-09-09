@@ -87,3 +87,14 @@
 | P30-T2 | `slack-bot/` | **Slack Bot:** `/barnowl ask`, `/barnowl summarize`, and `@BarnOwl` mention support. Uses Slack Bolt SDK with Socket Mode (no public URL needed). Posts session summaries as rich Block Kit messages. | ⬜ | — |
 | P30-T3 | `zoom-app/` | **Zoom App (In-Meeting Sidebar):** Embeds BarnOwl as a Zoom Apps iframe panel. Uses the Zoom JS SDK to get meeting context and user identity. Minimal Express server to host the app for local testing. | ⬜ | — |
 | P30-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Chrome Extension sidebar, Pytest stubs for Slack bot and Zoom app. | ⬜ | — |
+
+---
+
+## Phase 31 — Freemium PLG Model 💸
+
+> Implementing the Product-Led Growth freemium model. Free users get unlimited local transcription (faster-whisper) at zero cloud cost. Paid users unlock Cloud LLMs for summaries, chat, and agentic tools.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P31-T1 | `backend/app.py`, `backend/config.py` | **Freemium Engine:** Lock LLM chat, summary, and CRM sync behind a subscription check. Force free users to strictly use local STT (`faster-whisper` or `parakeet`) and disable cloud LLM endpoints. | ⬜ | — |
+| P31-T2 | `backend/audio_listener.py` | **Multi-Engine Local STT:** Allow power users to select their local STT engine in settings. Support `faster-whisper` (universal/CPU/Mac) and Nvidia `parakeet` (for RTX GPU owners). | ⬜ | — |
