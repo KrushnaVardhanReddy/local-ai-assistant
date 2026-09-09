@@ -114,3 +114,26 @@ python3 scripts/jules_submit.py --task P29-T3
 python3 scripts/jules_submit.py --task P29-T4
 ```
 
+
+---
+
+### BATCH 10 — Phase 30 Platform Integrations (Parallel Safe)
+**Wait for Batch 9 to merge.**
+
+All three integration tasks create entirely new top-level directories (`chrome-extension/`, `slack-bot/`, `zoom-app/`) with zero overlap. They can all run in parallel.
+
+| Priority | File | Task | Touches |
+|---|---|---|---|
+| 🟢 1st | `phase_30_integrations/P30_T1_chrome_extension` | Google Meet Chrome Extension | `chrome-extension/` (ALL NEW) |
+| 🟢 1st | `phase_30_integrations/P30_T2_slack_bot` | Slack Bot | `slack-bot/` (ALL NEW) |
+| 🟢 1st | `phase_30_integrations/P30_T3_zoom_app` | Zoom App Sidebar | `zoom-app/` (ALL NEW) |
+| 🟡 2nd | `phase_30_integrations/P30_T4_e2e_tests` | E2E Tests | `tests/e2e/` |
+
+```bash
+# All three can be submitted simultaneously:
+python3 scripts/jules_submit.py --task P30-T1
+python3 scripts/jules_submit.py --task P30-T2
+python3 scripts/jules_submit.py --task P30-T3
+# After all three merged:
+python3 scripts/jules_submit.py --task P30-T4
+```

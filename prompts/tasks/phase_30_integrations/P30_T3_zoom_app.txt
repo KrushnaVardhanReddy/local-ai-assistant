@@ -1,0 +1,66 @@
+## Task: P30-T3 — Zoom App (In-Meeting Sidebar)
+
+**Project:** BarnOwl AI (Local AI Assistant)
+**Phase:** 30 — Platform Integrations
+**Task ID:** P30-T3
+
+---
+
+### Goal
+
+Build a Zoom App that appears as an in-meeting sidebar for Zoom video calls. The app embeds as an iframe inside Zoom's Apps panel and lets users ask BarnOwl questions contextual to their current meeting.
+
+---
+
+### Files to Create (ALL NEW — no conflicts)
+
+```
+zoom-app/
+  index.html           ← Main app UI (loaded as Zoom App iframe)
+  app.js               ← Zoom JS SDK integration + BarnOwl API calls
+  app.css              ← Sidebar styles (dark theme, BarnOwl branded)
+  server.js            ← Tiny Express server to serve the app (for Zoom OAuth)
+  package.json         ← express, @zoom/appssdk
+  .env.example         ← ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, PORT
+  README.md            ← Instructions for Zoom Marketplace app setup
+```
+
+---
+
+### Detailed Specification
+
+#### index.html
+- Single-page app loaded inside Zoom Apps iframe panel
+- Shows a greeting with the current user's Zoom display name (via Zoom JS SDK)
+- Text area to ask BarnOwl a question
+- Response display panel (renders markdown via marked.js CDN)
+- Settings: input for BarnOwl backend URL (saved to localStorage)
+- BarnOwl branding (purple accent, dark background)
+
+#### app.js
+- Import and init Zoom Apps SDK: `import zoomSdk from "@zoom/appssdk"`
+- On load: `await zoomSdk.config({ capabilities: ["getMeetingContext", "getUserContext"] })`
+- Get user display name: `const user = await zoomSdk.getUserContext()`
+- Get meeting UUID: `const meeting = await zoomSdk.getMeetingContext()`
+- On question submit: POST to BarnOwl /chat with { message, context: `Meeting ID: ${meeting.meetingID}` }
+- Display streaming response
+
+#### server.js
+- Minimal Express server (port from .env PORT, default 3001)
+- GET / → serves index.html
+- GET /health → returns { status: "ok" }
+- No OAuth needed for basic functionality (Zoom Apps can work in "local test" mode)
+
+---
+
+### What NOT to do
+- Do NOT modify any existing BarnOwl files
+- Do NOT implement full Zoom OAuth for now (README should note it's needed for Marketplace listing)
+
+---
+
+### Verification
+1. Run: npm install (in zoom-app/), should succeed
+2. Run: node -e "require('./zoom-app/server.js')" — should not error on import
+3. Confirm index.html loads @zoom/appssdk from CDN
+4. Confirm README explains the Zoom Marketplace submission steps

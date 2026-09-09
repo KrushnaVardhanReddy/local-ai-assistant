@@ -75,3 +75,15 @@
 | P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ⏳ | — |
 | P29-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Resume Builder. | ⬜ | — |
 
+---
+
+## Phase 30 — Platform Integrations 🔌
+
+> BarnOwl becomes the "layer on top" of every tool teams already use. Instead of competing with Zoom AI or Slack AI, BarnOwl embeds inside them — bringing your private, context-aware AI into the tools you're already in.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P30-T1 | `chrome-extension/` | **Google Meet Chrome Extension:** Injects a BarnOwl sidebar into Google Meet. Reads live captions via DOM MutationObserver and streams them to the local backend for real-time suggestions. Pure HTML/CSS/JS, load as unpacked extension. | ⬜ | — |
+| P30-T2 | `slack-bot/` | **Slack Bot:** `/barnowl ask`, `/barnowl summarize`, and `@BarnOwl` mention support. Uses Slack Bolt SDK with Socket Mode (no public URL needed). Posts session summaries as rich Block Kit messages. | ⬜ | — |
+| P30-T3 | `zoom-app/` | **Zoom App (In-Meeting Sidebar):** Embeds BarnOwl as a Zoom Apps iframe panel. Uses the Zoom JS SDK to get meeting context and user identity. Minimal Express server to host the app for local testing. | ⬜ | — |
+| P30-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Chrome Extension sidebar, Pytest stubs for Slack bot and Zoom app. | ⬜ | — |
