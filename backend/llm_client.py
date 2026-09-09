@@ -13,6 +13,13 @@ class LLMClient:
         self.api_key = api_key
         self.provider = provider
 
+        if self.provider.lower() == "openrouter":
+            from openai import AsyncOpenAI
+            self.base_url = "https://openrouter.ai/api/v1"
+            self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+        else:
+            self.client = None
+
     def _build_headers(self) -> dict:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
@@ -25,6 +32,22 @@ class LLMClient:
         msgs = messages.copy()
         if system_prompt:
             msgs.insert(0, {"role": "system", "content": system_prompt})
+
+        if self.provider.lower() == "openrouter" and getattr(self, "client", None):
+            try:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=msgs,
+                    stream=True,
+                )
+                async for chunk in response:
+                    content = chunk.choices[0].delta.content
+                    if content is not None:
+                        yield content
+                return
+            except Exception as e:
+                yield f"[Error: OpenRouter request failed: {str(e)}]"
+                return
 
         payload = {
             "model": self.model,
@@ -134,35 +157,48 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
         import httpx
 
         headers = self._build_headers()
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "stream": False,
-            "temperature": 0.3,
-            "max_tokens": 2000,
-        }
-
-        try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                resp = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    headers=headers,
-                    json=payload,
+        if self.provider.lower() == "openrouter" and getattr(self, "client", None):
+            try:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    stream=False,
+                    temperature=0.3,
+                    max_tokens=2000,
                 )
-                resp.raise_for_status()
-                content = resp.json()["choices"][0]["message"]["content"].strip()
-                if content.startswith("```"):
-                    content = content.split("```", 1)[1]
-                    if content.startswith("json\n"):
-                        content = content[5:]
-                    elif content.startswith("json"):
-                        content = content[4:]
+                content = response.choices[0].message.content.strip()
+            except Exception as e:
+                return {"error": f"Scorecard generation failed: {str(e)}"}
+        else:
+            payload = {
+                "model": self.model,
+                "messages": messages,
+                "stream": False,
+                "temperature": 0.3,
+                "max_tokens": 2000,
+            }
+            try:
+                async with httpx.AsyncClient(timeout=30) as client:
+                    resp = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                    )
+                    resp.raise_for_status()
+                    content = resp.json()["choices"][0]["message"]["content"].strip()
+            except Exception as e:
+                return {"error": f"Scorecard generation failed: {str(e)}"}
 
-                    if content.endswith("```"):
-                        content = content[:-3].strip()
-                return json.loads(content)
-        except Exception as e:
-            return {"error": f"Scorecard generation failed: {str(e)}"}
+        if content.startswith("```"):
+            content = content.split("```", 1)[1]
+            if content.startswith("json\n"):
+                content = content[5:]
+            elif content.startswith("json"):
+                content = content[4:]
+
+            if content.endswith("```"):
+                content = content[:-3].strip()
+        return json.loads(content)
 
     async def health_check(self) -> bool:
         try:

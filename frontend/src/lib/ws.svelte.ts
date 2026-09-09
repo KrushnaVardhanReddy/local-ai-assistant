@@ -99,9 +99,19 @@ export function connect(url?: string): void {
     targetUrl = targetUrl.replace(/\/?$/, '/ws');
   }
 
-  const customKey = localStorage.getItem("custom_gemini_key") || "";
-  if (customKey) {
-    targetUrl = `${targetUrl}?custom_key=${encodeURIComponent(customKey)}`;
+  const customProvider = localStorage.getItem("custom_provider") || "auto";
+  const customApiKey = localStorage.getItem("custom_api_key") || "";
+  const openRouterModel = localStorage.getItem("openrouter_model") || "anthropic/claude-3.5-sonnet:beta";
+
+  let params = new URLSearchParams();
+  if (customProvider !== "auto") {
+    params.append("custom_provider", customProvider);
+    if (customApiKey) params.append("custom_key", customApiKey);
+    if (customProvider === "openrouter" && openRouterModel) {
+      params.append("openrouter_model", openRouterModel);
+    }
+    const sep = targetUrl.includes('?') ? '&' : '?';
+    targetUrl = `${targetUrl}${sep}${params.toString()}`;
   }
 
   lastUrl = targetUrl;

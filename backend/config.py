@@ -9,7 +9,8 @@ PROVIDER_CONFIG = {
     "openai":   {"url": "https://api.openai.com/v1", "key_env": "OPENAI_API_KEY"},
     "groq":     {"url": "https://api.groq.com/openai/v1", "key_env": "GROQ_API_KEY"},
     "gemini":   {"url": "https://generativelanguage.googleapis.com/v1beta/openai/", "key_env": "GEMINI_API_KEY"},
-    "anthropic":{"url": "https://api.anthropic.com/v1", "key_env": "ANTHROPIC_API_KEY"}
+    "anthropic":{"url": "https://api.anthropic.com/v1", "key_env": "ANTHROPIC_API_KEY"},
+    "openrouter":{"url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY"}
 }
 
 def _load_env():

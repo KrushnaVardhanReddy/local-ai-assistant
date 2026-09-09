@@ -185,7 +185,7 @@ async def get_interview_language():
     return {"language": config.LANGUAGE_OVERRIDE}
 
 @app.websocket("/ws")
-async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
+async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provider: str = None, openrouter_model: str = None):
     await websocket.accept()
 
     connection_llm_client = llm_client
@@ -262,18 +262,31 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
             if user_plan == "payg":
                 payg_token = create_payg_session_token(user_id)
 
-            if user_plan == "lifetime" and custom_key:
+            if user_plan == "lifetime" and custom_provider and custom_provider != "auto":
                 websocket.custom_key = custom_key
+                websocket.custom_provider = custom_provider
+                websocket.openrouter_model = openrouter_model
             else:
                 websocket.custom_key = None
+                websocket.custom_provider = None
+                websocket.openrouter_model = None
 
-            connection_llm_client = await LLMClient.from_config(api_key_override=getattr(websocket, "custom_key", None))
+            if getattr(websocket, "custom_provider", None):
+                base_url = PROVIDER_CONFIG.get(websocket.custom_provider, {}).get("url", "")
+                connection_llm_client = LLMClient(
+                    base_url=base_url,
+                    model=getattr(websocket, "openrouter_model", config.LLM_MODEL) if websocket.custom_provider == "openrouter" else config.LLM_MODEL,
+                    api_key=getattr(websocket, "custom_key", ""),
+                    provider=websocket.custom_provider
+                )
+            else:
+                connection_llm_client = await LLMClient.from_config(api_key_override=getattr(websocket, "custom_key", None))
 
             # Immediately send plan to the connecting client
             await websocket.send_json({"type": "plan", "plan": user_plan})
 
             # Determine LLM provider from stored keys
-            providers_to_check = ["openai", "groq", "gemini", "anthropic"]
+            providers_to_check = ["openai", "groq", "gemini", "anthropic", "openrouter"]
             found_key = None
             found_provider = None
 
@@ -439,8 +452,9 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
                     transcript = chunk.get("text", "")
                     if config.LLM_PROVIDER.lower() == "gemini":
                         if getattr(websocket, "gemini_live", None) is None:
+                            g_key = getattr(websocket, "custom_key", None) if getattr(websocket, "custom_provider", None) == "gemini" else None
                             websocket.gemini_live = GeminiLiveClient(
-                                api_key=getattr(websocket, "custom_key", None) or config.GEMINI_API_KEY,
+                                api_key=g_key or config.GEMINI_API_KEY,
                                 model=config.GEMINI_LIVE_MODEL,
                                 system_prompt=config.SYSTEM_PROMPT,
                                 sample_rate=config.AUDIO_SAMPLE_RATE,
@@ -488,8 +502,9 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
 
                         if config.LLM_PROVIDER.lower() == "gemini":
                             if getattr(websocket, "gemini_live", None) is None:
+                                g_key = getattr(websocket, "custom_key", None) if getattr(websocket, "custom_provider", None) == "gemini" else None
                                 websocket.gemini_live = GeminiLiveClient(
-                                    api_key=getattr(websocket, "custom_key", None) or config.GEMINI_API_KEY,
+                                    api_key=g_key or config.GEMINI_API_KEY,
                                     model=config.GEMINI_LIVE_MODEL,
                                     system_prompt=config.SYSTEM_PROMPT,
                                     sample_rate=config.AUDIO_SAMPLE_RATE,
@@ -529,8 +544,9 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None):
                     if websocket.audio_buffer and (time.monotonic() - websocket.last_active_time) >= config.SILENCE_THRESHOLD_SECONDS:
                         if config.LLM_PROVIDER.lower() == "gemini":
                             if getattr(websocket, "gemini_live", None) is None:
+                                g_key = getattr(websocket, "custom_key", None) if getattr(websocket, "custom_provider", None) == "gemini" else None
                                 websocket.gemini_live = GeminiLiveClient(
-                                    api_key=getattr(websocket, "custom_key", None) or config.GEMINI_API_KEY,
+                                    api_key=g_key or config.GEMINI_API_KEY,
                                     model=config.GEMINI_LIVE_MODEL,
                                     system_prompt=config.SYSTEM_PROMPT,
                                     sample_rate=config.AUDIO_SAMPLE_RATE,
