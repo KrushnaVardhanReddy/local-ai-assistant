@@ -58,3 +58,16 @@
 | P28-T2 | `backend/tools/` | **OS Interaction Toolkit:** Build Python functions using `subprocess` and `pyautogui` to open applications, manage windows, type text, and retrieve OS status. | ⬜ | — |
 | P28-T3 | `backend/app.py` | **Agentic Event Loop:** Intercept tool-call responses from the LLM, execute the local Python function, and feed the result back to the LLM to continue the conversation. | ⬜ | — |
 | P28-T4 | `backend/mcp/` | **Model Context Protocol (MCP):** Add an MCP client to the Tool Registry to dynamically discover and use tools from external enterprise MCP servers (e.g., GitHub, DBs). | ⬜ | — |
+
+---
+
+## Phase 29 — Auto-Tailored Resume Builder 📄
+
+> Generates an ATS-optimized, tailored resume in Markdown using the user's base resume and target Job Description. Features a dual-pane editor and PDF export with 5-10 professional CSS templates.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P29-T1 | `backend/resume_builder.py`, `backend/app.py` | **Resume Generation API:** Endpoint that uses the LLM to output a perfectly tailored Markdown resume. | ⬜ | — |
+| P29-T2 | `frontend/src/lib/ResumeBuilder.svelte` | **Resume Editor UI:** Dual-pane view with a Markdown editor on the left and a live preview on the right. | ⬜ | — |
+| P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ⬜ | — |
+

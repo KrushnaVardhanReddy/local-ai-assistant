@@ -1,0 +1,28 @@
+TASK: P29-T1 — Backend Resume Generation API
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create a FastAPI endpoint that takes a user's base resume and the target
+Job Description, and uses the LLM to generate a perfectly tailored
+resume formatted in raw Markdown.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/resume_builder.py (CREATE NEW)
+   - Function: `generate_tailored_resume(base_resume, job_description)`
+   - Implementation: Construct a strict system prompt that forces the
+     LLM to output ONLY Markdown. It should optimize bullet points to
+     match the keywords in the Job Description without hallucinating
+     fake experience.
+
+2. FILE: backend/app.py (MODIFY)
+   - Route: `POST /resume/tailor`
+   - Request Body: `{"base_resume": "...", "job_description": "..."}`
+   - Response: `{"markdown": "..."}`
+   - Implementation: Calls `generate_tailored_resume` using `llm_client`.
+
+Commit: "jules: P29-T1 add resume generation API"
+Target branch: main
