@@ -21,7 +21,7 @@ function getHighlighter() {
 }
 
 const renderer = new marked.Renderer();
-renderer.code = async ({ text, lang }: { text: string; lang?: string | undefined }) => {
+(renderer as any).code = async ({ text, lang }: { text: string; lang?: string | undefined }) => {
   const highlighter = await getHighlighter();
   const validLang = highlighter.getLoadedLanguages().includes(lang ?? '')
     ? lang!
