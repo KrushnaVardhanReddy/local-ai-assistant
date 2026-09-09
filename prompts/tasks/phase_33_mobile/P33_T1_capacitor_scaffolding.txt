@@ -1,0 +1,22 @@
+TASK: P33-T1 — Capacitor Scaffolding
+
+PARALLEL BATCH: 1 — Start of Phase 33.
+Files touched: frontend/package.json, frontend/svelte.config.js, frontend/capacitor.config.ts
+PREREQUISITE: None
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Wrap the existing Svelte web app into a native iOS and Android application 
+using Ionic Capacitor. This lays the foundation for native deployment.
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+1. In `frontend/package.json`, add `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, and `@capacitor/android` as dependencies.
+2. Update `frontend/svelte.config.js` to use `@sveltejs/adapter-static` instead of the default adapter, with strict: false if necessary, because Capacitor requires a purely static HTML export.
+3. Create `frontend/capacitor.config.ts` with the appId "com.localai.assistant", appName "Local AI", and webDir set to your svelte build output directory (usually "build").
+4. Ensure `package.json` has scripts for `cap sync` and `cap build`.
+
+Commit: "jules: P33-T1 add capacitor scaffolding and static adapter"
+Target branch: main
