@@ -212,6 +212,70 @@ Return ONLY valid JSON with this exact structure (no markdown, no explanation):
         except Exception:
             return False
 
+    async def agentic_chat(self, messages: list[dict], tools: list[dict]) -> dict | str:
+        """
+        Send a chat completion request with tools.
+        Returns a dict containing `tool_calls` if the LLM invoked tools,
+        or a string response otherwise.
+        """
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+        }
+
+        # Anthropic tool calling has a different spec but the instructions
+        # say to support OpenAI schema universally via the LLMClient or base_tool,
+        # however let's use the standard open API payload for now.
+
+        if tools:
+            # We don't send tools for unsupported providers as fallback
+            unsupported = ["ollama", "lmstudio", "llamacpp", "gemini"]
+            if self.provider.lower() not in unsupported:
+                payload["tools"] = tools
+                payload["tool_choice"] = "auto"
+            else:
+                print(f"[Warning] Tool calling not natively supported for {self.provider}. Falling back to plain text.", file=sys.stderr)
+
+        try:
+            if self.provider.lower() == "openrouter" and getattr(self, "client", None):
+                response = await self.client.chat.completions.create(**payload)
+                message = response.choices[0].message
+                if hasattr(message, "tool_calls") and message.tool_calls:
+                    return {"tool_calls": [
+                        {
+                            "id": tc.id,
+                            "type": tc.type,
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments
+                            }
+                        } for tc in message.tool_calls
+                    ]}
+                return message.content or ""
+
+            import httpx
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=self._build_headers(),
+                    json=payload,
+                )
+                resp.raise_for_status()
+
+                resp_json = resp.json()
+                message = resp_json["choices"][0]["message"]
+
+                if "tool_calls" in message and message["tool_calls"]:
+                    return {"tool_calls": message["tool_calls"]}
+
+                return message.get("content", "")
+
+        except Exception as e:
+            print(f"[Error: agentic_chat failed: {str(e)}]", file=sys.stderr)
+            return f"[Error: agentic_chat failed: {str(e)}]"
+
+
     async def chat_vision(self, image_base64: str, prompt: str) -> AsyncGenerator[str, None]:
         if not image_base64.startswith("data:image/"):
             image_base64 = f"data:image/jpeg;base64,{image_base64}"

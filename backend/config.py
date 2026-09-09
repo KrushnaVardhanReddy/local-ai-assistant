@@ -81,6 +81,8 @@ class Config:
 
     LANGUAGE_OVERRIDE: str = "auto"
 
+    AGENT_MODE_ENABLED: bool = False
+
     def __post_init__(self):
         # Override fields with os.environ
         self.RAG_ENABLED = os.environ.get("RAG_ENABLED", "true").lower() == "true"
@@ -96,6 +98,7 @@ class Config:
         self.SMART_FILTER_ENABLED = os.environ.get("SMART_FILTER_ENABLED", "true").lower() == "true"
 
         self.COACHING_ENABLED = os.environ.get("COACHING_ENABLED", "false").lower() == "true"
+        self.AGENT_MODE_ENABLED = os.environ.get("AGENT_MODE_ENABLED", "false").lower() == "true"
 
         self.LLM_PROVIDER = os.environ.get("LLM_PROVIDER", self.LLM_PROVIDER)
         self.LLM_MODEL = os.environ.get("LLM_MODEL", self.LLM_MODEL)
