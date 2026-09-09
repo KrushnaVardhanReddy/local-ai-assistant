@@ -44,7 +44,24 @@
 			const { error } = await supabase.auth.signInWithOAuth({
 				provider: 'google',
 				options: {
-					redirectTo: `${window.location.origin}/auth/callback`
+					redirectTo: `${window.location.origin}/dashboard`
+				}
+			});
+			if (error) throw error;
+		} catch (error: any) {
+			errorMsg = error.message;
+			loading = false;
+		}
+	}
+
+	async function handleGithubOAuth() {
+		errorMsg = '';
+		loading = true;
+		try {
+			const { error } = await supabase.auth.signInWithOAuth({
+				provider: 'github',
+				options: {
+					redirectTo: `${window.location.origin}/dashboard`
 				}
 			});
 			if (error) throw error;
@@ -137,12 +154,17 @@
 		</form>
 
 		<div class="divider">
-			<span>OR</span>
+			<span>--- or ---</span>
 		</div>
 
-		<button onclick={handleGoogleOAuth} class="btn-google" disabled={loading}>
-			Continue with Google
-		</button>
+		<div class="social-buttons">
+			<button onclick={handleGoogleOAuth} class="btn-social" disabled={loading}>
+				Continue with Google
+			</button>
+			<button onclick={handleGithubOAuth} class="btn-social" disabled={loading}>
+				Continue with GitHub
+			</button>
+		</div>
 
 		{#if errorMsg}
 			<div class="error">{errorMsg}</div>
@@ -307,6 +329,42 @@
 		padding: 0 0.5rem;
 	}
 
+	.social-buttons {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.btn-social {
+		background: rgba(30, 41, 59, 0.8);
+		backdrop-filter: blur(8px);
+		color: white;
+		padding: 0.75rem;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 6px;
+		font-weight: 500;
+		font-size: 1rem;
+		cursor: pointer;
+		width: 100%;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 0.5rem;
+		transition: all 0.2s ease-in-out;
+	}
+
+	.btn-social:hover {
+		background: rgba(30, 41, 59, 1);
+		border-color: rgba(255, 255, 255, 0.2);
+	}
+
+	.btn-social:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	/* We retain btn-google for the SSO button temporarily, or we could change it to btn-secondary,
+	   but to avoid regressions we will just keep the styles for the SSO button */
 	.btn-google {
 		background-color: white;
 		color: #374151;
