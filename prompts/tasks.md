@@ -92,7 +92,7 @@
 | P7-T4 | `README.md` | Final pass — screenshots, install instructions | ✅ | #23 |
 | P7-T5 | `scripts/start_remote.sh`, `backend/app.py` | Remote Helper Mode — serve UI statically + Cloudflare tunnel | ✅ | #29 |
 | P7-T6 | `tests/`, `e2e/`, `playwright.config.ts` | E2E test suite — pytest API tests + Playwright frontend tests | ✅ | #30 |
-| P7-T7 | `src-tauri/src/main.rs`, `Assistant.svelte` | Advanced Stealth Hotkeys & UI — Add `Ctrl+Shift+1-6` to send pending transcript chips (P14). Adds an in-app glassmorphism "cheatsheet" modal via a toolbar button so users can reference the hotkeys safely (inherits stealth properties). | ⬜ | — |
+| P7-T7 | `src-tauri/src/main.rs`, `Assistant.svelte` | Advanced Stealth Hotkeys & UI — Add `Ctrl+Shift+1-6` to send pending transcript chips (P14). Adds an in-app glassmorphism "cheatsheet" modal via a toolbar button so users can reference the hotkeys safely (inherits stealth properties). | ✅ | #82 |
 
 ---
 
@@ -326,7 +326,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P24-T1 | `frontend/src/lib/Settings.svelte`, `backend/app.py` | **Bring Your Own Key:** Adds a UI toggle for lifetime users to supply their own Gemini API key, stored securely in `localStorage` and sent over WS. | ✅ | #75 |
-| P24-T2 | `frontend/src/lib/Settings.svelte`, `backend/llm_client.py` | **OpenRouter BYOK Support:** Adds OpenRouter as a supported BYOK provider. Allows the user to select the provider and input a specific model string (e.g. `anthropic/claude-3.5-sonnet`). | ⬜ | — |
+| P24-T2 | `frontend/src/lib/Settings.svelte`, `backend/llm_client.py` | **OpenRouter BYOK Support:** Adds OpenRouter as a supported BYOK provider. Allows the user to select the provider and input a specific model string (e.g. `anthropic/claude-3.5-sonnet`). | ✅ | #81 |
 
 ---
 
