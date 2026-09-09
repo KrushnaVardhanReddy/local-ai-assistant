@@ -1,0 +1,49 @@
+## Task: P26-T6 — Social Login (Google/GitHub)
+
+**Project:** BarnOwl AI
+**Phase:** 26 — Enterprise B2B Features & Release Prep
+**Task ID:** P26-T6
+
+---
+
+### Goal
+
+We already implemented SAML SSO for enterprise users, but general users still have to register manually. To remove friction for v1.0 release, we need to add "Continue with Google" and "Continue with GitHub" OAuth buttons to the login page using Supabase Auth.
+
+---
+
+### Files to Modify
+
+1. `web/src/routes/login/+page.svelte`
+
+---
+
+### Detailed Specification
+
+#### web/src/routes/login/+page.svelte
+- Add two new buttons below the existing email/password login form (or above it):
+  - "Continue with Google"
+  - "Continue with GitHub"
+- Use the standard Supabase JS client to trigger OAuth:
+  ```javascript
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google', // or 'github'
+    options: {
+      redirectTo: `${window.location.origin}/dashboard`
+    }
+  });
+  ```
+- Make the buttons match the BarnOwl aesthetic (dark mode, glassmorphism).
+- Add a subtle divider (e.g., `--- or ---`) between the social login buttons and the email login form.
+
+---
+
+### What NOT to do
+- Do NOT modify `backend/app.py` or any backend files. OAuth via Supabase happens entirely on the client side.
+- Do NOT change the existing SAML or email/password logic.
+
+---
+
+### Verification
+- Run `npm run check` in the `web` folder to ensure no TypeScript errors were introduced.
+- Ensure the Supabase client is correctly imported and utilized for the new buttons.
