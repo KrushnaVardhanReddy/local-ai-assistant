@@ -67,7 +67,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P29-T1 | `backend/resume_builder.py`, `backend/app.py` | **Resume Generation API:** Endpoint that uses the LLM to output a perfectly tailored Markdown resume. | ⬜ | — |
-| P29-T2 | `frontend/src/lib/ResumeBuilder.svelte` | **Resume Editor UI:** Dual-pane view with a Markdown editor on the left and a live preview on the right. | ⬜ | — |
+| P29-T1 | `backend/resume_builder.py`, `backend/app.py` | **Resume Generation API:** Endpoint that uses the LLM to output a perfectly tailored Markdown resume. | ⏳ | — |
+| P29-T2 | `frontend/src/lib/ResumeBuilder.svelte` | **Resume Editor UI:** Dual-pane view with a Markdown editor on the left and a live preview on the right. | ⏳ | — |
 | P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ⬜ | — |
 
