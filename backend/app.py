@@ -1007,6 +1007,53 @@ async def get_resume_context():
     return {"context": candidate_context}
 
 
+class ResumeTailorRequest(BaseModel):
+    base_resume: str
+    job_description: str
+
+@app.post("/api/resume/tailor")
+async def tailor_resume(body: ResumeTailorRequest) -> dict:
+    if not llm_client:
+        raise HTTPException(status_code=503, detail="LLM Client not initialized")
+
+    if not body.base_resume:
+        raise HTTPException(status_code=400, detail="Base resume not provided.")
+
+    system_prompt = (
+        "You are an expert resume writer. Given a candidate's background and a target job description, "
+        "write a tailored resume in Professional Markdown format.\n"
+        "Include sections like Summary, Skills, Experience, and Education.\n"
+        "Do not include any preamble or extra text outside the Markdown."
+    )
+
+    user_prompt = f"Candidate Background:\n{body.base_resume}\n\n"
+    if body.job_description:
+        user_prompt += f"Target Job Description:\n{body.job_description}\n\n"
+    user_prompt += "Generate the tailored resume now."
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    result = ""
+    try:
+        async for token in llm_client.stream(messages):
+            result += token
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
+
+    llm_response_text = result.strip()
+    if llm_response_text.startswith("```markdown"):
+        llm_response_text = llm_response_text[11:]
+    elif llm_response_text.startswith("```"):
+        llm_response_text = llm_response_text[3:]
+    if llm_response_text.endswith("```"):
+        llm_response_text = llm_response_text[:-3]
+
+    return {"resume": llm_response_text.strip()}
+
+
 class JobDescriptionModel(BaseModel):
     text: str
 
@@ -1014,6 +1061,10 @@ class JobDescriptionModel(BaseModel):
 async def update_job_description(body: JobDescriptionModel):
     config.JOB_DESCRIPTION = body.text
     return {"status": "success"}
+
+@app.get("/config/job-description")
+async def get_job_description():
+    return {"text": config.JOB_DESCRIPTION}
 
 class PromptModel(BaseModel):
     prompt: str
