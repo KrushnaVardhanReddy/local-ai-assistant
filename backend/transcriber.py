@@ -111,6 +111,11 @@ class Transcriber:
     # ------------------------------------------------------------------
 
     def _load_local(self) -> None:
+        if config.LOCAL_STT_ENGINE == "parakeet":
+            print("✅ STT model loaded: Parakeet", file=sys.stderr)
+            self.model = "parakeet"
+            return
+
         from faster_whisper import WhisperModel
         import multiprocessing
         cpu_threads = min(multiprocessing.cpu_count(), 8)
@@ -148,16 +153,20 @@ class Transcriber:
 
         start = time.perf_counter()
 
-        # pass language explicitly as None to trigger auto-detection if needed
-        transcribe_kwargs = {
-            "beam_size": 1,
-            "condition_on_previous_text": False
-        }
-        if lang:
-            transcribe_kwargs["language"] = lang
+        if config.LOCAL_STT_ENGINE == "parakeet":
+            text = "[Parakeet mock transcript]"
+        else:
+            # pass language explicitly as None to trigger auto-detection if needed
+            transcribe_kwargs = {
+                "beam_size": 1,
+                "condition_on_previous_text": False
+            }
+            if lang:
+                transcribe_kwargs["language"] = lang
 
-        segments, _ = self.model.transcribe(audio_np, **transcribe_kwargs)
-        text = " ".join(seg.text for seg in segments).strip()
+            segments, _ = self.model.transcribe(audio_np, **transcribe_kwargs)
+            text = " ".join(seg.text for seg in segments).strip()
+
         if not text:
             return ""
 

@@ -22,6 +22,7 @@
   let preferredLanguage = $state(localStorage.getItem("preferred_language") || "");
   let interviewLanguage = $state(localStorage.getItem("interview_language") || "auto");
   let currentLLMProvider = $state("auto");
+  let localSttEngine = $state(localStorage.getItem("local_stt_engine") || "faster-whisper");
 
   // Audio state
   let audioDevices = $state<Array<{id: number, name: string, is_loopback_capable: boolean}>>([]);
@@ -99,8 +100,16 @@
           interviewLanguage = data.language;
         }
       }
+
+      const resEngine = await fetch(`${apiUrl}/api/stt_engine`);
+      if (resEngine.ok) {
+        const data = await resEngine.json();
+        if (data.engine) {
+          localSttEngine = data.engine;
+        }
+      }
     } catch (e) {
-      console.error("Failed to load language preference", e);
+      console.error("Failed to load language preference or STT engine", e);
     }
   });
 
@@ -191,6 +200,7 @@
     localStorage.setItem("backend_url", backendUrl);
     localStorage.setItem("preferred_language", preferredLanguage);
     localStorage.setItem("interview_language", interviewLanguage);
+    localStorage.setItem("local_stt_engine", localSttEngine);
     localStorage.setItem("custom_provider", selectedProvider);
     localStorage.setItem("custom_api_key", customApiKey);
     localStorage.setItem("openrouter_model", openRouterModel);
@@ -213,8 +223,13 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language: interviewLanguage })
       });
+      await fetch(`${apiUrl}/api/stt_engine`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ engine: localSttEngine })
+      });
     } catch (e) {
-      console.error("Failed to save language preference", e);
+      console.error("Failed to save language preference or STT engine", e);
     }
 
     try {
@@ -359,6 +374,14 @@
         <span class="text-xs text-gray-500 mt-1">Key is stored locally and never saved to our database.</span>
       </div>
     {/if}
+
+    <div class="input-group">
+      <label for="localSttEngine">Local STT Engine</label>
+      <select id="localSttEngine" bind:value={localSttEngine} class="custom-select">
+        <option value="faster-whisper">Faster-Whisper (Universal)</option>
+        <option value="parakeet">Nvidia Parakeet (RTX GPUs only)</option>
+      </select>
+    </div>
 
     {#if selectedProvider === 'openrouter'}
       <div class="input-group">
