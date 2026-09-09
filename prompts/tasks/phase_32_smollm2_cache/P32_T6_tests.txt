@@ -1,0 +1,159 @@
+TASK: P32-T6 — Unit Tests for Local Intelligence and Q&A Cache
+
+PARALLEL BATCH: 4 — After P32-T3 is merged. Safe alongside P32-T5.
+Files touched: tests/test_local_intelligence.py (NEW), tests/test_qa_cache.py (NEW)
+PREREQUISITE: P32-T1 (local_intelligence.py) and P32-T3 (qa_cache.py) must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Write Pytest unit tests for:
+  1. LocalIntelligence: is_complete() classifies text correctly + safe fallback
+  2. QACache: lookup/store/clear/stats work correctly with a temporary ChromaDB dir
+
+All tests must run without SmolLM2 being actually installed (use mocks).
+
+═══════════════════════════════════════════════════════════════
+CHANGES: tests/test_local_intelligence.py (NEW FILE)
+═══════════════════════════════════════════════════════════════
+
+```python
+import pytest
+from unittest.mock import patch, MagicMock
+
+class TestLocalIntelligence:
+
+    def test_is_complete_returns_true_when_disabled(self):
+        """When SMOLLM2_ENABLED=false, is_complete always returns True."""
+        with patch("local_intelligence.config") as mock_cfg:
+            mock_cfg.SMOLLM2_ENABLED = False
+            from local_intelligence import LocalIntelligence
+            li = LocalIntelligence()
+            assert li.is_complete("Can you tell me") is True
+
+    def test_is_complete_returns_true_for_complete_sentence(self):
+        """SmolLM2 returning COMPLETE should pass the text through."""
+        mock_llm = MagicMock()
+        mock_llm.return_value = {"choices": [{"text": "COMPLETE"}]}
+        with patch("local_intelligence.config") as mock_cfg, \
+             patch("local_intelligence.Llama", return_value=mock_llm):
+            mock_cfg.SMOLLM2_ENABLED = True
+            mock_cfg.SMOLLM2_MODEL_PATH = "/fake/model.gguf"
+            from local_intelligence import LocalIntelligence
+            li = LocalIntelligence.__new__(LocalIntelligence)
+            li._enabled = True
+            li._llm = mock_llm
+            assert li.is_complete("What is a closure in JavaScript?") is True
+
+    def test_is_complete_returns_false_for_incomplete_sentence(self):
+        """SmolLM2 returning INCOMPLETE should block the text."""
+        mock_llm = MagicMock()
+        mock_llm.return_value = {"choices": [{"text": "INCOMPLETE"}]}
+        from local_intelligence import LocalIntelligence
+        li = LocalIntelligence.__new__(LocalIntelligence)
+        li._enabled = True
+        li._llm = mock_llm
+        assert li.is_complete("Can you explain how to...") is False
+
+    def test_encode_returns_empty_when_disabled(self):
+        """When SMOLLM2_ENABLED=false, encode returns empty list."""
+        from local_intelligence import LocalIntelligence
+        li = LocalIntelligence.__new__(LocalIntelligence)
+        li._enabled = False
+        li._llm = None
+        assert li.encode("some text") == []
+
+    def test_is_complete_falls_back_on_exception(self):
+        """If SmolLM2 raises an exception, is_complete returns True (safe fallback)."""
+        mock_llm = MagicMock()
+        mock_llm.side_effect = RuntimeError("model crashed")
+        from local_intelligence import LocalIntelligence
+        li = LocalIntelligence.__new__(LocalIntelligence)
+        li._enabled = True
+        li._llm = mock_llm
+        assert li.is_complete("test") is True
+```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: tests/test_qa_cache.py (NEW FILE)
+═══════════════════════════════════════════════════════════════
+
+```python
+import pytest
+import tempfile
+from unittest.mock import patch, MagicMock
+
+@pytest.fixture
+def temp_chroma(tmp_path):
+    """Provides a temporary ChromaDB directory for isolated tests."""
+    return str(tmp_path / "chroma_test")
+
+class TestQACache:
+
+    def test_lookup_returns_none_when_smollm2_disabled(self, temp_chroma):
+        """Cache lookup returns None when SmolLM2 is disabled (no embeddings)."""
+        mock_li = MagicMock()
+        mock_li.encode.return_value = []  # disabled state
+        with patch("qa_cache.get_local_intelligence", return_value=mock_li), \
+             patch("qa_cache.config") as mock_cfg:
+            mock_cfg.CHROMA_DIR = temp_chroma
+            import qa_cache
+            result = qa_cache.lookup("What is a closure?")
+            assert result is None
+
+    def test_store_and_lookup_returns_cached_answer(self, temp_chroma):
+        """Storing a Q&A pair and then looking up a similar question returns the answer."""
+        fake_vector = [0.1] * 384
+        mock_li = MagicMock()
+        mock_li.encode.return_value = fake_vector
+        with patch("qa_cache.get_local_intelligence", return_value=mock_li), \
+             patch("qa_cache.config") as mock_cfg:
+            mock_cfg.CHROMA_DIR = temp_chroma
+            import importlib, qa_cache
+            importlib.reload(qa_cache)  # fresh collection
+            qa_cache.store("What is a closure?", "A closure is a function with access to its outer scope.")
+            result = qa_cache.lookup("What is a closure?")
+            assert result == "A closure is a function with access to its outer scope."
+
+    def test_clear_empties_collection(self, temp_chroma):
+        """clear() removes all entries and stats() returns 0 after clearing."""
+        fake_vector = [0.2] * 384
+        mock_li = MagicMock()
+        mock_li.encode.return_value = fake_vector
+        with patch("qa_cache.get_local_intelligence", return_value=mock_li), \
+             patch("qa_cache.config") as mock_cfg:
+            mock_cfg.CHROMA_DIR = temp_chroma
+            import importlib, qa_cache
+            importlib.reload(qa_cache)
+            qa_cache.store("Q1", "A1")
+            qa_cache.store("Q2", "A2")
+            count = qa_cache.clear()
+            assert count == 2
+            assert qa_cache.stats()["cached_pairs"] == 0
+
+    def test_stats_reports_correct_count(self, temp_chroma):
+        """stats() returns accurate cached_pairs count."""
+        fake_vector = [0.3] * 384
+        mock_li = MagicMock()
+        mock_li.encode.return_value = fake_vector
+        with patch("qa_cache.get_local_intelligence", return_value=mock_li), \
+             patch("qa_cache.config") as mock_cfg:
+            mock_cfg.CHROMA_DIR = temp_chroma
+            import importlib, qa_cache
+            importlib.reload(qa_cache)
+            qa_cache.store("Question 1", "Answer 1")
+            stats = qa_cache.stats()
+            assert stats["cached_pairs"] == 1
+            assert stats["estimated_tokens_saved"] > 0
+```
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- tests/test_local_intelligence.py  (LocalIntelligence unit tests)
+- tests/test_qa_cache.py            (QACache unit tests with tmp ChromaDB)
+
+Commit: "jules: P32-T6 add unit tests for local intelligence and Q&A cache"
+Target branch: main

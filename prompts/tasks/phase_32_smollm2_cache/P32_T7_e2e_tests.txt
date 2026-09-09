@@ -1,0 +1,132 @@
+TASK: P32-T7 — E2E Tests for Cache UI and API Endpoints
+
+PARALLEL BATCH: 5 — After P32-T4 and P32-T5 are merged.
+Files touched: frontend/e2e/test_cache_ui.spec.ts (NEW), tests/e2e/test_cache_api.py (NEW)
+PREREQUISITE: P32-T4 (cache API) and P32-T5 (cache UI) must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Write end-to-end tests covering:
+  1. Playwright: Cache UI in the settings panel (stats display, Clear Cache button,
+     confirmation dialog behaviour)
+  2. Pytest: HTTP integration tests for GET /api/cache/stats and DELETE /api/cache
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/e2e/test_cache_ui.spec.ts (NEW FILE)
+═══════════════════════════════════════════════════════════════
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+test.describe("Cache UI Panel", () => {
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("http://localhost:1420");
+    // Open settings panel ("The Brain")
+    await page.getByRole("button", { name: /brain|settings/i }).click();
+    await page.waitForSelector("text=Local Q&A Cache");
+  });
+
+  test("displays cache stats section", async ({ page }) => {
+    const section = page.locator("text=Local Q&A Cache");
+    await expect(section).toBeVisible();
+  });
+
+  test("Clear Cache button is disabled when cache is empty", async ({ page }) => {
+    // When cache has 0 entries, the button should be disabled
+    const clearBtn = page.getByRole("button", { name: /clear cache/i });
+    await expect(clearBtn).toBeDisabled();
+  });
+
+  test("Clear Cache button shows confirmation dialog", async ({ page }) => {
+    // Artificially set cached_pairs > 0 by mocking the API
+    await page.route("**/api/cache/stats", route =>
+      route.fulfill({ json: { cached_pairs: 5, estimated_tokens_saved: 1280 } })
+    );
+    await page.reload();
+    await page.getByRole("button", { name: /brain|settings/i }).click();
+    const clearBtn = page.getByRole("button", { name: /clear cache/i });
+    await expect(clearBtn).toBeEnabled();
+
+    // Listen for the confirmation dialog
+    page.once("dialog", dialog => {
+      expect(dialog.message()).toContain("Are you sure");
+      dialog.dismiss(); // Cancel — should NOT clear
+    });
+    await clearBtn.click();
+  });
+
+  test("Clear Cache confirmed calls DELETE /api/cache and refreshes stats", async ({ page }) => {
+    let deleteCalled = false;
+    await page.route("**/api/cache/stats", route =>
+      route.fulfill({ json: { cached_pairs: deleteCalled ? 0 : 5, estimated_tokens_saved: 1280 } })
+    );
+    await page.route("**/api/cache", route => {
+      if (route.request().method() === "DELETE") {
+        deleteCalled = true;
+        route.fulfill({ json: { deleted: 5, message: "Cleared 5 cached Q&A pairs." } });
+      }
+    });
+    await page.reload();
+    await page.getByRole("button", { name: /brain|settings/i }).click();
+
+    page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: /clear cache/i }).click();
+
+    await expect(page.locator("text=0 answers cached")).toBeVisible({ timeout: 3000 });
+    expect(deleteCalled).toBe(true);
+  });
+
+});
+```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: tests/e2e/test_cache_api.py (NEW FILE)
+═══════════════════════════════════════════════════════════════
+
+```python
+import pytest
+import httpx
+
+BASE_URL = "http://127.0.0.1:8765"
+
+class TestCacheAPI:
+
+    def test_stats_returns_200(self):
+        """GET /api/cache/stats should return 200 with correct shape."""
+        resp = httpx.get(f"{BASE_URL}/api/cache/stats", timeout=5)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "cached_pairs" in data
+        assert "estimated_tokens_saved" in data
+        assert isinstance(data["cached_pairs"], int)
+        assert isinstance(data["estimated_tokens_saved"], int)
+
+    def test_clear_cache_returns_200(self):
+        """DELETE /api/cache should return 200 with deleted count."""
+        resp = httpx.delete(f"{BASE_URL}/api/cache", timeout=5)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "deleted" in data
+        assert "message" in data
+        assert isinstance(data["deleted"], int)
+
+    def test_stats_after_clear_is_zero(self):
+        """After DELETE /api/cache, GET /api/cache/stats should show 0 pairs."""
+        httpx.delete(f"{BASE_URL}/api/cache", timeout=5)
+        resp = httpx.get(f"{BASE_URL}/api/cache/stats", timeout=5)
+        data = resp.json()
+        assert data["cached_pairs"] == 0
+```
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- frontend/e2e/test_cache_ui.spec.ts   (Playwright UI tests for cache section)
+- tests/e2e/test_cache_api.py          (Pytest HTTP integration tests for cache endpoints)
+
+Commit: "jules: P32-T7 add E2E tests for cache UI and cache API endpoints"
+Target branch: main

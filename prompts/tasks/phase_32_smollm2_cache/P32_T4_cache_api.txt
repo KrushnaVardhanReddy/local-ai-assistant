@@ -1,0 +1,75 @@
+TASK: P32-T4 — Cache Management API Endpoints
+
+PARALLEL BATCH: 3 — After P32-T3 is merged.
+Files touched: backend/app.py
+PREREQUISITE: P32-T3 (qa_cache.py with clear() and stats() methods) must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Expose two new REST API endpoints so the frontend (and power users) can
+inspect and manage the local Q&A cache without restarting the backend:
+
+  GET  /api/cache/stats   → return total cached pairs + estimated tokens saved
+  DELETE /api/cache        → wipe all cache entries, return count deleted
+
+Both endpoints require no authentication (cache is local-only and user-owned).
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py
+═══════════════════════════════════════════════════════════════
+
+1. Import qa_cache at the top of app.py (alongside other imports):
+
+   import qa_cache
+
+2. Add GET /api/cache/stats endpoint:
+
+   ```python
+   @app.get("/api/cache/stats")
+   async def get_cache_stats():
+       """Returns Q&A cache statistics: total pairs and estimated tokens saved."""
+       return qa_cache.stats()
+   ```
+
+   Expected response shape:
+   {
+     "cached_pairs": 47,
+     "estimated_tokens_saved": 12032
+   }
+
+3. Add DELETE /api/cache endpoint:
+
+   ```python
+   @app.delete("/api/cache")
+   async def clear_cache():
+       """Deletes all entries from the Q&A cache. Returns count of deleted pairs."""
+       count = qa_cache.clear()
+       return {"deleted": count, "message": f"Cleared {count} cached Q&A pairs."}
+   ```
+
+   Expected response shape:
+   {
+     "deleted": 47,
+     "message": "Cleared 47 cached Q&A pairs."
+   }
+
+═══════════════════════════════════════════════════════════════
+BEHAVIOUR NOTES
+═══════════════════════════════════════════════════════════════
+
+- If SMOLLM2_ENABLED=false, both endpoints still function safely:
+  stats() returns {"cached_pairs": 0, "estimated_tokens_saved": 0}
+  clear() returns {"deleted": 0, "message": "Cleared 0 cached Q&A pairs."}
+- These endpoints are non-destructive to any other RAG or ChromaDB collection.
+  qa_cache uses a separate ChromaDB collection named "qa_cache".
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/app.py  (add GET /api/cache/stats and DELETE /api/cache endpoints)
+
+Commit: "jules: P32-T4 add cache management API endpoints (stats + clear)"
+Target branch: main

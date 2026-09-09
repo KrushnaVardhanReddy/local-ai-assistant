@@ -1,0 +1,135 @@
+TASK: P32-T5 — Cache UI Controls in Settings Panel
+
+PARALLEL BATCH: 4 — After P32-T4 is merged.
+Files touched: frontend/src/lib/Assistant.svelte (or Settings.svelte if settings panel is separate)
+PREREQUISITE: P32-T4 (cache API endpoints) must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a "Local Cache" section inside the existing settings panel ("The Brain") that:
+  - Fetches and displays live cache statistics on open (pairs cached, tokens saved)
+  - Shows a red "Clear Cache" button that calls DELETE /api/cache
+  - Displays a confirmation dialog before wiping to prevent accidental data loss
+  - Updates the stats display immediately after clearing
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/Assistant.svelte (Settings panel section)
+═══════════════════════════════════════════════════════════════
+
+1. Add a reactive state variable for cache stats near the top of the <script>:
+
+   ```typescript
+   let cacheStats = $state<{ cached_pairs: number; estimated_tokens_saved: number } | null>(null);
+   let clearingCache = $state(false);
+   ```
+
+2. Add a function to fetch cache stats:
+
+   ```typescript
+   async function fetchCacheStats() {
+     try {
+       const res = await fetch(`${apiUrl}/api/cache/stats`);
+       cacheStats = await res.json();
+     } catch {
+       cacheStats = null;
+     }
+   }
+   ```
+
+   Call fetchCacheStats() when the settings panel opens (alongside other data fetches).
+
+3. Add a function to clear the cache:
+
+   ```typescript
+   async function clearCache() {
+     const confirmed = window.confirm(
+       `Are you sure you want to clear all ${cacheStats?.cached_pairs ?? 0} cached Q&A pairs? This cannot be undone.`
+     );
+     if (!confirmed) return;
+     clearingCache = true;
+     try {
+       await fetch(`${apiUrl}/api/cache`, { method: "DELETE" });
+       await fetchCacheStats();  // refresh stats after clear
+     } finally {
+       clearingCache = false;
+     }
+   }
+   ```
+
+4. Add the UI section inside the settings panel HTML, below the existing sections:
+
+   ```svelte
+   <!-- Local Cache Section -->
+   <div class="settings-section">
+     <h3 class="settings-section-title">
+       <span class="material-symbols-outlined">database</span>
+       Local Q&A Cache
+     </h3>
+     {#if cacheStats}
+       <div class="cache-stats-row">
+         <span class="cache-stat">
+           <strong>{cacheStats.cached_pairs}</strong> answers cached
+         </span>
+         <span class="cache-stat muted">
+           ~{cacheStats.estimated_tokens_saved.toLocaleString()} tokens saved
+         </span>
+       </div>
+     {:else}
+       <p class="muted-text">Cache unavailable (SmolLM2 not enabled)</p>
+     {/if}
+     <button
+       class="btn-danger"
+       onclick={clearCache}
+       disabled={clearingCache || !cacheStats || cacheStats.cached_pairs === 0}
+     >
+       {clearingCache ? "Clearing..." : "Clear Cache"}
+     </button>
+   </div>
+   ```
+
+5. Add CSS in the <style> block:
+
+   ```css
+   .cache-stats-row {
+     display: flex;
+     gap: 16px;
+     align-items: center;
+     margin-bottom: 10px;
+   }
+   .cache-stat {
+     font-size: 13px;
+     color: rgba(255,255,255,0.75);
+   }
+   .cache-stat strong {
+     color: #fff;
+     font-size: 16px;
+   }
+   .btn-danger {
+     background: rgba(239, 68, 68, 0.15);
+     border: 1px solid rgba(239, 68, 68, 0.4);
+     color: #f87171;
+     padding: 8px 16px;
+     border-radius: 8px;
+     font-size: 13px;
+     cursor: pointer;
+     transition: background 0.2s;
+   }
+   .btn-danger:hover:not(:disabled) {
+     background: rgba(239, 68, 68, 0.3);
+   }
+   .btn-danger:disabled {
+     opacity: 0.4;
+     cursor: not-allowed;
+   }
+   ```
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src/lib/Assistant.svelte  (add Local Cache section to settings panel)
+
+Commit: "jules: P32-T5 add cache stats and clear button to settings panel"
+Target branch: main
