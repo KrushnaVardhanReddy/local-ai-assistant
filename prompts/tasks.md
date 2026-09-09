@@ -32,6 +32,7 @@
 | P26-T2 | `web/src/routes/dashboard/admin/` | **Seat Management:** Admin dashboard to purchase blocks of seats via Stripe, and assign/revoke them to employee emails. | ⏳ | — |
 | P26-T3 | `backend/rag/` | **Team Knowledge Base:** Expand RAG to allow uploading company-wide Playbooks/Docs to a shared vector database. | ⬜ | — |
 | P26-T4 | `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Auto-CRM Sync:** Add a "Push to Salesforce/HubSpot" button in the Session Report panel to log meeting notes directly to the CRM. | ⬜ | — |
+| P26-T5 | `web/tests/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Enterprise B2B features. | ⬜ | — |
 
 ---
 
@@ -45,6 +46,7 @@
 | P27-T1 | `backend/audio_listener.py` | **Wake Word Detection:** Integrate Picovoice Porcupine to detect the wake word (e.g. "Hey Owl") before sending audio to the LLM. | ⬜ | — |
 | P27-T2 | `backend/tts.py`, `backend/app.py` | **Text-to-Speech (TTS):** Pipe LLM responses through Edge-TTS (or ElevenLabs for premium users) and play audio through system speakers. | ⬜ | — |
 | P27-T3 | `frontend/src/lib/Assistant.svelte` | **Voice Mode UI:** Add a visual indicator (like a glowing orb) when the assistant is actively listening/speaking, bypassing the stealth chat UI. | ⬜ | — |
+| P27-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Voice Mode. | ⬜ | — |
 
 ---
 
@@ -58,6 +60,7 @@
 | P28-T2 | `backend/tools/` | **OS Interaction Toolkit:** Build Python functions using `subprocess` and `pyautogui` to open applications, manage windows, type text, and retrieve OS status. | ⬜ | — |
 | P28-T3 | `backend/app.py` | **Agentic Event Loop:** Intercept tool-call responses from the LLM, execute the local Python function, and feed the result back to the LLM to continue the conversation. | ⬜ | — |
 | P28-T4 | `backend/mcp/` | **Model Context Protocol (MCP):** Add an MCP client to the Tool Registry to dynamically discover and use tools from external enterprise MCP servers (e.g., GitHub, DBs). | ⬜ | — |
+| P28-T5 | `tests/e2e/` | **E2E Tests:** Pytest tests for Agentic Tool Registry and Loop. | ⬜ | — |
 
 ---
 
@@ -70,4 +73,5 @@
 | P29-T1 | `backend/resume_builder.py`, `backend/app.py` | **Resume Generation API:** Endpoint that uses the LLM to output a perfectly tailored Markdown resume. | ⏳ | — |
 | P29-T2 | `frontend/src/lib/ResumeBuilder.svelte` | **Resume Editor UI:** Dual-pane view with a Markdown editor on the left and a live preview on the right. | ⏳ | — |
 | P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ⬜ | — |
+| P29-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Resume Builder. | ⬜ | — |
 

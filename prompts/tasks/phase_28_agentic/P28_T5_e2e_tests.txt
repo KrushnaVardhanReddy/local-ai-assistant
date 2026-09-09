@@ -1,0 +1,17 @@
+TASK: P28-T5 — Agentic Control E2E Tests
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Write E2E tests to guarantee the stability of Phase 28 features.
+
+DELIVERABLES:
+1. `tests/e2e/test_agentic_loop.py`: Pytest tests validating the 
+   ToolRegistry discovers tools correctly, and that the agentic loop 
+   respects the MAX_TOOL_CALLS limit.
+2. `tests/e2e/test_mcp_client.py`: Pytest tests for the MCP client 
+   (mocking the stdio server).
+3. Verify tests pass.
+
+Commit: "jules: P28-T5 add agentic e2e tests"
+Target branch: main

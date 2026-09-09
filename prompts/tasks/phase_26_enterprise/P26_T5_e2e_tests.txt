@@ -1,0 +1,17 @@
+TASK: P26-T5 — Enterprise B2B E2E Tests
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Write Playwright (frontend) and Pytest (backend) E2E tests to 
+guarantee the stability of all features introduced in Phase 26.
+
+DELIVERABLES:
+1. `web/tests/e2e/enterprise.spec.ts`: Playwright tests for SSO login
+   flow (mocked) and Seat Management Admin dashboard.
+2. `tests/e2e/test_team_rag.py`: Pytest integration tests for the Team 
+   Knowledge Base endpoints and RAG retrieval.
+3. Verify that `npm run test:e2e` and `pytest` pass.
+
+Commit: "jules: P26-T5 add enterprise e2e tests"
+Target branch: main

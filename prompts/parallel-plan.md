@@ -46,6 +46,7 @@ P7-T1 ──── P7-T2 ──────────────────�
 | Wave | Tasks | Parallel? | Gate |
 |---|---|---|---|
 | **10** | P26-T1 · P26-T2 · P26-T3 | ✅ T1 & T2 parallel. T3 runs alone (touches app.py) | main up to date |
+| **10b** | P26-T5 | ❌ Sequential | P26-T4 merged |
 
 ```bash
 # T1 and T2 can run together — they only touch web/ files
@@ -64,6 +65,7 @@ python3 scripts/jules_submit.py --task P26-T3
 | **11a** | P27-T1 | ❌ Sequential | Wave 10 merged |
 | **11b** | P27-T2 | ❌ Sequential | P27-T1 merged |
 | **11c** | P27-T3 | ✅ Parallel with 11b | P27-T1 merged |
+| **11d** | P27-T4 | ❌ Sequential | P27-T2 & P27-T3 merged |
 
 ```bash
 python3 scripts/jules_submit.py --task P27-T1
@@ -82,6 +84,7 @@ python3 scripts/jules_submit.py --task P27-T3
 | **12b** | P28-T2 | ✅ Parallel safe (new files only) | P28-T1 merged |
 | **12c** | P28-T3 | ❌ Sequential | P28-T2 merged |
 | **12d** | P28-T4 | ❌ Sequential | P28-T3 merged |
+| **12e** | P28-T5 | ❌ Sequential | P28-T4 merged |
 
 ```bash
 python3 scripts/jules_submit.py --task P28-T1
@@ -104,6 +107,7 @@ python3 scripts/jules_submit.py --task P28-T4
 |---|---|---|---|
 | **13a** | P29-T1 · P29-T2 | ✅ T1 & T2 parallel (backend vs frontend) | main up to date |
 | **13b** | P29-T3 | ❌ Sequential | P29-T2 merged |
+| **13c** | P29-T4 | ❌ Sequential | P29-T3 merged |
 
 ```bash
 # T1 (backend API) and T2 (frontend UI) can run simultaneously

@@ -1,0 +1,16 @@
+TASK: P27-T4 — Voice Mode E2E Tests
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Write E2E tests to guarantee the stability of Phase 27 features.
+
+DELIVERABLES:
+1. `tests/e2e/test_voice_mode.py`: Pytest integration tests mocking 
+   the wake word detection and verifying that TTS output is generated.
+2. `frontend/e2e/voice_ui.spec.ts`: Playwright tests to verify the 
+   glowing orb UI appears when the assistant state is 'speaking'.
+3. Verify tests pass.
+
+Commit: "jules: P27-T4 add voice mode e2e tests"
+Target branch: main
