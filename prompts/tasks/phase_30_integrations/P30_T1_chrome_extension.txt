@@ -1,0 +1,81 @@
+## Task: P30-T1 — Google Meet Chrome Extension
+
+**Project:** BarnOwl AI (Local AI Assistant)
+**Phase:** 30 — Platform Integrations
+**Task ID:** P30-T1
+
+---
+
+### Goal
+
+Build a Chrome Extension that injects a BarnOwl AI sidebar into any active Google Meet session. The extension acts as a companion panel — it reads live closed captions from the Meet DOM, streams them to the BarnOwl backend, and shows real-time AI suggestions in the sidebar.
+
+This positions BarnOwl as the "layer on top" of Google Meet's built-in AI — users keep their privacy-compliant local model while staying in their existing workflow.
+
+---
+
+### Files to Create (ALL NEW — no conflicts)
+
+```
+chrome-extension/
+  manifest.json          ← Chrome Manifest V3 config
+  content.js             ← Content script injected into meet.google.com
+  sidebar.html           ← Sidebar panel HTML
+  sidebar.js             ← Sidebar logic (communicates with content.js via postMessage)
+  sidebar.css            ← Sidebar styles (dark, matches BarnOwl aesthetic)
+  background.js          ← Service worker for extension lifecycle
+```
+
+---
+
+### Detailed Specification
+
+#### manifest.json
+- Use Manifest V3
+- permissions: ["storage", "activeTab", "scripting"]
+- host_permissions: ["https://meet.google.com/*"]
+- content_scripts: inject content.js on https://meet.google.com/*
+- action: popup is sidebar.html
+- background: service worker is background.js
+- name: "BarnOwl AI"
+- description: "Your personal AI assistant, inside every Google Meet"
+
+#### content.js
+- On load, observe the DOM for Google Meet's live caption container using MutationObserver
+- Each time a new caption text node is added, extract the speaker name and caption text
+- Debounce captions (collect text for 2 seconds before sending)
+- Send caption chunks to the sidebar via window.postMessage({ type: 'BARNOWL_CAPTION', text, speaker })
+- Inject a floating "🦉 BarnOwl" button into the Meet UI bottom bar that opens/closes the sidebar iframe
+
+#### sidebar.html + sidebar.js + sidebar.css
+- A clean dark sidebar panel (width: 360px, full height)
+- Scrollable transcript log of captions
+- Input field to ask BarnOwl a question about the meeting
+- On submit, reads backend_url from chrome.storage.local (default: http://127.0.0.1:8765)
+- POSTs to ${backendUrl}/chat with { message: userQuestion, context: lastNTranscriptLines }
+- Streams the response and renders it using marked.js CDN
+- Has "Clear" and "Copy Transcript" buttons
+- Settings gear to set backend_url
+
+#### background.js
+- Simple service worker that sets default backend_url in chrome.storage.local on install
+
+---
+
+### Style Guide
+- Dark background: #1a1a2e
+- Accent: #7c3aed (purple, BarnOwl brand)
+- Font: Inter, sans-serif (Google Fonts)
+
+---
+
+### What NOT to do
+- Do NOT modify any existing files (backend/app.py, frontend/, etc.)
+- Do NOT use any npm build system — pure HTML/CSS/JS for unpacked extension loading
+
+---
+
+### Verification
+1. Confirm manifest.json is valid Manifest V3
+2. Confirm content.js uses MutationObserver not polling
+3. Run: python3 -c "import json; json.load(open('chrome-extension/manifest.json'))"
