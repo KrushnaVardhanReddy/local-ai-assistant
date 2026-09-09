@@ -57,9 +57,9 @@ class LLMClient:
 
         try:
             async with aiohttp.ClientSession() as session:
-                print(f"[DEBUG LLM] Sending POST to {self.base_url}/chat/completions", file=sys.stderr)
+                # print(f"[DEBUG LLM] Sending POST to {self.base_url}/chat/completions", file=sys.stderr)
                 async with session.post(f"{self.base_url}/chat/completions", headers=self._build_headers(), json=payload) as resp:
-                    print(f"[DEBUG LLM] Got response status: {resp.status}", file=sys.stderr)
+                    # print(f"[DEBUG LLM] Got response status: {resp.status}", file=sys.stderr)
                     if resp.status != 200:
                         if resp.status in (401, 403):
                             yield f"[Error: Invalid API key for {self.provider}]"
@@ -72,7 +72,7 @@ class LLMClient:
 
                     async for line in resp.content:
                         decoded_line = line.decode('utf-8').strip()
-                        print(f"[DEBUG LLM] Raw line: {decoded_line}", file=sys.stderr)
+                        # print(f"[DEBUG LLM] Raw line: {decoded_line}", file=sys.stderr)
                         if not decoded_line:
                             continue
 
@@ -96,11 +96,11 @@ class LLMClient:
                                     if content is not None:
                                         yield str(content)
                                 else:
-                                    print(f"[DEBUG LLM] Empty choices in chunk: {chunk}", file=sys.stderr)
+                                    pass # print(f"[DEBUG LLM] Empty choices in chunk: {chunk}", file=sys.stderr)
                             except json.JSONDecodeError:
                                 pass
                         else:
-                            print(f"[DEBUG LLM] Ignored non-data line: {decoded_line}", file=sys.stderr)
+                            pass # print(f"[DEBUG LLM] Ignored non-data line: {decoded_line}", file=sys.stderr)
         except aiohttp.ClientConnectorError:
             yield f"[Error: Cannot connect to LLM backend at {self.base_url}]"
 
