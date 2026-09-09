@@ -82,3 +82,24 @@ python3 scripts/jules_submit.py --task P28-T3
 # After P28-T3 merged:
 python3 scripts/jules_submit.py --task P28-T4
 ```
+
+---
+
+### BATCH 9 — Phase 29 Resume Builder (Parallel Safe)
+**No prerequisites beyond main being fully up to date.**
+
+| Priority | File | Task | Touches |
+|---|---|---|---|
+| 🔴 1st | `phase_29_resume_builder/P29_T1_resume_gen_api` | Backend LLM Generation API | `backend/resume_builder.py` (NEW), `backend/app.py` |
+| 🔴 2nd | `phase_29_resume_builder/P29_T2_resume_editor_ui` | Frontend Resume Editor | `frontend/src/lib/ResumeBuilder.svelte` (NEW), `frontend/src/lib/Assistant.svelte` |
+| 🟡 3rd | `phase_29_resume_builder/P29_T3_pdf_export` | 5-10 CSS Templates & PDF Export | `frontend/src/lib/resume-styles.css` (NEW), `frontend/src/lib/ResumeBuilder.svelte` |
+
+⚠️ P29-T1 and P29-T2 can be submitted in parallel (backend vs frontend). Submit P29-T3 sequentially after P29-T2 merges.
+
+```bash
+python3 scripts/jules_submit.py --task P29-T1
+python3 scripts/jules_submit.py --task P29-T2
+# After P29-T2 merged:
+python3 scripts/jules_submit.py --task P29-T3
+```
+

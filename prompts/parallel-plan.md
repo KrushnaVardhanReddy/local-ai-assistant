@@ -95,3 +95,21 @@ python3 scripts/jules_submit.py --task P28-T4
 
 > 💡 **Tip for P28:** Since P28-T2 only creates NEW files in `backend/tools/`, it can
 > safely run in parallel with unrelated frontend-only tasks if you have any queued up.
+
+---
+
+## Phase 29 — Auto-Tailored Resume Builder (Wave 13)
+
+| Wave | Tasks | Parallel? | Gate |
+|---|---|---|---|
+| **13a** | P29-T1 · P29-T2 | ✅ T1 & T2 parallel (backend vs frontend) | main up to date |
+| **13b** | P29-T3 | ❌ Sequential | P29-T2 merged |
+
+```bash
+# T1 (backend API) and T2 (frontend UI) can run simultaneously
+python3 scripts/jules_submit.py --task P29-T1
+python3 scripts/jules_submit.py --task P29-T2
+# After P29-T2 merges:
+python3 scripts/jules_submit.py --task P29-T3
+```
+

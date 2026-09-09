@@ -1,0 +1,33 @@
+TASK: P29-T3 — CSS Templates & PDF Export
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Provide a selection of 5-10 professional CSS templates so users can
+instantly style their generated Markdown resume. Implement a "Download PDF"
+button using native browser/webview print functionality.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/resume-styles.css (CREATE NEW)
+   - Create 5 to 10 distinct CSS themes using wrapper classes
+     (e.g., `.theme-modern`, `.theme-classic`, `.theme-minimal`,
+     `.theme-executive`, `.theme-tech`, `.theme-creative`).
+   - Each theme should alter fonts, spacing, header styles, and accent
+     colors to give a completely different look.
+   - All themes MUST include a clean `@media print` query that removes
+     background colors and standardizes margins for ATS parsing.
+
+2. FILE: frontend/src/lib/ResumeBuilder.svelte (MODIFY)
+   - Import `resume-styles.css`.
+   - Add a "Template Theme" dropdown that applies the selected `.theme-*`
+     class to the Markdown preview pane.
+   - Add a "Download PDF" button.
+   - Implementation: When clicked, temporarily hide the left editor pane
+     and toolbar, call `window.print()`, and then restore the UI.
+     (Tauri intercepts `window.print()` and opens the native print dialog).
+
+Commit: "jules: P29-T3 add resume templates and PDF export"
+Target branch: main

@@ -1,0 +1,24 @@
+TASK: P29-T2 — Frontend Resume Editor UI
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create the UI on the Svelte dashboard where the user can trigger the
+resume generation and edit the resulting Markdown before exporting.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/ResumeBuilder.svelte (CREATE NEW)
+   - UI Layout: Two-pane view. Left pane is a Markdown editor (`<textarea>`).
+     Right pane is a live preview using `markdownRenderer.ts`.
+   - Include a "Tailor to Job Description" button that sends the existing
+     Settings (base resume + job context) to `POST /resume/tailor`.
+
+2. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+   - Add a navigation tab or toolbar button to switch between the
+     "Live Interview" view and the "Resume Builder" view.
+
+Commit: "jules: P29-T2 add resume editor UI"
+Target branch: main
