@@ -1,0 +1,37 @@
+TASK: P26-T4 — Universal Export Menu (Session Report)
+
+PARALLEL BATCH: 2 — After P26-T3
+Files touched: frontend/src/lib/SessionReport.svelte
+PREREQUISITE: None
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Replace the idea of a heavy backend Auto-CRM Sync with a lightweight, 
+flexible "Universal Export Menu" in the Session Report panel.
+
+Users should be able to click an "Export" button in the SessionReport.svelte 
+component, which opens a dropdown menu with three options:
+1. Copy to Clipboard
+2. Download as Markdown
+3. Draft as Email
+
+═══════════════════════════════════════════════════════════════
+CHANGES: frontend/src/lib/SessionReport.svelte
+═══════════════════════════════════════════════════════════════
+1. Add an "Export" button (e.g., in the top right of the report).
+2. When clicked, show a small dropdown menu with the three options.
+3. Implement the logic for the options:
+   - "Copy to Clipboard": Use `navigator.clipboard.writeText(reportMarkdown)`. Show a temporary "Copied!" toast/indicator.
+   - "Download as Markdown": Create a Blob with `reportMarkdown`, generate a temporary `<a>` tag, and trigger a download of `session-report.md`.
+   - "Draft as Email": Open the user's default email client using `mailto:?subject=Session Report&body=` (URI encode the markdown content).
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- frontend/src/lib/SessionReport.svelte (Add Universal Export Menu)
+
+Commit: "jules: P26-T4 add universal export menu to session report (copy, download, email)"
+Target branch: main
