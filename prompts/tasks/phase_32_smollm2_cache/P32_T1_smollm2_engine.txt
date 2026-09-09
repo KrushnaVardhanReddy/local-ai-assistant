@@ -1,0 +1,135 @@
+TASK: P32-T1 — SmolLM2 Local Intelligence Engine
+
+PARALLEL BATCH: 1 — Start of Phase 32. No dependencies.
+Files touched: backend/local_intelligence.py (NEW), backend/config.py, backend/requirements.txt
+PREREQUISITE: None.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Load the SmolLM2-135M-Instruct model (GGUF quantized) via llama-cpp-python
+at backend server startup as a singleton. Expose two async methods:
+  - is_complete(text: str) → bool   (turn-taking classifier)
+  - encode(text: str) → list[float] (semantic embedding vector)
+
+This module runs 100% locally, requires no API key, consumes ~100MB RAM,
+and responds in ~10-20ms on CPU.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/local_intelligence.py (NEW FILE)
+═══════════════════════════════════════════════════════════════
+
+1. Create a new file backend/local_intelligence.py with a LocalIntelligence class:
+
+   ```python
+   import os
+   import sys
+   from typing import Optional
+   from config import config
+
+   _instance: Optional["LocalIntelligence"] = None
+
+   def get_local_intelligence() -> "LocalIntelligence":
+       global _instance
+       if _instance is None:
+           _instance = LocalIntelligence()
+       return _instance
+
+   class LocalIntelligence:
+       def __init__(self):
+           self._llm = None
+           self._enabled = config.SMOLLM2_ENABLED
+           if self._enabled:
+               self._load_model()
+
+       def _load_model(self):
+           try:
+               from llama_cpp import Llama
+               model_path = config.SMOLLM2_MODEL_PATH
+               if not os.path.exists(model_path):
+                   print(f"[SmolLM2] Model not found at {model_path}. Disabling.", file=sys.stderr)
+                   self._enabled = False
+                   return
+               self._llm = Llama(
+                   model_path=model_path,
+                   n_ctx=512,
+                   n_threads=4,
+                   embedding=True,
+                   verbose=False,
+               )
+               print(f"[SmolLM2] Local intelligence loaded from {model_path}", file=sys.stderr)
+           except ImportError:
+               print("[SmolLM2] llama-cpp-python not installed. Disabling.", file=sys.stderr)
+               self._enabled = False
+           except Exception as e:
+               print(f"[SmolLM2] Failed to load model: {e}", file=sys.stderr)
+               self._enabled = False
+
+       def is_complete(self, text: str) -> bool:
+           """Returns True if the transcript is a complete thought. Falls back to True if disabled."""
+           if not self._enabled or self._llm is None:
+               return True
+           prompt = (
+               f"<|system|>You are a turn-detection classifier. Reply with exactly one word.<|end|>\n"
+               f"<|user|>Transcript: \"{text}\"\n"
+               f"Is this a complete thought? Reply COMPLETE or INCOMPLETE.<|end|>\n"
+               f"<|assistant|>"
+           )
+           try:
+               output = self._llm(prompt, max_tokens=5, temperature=0.0, stop=["\n", "<"])
+               answer = output["choices"][0]["text"].strip().upper()
+               return "COMPLETE" in answer
+           except Exception as e:
+               print(f"[SmolLM2] is_complete error: {e}", file=sys.stderr)
+               return True
+
+       def encode(self, text: str) -> list:
+           """Returns a semantic embedding vector. Returns empty list if disabled."""
+           if not self._enabled or self._llm is None:
+               return []
+           try:
+               return self._llm.embed(text)
+           except Exception as e:
+               print(f"[SmolLM2] encode error: {e}", file=sys.stderr)
+               return []
+   ```
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/config.py
+═══════════════════════════════════════════════════════════════
+
+2. Add two new config fields to the Config dataclass:
+
+   SMOLLM2_ENABLED: bool = False
+   SMOLLM2_MODEL_PATH: str = "./models/smollm2-135m-instruct-q4_k_m.gguf"
+
+3. In __post_init__, wire them to environment variables:
+
+   self.SMOLLM2_ENABLED = os.environ.get("SMOLLM2_ENABLED", "false").lower() == "true"
+   self.SMOLLM2_MODEL_PATH = os.environ.get("SMOLLM2_MODEL_PATH", self.SMOLLM2_MODEL_PATH)
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/requirements.txt
+═══════════════════════════════════════════════════════════════
+
+4. Add llama-cpp-python as an optional dependency with a comment:
+
+   # Optional: SmolLM2 local intelligence layer (P32-T1)
+   # Install manually: pip install llama-cpp-python
+   # llama-cpp-python>=0.2.90
+
+   Do NOT add as a hard requirement — it requires platform-specific compilation.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO CREATE:
+- backend/local_intelligence.py  (SmolLM2 singleton engine)
+
+FILES TO MODIFY:
+- backend/config.py              (SMOLLM2_ENABLED, SMOLLM2_MODEL_PATH fields)
+- backend/requirements.txt       (optional install note)
+
+Commit: "jules: P32-T1 add SmolLM2 local intelligence engine with turn detection and embedding"
+Target branch: main

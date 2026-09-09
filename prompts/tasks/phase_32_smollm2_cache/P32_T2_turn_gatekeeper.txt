@@ -1,0 +1,62 @@
+TASK: P32-T2 — Turn-Taking Gatekeeper in Smart Filter
+
+PARALLEL BATCH: 2 — After P32-T1 is merged.
+Files touched: backend/smart_filter.py
+PREREQUISITE: P32-T1 (LocalIntelligence singleton) must be merged.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Before firing any STT transcript to the cloud LLM, call
+local_intelligence.is_complete(text). If the result is INCOMPLETE,
+reject the chunk, reset the silence timer, and keep listening.
+Only forward to the cloud LLM when is_complete() returns True.
+
+This prevents expensive and unhelpful partial-sentence calls to the cloud.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/smart_filter.py
+═══════════════════════════════════════════════════════════════
+
+1. Import get_local_intelligence at the top of the file:
+
+   from local_intelligence import get_local_intelligence
+
+2. In the main filter function (the one that checks MIN_WORDS, SILENCE_THRESHOLD, etc.),
+   after the existing word count and silence checks pass, add a SmolLM2 gate:
+
+   li = get_local_intelligence()
+   if not li.is_complete(text):
+       print(f"[INTENT] Dropped (incomplete turn): '{text}'", file=sys.stderr)
+       return None   # Signal to caller: keep listening, do not send to LLM
+
+3. If is_complete() returns True, allow the existing flow to continue normally
+   and log the acceptance:
+
+   print(f"[INTENT] Accepted: '{text}'", file=sys.stderr)
+
+4. The caller (backend/app.py WebSocket handler) already handles None returns
+   from smart_filter — it simply resets the silence buffer and continues listening.
+   No changes needed in app.py for this task.
+
+═══════════════════════════════════════════════════════════════
+BEHAVIOUR NOTES
+═══════════════════════════════════════════════════════════════
+
+- If SMOLLM2_ENABLED=false (default), is_complete() always returns True,
+  so the gatekeeper is a transparent no-op. No behaviour change for users
+  who have not opted in to SmolLM2.
+- The SmolLM2 call adds ~15ms of latency before forwarding to the cloud LLM.
+  This is imperceptible compared to the 1-3 second LLM response time.
+- If the SmolLM2 model crashes or returns an unexpected token, the method
+  falls back to True (always pass through), so the assistant stays functional.
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/smart_filter.py  (add is_complete() gate after existing word/silence checks)
+
+Commit: "jules: P32-T2 add SmolLM2 turn-taking gatekeeper to smart filter"
+Target branch: main

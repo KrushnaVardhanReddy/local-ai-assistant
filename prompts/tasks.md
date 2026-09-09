@@ -98,3 +98,21 @@
 |---|---|---|---|---|
 | P31-T1 | `backend/app.py`, `backend/config.py` | **Freemium Engine:** Lock LLM chat, summary, and CRM sync behind a subscription check. Force free users to strictly use local STT (`faster-whisper` or `parakeet`) and disable cloud LLM endpoints. | ⬜ | — |
 | P31-T2 | `backend/audio_listener.py` | **Multi-Engine Local STT:** Allow power users to select their local STT engine in settings. Support `faster-whisper` (universal/CPU/Mac) and Nvidia `parakeet` (for RTX GPU owners). | ⬜ | — |
+
+---
+
+## Phase 32 — SmolLM2 Local Intelligence Layer 🧠
+
+> Adds a tiny on-device SmolLM2 model (135M params, ~100MB RAM) as a local pre-filter and semantic cache.
+> This layer runs entirely offline, cuts cloud API costs by 40-60%, and makes the assistant feel instant.
+> Two core jobs: (1) turn-taking gatekeeper — stops premature LLM calls mid-sentence; (2) semantic cache encoder — finds similar past Q&As in ChromaDB to serve answers instantly without hitting the cloud.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P32-T1 | `backend/local_intelligence.py` | **SmolLM2 Engine:** Load `SmolLM2-135M-Instruct` (GGUF quantized) via `llama-cpp-python` at server startup. Expose two async methods: `is_complete(text) → bool` (turn detection) and `encode(text) → vector` (semantic embedding). | ⬜ | — |
+| P32-T2 | `backend/smart_filter.py` | **Turn-Taking Gatekeeper:** Before firing any STT transcript to the cloud LLM, call `local_intelligence.is_complete()`. If `INCOMPLETE`, reset the silence timer and keep listening. Log skipped incomplete turns. | ⬜ | — |
+| P32-T3 | `backend/qa_cache.py` | **Semantic Q&A Cache:** Use the SmolLM2 encoder to convert each question into a vector and store/look up past Q&A pairs in a dedicated ChromaDB collection (`qa_cache`). On cache hit (cosine similarity > 0.92), serve the cached answer instantly, skipping cloud LLM entirely. | ⬜ | — |
+| P32-T4 | `backend/app.py` | **Cache Management API:** Add `DELETE /api/cache` endpoint to wipe all entries from the `qa_cache` ChromaDB collection. Add `GET /api/cache/stats` to show total cached pairs and estimated tokens saved. | ⬜ | — |
+| P32-T5 | `frontend/src/lib/Assistant.svelte` | **Cache UI Controls:** Add a "Cache" section in the settings panel showing cache stats (e.g. "47 answers cached — ~12,000 tokens saved"). Include a red "Clear Cache" button that calls the `DELETE /api/cache` endpoint with a confirmation dialog. | ⬜ | — |
+| P32-T6 | `tests/test_local_intelligence.py`, `tests/test_qa_cache.py` | **Unit Tests:** Tests for turn-detection accuracy (COMPLETE/INCOMPLETE), cache hit/miss logic, similarity threshold, and cache clearing via the API endpoint. | ⬜ | — |
+| P32-T7 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Cache UI (stats display, Clear Cache button, confirmation dialog). Pytest integration tests for `GET /api/cache/stats` and `DELETE /api/cache` endpoints. | ⬜ | — |
