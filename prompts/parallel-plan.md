@@ -81,6 +81,7 @@ python3 scripts/jules_submit.py --task P27-T3
 | **12a** | P28-T1 | ❌ Sequential | Wave 11 merged |
 | **12b** | P28-T2 | ✅ Parallel safe (new files only) | P28-T1 merged |
 | **12c** | P28-T3 | ❌ Sequential | P28-T2 merged |
+| **12d** | P28-T4 | ❌ Sequential | P28-T3 merged |
 
 ```bash
 python3 scripts/jules_submit.py --task P28-T1
@@ -88,8 +89,9 @@ python3 scripts/jules_submit.py --task P28-T1
 python3 scripts/jules_submit.py --task P28-T2
 # After P28-T2 merged:
 python3 scripts/jules_submit.py --task P28-T3
+# After P28-T3 merged:
+python3 scripts/jules_submit.py --task P28-T4
 ```
 
 > 💡 **Tip for P28:** Since P28-T2 only creates NEW files in `backend/tools/`, it can
 > safely run in parallel with unrelated frontend-only tasks if you have any queued up.
-

@@ -57,3 +57,4 @@
 | P28-T1 | `backend/llm_client.py` | **Tool Calling Integration:** Add `tools` and `tool_choice` parameters to the OpenAI API requests to allow the LLM to emit function calls instead of text responses. | ⬜ | — |
 | P28-T2 | `backend/tools/` | **OS Interaction Toolkit:** Build Python functions using `subprocess` and `pyautogui` to open applications, manage windows, type text, and retrieve OS status. | ⬜ | — |
 | P28-T3 | `backend/app.py` | **Agentic Event Loop:** Intercept tool-call responses from the LLM, execute the local Python function, and feed the result back to the LLM to continue the conversation. | ⬜ | — |
+| P28-T4 | `backend/mcp/` | **Model Context Protocol (MCP):** Add an MCP client to the Tool Registry to dynamically discover and use tools from external enterprise MCP servers (e.g., GitHub, DBs). | ⬜ | — |
