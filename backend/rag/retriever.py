@@ -2,14 +2,16 @@ from fastapi import APIRouter, Query
 from typing import Optional
 
 from rag.ingestor import _collection, _embedder, get_collection, get_embedder
+from rag.team_retriever import TeamRetriever
 from config import config
 
 retriever_router = APIRouter()
 
-def retrieve(query: str, top_k: Optional[int] = None) -> str:
+def retrieve(query: str, top_k: Optional[int] = None, org_id: Optional[str] = None) -> str:
     """
     Embeds the query, searches ChromaDB for top_k relevant chunks,
-    deduplicates them, and returns a formatted context string.
+    queries Supabase for team documents if org_id is provided,
+    deduplicates them, merges local + team results, and returns a formatted context string.
     """
     if top_k is None:
         top_k = config.RAG_TOP_K
@@ -20,54 +22,50 @@ def retrieve(query: str, top_k: Optional[int] = None) -> str:
     # but we will use the imported singletons as requested if they are available.
 
     collection = _collection if _collection is not None else get_collection()
-    if collection is None:
-        return ""
-
-    count = collection.count()
-    if count == 0:
-        return ""
-
     embedder = _embedder if _embedder is not None else get_embedder()
     query_embedding = embedder.encode([query]).tolist()[0]
 
-    n_results_to_fetch = min(top_k * 2, count)
+    kept_local = []
+    if collection is not None and collection.count() > 0:
+        n_results_to_fetch = min(top_k * 2, collection.count())
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=n_results_to_fetch,
+            include=["documents", "metadatas", "distances"]
+        )
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=n_results_to_fetch,
-        include=["documents", "metadatas", "distances"]
-    )
+        if results and results["documents"] and results["documents"][0]:
+            documents = results["documents"][0]
+            metadatas = results["metadatas"][0]
 
-    if not results or not results["documents"] or not results["documents"][0]:
-        return ""
+            seen_sources: dict[str, int] = {}
+            for doc, meta in zip(documents, metadatas):
+                source = meta.get("source_file", "unknown") if meta else "unknown"
+                if seen_sources.get(source, 0) >= 2:
+                    continue
+                seen_sources[source] = seen_sources.get(source, 0) + 1
+                chunk_index = meta.get("chunk_index", "?") if meta else "?"
+                kept_local.append((source, chunk_index, doc))
+                if len(kept_local) == top_k:
+                    break
 
-    # ChromaDB returns a list of lists because you can pass multiple queries
-    documents = results["documents"][0]
-    metadatas = results["metadatas"][0]
-    # distances = results["distances"][0] # distances are returned sorted by default
+    kept_team = []
+    if org_id is not None:
+        team_retriever = TeamRetriever(org_id, query_embedding)
+        kept_team = team_retriever.retrieve(top_k=top_k)
 
-    kept = []
-    seen_sources: dict[str, int] = {}
+    # Merge results, local first
+    kept_total = kept_local + kept_team
 
-    for doc, meta in zip(documents, metadatas):
-        source = meta.get("source_file", "unknown") if meta else "unknown"
+    # Cap total at 8 chunks (4 local + 4 team as max)
+    if len(kept_total) > 8:
+        kept_total = kept_total[:8]
 
-        if seen_sources.get(source, 0) >= 2:
-            continue
-
-        seen_sources[source] = seen_sources.get(source, 0) + 1
-
-        chunk_index = meta.get("chunk_index", "?") if meta else "?"
-        kept.append((source, chunk_index, doc))
-
-        if len(kept) == top_k:
-            break
-
-    if not kept:
+    if not kept_total:
         return ""
 
     context_blocks = ["--- Relevant context from your knowledge base ---"]
-    for source, chunk_index, text in kept:
+    for source, chunk_index, text in kept_total:
         context_blocks.append(f"[Source: {source}, chunk {chunk_index}]\n{text}")
 
     return "\n\n".join(context_blocks)

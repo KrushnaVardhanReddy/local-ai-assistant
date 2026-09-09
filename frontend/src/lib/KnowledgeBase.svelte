@@ -1,10 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { authState } from "./auth.svelte";
 
   let ragEnabled = $state(false);
   let webSearchEnabled = $state(false);
   let documents = $state<string[]>([]);
+  let teamDocuments = $state<any[]>([]);
   let isDragging = $state(false);
+
+  let activeTab = $state<"personal" | "team">("personal");
 
   type UploadItem = {
     id: string;
@@ -76,11 +80,36 @@
     }
   }
 
-  async function deleteDocument(filename: string) {
+  async function fetchTeamDocuments() {
     try {
-      const res = await fetch(`${API_BASE}/rag/document/${encodeURIComponent(filename)}`, { method: "DELETE" });
+      const token = authState.accessToken;
+      const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/rag/team/list`, { headers });
       if (res.ok) {
-        await fetchDocuments();
+        const data = await res.json();
+        teamDocuments = data.documents;
+      }
+    } catch (e) {
+      console.error("Failed to fetch team documents", e);
+    }
+  }
+
+  async function deleteDocument(filename: string, isTeam: boolean = false) {
+    try {
+      const token = authState.accessToken;
+      const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+
+      const endpoint = isTeam
+        ? `${API_BASE}/rag/team/document/${encodeURIComponent(filename)}`
+        : `${API_BASE}/rag/document/${encodeURIComponent(filename)}`;
+
+      const res = await fetch(endpoint, { method: "DELETE", headers });
+      if (res.ok) {
+        if (isTeam) {
+          await fetchTeamDocuments();
+        } else {
+          await fetchDocuments();
+        }
       }
     } catch (e) {
       console.error("Failed to delete document", e);
@@ -90,6 +119,9 @@
   onMount(() => {
     fetchStatus();
     fetchDocuments();
+    if (authState.user) {
+      fetchTeamDocuments();
+    }
   });
 
   function handleDragOver(e: DragEvent) {
@@ -147,7 +179,12 @@
 
   function uploadFile(item: UploadItem) {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${API_BASE}/rag/upload`, true);
+    const endpoint = activeTab === "team" ? `${API_BASE}/rag/team/ingest` : `${API_BASE}/rag/upload`;
+    xhr.open("POST", endpoint, true);
+
+    if (activeTab === "team" && authState.accessToken) {
+      xhr.setRequestHeader("Authorization", `Bearer ${authState.accessToken}`);
+    }
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
@@ -159,7 +196,11 @@
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         updateQueueItem(item.id, { status: "success", progress: 100 });
-        fetchDocuments();
+        if (activeTab === "team") {
+          fetchTeamDocuments();
+        } else {
+          fetchDocuments();
+        }
         setTimeout(() => {
           uploadQueue = uploadQueue.filter(i => i.id !== item.id);
         }, 2000);
@@ -194,26 +235,43 @@
     </label>
   </div>
 
-  <div
-    class="drop-zone {isDragging ? 'dragging' : ''}"
-    ondragover={handleDragOver}
-    ondragleave={handleDragLeave}
-    ondrop={handleDrop}
-    role="button"
-    tabindex="0"
-    onclick={() => document.getElementById('fileUpload')?.click()}
-    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') document.getElementById('fileUpload')?.click(); }}
-  >
-    <p>Drop PDF, TXT, or MD files here, or click to browse</p>
-    <input
-      id="fileUpload"
-      type="file"
-      multiple
-      accept=".pdf,.txt,.md"
-      onchange={handleFileInput}
-      style="display: none;"
-    />
+  <div class="tabs">
+    <button
+      class="tab-btn {activeTab === 'personal' ? 'active' : ''}"
+      onclick={() => activeTab = 'personal'}
+    >
+      My Documents
+    </button>
+    <button
+      class="tab-btn {activeTab === 'team' ? 'active' : ''}"
+      onclick={() => activeTab = 'team'}
+    >
+      Team Playbook
+    </button>
   </div>
+
+  {#if activeTab === 'personal' || (activeTab === 'team' && authState.user?.app_metadata?.is_org_admin === true)}
+    <div
+      class="drop-zone {isDragging ? 'dragging' : ''}"
+      ondragover={handleDragOver}
+      ondragleave={handleDragLeave}
+      ondrop={handleDrop}
+      role="button"
+      tabindex="0"
+      onclick={() => document.getElementById('fileUpload')?.click()}
+      onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') document.getElementById('fileUpload')?.click(); }}
+    >
+      <p>Drop PDF, TXT, or MD files here, or click to browse</p>
+      <input
+        id="fileUpload"
+        type="file"
+        multiple
+        accept=".pdf,.txt,.md"
+        onchange={handleFileInput}
+        style="display: none;"
+      />
+    </div>
+  {/if}
 
   {#if uploadQueue.length > 0}
     <div class="upload-queue">
@@ -243,18 +301,36 @@
   {/if}
 
   <div class="documents-list">
-    <h3>Ingested Documents</h3>
-    {#if documents.length === 0}
-      <p class="empty-state">No documents ingested yet. Upload your first file above.</p>
+    {#if activeTab === 'personal'}
+      <h3>Personal Documents</h3>
+      {#if documents.length === 0}
+        <p class="empty-state">No personal documents ingested yet.</p>
+      {:else}
+        <ul>
+          {#each documents as doc}
+            <li>
+              <span class="doc-name">📄 {doc}</span>
+              <button class="delete-btn" onclick={() => deleteDocument(doc, false)}>Delete</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     {:else}
-      <ul>
-        {#each documents as doc}
-          <li>
-            <span class="doc-name">📄 {doc}</span>
-            <button class="delete-btn" onclick={() => deleteDocument(doc)}>Delete</button>
-          </li>
-        {/each}
-      </ul>
+      <h3>Team Documents</h3>
+      {#if teamDocuments.length === 0}
+        <p class="empty-state">No team documents found.</p>
+      {:else}
+        <ul>
+          {#each teamDocuments as doc}
+            <li>
+              <span class="doc-name">📄 {doc.filename}</span>
+              {#if authState.user?.app_metadata?.is_org_admin === true}
+                <button class="delete-btn" onclick={() => deleteDocument(doc.filename, true)}>Delete</button>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
     {/if}
   </div>
 </div>
@@ -282,6 +358,33 @@
     margin: 0;
     font-size: 1.25rem;
     color: #e2e8f0;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 1rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tab-btn:hover {
+    color: #e2e8f0;
+  }
+
+  .tab-btn.active {
+    color: #7c3aed;
+    border-bottom-color: #7c3aed;
   }
 
   .toggle {

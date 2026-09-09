@@ -309,3 +309,22 @@ async def increment_and_check_monthly_sessions(user_id: str, plan: str) -> dict:
         patch_resp.raise_for_status()
 
         return {"allowed": True}
+
+async def get_user_org(user_id: str) -> str | None:
+    """Fetches the user's org_id from Supabase."""
+    url = f"{config.SUPABASE_URL.rstrip('/')}/rest/v1/users"
+    headers = {
+        "apikey": config.SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json"
+    }
+    params = {"id": f"eq.{user_id}", "select": "org_id"}
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, headers=headers, params=params)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if data and len(data) > 0:
+            return data[0].get("org_id")
+        return None
