@@ -1,0 +1,46 @@
+## Task: Chore — Refactor app.py into Modular Routes
+
+**Project:** BarnOwl AI
+**Phase:** Core Architecture
+**Task ID:** chore_refactor_app
+
+---
+
+### Goal
+
+The `backend/app.py` file has grown to over 1,200 lines, becoming a massive bottleneck for parallel development and merge conflicts. Your task is to break it down into modular FastAPI routers and a shared state module, reducing `app.py` to a clean entry point.
+
+---
+
+### Instructions
+
+1. **Create `backend/state.py`**
+   Move all the global variables from `app.py` into this file so they can be imported without circular dependencies:
+   - `transcriber`, `llm_client`, `listener`
+   - `sync_queue`, `candidate_context`, `preferred_language`
+   - `PTT_MODE`
+   - `active_ws_queues`, `active_outbound_queues`
+
+2. **Create `backend/routes/` directory**
+   Extract the endpoints from `app.py` into logically grouped routers in this new folder. Each file should define a `router = APIRouter()` and have the necessary imports.
+   
+   - **`routes/settings.py`**: `/api/language`, `/api/interview_language`, `/api/system_prompt`, `/config/job-description`, `/api/audio/devices`, `/api/audio/device`
+   - **`routes/audio.py`**: `/ptt/mode`, `/ptt/start`, `/ptt/stop`
+   - **`routes/vision.py`**: `/vision/analyze`
+   - **`routes/resume.py`**: `/resume/tailor`, `/api/resume/extract`, `/api/resume/context`
+   - **`routes/history.py`**: `/history/clear`
+   - **`routes/ws.py`**: The massive `@app.websocket("/ws")` endpoint and its immediate helper async tasks (`async_receiver`, `async_sender`, `session_validator`, `llm_processor`, `audio_chunk_processor`, `video_frame_processor`, `mock_interviewer`, etc.)
+
+3. **Refactor `backend/app.py`**
+   - Import `state` to initialize the `_audio_loop` and `_async_audio_bridge` in the startup/lifespan events.
+   - Retain the `lifespan` function (which starts the threads).
+   - Retain the `CORSMiddleware` and static files mount.
+   - Replace all the extracted endpoints with `app.include_router(routes.ws.router)`, etc.
+   - Ensure all imports in `app.py` that are no longer needed are removed, and properly added to the new route files.
+
+### Note on State Mutation
+When mutating globals like `PTT_MODE`, ensure the new routes import the `state` module and mutate it via `state.PTT_MODE = ...`, rather than `from state import PTT_MODE` (which would only mutate the local reference).
+
+### Verification
+- Run `python3 -m py_compile backend/app.py backend/routes/*.py` to catch basic syntax errors.
+- Do NOT modify the frontend. This is a pure backend refactor.
