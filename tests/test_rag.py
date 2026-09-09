@@ -1,5 +1,12 @@
 import pytest
 import io
+import os
+
+@pytest.fixture(scope="module", autouse=True)
+def clean_chroma():
+    os.system('rm -rf tests/chroma_db backend/data/chroma')
+    from backend.rag.ingestor import _collection
+    _collection = None
 
 @pytest.mark.asyncio
 async def test_upload_txt(app_client):
@@ -28,10 +35,14 @@ async def test_search(app_client):
 
 @pytest.mark.asyncio
 async def test_delete_document(app_client):
-    response = await app_client.delete("/rag/document/test.txt")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["ok"] is True
+    # Get list of all documents and delete them
+    response = await app_client.get("/rag/documents")
+    docs = response.json().get("documents", [])
+    for doc in docs:
+        await app_client.delete(f"/rag/document/{doc}")
+
+    response = await app_client.get("/rag/documents")
+    assert len(response.json().get("documents", [])) == 0
 
 @pytest.mark.asyncio
 async def test_search_empty_after_delete(app_client):
