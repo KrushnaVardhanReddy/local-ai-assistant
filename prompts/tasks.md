@@ -28,8 +28,8 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P26-T1 | `web/src/routes/api/auth/` | **SSO Integration:** Add SAML/Okta single sign-on support via Supabase Auth for Enterprise customers. | ⬜ | — |
-| P26-T2 | `web/src/routes/dashboard/admin/` | **Seat Management:** Admin dashboard to purchase blocks of seats via Stripe, and assign/revoke them to employee emails. | ⬜ | — |
+| P26-T1 | `web/src/routes/api/auth/` | **SSO Integration:** Add SAML/Okta single sign-on support via Supabase Auth for Enterprise customers. | ⏳ | — |
+| P26-T2 | `web/src/routes/dashboard/admin/` | **Seat Management:** Admin dashboard to purchase blocks of seats via Stripe, and assign/revoke them to employee emails. | ⏳ | — |
 | P26-T3 | `backend/rag/` | **Team Knowledge Base:** Expand RAG to allow uploading company-wide Playbooks/Docs to a shared vector database. | ⬜ | — |
 | P26-T4 | `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Auto-CRM Sync:** Add a "Push to Salesforce/HubSpot" button in the Session Report panel to log meeting notes directly to the CRM. | ⬜ | — |
 
