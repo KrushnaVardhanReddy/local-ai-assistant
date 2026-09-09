@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
 
-  let { children } = $props();
+  let { data, children } = $props();
 </script>
 
 <div class="dashboard-layout">
@@ -12,6 +12,9 @@
       <a href="/dashboard/keys" class="nav-item {($page.url.pathname as string) === '/dashboard/keys' ? 'active' : ''}">API Keys</a>
       <a href="/dashboard/billing" class="nav-item {($page.url.pathname as string) === '/dashboard/billing' ? 'active' : ''}">Billing</a>
       <a href="/dashboard/settings" class="nav-item {($page.url.pathname as string) === '/dashboard/settings' ? 'active' : ''}">Settings</a>
+      {#if data.is_org_admin}
+        <a href="/dashboard/admin" class="nav-item {($page.url.pathname as string) === '/dashboard/admin' ? 'active' : ''}">Admin</a>
+      {/if}
     </nav>
   </aside>
 
