@@ -5,6 +5,7 @@
   import { authState } from "$lib/auth.svelte";
 
   let showSessionReport = $state(false);
+  let showHotkeys = $state(false);
   let starPrimed = $state(false);
   let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -110,11 +111,36 @@
       toggleClickthrough();
     });
 
+    const unlistenTranscript1 = listen("hotkey_transcript_1", () => {
+      if (wsState.pendingTranscripts.length > 0) sendChip(wsState.pendingTranscripts[0]);
+    });
+    const unlistenTranscript2 = listen("hotkey_transcript_2", () => {
+      if (wsState.pendingTranscripts.length > 1) sendChip(wsState.pendingTranscripts[1]);
+    });
+    const unlistenTranscript3 = listen("hotkey_transcript_3", () => {
+      if (wsState.pendingTranscripts.length > 2) sendChip(wsState.pendingTranscripts[2]);
+    });
+    const unlistenTranscript4 = listen("hotkey_transcript_4", () => {
+      if (wsState.pendingTranscripts.length > 3) sendChip(wsState.pendingTranscripts[3]);
+    });
+    const unlistenTranscript5 = listen("hotkey_transcript_5", () => {
+      if (wsState.pendingTranscripts.length > 4) sendChip(wsState.pendingTranscripts[4]);
+    });
+    const unlistenTranscript6 = listen("hotkey_transcript_6", () => {
+      if (wsState.pendingTranscripts.length > 5) sendChip(wsState.pendingTranscripts[5]);
+    });
+
     return () => {
       unlisten.then(f => f());
       unlistenScrollDown.then(f => f());
       unlistenScrollUp.then(f => f());
       unlistenClickthrough.then(f => f());
+      unlistenTranscript1.then(f => f());
+      unlistenTranscript2.then(f => f());
+      unlistenTranscript3.then(f => f());
+      unlistenTranscript4.then(f => f());
+      unlistenTranscript5.then(f => f());
+      unlistenTranscript6.then(f => f());
       if (starPrimedTimer) clearTimeout(starPrimedTimer);
     };
   });
@@ -342,6 +368,14 @@
         onclick={triggerStarPreset}
       >
         STAR
+      </button>
+      <button
+        aria-label="Hotkeys Cheatsheet"
+        title="Hotkeys Cheatsheet"
+        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
+        onclick={() => showHotkeys = true}
+      >
+        <span class="material-symbols-outlined text-[20px]" data-icon="keyboard">keyboard</span>
       </button>
       <button
         id="session-report-btn"
@@ -623,6 +657,55 @@
 </div>
 
 
+
+{#if showHotkeys}
+  <div class="fixed inset-0 z-[9998] pointer-events-auto flex items-center justify-center bg-black/50 backdrop-blur-sm" onclick={() => showHotkeys = false}>
+    <div class="glass-panel bg-surface-variant/90 backdrop-blur-md p-8 rounded-2xl max-w-lg w-full flex flex-col gap-6 shadow-2xl border border-white/10 relative overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <h2 class="text-xl font-headline-md text-on-background tracking-wide flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">keyboard</span>
+          Hotkeys Cheatsheet
+        </h2>
+        <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-red-400 transition-colors" onclick={() => showHotkeys = false}>
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Hotkeys List -->
+      <div class="flex flex-col gap-3 font-body-sm text-on-surface-variant">
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="font-bold">Push to Talk</span>
+          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+Space</kbd>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="font-bold">Screenshot Vision</span>
+          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+S</kbd>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="font-bold">Send Transcript Chip 1-6</span>
+          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+1...6</kbd>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="font-bold">Scroll Answer Down / Up</span>
+          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+↓/↑</kbd>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="font-bold">Toggle Click-through Mode</span>
+          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+M</kbd>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
+          <span class="font-bold">Session Report</span>
+          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+E</kbd>
+        </div>
+        <div class="flex items-center justify-between py-2">
+          <span class="font-bold">Panic Clear / Hide</span>
+          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+X</kbd>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
 
 {#if wsState.sessionExpired}
   <div class="fixed inset-0 z-[9999] pointer-events-auto flex items-center justify-center bg-black/80 backdrop-blur-md">

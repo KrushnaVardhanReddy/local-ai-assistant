@@ -248,6 +248,42 @@ pub fn run() {
                 }
             }).expect("failed to register Ctrl+Shift+M shortcut");
 
+            app.global_shortcut().on_shortcut("Ctrl+Shift+1", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("hotkey_transcript_1", ());
+                }
+            }).expect("failed to register Ctrl+Shift+1 shortcut");
+
+            app.global_shortcut().on_shortcut("Ctrl+Shift+2", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("hotkey_transcript_2", ());
+                }
+            }).expect("failed to register Ctrl+Shift+2 shortcut");
+
+            app.global_shortcut().on_shortcut("Ctrl+Shift+3", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("hotkey_transcript_3", ());
+                }
+            }).expect("failed to register Ctrl+Shift+3 shortcut");
+
+            app.global_shortcut().on_shortcut("Ctrl+Shift+4", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("hotkey_transcript_4", ());
+                }
+            }).expect("failed to register Ctrl+Shift+4 shortcut");
+
+            app.global_shortcut().on_shortcut("Ctrl+Shift+5", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("hotkey_transcript_5", ());
+                }
+            }).expect("failed to register Ctrl+Shift+5 shortcut");
+
+            app.global_shortcut().on_shortcut("Ctrl+Shift+6", |app, _shortcut, event| {
+                if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                    let _ = app.emit("hotkey_transcript_6", ());
+                }
+            }).expect("failed to register Ctrl+Shift+6 shortcut");
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
