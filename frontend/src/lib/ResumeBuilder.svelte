@@ -32,7 +32,7 @@
       // Fetch the context and job description
       const [resContext, resJob] = await Promise.all([
         fetch(`${apiUrl}/api/resume/context`),
-        fetch(`${apiUrl}/config/job-description`).catch(() => ({ ok: false }))
+        fetch(`${apiUrl}/config/job-description`).catch(() => new Response(JSON.stringify({}), { status: 500, statusText: "Error" }))
       ]);
 
       let baseResume = "";
