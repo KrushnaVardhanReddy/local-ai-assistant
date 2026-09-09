@@ -67,8 +67,9 @@ python3 scripts/jules_submit.py --task P27-T3
 | 🔴 1st | `phase_28_agentic/P28_T1_tool_registry` | Tool calling infra + BaseTool | `backend/tools/base_tool.py` (NEW), `backend/tools/__init__.py` (NEW), `backend/llm_client.py`, `backend/config.py` |
 | 🔴 2nd | `phase_28_agentic/P28_T2_os_tool_pack` | 6 built-in OS tools | `backend/tools/open_app.py`, `type_text.py`, `get_clipboard.py`, `set_clipboard.py`, `web_search.py`, `show_notification.py` (ALL NEW) |
 | 🔴 3rd | `phase_28_agentic/P28_T3_agentic_loop` | Agent loop + UI toggle | `backend/app.py`, `frontend/src/lib/Assistant.svelte` |
+| 🔴 4th | `phase_28_agentic/P28_T4_mcp_support` | MCP Client Integration | `backend/mcp/client.py` (NEW), `backend/tools/registry.py`, `backend/config.py`, `frontend/src/lib/Settings.svelte` |
 
-⚠️ P28 tasks MUST be submitted in strict order (T1 → T2 → T3). Each depends on the previous.
+⚠️ P28 tasks MUST be submitted in strict order (T1 → T2 → T3 → T4). Each depends on the previous.
 P28-T2 is fully safe to parallelize with any Phase 26 tasks (only creates new files).
 
 ```bash
@@ -78,4 +79,6 @@ python3 scripts/jules_submit.py --task P28-T1
 python3 scripts/jules_submit.py --task P28-T2
 # After P28-T2 merged:
 python3 scripts/jules_submit.py --task P28-T3
+# After P28-T3 merged:
+python3 scripts/jules_submit.py --task P28-T4
 ```

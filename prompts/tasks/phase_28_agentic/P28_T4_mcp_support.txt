@@ -1,0 +1,68 @@
+TASK: P28-T4 — Model Context Protocol (MCP) Integration
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Extend the Agentic Tool Registry (built in P28-T1) to support the
+Model Context Protocol (MCP). This allows BarnOwl AI to connect to 
+external enterprise MCP servers (e.g., GitHub, Postgres, Slack) and 
+dynamically expose those remote tools to the LLM alongside local OS tools.
+
+PREREQUISITE: P28-T1, P28-T2, and P28-T3 must be merged before this task.
+
+This enables true B2B Enterprise capabilities without writing custom
+integrations for every SaaS platform.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Implement a basic MCP stdio client that can spawn an MCP server 
+  process (like `npx @modelcontextprotocol/server-github`) and read 
+  its schema via stdio JSON-RPC.
+- The `ToolRegistry` must merge the MCP tool schemas with the local 
+  `BaseTool` schemas so the LLM receives a unified list.
+- When an MCP tool is called, the execution must be forwarded over 
+  the stdio connection to the MCP server, and the result awaited.
+- Add configuration to `backend/config.py` and `frontend/src/lib/Settings.svelte`
+  allowing users to define custom MCP server command strings.
+- Only support tools right now (no need for MCP prompts or resources yet).
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/mcp/client.py (CREATE NEW)
+   Description: "Basic MCP JSON-RPC client over stdio."
+   Implementation: 
+   - Takes a command (e.g., `['npx', '-y', '@modelcontextprotocol/server-postgres', '...']`).
+   - Uses `asyncio.create_subprocess_exec` with `stdin=PIPE, stdout=PIPE`.
+   - Sends `initialize` request and parses the response.
+   - Sends `tools/list` request to get schemas.
+   - Provides an `execute_tool(name, args)` method that sends `tools/call`.
+
+2. FILE: backend/tools/registry.py (MODIFY)
+   Implementation:
+   - During startup (if `AGENT_MODE_ENABLED`), read `MCP_SERVERS` from config.
+   - For each server command, instantiate an `MCPClient`, initialize it, and
+     fetch tools.
+   - Expose these tools via `registry.get_schemas()`.
+   - Modify `registry.get()` so if a tool name matches an MCP tool, it returns
+     a wrapper object with an `execute()` method that proxies to the `MCPClient`.
+
+3. FILE: backend/config.py (MODIFY)
+   Implementation:
+   - Add `MCP_SERVERS: list[list[str]]` (e.g., `[["npx", "-y", "..."]]`).
+
+4. FILE: frontend/src/lib/Settings.svelte (MODIFY)
+   Implementation:
+   - In the Agent Mode section, add an "MCP Servers" JSON input area where 
+     users can paste their server commands.
+
+FILES TO MODIFY/CREATE:
+- backend/mcp/client.py (NEW)
+- backend/tools/registry.py
+- backend/config.py
+- frontend/src/lib/Settings.svelte
+
+Commit: "jules: P28-T4 add MCP client integration to tool registry"
+Target branch: main
