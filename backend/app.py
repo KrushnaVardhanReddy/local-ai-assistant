@@ -264,6 +264,9 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
 
             if not user_plan or user_plan == "demo":
                 user_plan = await get_user_plan(user_id)
+
+            is_pro = user_plan in ["pro", "payg", "lifetime"] or config.FORCE_PRO_MODE
+
             payg_token = None
             if user_plan == "payg":
                 payg_token = create_payg_session_token(user_id)
@@ -699,6 +702,13 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                     # Plan verification: restricted models
                     if user_plan in ["demo", "payg"] and is_reasoning_model(connection_llm_client.model):
                         outbound_queue.put_nowait({"type": "error", "message": "Reasoning models require a Monthly or Founding plan."})
+                        continue
+
+                    if not is_pro and config.LLM_PROVIDER != "local":
+                        outbound_queue.put_nowait({
+                            "type": "upgrade_required",
+                            "message": "Cloud LLMs require a Pro subscription. Upgrade to access Gemini, Groq, and Cloudflare Workers AI."
+                        })
                         continue
 
                     # Clear queue backlog
