@@ -1,4 +1,9 @@
-import pytest
+import sys
+
+with open("tests/test_rag.py", "r") as f:
+    lines = f.readlines()
+
+new_content = """import pytest
 import io
 import os
 
@@ -50,3 +55,7 @@ async def test_search_empty_after_delete(app_client):
     assert response.status_code == 200
     data = response.json()
     assert data["empty"] is True
+"""
+
+with open("tests/test_rag.py", "w") as f:
+    f.write(new_content)
