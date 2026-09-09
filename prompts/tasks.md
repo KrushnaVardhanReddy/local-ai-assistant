@@ -342,4 +342,41 @@
 | P25-T3 | `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Post-Interview Email Draft:** New `POST /session/email-draft` endpoint generates a personalized 3-paragraph thank-you email from the session scorecard. Rendered in an editable textarea with copy button in the Session Report panel. Closes Cluely's auto-email feature. | ✅ | #76 |
 | P25-T4 | `backend/history_store.py` [NEW], `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Session History & Score Trends:** New `backend/history_store.py` persists lightweight scorecard summaries to a local JSON file after each session. New `GET /session/history` endpoint. Session Report panel gets a collapsible "Past Sessions" section with SVG sparkline score trend + per-session cards. Closes Sensei AI's primary differentiator. | ✅ | #80 |
 
+---
 
+## Phase 26 — Enterprise B2B Features 🏢
+
+> Shifting from B2C to B2B. Requires Supabase authentication upgrades and SSO integration.
+> Allows IT Admins to manage seats, and creates a Team Knowledge Base.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P26-T1 | `web/src/routes/api/auth/` | **SSO Integration:** Add SAML/Okta single sign-on support via Supabase Auth for Enterprise customers. | ⬜ | — |
+| P26-T2 | `web/src/routes/dashboard/admin/` | **Seat Management:** Admin dashboard to purchase blocks of seats via Stripe, and assign/revoke them to employee emails. | ⬜ | — |
+| P26-T3 | `backend/rag/` | **Team Knowledge Base:** Expand RAG to allow uploading company-wide Playbooks/Docs to a shared vector database. | ⬜ | — |
+| P26-T4 | `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Auto-CRM Sync:** Add a "Push to Salesforce/HubSpot" button in the Session Report panel to log meeting notes directly to the CRM. | ⬜ | — |
+
+---
+
+## Phase 27 — Voice Conversational Mode (Alexa for Work) 🗣️
+
+> Transforms the app from a passive stealth listener to an active Voice-In/Voice-Out assistant.
+> Users can leave it running all day and ask it questions hands-free.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P27-T1 | `backend/audio_listener.py` | **Wake Word Detection:** Integrate Picovoice Porcupine to detect the wake word (e.g. "Hey Owl") before sending audio to the LLM. | ⬜ | — |
+| P27-T2 | `backend/tts.py`, `backend/app.py` | **Text-to-Speech (TTS):** Pipe LLM responses through Edge-TTS (or ElevenLabs for premium users) and play audio through system speakers. | ⬜ | — |
+| P27-T3 | `frontend/src/lib/Assistant.svelte` | **Voice Mode UI:** Add a visual indicator (like a glowing orb) when the assistant is actively listening/speaking, bypassing the stealth chat UI. | ⬜ | — |
+
+---
+
+## Phase 28 — Agentic Computer Control (OS Level) 🤖
+
+> Gives BarnOwl "hands". Upgrades the LLM client to support tool-calling (function calling) so it can execute Python scripts to control the OS.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P28-T1 | `backend/llm_client.py` | **Tool Calling Integration:** Add `tools` and `tool_choice` parameters to the OpenAI API requests to allow the LLM to emit function calls instead of text responses. | ⬜ | — |
+| P28-T2 | `backend/tools/` | **OS Interaction Toolkit:** Build Python functions using `subprocess` and `pyautogui` to open applications, manage windows, type text, and retrieve OS status. | ⬜ | — |
+| P28-T3 | `backend/app.py` | **Agentic Event Loop:** Intercept tool-call responses from the LLM, execute the local Python function, and feed the result back to the LLM to continue the conversation. | ⬜ | — |
