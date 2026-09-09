@@ -1,0 +1,107 @@
+TASK: P27-T1 — Wake Word Detection ("Hey Owl")
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Integrate Picovoice Porcupine wake word detection so BarnOwl AI
+can listen passively in the background and activate only when the
+user says "Hey Owl" — exactly like Alexa or Google Home.
+
+The wake word engine runs at near-zero CPU cost and listens 24/7
+without sending any audio to the internet. This makes BarnOwl AI
+a safe, always-available enterprise voice assistant.
+
+Key behaviors:
+  1. Add a new `backend/wake_word.py` module that wraps Porcupine.
+  2. The module runs on a dedicated background thread separate from
+     the main audio capture loop.
+  3. When the wake word is detected, it emits a `wake_word_detected`
+     event by sending a WebSocket message `{"type": "wake_word_triggered"}`.
+  4. Add a config flag `WAKE_WORD_ENABLED=false` (off by default) so
+     existing users are unaffected until they opt in.
+  5. Add a "Voice Mode" toggle to Settings.svelte to enable/disable it.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use `pvporcupine` (Picovoice Porcupine Python SDK). Add to requirements.txt.
+  Use the FREE built-in keywords — "hey google", "alexa", "jarvis" are examples.
+  For a custom "hey owl" keyword, we need a Picovoice account. Use "jarvis"
+  as the DEFAULT wake word for now (it is a built-in free keyword).
+- The wake word thread must be COMPLETELY isolated from the main STT thread.
+  It should use a separate `sounddevice.InputStream` on the same mic.
+- If `pvporcupine` is not installed or `PICOVOICE_ACCESS_KEY` is missing,
+  the module must silently disable itself (no crash, no error).
+- Do NOT modify `audio_listener.py`. The wake word detector is a standalone module.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/wake_word.py (CREATE NEW)
+   ```python
+   """
+   WakeWordDetector — Picovoice Porcupine integration for BarnOwl AI.
+   Listens for a configurable wake word on a background thread.
+   Emits a callback when triggered. Silently no-ops if pvporcupine is unavailable.
+   """
+   import threading
+   import queue
+   from typing import Callable
+
+   class WakeWordDetector:
+       def __init__(self, on_trigger: Callable[[], None], keyword: str = "jarvis"):
+           self._on_trigger = on_trigger
+           self._keyword = keyword
+           self._thread: threading.Thread | None = None
+           self._stop_event = threading.Event()
+
+       def start(self) -> bool:
+           """Start listening. Returns True if started successfully."""
+           try:
+               import pvporcupine
+               import sounddevice as sd
+               import numpy as np
+               # ... implementation
+           except (ImportError, Exception):
+               return False  # silently no-op
+           # ... start background thread
+           return True
+
+       def stop(self):
+           self._stop_event.set()
+           if self._thread:
+               self._thread.join(timeout=2)
+   ```
+
+2. FILE: backend/config.py (MODIFY — minimal)
+   Add:
+   ```python
+   WAKE_WORD_ENABLED: bool = os.getenv("WAKE_WORD_ENABLED", "false").lower() == "true"
+   PICOVOICE_ACCESS_KEY: str = os.getenv("PICOVOICE_ACCESS_KEY", "")
+   WAKE_WORD_KEYWORD: str = os.getenv("WAKE_WORD_KEYWORD", "jarvis")
+   ```
+
+3. FILE: backend/app.py (MODIFY — minimal)
+   In the FastAPI startup event, if `config.WAKE_WORD_ENABLED`:
+   - Instantiate `WakeWordDetector` and call `.start()`.
+   - The `on_trigger` callback should broadcast `{"type": "wake_word_triggered"}`
+     to all active WebSocket clients.
+
+4. FILE: frontend/src/lib/Settings.svelte (MODIFY — minimal)
+   Add a "Voice Mode" checkbox below the BYOK section:
+   - Label: "🎙 Voice Mode — Say 'Jarvis' to activate"
+   - On toggle, POSTs to a new `POST /config/wake-word` endpoint to
+     set `WAKE_WORD_ENABLED` at runtime without restart.
+
+FILES TO CREATE:
+- backend/wake_word.py
+
+FILES TO MODIFY:
+- backend/config.py
+- backend/app.py
+- frontend/src/lib/Settings.svelte
+- backend/requirements.txt  (add pvporcupine)
+
+Commit: "jules: P27-T1 add wake word detection via Picovoice Porcupine"
+Target branch: main

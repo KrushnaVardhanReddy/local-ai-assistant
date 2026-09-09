@@ -1,0 +1,106 @@
+TASK: P26-T3 — Team Knowledge Base (Shared Enterprise RAG)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Extend the existing local RAG system (Phase 5) to support a shared,
+organisation-wide Team Knowledge Base stored in Supabase pgvector.
+
+Individual users currently upload their own documents (resume, JD) to a
+local ChromaDB instance. For Enterprise B2B, a Sales Manager should be
+able to upload the company's Sales Playbook once and have it instantly
+available to ALL reps in the org during live calls.
+
+Key behaviors:
+  1. Add a new `POST /rag/team/ingest` backend endpoint that accepts a
+     PDF or TXT file upload, creates embeddings, and stores them in a
+     Supabase `team_documents` pgvector table (keyed by `org_id`).
+  2. Modify the RAG retriever to MERGE results from:
+     - Local ChromaDB (personal, per-user documents)
+     - Supabase pgvector (team-shared, per-org documents)
+  3. Add a "Team Playbook" tab in the existing `KnowledgeBase.svelte`
+     component that lets admins upload team documents and shows a list
+     of all docs in the org's shared knowledge base.
+  4. On ingest, store file metadata in a `team_documents_meta` Supabase
+     table: (id, org_id, filename, uploaded_by, size_bytes, uploaded_at).
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- The pgvector extension must already be enabled in Supabase.
+  Add a migration file that creates the `team_documents` and
+  `team_documents_meta` tables.
+- The MERGE of local + team results must happen BEFORE the LLM call,
+  inside `backend/rag/retriever.py`. Local docs get priority (inserted
+  first in the context) so personal info always overrides team defaults.
+- If no `org_id` is found in the JWT (user is not Enterprise), the team
+  retrieval silently returns [] — individual plan users are unaffected.
+- Use `supabase-py` for the pgvector query. Add it to requirements.txt.
+- Cap the merged context at 8 chunks total (4 local + 4 team) to avoid
+  bloating the LLM context window.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: web/supabase/migrations/20260102000000_team_knowledge_base.sql (CREATE NEW)
+   ```sql
+   create extension if not exists vector;
+
+   create table if not exists public.team_documents (
+     id uuid primary key default gen_random_uuid(),
+     org_id uuid references public.enterprise_orgs(id) on delete cascade,
+     content text not null,
+     embedding vector(1536),
+     metadata jsonb,
+     created_at timestamptz default now()
+   );
+   create index on public.team_documents using ivfflat (embedding vector_cosine_ops);
+
+   create table if not exists public.team_documents_meta (
+     id uuid primary key default gen_random_uuid(),
+     org_id uuid references public.enterprise_orgs(id) on delete cascade,
+     filename text,
+     uploaded_by uuid references auth.users(id),
+     size_bytes int,
+     uploaded_at timestamptz default now()
+   );
+   ```
+
+2. FILE: backend/rag/team_retriever.py (CREATE NEW)
+   A new retriever class `TeamRetriever` that:
+   - Takes `org_id: str | None` and `query_embedding: list[float]`.
+   - If `org_id` is None, immediately returns [].
+   - Queries `team_documents` in Supabase using pgvector cosine similarity.
+   - Returns top 4 matching text chunks.
+
+3. FILE: backend/rag/retriever.py (MODIFY)
+   Modify the `retrieve(query, org_id=None)` function to:
+   - Keep the existing ChromaDB local retrieval (top 4 chunks).
+   - Call `TeamRetriever(org_id, embedding).retrieve()` for team chunks.
+   - Merge and return combined list, local chunks first.
+
+4. FILE: backend/app.py (MODIFY — minimal)
+   - Add `POST /rag/team/ingest` endpoint that accepts a file upload,
+     chunks the text, generates embeddings via the existing sentence-transformer,
+     and upserts into Supabase `team_documents`.
+   - Extract `org_id` from the JWT payload to scope the upload.
+
+5. FILE: frontend/src/lib/KnowledgeBase.svelte (MODIFY)
+   - Add a "Team Playbook" tab alongside the existing "My Documents" tab.
+   - Show a file upload area and a list of team documents (fetched from
+     `GET /rag/team/list` — also add this backend endpoint).
+   - Only show the upload button if `authState.is_org_admin === true`.
+     Non-admin enterprise users can see but not delete team documents.
+
+FILES TO CREATE:
+- web/supabase/migrations/20260102000000_team_knowledge_base.sql
+- backend/rag/team_retriever.py
+
+FILES TO MODIFY:
+- backend/rag/retriever.py
+- backend/app.py
+- frontend/src/lib/KnowledgeBase.svelte
+
+Commit: "jules: P26-T3 add team knowledge base with shared enterprise RAG"
+Target branch: main

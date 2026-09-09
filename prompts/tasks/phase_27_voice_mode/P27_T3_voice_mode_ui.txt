@@ -1,0 +1,134 @@
+TASK: P27-T3 — Voice Mode UI (Glowing Orb Indicator)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a "Voice Mode" visual state to the BarnOwl AI UI that activates
+when the wake word is detected (P27-T1) or when TTS is speaking (P27-T2).
+
+In Stealth Interview Mode, the app shows a compact, invisible glass panel.
+In Voice Mode (when alone at your desk), it should transform into a
+highly visible, animated "Orb" indicator so you know the AI is listening
+or speaking — similar to the Gemini Live orb or Siri's animated sphere.
+
+Key behaviors:
+  1. Listen for the `wake_word_triggered` WebSocket event from P27-T1.
+     When received, temporarily show the "Voice Orb" overlay.
+  2. The orb animates: pulsing green when listening, pulsing blue when
+     the AI is generating, and pulsing purple when TTS is speaking.
+  3. The orb disappears automatically 3 seconds after TTS finishes speaking.
+  4. The orb is a small floating element (100x100px) positioned in the
+     bottom-right corner of the screen — unobtrusive but visible.
+  5. Clicking the orb opens the full Assistant panel.
+  6. Add a new Svelte state `voiceModeActive = $state(false)` toggled by
+     the wake word event.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Only modify `frontend/src/lib/Assistant.svelte`. This is a pure UI change.
+- The orb is pure CSS animation — no external animation libraries.
+- Use `@keyframes` pulse animations defined in a `<style>` block.
+- The orb states map to WebSocket message types:
+    - `wake_word_triggered` → green pulse (listening)
+    - `token` (streaming) → blue pulse (thinking)
+    - `done` (stream finished + TTS playing) → purple pulse (speaking)
+    - `tts_done` (new event from backend after TTS) → fade out orb
+- The orb must respect the existing stealth/click-through mode.
+  If click-through is active, the orb has `pointer-events: none`.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+
+   a. Add state variables:
+      ```typescript
+      let voiceModeActive = $state(false);
+      let voiceOrbState = $state<'listening' | 'thinking' | 'speaking' | 'idle'>('idle');
+      let orbDismissTimer: ReturnType<typeof setTimeout> | null = null;
+      ```
+
+   b. In the WebSocket message handler (where `type === 'wake_word_triggered'`):
+      ```typescript
+      case 'wake_word_triggered':
+        voiceModeActive = true;
+        voiceOrbState = 'listening';
+        break;
+      case 'tts_done':
+        voiceOrbState = 'idle';
+        orbDismissTimer = setTimeout(() => { voiceModeActive = false; }, 3000);
+        break;
+      ```
+      Also update orbState to 'thinking' on first token and 'speaking' on 'done'.
+
+   c. Add the orb HTML at the bottom of the component (before the
+      session-expired overlay):
+      ```svelte
+      {#if voiceModeActive}
+        <div
+          class="voice-orb {voiceOrbState}"
+          onclick={() => showAssistant = true}
+          title="BarnOwl is listening..."
+        >
+          <div class="orb-inner"></div>
+        </div>
+      {/if}
+      ```
+
+   d. Add the CSS in the `<style>` block:
+      ```css
+      .voice-orb {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 9990;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .voice-orb .orb-inner {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        transition: background 0.5s ease;
+      }
+      .voice-orb.listening .orb-inner {
+        background: radial-gradient(circle, #4ade80, #16a34a);
+        animation: pulse-green 1.2s infinite;
+        box-shadow: 0 0 20px rgba(74, 222, 128, 0.6);
+      }
+      .voice-orb.thinking .orb-inner {
+        background: radial-gradient(circle, #60a5fa, #2563eb);
+        animation: pulse-blue 0.8s infinite;
+        box-shadow: 0 0 20px rgba(96, 165, 250, 0.6);
+      }
+      .voice-orb.speaking .orb-inner {
+        background: radial-gradient(circle, #c084fc, #7c3aed);
+        animation: pulse-purple 1.5s infinite;
+        box-shadow: 0 0 20px rgba(192, 132, 252, 0.6);
+      }
+      @keyframes pulse-green {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.15); opacity: 0.85; }
+      }
+      @keyframes pulse-blue {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+      }
+      @keyframes pulse-purple {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.9; }
+      }
+      ```
+
+FILES TO MODIFY:
+- frontend/src/lib/Assistant.svelte
+
+Commit: "jules: P27-T3 add voice mode UI with animated glowing orb indicator"
+Target branch: main

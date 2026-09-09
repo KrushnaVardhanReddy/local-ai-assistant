@@ -1,0 +1,109 @@
+TASK: P27-T2 — Text-to-Speech (TTS) for Voice Conversational Mode
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add Text-to-Speech (TTS) output so BarnOwl AI can speak LLM responses
+aloud — completing the Voice-In / Voice-Out conversational loop started
+by P27-T1 (wake word detection).
+
+When TTS mode is active, instead of just streaming text to the UI panel,
+the LLM's response is also converted to speech and played through the
+default system speakers.
+
+Key behaviors:
+  1. Create a new `backend/tts.py` module with a `TTSEngine` class.
+  2. Default TTS engine: Microsoft `edge-tts` (free, neural voices, no API key).
+     Premium TTS engine (optional, Lifetime BYOK tier): OpenAI TTS API.
+  3. After streaming each LLM response sentence (split on `.`, `!`, `?`),
+     call `tts.speak(sentence)` async to avoid blocking the stream.
+  4. TTS audio is played server-side using `sounddevice.play()` on the
+     default output device.
+  5. Add a `TTS_ENABLED=false` config flag. Default off.
+  6. While TTS is speaking, set a `tts_speaking` busy-guard so the STT
+     pipeline ignores the speaker audio (avoids the AI hearing itself).
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Use `edge-tts` library (pip install edge-tts). Add to requirements.txt.
+- `edge-tts` is async — use `asyncio` natively. Do NOT block the WS thread.
+- Sentence splitting: use a simple regex `re.split(r'(?<=[.!?])\s+', text)`.
+  Do NOT use NLTK or any heavy NLP library.
+- The `tts_speaking` flag must integrate with the existing busy-guard in
+  `backend/smart_filter.py`. Add a new check: `if tts_speaking: drop audio`.
+- If TTS is playing and the wake word fires again (P27-T1), interrupt
+  TTS immediately (cancel the current audio playback task).
+- Default voice: `en-US-AriaNeural` (clear, professional female voice).
+  Make this configurable via `TTS_VOICE` env var.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/tts.py (CREATE NEW)
+   ```python
+   """
+   TTSEngine — Text-to-Speech for BarnOwl AI Voice Mode.
+   Supports edge-tts (free) and OpenAI TTS (premium).
+   Silently no-ops if edge-tts is not installed.
+   """
+   import asyncio
+   import re
+   from typing import Literal
+
+   _tts_speaking = False
+
+   def is_speaking() -> bool:
+       return _tts_speaking
+
+   class TTSEngine:
+       def __init__(self, voice: str = "en-US-AriaNeural",
+                    provider: Literal["edge", "openai"] = "edge"):
+           self.voice = voice
+           self.provider = provider
+           self._current_task: asyncio.Task | None = None
+
+       async def speak(self, text: str) -> None:
+           """Convert text to speech and play it. Sentence-chunks for low latency."""
+           # ... implementation
+
+       def interrupt(self) -> None:
+           """Cancel current speech immediately."""
+           if self._current_task:
+               self._current_task.cancel()
+   ```
+
+2. FILE: backend/config.py (MODIFY — minimal)
+   Add:
+   ```python
+   TTS_ENABLED: bool = os.getenv("TTS_ENABLED", "false").lower() == "true"
+   TTS_VOICE: str = os.getenv("TTS_VOICE", "en-US-AriaNeural")
+   TTS_PROVIDER: str = os.getenv("TTS_PROVIDER", "edge")
+   ```
+
+3. FILE: backend/smart_filter.py (MODIFY — minimal)
+   Import and use `tts.is_speaking()`:
+   ```python
+   from tts import is_speaking as tts_is_speaking
+   # In the main filter function, add:
+   if tts_is_speaking():
+       return False  # drop audio while AI is speaking
+   ```
+
+4. FILE: backend/app.py (MODIFY — minimal)
+   - Import `TTSEngine` and instantiate it at startup if `TTS_ENABLED`.
+   - In the LLM stream handler, after accumulating each sentence,
+     fire `asyncio.create_task(tts_engine.speak(sentence))`.
+
+FILES TO CREATE:
+- backend/tts.py
+
+FILES TO MODIFY:
+- backend/config.py
+- backend/smart_filter.py
+- backend/app.py
+- backend/requirements.txt  (add edge-tts)
+
+Commit: "jules: P27-T2 add TTS engine for voice conversational mode"
+Target branch: main

@@ -14,72 +14,68 @@ Wait for ALL tasks in a batch to be merged before starting the next batch.
 
 ---
 
-### BATCH 1 — Start Now (All Parallel Safe)
-**No prerequisites. Run all 3 simultaneously.**
+
+> 📦 Previous batches (1-5) for Phases 1-25 have been completed.
+
+### BATCH 6 — Phase 26 Enterprise (Parallel Safe — All touch different files)
+**No prerequisites beyond main being fully up to date.**
 
 | Priority | File | Task | Touches |
 |---|---|---|---|
-| 🔴 1st | `phase_18_portable_stealth/P18_T1_T2_portable_neutral_name` | Portable app + neutral process name | `tauri.conf.json`, `Cargo.toml` |
-| 🔴 2nd | `phase_16_gemini_live/P16_T1_gemini_live_client` | New GeminiLiveClient module | `backend/gemini_live_client.py` (NEW) |
-| 🟠 3rd | `phase_17_session_intelligence/P17_T1_session_manager` | New SessionManager + 2 endpoints | `backend/session_manager.py` (NEW), `backend/app.py` (new routes only) |
+| 🔴 1st | `phase_26_enterprise/P26_T1_sso_integration` | Enterprise SSO (SAML/Supabase) | `web/src/routes/login/`, `web/src/routes/api/enterprise/sso-init/`, `web/supabase/migrations/` |
+| 🔴 2nd | `phase_26_enterprise/P26_T2_seat_management` | Admin seat management dashboard | `web/src/routes/dashboard/admin/`, `web/src/routes/api/enterprise/` (different files) |
+| 🟠 3rd | `phase_26_enterprise/P26_T3_team_knowledge_base` | Team RAG (shared knowledge base) | `backend/rag/team_retriever.py` (NEW), `backend/rag/retriever.py`, `backend/app.py`, `frontend/src/lib/KnowledgeBase.svelte` |
+
+⚠️ Note: P26-T3 touches `backend/app.py`. Do NOT run any other task that also touches `backend/app.py` in the same batch.
+
+```bash
+python3 scripts/jules_submit.py --task P26-T1
+python3 scripts/jules_submit.py --task P26-T2
+python3 scripts/jules_submit.py --task P26-T3
+```
 
 ---
 
-### BATCH 2 — After Batch 1 Merged (All Parallel Safe)
+### BATCH 7 — Phase 27 Voice Mode (Sequential — build on each other)
+**Wait for Batch 6 to merge.**
 
 | Priority | File | Task | Touches |
 |---|---|---|---|
-| 🔴 1st | `phase_16_gemini_live/P16_T3_gemini_config` | Gemini config vars | `backend/config.py` (2 new fields), `.env.local` |
-| 🟠 2nd | `phase_17_session_intelligence/P17_T2_scorecard_generation` | Scorecard LLM method | `backend/llm_client.py` (new method) |
-| 🟡 3rd | `phase_18_portable_stealth/P18_T4_build_pipeline` | Build pipeline script | `Makefile` (new targets), `scripts/build_portable.sh` (NEW) |
+| 🔴 1st | `phase_27_voice_mode/P27_T1_wake_word` | Wake word detection | `backend/wake_word.py` (NEW), `backend/config.py`, `backend/app.py`, `frontend/src/lib/Settings.svelte` |
+| 🔴 2nd | `phase_27_voice_mode/P27_T2_tts_engine` | TTS engine | `backend/tts.py` (NEW), `backend/config.py`, `backend/smart_filter.py`, `backend/app.py` |
+
+⚠️ P27-T1 and P27-T2 BOTH touch `backend/config.py` and `backend/app.py`. Submit them SEQUENTIALLY (wait for P27-T1 to merge before P27-T2).
+
+```bash
+# Submit P27-T1 first and wait for it to merge, THEN:
+python3 scripts/jules_submit.py --task P27-T1
+# After P27-T1 merged:
+python3 scripts/jules_submit.py --task P27-T2
+# After P27-T2 merged:
+python3 scripts/jules_submit.py --task P27-T3
+```
+
+| 🟡 3rd | `phase_27_voice_mode/P27_T3_voice_mode_ui` | Glowing orb UI | `frontend/src/lib/Assistant.svelte` only |
 
 ---
 
-### BATCH 3 — After Batch 2 Merged (All Parallel Safe)
+### BATCH 8 — Phase 28 Agentic (Sequential — strict dependency chain)
+**Wait for Batch 7 to merge.**
 
 | Priority | File | Task | Touches |
 |---|---|---|---|
-| 🔴 1st | `phase_16_gemini_live/P16_T2_gemini_app_pipeline` | Wire Gemini into WS pipeline | `backend/app.py` (startup + WS handler) |
-| 🟠 2nd | `phase_15_speaker_diarization/P15_T1_diarization_backend` | Speaker diarization in Transcriber | `backend/transcriber.py`, `backend/config.py` (1 field), `backend/app.py` (1 line) |
-| 🟡 3rd | `phase_17_session_intelligence/P17_T3_session_report_ui` | Session Report UI | `frontend/src/lib/SessionReport.svelte` (NEW), `frontend/src/lib/Assistant.svelte` |
+| 🔴 1st | `phase_28_agentic/P28_T1_tool_registry` | Tool calling infra + BaseTool | `backend/tools/base_tool.py` (NEW), `backend/tools/__init__.py` (NEW), `backend/llm_client.py`, `backend/config.py` |
+| 🔴 2nd | `phase_28_agentic/P28_T2_os_tool_pack` | 6 built-in OS tools | `backend/tools/open_app.py`, `type_text.py`, `get_clipboard.py`, `set_clipboard.py`, `web_search.py`, `show_notification.py` (ALL NEW) |
+| 🔴 3rd | `phase_28_agentic/P28_T3_agentic_loop` | Agent loop + UI toggle | `backend/app.py`, `frontend/src/lib/Assistant.svelte` |
 
----
+⚠️ P28 tasks MUST be submitted in strict order (T1 → T2 → T3). Each depends on the previous.
+P28-T2 is fully safe to parallelize with any Phase 26 tasks (only creates new files).
 
-### BATCH 4 — After Batch 3 Merged (All Parallel Safe)
-
-| Priority | File | Task | Touches |
-|---|---|---|---|
-| 🟠 | `phase_15_speaker_diarization/P15_T2_diarization_routing` | Route diarized segments | `backend/smart_filter.py`, `backend/app.py` (WS routing) |
-| 🟠 | `phase_15_speaker_diarization/P15_T3_diarization_ui` | Speaker badge chips | `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Assistant.svelte` |
-| 🟡 | `phase_16_gemini_live/P16_T4_gemini_settings_ui` | STT selector hide for Gemini | `frontend/src/lib/Settings.svelte` |
-| 🟡 | `phase_17_session_intelligence/P17_T4_answer_coaching` | Live coaching hints | `backend/config.py` (1 field), `backend/app.py` (coaching task) |
-| 🟡 | `phase_18_portable_stealth/P18_T3_configurable_name` | User-configurable process name | `frontend/src-tauri/src/lib.rs`, `settings.json.example` (NEW) |
-
-⚠️ Note: P15-T2 and P17-T4 both touch `backend/app.py`. Submit them sequentially within Batch 4, not truly parallel. All others in Batch 4 are fully parallel.
-
----
-
-### BATCH 5 — Phase 19 & 20 (Needs Auth/Billing Infrastructure)
-**Submit Phase 19 tasks in sequence (many share auth.py). Phase 20 after schema applied.**
-
-**Phase 20 — Anti-Sharing (run first within Batch 5):**
-1. `phase_20_anti_sharing/P20_T1_supabase_schema` — Apply SQL schema in Supabase (no code)
-2. `phase_20_anti_sharing/P20_T2_T3_device_session_lock` — Device + session enforcement
-3. `phase_20_anti_sharing/P20_T4_T5_device_dashboard` — Dashboard + frontend handlers
-
-**Phase 19 — Pricing (parallel with Phase 20 where possible):**
-> Phase 19 prompts are in `phase_19_pricing_billing/` — see individual files for details.
-> These require Stripe account setup and are lower priority than the core app features.
-
----
-
-## 📋 Priority Color Key
-- 🔴 Critical path — blocks next batch
-- 🟠 High value — ship ASAP
-- 🟡 Important but non-blocking
-
-## 🚫 Conflict Rules
-- **Never run two Jules tasks that touch the same file in the same batch**
-- `backend/app.py` is the most contested file — check each prompt's "Files touched" row
-- `backend/config.py` — only one task per batch should touch it
-- `frontend/src/lib/Assistant.svelte` — only one task per batch
+```bash
+# Submit strictly in order:
+python3 scripts/jules_submit.py --task P28-T1
+# After P28-T1 merged:
+python3 scripts/jules_submit.py --task P28-T2
+# After P28-T2 merged:
+python3 scripts/jules_submit.py --task P28-T3
+```

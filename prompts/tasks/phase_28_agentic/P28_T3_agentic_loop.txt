@@ -1,0 +1,95 @@
+TASK: P28-T3 — Agentic Event Loop & Frontend Agent Mode UI
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Wire up the agent event loop in `backend/app.py` and add a minimal
+"Agent Mode" toggle in the frontend so users can switch BarnOwl AI
+between Passive Mode (just answers questions) and Agent Mode (can
+execute OS actions).
+
+PREREQUISITE: P28-T1 and P28-T2 must be merged before this task.
+
+The agentic event loop runs INSIDE the existing WebSocket handler.
+When `AGENT_MODE_ENABLED` is true and the user sends a chat message:
+  1. Call `llm_client.agentic_chat(messages, tools=registry.get_schemas())`.
+  2. If the LLM returns a tool_call, execute the tool via the registry.
+  3. Feed the tool result back to the LLM as a `tool` role message.
+  4. Repeat until the LLM returns a plain text response (no more tool calls).
+  5. Stream the final response to the frontend.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- The agentic loop has a hard limit of MAX_TOOL_CALLS = 5 per turn.
+  After 5 tool calls, break out and return whatever the LLM has so far.
+  This prevents infinite loops.
+- Each tool_call result must be sent to the frontend as a special message
+  type `{"type": "tool_call", "tool": "open_application", "result": "..."}`.
+  The frontend will display it as a small "action card" below the response.
+- Agent Mode is ONLY active when `AGENT_MODE_ENABLED=true` in config.
+  In normal mode, the WS handler uses the existing non-agentic pipeline.
+- Do NOT modify the existing STT → LLM pipeline. The agentic loop is
+  only triggered when the user sends a manual chat message (not auto-STT).
+- The frontend shows tool_call action cards with a robot emoji prefix.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/app.py (MODIFY)
+   a. At startup, import and instantiate the ToolRegistry:
+      ```python
+      if config.AGENT_MODE_ENABLED:
+          from tools import registry as tool_registry
+      ```
+   b. In the `sendChat` WebSocket message handler (where manual chat
+      messages are processed), add the agentic loop BEFORE the existing
+      LLM call:
+      ```python
+      if config.AGENT_MODE_ENABLED:
+          messages = [...]  # build message history
+          tool_calls_made = 0
+          while tool_calls_made < 5:
+              result = await llm_client.agentic_chat(
+                  messages, tools=tool_registry.get_schemas()
+              )
+              if result.get("type") == "tool_call":
+                  tool = tool_registry.get(result["function"]["name"])
+                  if tool:
+                      tool_result = await tool.execute(**result["function"]["arguments"])
+                      # Send action card to frontend
+                      await websocket.send_json({
+                          "type": "tool_call",
+                          "tool": result["function"]["name"],
+                          "result": tool_result
+                      })
+                      messages.append({"role": "tool", "content": tool_result, ...})
+                      tool_calls_made += 1
+                  else:
+                      break
+              else:
+                  # Plain text response — stream it normally
+                  await websocket.send_json({"type": "token", "text": result["text"]})
+                  break
+      ```
+
+2. FILE: frontend/src/lib/Assistant.svelte (MODIFY)
+   a. Add state: `let agentModeActive = $state(false);`
+   b. Add a "⚙️ Agent" pill button to the toolbar (next to STAR and ⌨️).
+      When active, glows orange to indicate the AI can take actions.
+   c. Handle the new `tool_call` WebSocket message type:
+      ```typescript
+      case 'tool_call':
+        // Append a small action card to the response panel
+        const card = `\n\n> 🤖 **Action:** \`${msg.tool}\`\n> Result: ${msg.result}\n`;
+        wsState.answer += card;
+        break;
+      ```
+
+FILES TO MODIFY:
+- backend/app.py
+- frontend/src/lib/Assistant.svelte
+
+Commit: "jules: P28-T3 add agentic event loop and agent mode UI toggle"
+Target branch: main

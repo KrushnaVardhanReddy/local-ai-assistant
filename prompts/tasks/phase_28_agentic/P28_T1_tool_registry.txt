@@ -1,0 +1,174 @@
+TASK: P28-T1 — Tool Registry & Tool Calling Integration
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build the core infrastructure for Agentic Computer Control — the
+"nervous system" that allows the LLM to call Python functions to
+control the OS. This task is 100% foundational and must be designed
+for extensibility — adding a new "tool" (e.g., send_email, open_spotify)
+should require writing ONE Python file and nothing else.
+
+The architecture follows the OpenAI Tool Calling spec. The LLM is given
+a list of available tools with JSON Schema definitions. When the LLM
+wants to perform an action, it returns a tool_call object instead of
+text. The backend intercepts this, executes the function, feeds the
+result back to the LLM, and the LLM continues the conversation.
+
+═══════════════════════════════════════════════════════════════
+PLUGIN ARCHITECTURE (CRITICAL — READ CAREFULLY)
+═══════════════════════════════════════════════════════════════
+The tool system is plugin-based. To add a new tool:
+  1. Create a new Python file in `backend/tools/` directory.
+  2. Define a class that inherits from `BaseTool`.
+  3. The ToolRegistry auto-discovers all files in `backend/tools/`.
+  4. Zero changes needed anywhere else.
+
+This is similar to how pytest discovers test files — drop a file in
+the folder, it works automatically.
+
+```
+backend/
+  tools/
+    __init__.py            ← ToolRegistry auto-discovery
+    base_tool.py           ← BaseTool abstract class (THE SPEC)
+    open_app.py            ← Example: opens applications
+    type_text.py           ← Example: types text
+    take_screenshot.py     ← Example: captures screen
+    web_search.py          ← Example: DuckDuckGo search
+    get_clipboard.py       ← Example: reads clipboard
+```
+
+Each tool file defines ONE class inheriting `BaseTool`. The registry
+calls `tool.to_openai_schema()` to get its JSON spec for the LLM,
+and `tool.execute(args)` to run it.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/tools/base_tool.py (CREATE NEW)
+   The abstract base class ALL tools must inherit from:
+   ```python
+   """
+   BaseTool — Abstract base for all BarnOwl AI agent tools.
+
+   To add a new tool:
+     1. Create a new file in backend/tools/
+     2. Define a class that inherits from BaseTool
+     3. Implement: name, description, parameters, execute()
+     4. The ToolRegistry will auto-discover it. Nothing else to change.
+   """
+   from abc import ABC, abstractmethod
+   from typing import Any
+
+   class BaseTool(ABC):
+       @property
+       @abstractmethod
+       def name(self) -> str:
+           """Unique tool name — used as the function name in OpenAI schema."""
+           ...
+
+       @property
+       @abstractmethod
+       def description(self) -> str:
+           """Human-readable description. The LLM reads this to decide when to use the tool."""
+           ...
+
+       @property
+       @abstractmethod
+       def parameters(self) -> dict:
+           """JSON Schema for the tool's arguments. Must be valid OpenAI tool parameters spec."""
+           ...
+
+       @abstractmethod
+       async def execute(self, **kwargs: Any) -> str:
+           """
+           Execute the tool with the given arguments.
+           Must return a string result that will be fed back to the LLM.
+           Never raise — catch exceptions and return an error string.
+           """
+           ...
+
+       def to_openai_schema(self) -> dict:
+           """Convert this tool to OpenAI function-calling JSON format."""
+           return {
+               "type": "function",
+               "function": {
+                   "name": self.name,
+                   "description": self.description,
+                   "parameters": self.parameters,
+               }
+           }
+   ```
+
+2. FILE: backend/tools/__init__.py (CREATE NEW)
+   The auto-discovery ToolRegistry:
+   ```python
+   """
+   ToolRegistry — Auto-discovers and registers all BaseTool subclasses
+   in the backend/tools/ directory. No manual registration needed.
+   """
+   import importlib
+   import inspect
+   import pkgutil
+   from pathlib import Path
+   from .base_tool import BaseTool
+
+   class ToolRegistry:
+       def __init__(self):
+           self._tools: dict[str, BaseTool] = {}
+           self._discover()
+
+       def _discover(self):
+           """Scan backend/tools/ for BaseTool subclasses and register them."""
+           tools_dir = Path(__file__).parent
+           for module_info in pkgutil.iter_modules([str(tools_dir)]):
+               if module_info.name in ("base_tool", "__init__"):
+                   continue
+               try:
+                   module = importlib.import_module(f"tools.{module_info.name}")
+                   for _, cls in inspect.getmembers(module, inspect.isclass):
+                       if issubclass(cls, BaseTool) and cls is not BaseTool:
+                           instance = cls()
+                           self._tools[instance.name] = instance
+               except Exception as e:
+                   print(f"[ToolRegistry] Failed to load tools/{module_info.name}.py: {e}")
+
+       def get_all(self) -> list[BaseTool]:
+           return list(self._tools.values())
+
+       def get_schemas(self) -> list[dict]:
+           return [t.to_openai_schema() for t in self._tools.values()]
+
+       def get(self, name: str) -> BaseTool | None:
+           return self._tools.get(name)
+
+   # Singleton
+   registry = ToolRegistry()
+   ```
+
+3. FILE: backend/llm_client.py (MODIFY)
+   Add a new method `agentic_chat(messages, tools)`:
+   - Calls the chat completion API with `tools=tools` and `tool_choice="auto"`.
+   - If response contains `tool_calls`, returns them. Otherwise returns text.
+   - Must work for OpenAI, Anthropic (different API schema), Groq, and OpenRouter.
+   - For Gemini and local models (Ollama/LMStudio) that don't support tool calling,
+     gracefully fall back to plain text (log a warning, return the LLM response as-is).
+
+4. FILE: backend/config.py (MODIFY — minimal)
+   Add:
+   ```python
+   AGENT_MODE_ENABLED: bool = os.getenv("AGENT_MODE_ENABLED", "false").lower() == "true"
+   ```
+
+FILES TO CREATE:
+- backend/tools/base_tool.py
+- backend/tools/__init__.py
+
+FILES TO MODIFY:
+- backend/llm_client.py
+- backend/config.py
+
+Commit: "jules: P28-T1 add tool registry and tool calling infrastructure"
+Target branch: main

@@ -1,0 +1,91 @@
+TASK: P28-T2 — Built-in OS Interaction Tool Pack
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create the built-in set of OS interaction tools using the plugin
+architecture established in P28-T1. Each tool is an independent file
+in `backend/tools/`. No orchestration code — just drop files in the folder.
+
+PREREQUISITE: P28-T1 must be merged before this task.
+
+These tools give BarnOwl AI "hands" to:
+  - Open applications
+  - Type text anywhere (for dictation)
+  - Take a screenshot and describe it
+  - Search the web and summarize results
+  - Read and write the clipboard
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Each tool is ONE Python file. No shared state between tools.
+- Use `pyautogui` for keyboard/mouse. Add to requirements.txt.
+- Use `subprocess` for opening apps (cross-platform: `start` on Windows,
+  `open` on macOS, `xdg-open` on Linux).
+- ALL `execute()` methods must catch ALL exceptions and return a
+  descriptive error string — NEVER raise. The agent loop depends on this.
+- Tools must be safe to call from an async context (use `asyncio.to_thread`
+  for blocking pyautogui calls).
+- Do NOT import from `app.py` or any other backend module. Tools are standalone.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES — One file per tool
+═══════════════════════════════════════════════════════════════
+
+1. FILE: backend/tools/open_app.py (CREATE NEW)
+   Tool name: `open_application`
+   Description: "Opens an application by name on the user's computer."
+   Parameters: `{ "app_name": { "type": "string", "description": "Name of the app to open" } }`
+   Implementation: Use `subprocess` to run the appropriate OS command.
+   Returns: "Opened {app_name}" or error string.
+
+2. FILE: backend/tools/type_text.py (CREATE NEW)
+   Tool name: `type_text`
+   Description: "Types text as keyboard input into the currently focused application."
+   Parameters: `{ "text": { "type": "string" }, "delay_ms": { "type": "integer", "default": 50 } }`
+   Implementation: `await asyncio.to_thread(pyautogui.typewrite, text, interval=delay_ms/1000)`
+   Returns: "Typed N characters." or error.
+
+3. FILE: backend/tools/get_clipboard.py (CREATE NEW)
+   Tool name: `get_clipboard`
+   Description: "Reads and returns the current text content of the system clipboard."
+   Parameters: `{}` (no arguments)
+   Implementation: Use `pyperclip.paste()`. Add `pyperclip` to requirements.txt.
+   Returns: The clipboard text (truncated to 2000 chars) or error.
+
+4. FILE: backend/tools/set_clipboard.py (CREATE NEW)
+   Tool name: `set_clipboard`
+   Description: "Writes text to the system clipboard."
+   Parameters: `{ "text": { "type": "string" } }`
+   Implementation: Use `pyperclip.copy(text)`.
+   Returns: "Clipboard updated." or error.
+
+5. FILE: backend/tools/web_search.py (CREATE NEW)
+   Tool name: `web_search`
+   Description: "Searches the web for a query and returns a summary of the top results."
+   Parameters: `{ "query": { "type": "string" }, "max_results": { "type": "integer", "default": 3 } }`
+   Implementation: Use `duckduckgo_search` (already in requirements.txt from P5-T5).
+   Returns: Formatted string of top N results: "Title\nURL\nSnippet\n---\n..."
+
+6. FILE: backend/tools/show_notification.py (CREATE NEW)
+   Tool name: `show_notification`
+   Description: "Shows a desktop notification with a title and message."
+   Parameters: `{ "title": { "type": "string" }, "message": { "type": "string" } }`
+   Implementation: Use `plyer` library for cross-platform notifications.
+     Add `plyer` to requirements.txt.
+   Returns: "Notification sent." or error.
+
+FILES TO CREATE:
+- backend/tools/open_app.py
+- backend/tools/type_text.py
+- backend/tools/get_clipboard.py
+- backend/tools/set_clipboard.py
+- backend/tools/web_search.py
+- backend/tools/show_notification.py
+
+FILES TO MODIFY:
+- backend/requirements.txt  (add pyautogui, pyperclip, plyer)
+
+Commit: "jules: P28-T2 add built-in OS interaction tool pack"
+Target branch: main
