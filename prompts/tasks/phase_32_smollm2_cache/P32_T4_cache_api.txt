@@ -19,14 +19,14 @@ Both endpoints require no authentication (cache is local-only and user-owned).
 CHANGES: backend/app.py
 ═══════════════════════════════════════════════════════════════
 
-1. Import qa_cache at the top of app.py (alongside other imports):
+1. Import qa_cache at the top of settings.py (alongside other imports):
 
    import qa_cache
 
 2. Add GET /api/cache/stats endpoint:
 
    ```python
-   @app.get("/api/cache/stats")
+   @router.get("/api/cache/stats")
    async def get_cache_stats():
        """Returns Q&A cache statistics: total pairs and estimated tokens saved."""
        return qa_cache.stats()
@@ -41,7 +41,7 @@ CHANGES: backend/app.py
 3. Add DELETE /api/cache endpoint:
 
    ```python
-   @app.delete("/api/cache")
+   @router.delete("/api/cache")
    async def clear_cache():
        """Deletes all entries from the Q&A cache. Returns count of deleted pairs."""
        count = qa_cache.clear()
