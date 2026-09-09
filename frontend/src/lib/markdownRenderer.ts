@@ -1,40 +1,39 @@
 import { createHighlighter } from 'shiki';
 import { marked } from 'marked';
 
-let highlighterPromise: Promise<any> | null = null;
+let highlighter: any = null;
 
-function getHighlighter() {
-  if (!highlighterPromise) {
-    highlighterPromise = Promise.race([
-      createHighlighter({
-        themes: ['tokyo-night'],
-        langs: [
-          'javascript', 'typescript', 'python', 'java', 'cpp', 'c',
-          'go', 'rust', 'sql', 'bash', 'json', 'yaml', 'html', 'css',
-          'kotlin', 'swift', 'ruby', 'php', 'csharp', 'scala'
-        ],
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Shiki highlighter load timeout (WASM block?)")), 3000))
-    ]);
-  }
-  return highlighterPromise;
-}
+// Initialize Shiki asynchronously in the background
+createHighlighter({
+  themes: ['tokyo-night'],
+  langs: [
+    'javascript', 'typescript', 'python', 'java', 'cpp', 'c',
+    'go', 'rust', 'sql', 'bash', 'json', 'yaml', 'html', 'css',
+    'kotlin', 'swift', 'ruby', 'php', 'csharp', 'scala'
+  ],
+}).then(h => {
+  highlighter = h;
+}).catch(console.error);
 
 const renderer = new marked.Renderer();
-(renderer as any).code = async ({ text, lang }: { text: string; lang?: string | undefined }) => {
-  const highlighter = await getHighlighter();
-  const validLang = highlighter.getLoadedLanguages().includes(lang ?? '')
-    ? lang!
-    : 'text';
-
-  const highlighted = highlighter.codeToHtml(text, {
-    lang: validLang,
-    theme: 'tokyo-night',
-  });
-
+(renderer as any).code = ({ text, lang }: { text: string; lang?: string | undefined }) => {
+  const validLang = lang || 'text';
   const label = validLang === 'text' ? 'code' : validLang;
+  
   // Escape backticks and backslashes for safe inline onclick embedding
   const escaped = text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
+  let highlighted = '';
+  if (highlighter && highlighter.getLoadedLanguages().includes(validLang)) {
+    highlighted = highlighter.codeToHtml(text, {
+      lang: validLang,
+      theme: 'tokyo-night',
+    });
+  } else {
+    // Fallback unstyled code block while Shiki is loading
+    const escapedHtml = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    highlighted = `<pre><code class="language-${validLang}">${escapedHtml}</code></pre>`;
+  }
 
   return `<div class="code-block-wrapper">
   <div class="code-block-header">
@@ -52,6 +51,5 @@ const renderer = new marked.Renderer();
 marked.use({ renderer });
 
 export async function renderMarkdown(text: string): Promise<string> {
-  // marked.parseAsync was removed or changed in newer versions, use parse with async: true
-  return await marked.parse(text, { async: true });
+  return await marked.parse(text);
 }
