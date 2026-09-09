@@ -109,7 +109,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P32-T1 | `backend/local_intelligence.py` | **SmolLM2 Engine:** Load `SmolLM2-135M-Instruct` (GGUF quantized) via `llama-cpp-python` at server startup. Expose two async methods: `is_complete(text) → bool` (turn detection) and `encode(text) → vector` (semantic embedding). | ⬜ | — |
+| P32-T1 | `backend/local_intelligence.py` | **SmolLM2 Engine:** Load `SmolLM2-135M-Instruct` (GGUF quantized) via `llama-cpp-python` at server startup. Expose two async methods: `is_complete(text) → bool` (turn detection) and `encode(text) → vector` (semantic embedding). | ⏳ | — |
 | P32-T2 | `backend/smart_filter.py` | **Turn-Taking Gatekeeper:** Before firing any STT transcript to the cloud LLM, call `local_intelligence.is_complete()`. If `INCOMPLETE`, reset the silence timer and keep listening. Log skipped incomplete turns. | ⬜ | — |
 | P32-T3 | `backend/qa_cache.py`, `backend/app.py` | **Semantic Q&A Cache:** Use the SmolLM2 encoder to convert each question into a vector and store/look up past Q&A pairs in a dedicated ChromaDB collection (`qa_cache`). On cache hit (cosine similarity > 0.92), serve the cached answer instantly, skipping cloud LLM entirely. | ⬜ | — |
 | P32-T4 | `backend/app.py` | **Cache Management API:** Add `DELETE /api/cache` endpoint to wipe all entries from the `qa_cache` ChromaDB collection. Add `GET /api/cache/stats` to show total cached pairs and estimated tokens saved. | ⬜ | — |
