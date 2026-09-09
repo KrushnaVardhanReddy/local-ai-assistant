@@ -1,0 +1,112 @@
+TASK: P26-T1 — Enterprise SSO Integration (SAML / Okta / Google Workspace)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add Single Sign-On (SSO) support to the BarnOwl AI web dashboard
+using Supabase Auth's built-in SAML 2.0 support. This unlocks
+Enterprise B2B sales — IT admins can provision employee access
+via Okta, Microsoft Entra ID, or Google Workspace without creating
+individual passwords.
+
+Key behaviors:
+  1. Add a new "Enterprise SSO" login option to `web/src/routes/login/+page.svelte`.
+     It shows an "Email domain" input (e.g. acme.com) + "Sign in with SSO" button.
+  2. On submit, call `supabase.auth.signInWithSSO({ domain })` which
+     triggers the SAML flow automatically (Supabase handles the redirect).
+  3. Add a new Supabase Edge Function `web/src/routes/api/enterprise/sso-init/+server.ts`
+     that looks up the organisation's SAML provider by domain from the
+     `enterprise_orgs` table and initiates the SSO flow server-side.
+  4. Add the `enterprise_orgs` Supabase schema migration file with columns:
+     (id, domain, saml_provider_id, plan, seats_purchased, created_at).
+  5. After successful SSO login, the user's `plan` column in Supabase must
+     be set to `enterprise` and linked to the org via `org_id`.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Only modify files in `web/` (SvelteKit web app). Do NOT touch the
+  Tauri desktop frontend (`frontend/`) or the Python backend.
+- Use Supabase's existing `@supabase/supabase-js` client — no new auth libraries.
+- The SSO login option must be ADDITIVE — the existing email/password login
+  must still work perfectly.
+- The migration SQL file goes in `web/supabase/migrations/` as
+  `20260101000000_enterprise_orgs.sql`.
+- Do NOT hardcode any Okta/SAML credentials. The SAML provider ID is
+  stored in Supabase and managed by the admin dashboard.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: web/supabase/migrations/20260101000000_enterprise_orgs.sql (CREATE NEW)
+   Create the enterprise_orgs table:
+   ```sql
+   create table if not exists public.enterprise_orgs (
+     id uuid primary key default gen_random_uuid(),
+     domain text unique not null,
+     saml_provider_id text,
+     plan text default 'enterprise',
+     seats_purchased int default 10,
+     created_at timestamptz default now()
+   );
+
+   -- Add org_id to users table
+   alter table public.users add column if not exists org_id uuid references public.enterprise_orgs(id);
+   ```
+
+2. FILE: web/src/routes/api/enterprise/sso-init/+server.ts (CREATE NEW)
+   ```typescript
+   import { createClient } from '@supabase/supabase-js';
+   import { json } from '@sveltejs/kit';
+   import type { RequestHandler } from './$types';
+
+   export const POST: RequestHandler = async ({ request }) => {
+     const { domain } = await request.json();
+     if (!domain) return json({ error: 'domain required' }, { status: 400 });
+
+     const supabase = createClient(
+       process.env.PUBLIC_SUPABASE_URL!,
+       process.env.SUPABASE_SERVICE_ROLE_KEY!
+     );
+
+     const { data, error } = await supabase.auth.admin.generateLink({
+       type: 'sso',
+       options: { domain }
+     });
+
+     if (error) return json({ error: error.message }, { status: 400 });
+     return json({ url: data.properties?.action_link });
+   };
+   ```
+
+3. FILE: web/src/routes/login/+page.svelte (MODIFY)
+   Add an "Enterprise SSO" section below the existing login form:
+   - A collapsible "Sign in with SSO" toggle.
+   - A text input bound to `ssoEmail` (full email — we extract domain).
+   - A button that calls `POST /api/enterprise/sso-init` with the domain
+     extracted from the email and redirects to the returned URL.
+   - Show a spinner while the SSO redirect is being prepared.
+
+═══════════════════════════════════════════════════════════════
+VISUAL REFERENCE
+═══════════════════════════════════════════════════════════════
+
+  Login page (bottom of existing form):
+  ┌───────────────────────────────────┐
+  │  ─────────── or ───────────       │
+  │                                   │
+  │  Work email                       │
+  │  [  you@acme.com              ]   │
+  │  [ Continue with SSO          ]   │
+  └───────────────────────────────────┘
+
+FILES TO CREATE:
+- web/supabase/migrations/20260101000000_enterprise_orgs.sql
+- web/src/routes/api/enterprise/sso-init/+server.ts
+
+FILES TO MODIFY:
+- web/src/routes/login/+page.svelte
+
+Commit: "jules: P26-T1 add enterprise SSO integration (SAML/Supabase)"
+Target branch: main

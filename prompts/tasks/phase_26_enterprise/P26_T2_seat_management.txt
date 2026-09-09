@@ -1,0 +1,84 @@
+TASK: P26-T2 — Enterprise Seat Management Admin Dashboard
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build an admin dashboard for Enterprise org administrators to:
+  - See how many seats their organisation has purchased.
+  - See which email addresses have used a seat.
+  - Invite new employees by email (sends a Supabase magic link).
+  - Revoke a seat from an employee (disabling their account access).
+
+This is the key Enterprise B2B selling feature — IT admins need
+control over who in their company can access BarnOwl AI.
+
+Key behaviors:
+  1. A new route at `web/src/routes/dashboard/admin/+page.svelte`
+     protected by a role check: user must have `is_org_admin = true`
+     in the `enterprise_orgs` table.
+  2. Shows a summary card: "X / Y seats used" with a progress bar.
+  3. A table of all current org members with columns:
+     (Email, Last Active, Status, Action).
+  4. An "Invite" button that opens a modal. The admin enters an email,
+     and the backend sends a Supabase magic-link invite email.
+  5. A "Revoke" button per user that sets their `plan = 'revoked'`
+     in the `users` table, immediately blocking their WS access.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Only modify files in `web/` — do NOT touch `frontend/` or `backend/`.
+- The admin page must check that `authState.is_org_admin === true`.
+  If not, redirect to `/dashboard`.
+- Use the existing Supabase client from `$lib/supabaseClient.ts`.
+- Revoke must be instant — it updates Supabase, and the next time
+  the revoked user sends a WebSocket message, `backend/auth.py` will
+  detect `plan = 'revoked'` and close the connection.
+- The Invite flow uses `supabase.auth.admin.inviteUserByEmail()` on
+  the server-side API route. The invited user gets an email to set up
+  their account, and their `org_id` is pre-populated.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: web/src/routes/api/enterprise/invite/+server.ts (CREATE NEW)
+   Server-side route that calls `supabase.auth.admin.inviteUserByEmail(email)`
+   and then upserts a record in the `users` table with the correct `org_id`
+   and `plan = 'enterprise'`.
+
+2. FILE: web/src/routes/api/enterprise/revoke/+server.ts (CREATE NEW)
+   Server-side route that updates the target user's row in `users` table:
+   `plan = 'revoked'`. Returns 200 on success.
+
+3. FILE: web/src/routes/dashboard/admin/+page.svelte (CREATE NEW)
+   The admin dashboard page. Includes:
+   - Seat usage summary card.
+   - Members table with Email, Last Active, Status (badge), Revoke button.
+   - Invite modal with email input and Send Invite button.
+   - Use the same glassmorphism/dark design as the existing dashboard pages.
+
+═══════════════════════════════════════════════════════════════
+VISUAL REFERENCE
+═══════════════════════════════════════════════════════════════
+
+  Admin Dashboard:
+  ┌───────────────────────────────────────────────────┐
+  │  🏢 Acme Corp — BarnOwl Enterprise               │
+  │  Seats: ████████░░  8 / 10 used     [+ Invite]   │
+  ├───────────────────────────────────────────────────┤
+  │  Email                  Last Active   Status      │
+  │  alice@acme.com         2 hours ago   ● Active    │
+  │  bob@acme.com           Yesterday     ● Active    │
+  │  charlie@acme.com       —             ● Pending   │
+  │  dave@acme.com          3 days ago    ● Active    │
+  │                                       [Revoke]    │
+  └───────────────────────────────────────────────────┘
+
+FILES TO CREATE:
+- web/src/routes/api/enterprise/invite/+server.ts
+- web/src/routes/api/enterprise/revoke/+server.ts
+- web/src/routes/dashboard/admin/+page.svelte
+
+Commit: "jules: P26-T2 add enterprise seat management admin dashboard"
+Target branch: main
