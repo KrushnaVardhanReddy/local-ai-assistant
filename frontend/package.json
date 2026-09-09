@@ -10,11 +10,18 @@
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri",
     "tauri dev": "tauri dev",
-    "tauri build": "tauri build"
+    "tauri build": "tauri build",
+    "cap sync": "cap sync",
+    "cap build": "cap build"
   },
   "license": "MIT",
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1",
     "@supabase/supabase-js": "^2.112.4",
+    "@sveltejs/adapter-static": "^3.0.10",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-opener": "^2",
     "marked": "^18.0.11",
