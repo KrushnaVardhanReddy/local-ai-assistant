@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Resume Builder Component', () => {
-  test('should render editor, preview pane and themes', async ({ page }) => {
+  test('should render editor, preview pane and themes', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'Skip desktop-only resume builder on mobile');
     await page.goto('/');
 
     // Ensure the toggle button exists and click it
