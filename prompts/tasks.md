@@ -28,8 +28,8 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P26-T1 | `web/src/routes/api/auth/` | **SSO Integration:** Add SAML/Okta single sign-on support via Supabase Auth for Enterprise customers. | ⏳ | — |
-| P26-T2 | `web/src/routes/dashboard/admin/` | **Seat Management:** Admin dashboard to purchase blocks of seats via Stripe, and assign/revoke them to employee emails. | ⏳ | — |
+| P26-T1 | `backend/auth.py`, `backend/app.py`, `frontend/src/routes/login/+page.svelte` | **SSO Integration:** Integrate SAML/SSO via Supabase for enterprise login, auto-provisioning a Seat based on the email domain. | ✅ | — |
+| P26-T2 | `frontend/src/lib/AdminDashboard.svelte` | **Seat Management:** Simple admin panel for the Org Admin to view active seats, invite via email, and instantly revoke API access. | ✅ | — |
 | P26-T3 | `backend/rag/` | **Team Knowledge Base:** Expand RAG to allow uploading company-wide Playbooks/Docs to a shared vector database. | ⬜ | — |
 | P26-T4 | `backend/app.py`, `frontend/src/lib/SessionReport.svelte` | **Auto-CRM Sync:** Add a "Push to Salesforce/HubSpot" button in the Session Report panel to log meeting notes directly to the CRM. | ⬜ | — |
 | P26-T5 | `web/tests/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Enterprise B2B features. | ⬜ | — |
@@ -70,8 +70,8 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P29-T1 | `backend/resume_builder.py`, `backend/app.py` | **Resume Generation API:** Endpoint that uses the LLM to output a perfectly tailored Markdown resume. | ⏳ | — |
-| P29-T2 | `frontend/src/lib/ResumeBuilder.svelte` | **Resume Editor UI:** Dual-pane view with a Markdown editor on the left and a live preview on the right. | ⏳ | — |
-| P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ⬜ | — |
+| P29-T1 | `backend/resume_builder.py`, `backend/app.py` | **Resume Generation API:** Endpoint that uses the LLM to output a perfectly tailored Markdown resume. | ✅ | — |
+| P29-T2 | `frontend/src/lib/ResumeBuilder.svelte` | **Resume Editor UI:** Dual-pane view with a Markdown editor on the left and a live preview on the right. | ✅ | — |
+| P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ⏳ | — |
 | P29-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Resume Builder. | ⬜ | — |
 
