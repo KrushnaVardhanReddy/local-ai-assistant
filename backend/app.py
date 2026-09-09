@@ -351,7 +351,8 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
             while True:
                 msg = await outbound_queue.get()
                 if msg.get("type") == "token":
-                    print(f"[DEBUG WS] Sending token to frontend: '{msg.get('text')}'", file=sys.stderr)
+                    pass
+                    # print(f"[DEBUG WS] Sending token to frontend: '{msg.get('text')}'", file=sys.stderr)
                 await websocket.send_json(msg)
         except asyncio.CancelledError:
             pass
