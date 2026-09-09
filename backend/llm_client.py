@@ -89,12 +89,12 @@ class LLMClient:
                                     
                                     # Handle DeepSeek/reasoning models
                                     reasoning = delta.get("reasoning")
-                                    if reasoning:
-                                        yield reasoning
+                                    if reasoning is not None:
+                                        yield str(reasoning)
                                         
                                     content = delta.get("content")
                                     if content is not None:
-                                        yield content
+                                        yield str(content)
                                 else:
                                     print(f"[DEBUG LLM] Empty choices in chunk: {chunk}", file=sys.stderr)
                             except json.JSONDecodeError:
