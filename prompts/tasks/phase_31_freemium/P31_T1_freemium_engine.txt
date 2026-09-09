@@ -1,0 +1,52 @@
+TASK: P31-T1 — Freemium Engine (Subscription Lock)
+
+PARALLEL BATCH: 1 — Start of Phase 31.
+Files touched: backend/app.py, backend/config.py
+PREREQUISITE: None.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement the Product-Led Growth (PLG) Freemium model. Free users should
+get unlimited local transcription (faster-whisper) but NO access to the 
+Cloud LLM endpoints (chat, summary, CRM sync).
+
+If a Free user connects via WebSocket and tries to use a Cloud LLM:
+1. Reject the LLM processing.
+2. Send a WebSocket message back: {"type": "upgrade_required", "message": "Cloud LLMs require a Pro subscription."}
+3. Allow them to continue using STT locally.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/config.py
+═══════════════════════════════════════════════════════════════
+1. Ensure there is a config variable for bypassing the lock in dev mode:
+   `FORCE_PRO_MODE: bool = False`
+   Wire it to the `FORCE_PRO_MODE` environment variable.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py
+═══════════════════════════════════════════════════════════════
+1. In `ws_endpoint`, after determining the `user_plan`:
+   `is_pro = user_plan in ["pro", "payg", "lifetime"] or config.FORCE_PRO_MODE`
+
+2. Later in the event loop, when processing a transcript string that would normally
+   trigger the cloud LLM:
+   ```python
+   if not is_pro and config.LLM_PROVIDER != "local":
+       await websocket.send_json({
+           "type": "upgrade_required", 
+           "message": "Cloud LLMs require a Pro subscription. Upgrade to access Gemini, Groq, and Cloudflare Workers AI."
+       })
+       continue  # Skip sending to cloud LLM
+   ```
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/config.py (Add FORCE_PRO_MODE)
+- backend/app.py (Add subscription lock in ws_endpoint)
+
+Commit: "jules: P31-T1 implement freemium engine subscription lock"
+Target branch: main
