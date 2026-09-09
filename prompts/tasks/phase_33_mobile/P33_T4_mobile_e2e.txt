@@ -1,0 +1,24 @@
+TASK: P33-T4 — Mobile E2E Tests (Playwright)
+
+PARALLEL BATCH: 1 — Start of Phase 33.
+Files touched: frontend/e2e/mobile_layout.spec.ts, frontend/playwright.config.ts
+PREREQUISITE: None
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Ensure the Svelte UI remains responsive and functional on mobile screens 
+(since it will now be rendered inside a native mobile WebView via Capacitor).
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+1. Update `frontend/playwright.config.ts` to include a "Mobile Safari" or "Mobile Chrome" project using Playwright's built-in device descriptors.
+2. Create `frontend/e2e/mobile_layout.spec.ts`.
+3. Add tests to ensure:
+   - The main chat layout fits within a 375px width (iPhone SE width).
+   - The settings modal is still usable and scrollable on small screens.
+   - The bottom input bar and microphone button are visible above the fold.
+
+Commit: "jules: P33-T4 add Playwright mobile viewport e2e tests"
+Target branch: main
