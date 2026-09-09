@@ -1,0 +1,287 @@
+/*
+  Resume Style Templates
+  These classes are meant to be applied to a wrapper element containing the rendered Markdown.
+*/
+
+/* --- Base Print Settings --- */
+@media print {
+  @page {
+    margin: 0.5in;
+    size: auto;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .resume-print-area,
+  .resume-print-area * {
+    visibility: visible;
+  }
+
+  .resume-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: transparent !important;
+    color: #000 !important; /* Force black text for ATS / Print */
+  }
+
+  /* Reset themes for print to ensure clean ATS readability */
+  .resume-print-area h1,
+  .resume-print-area h2,
+  .resume-print-area h3,
+  .resume-print-area p,
+  .resume-print-area li {
+    color: #000 !important;
+    background: transparent !important;
+    border-color: #000 !important;
+  }
+
+  .resume-print-area a {
+    color: #000 !important;
+    text-decoration: underline !important;
+  }
+}
+
+/* --- Theme 1: Modern --- */
+.theme-modern {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #333;
+  line-height: 1.6;
+}
+.theme-modern h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #111;
+  border-bottom: 2px solid #2563eb;
+  padding-bottom: 0.25rem;
+  margin-bottom: 1rem;
+}
+.theme-modern h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2563eb;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.theme-modern h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+.theme-modern p, .theme-modern li {
+  font-size: 1rem;
+  color: #4b5563;
+}
+.theme-modern ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.theme-modern strong {
+  font-weight: 700;
+  color: #111;
+}
+
+/* --- Theme 2: Classic --- */
+.theme-classic {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  color: #000;
+  line-height: 1.5;
+}
+.theme-classic h1 {
+  font-size: 2.5rem;
+  font-weight: normal;
+  text-align: center;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+}
+.theme-classic h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-bottom: 1px solid #ccc;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.theme-classic h3 {
+  font-size: 1.2rem;
+  font-weight: bold;
+  font-style: italic;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+.theme-classic p, .theme-classic li {
+  font-size: 1rem;
+}
+.theme-classic ul {
+  list-style-type: square;
+  padding-left: 1.5rem;
+}
+
+/* --- Theme 3: Minimal --- */
+.theme-minimal {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #444;
+  line-height: 1.4;
+  font-weight: 300;
+}
+.theme-minimal h1 {
+  font-size: 2rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.5rem;
+}
+.theme-minimal h2 {
+  font-size: 1.25rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+.theme-minimal h3 {
+  font-size: 1rem;
+  font-weight: 500;
+}
+.theme-minimal p, .theme-minimal li {
+  font-size: 0.95rem;
+}
+.theme-minimal ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+.theme-minimal li::before {
+  content: "- ";
+  color: #888;
+}
+
+/* --- Theme 4: Executive --- */
+.theme-executive {
+  font-family: 'Palatino', 'Palatino Linotype', 'Book Antiqua', serif;
+  color: #2c3e50;
+  line-height: 1.6;
+}
+.theme-executive h1 {
+  font-size: 2.2rem;
+  color: #1a252f;
+  text-align: left;
+  border-bottom: 3px double #2c3e50;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+.theme-executive h2 {
+  font-size: 1.4rem;
+  color: #2980b9;
+  border-bottom: 1px solid #bdc3c7;
+  padding-bottom: 0.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.theme-executive h3 {
+  font-size: 1.1rem;
+  color: #34495e;
+  font-weight: bold;
+}
+.theme-executive p, .theme-executive li {
+  font-size: 1rem;
+}
+.theme-executive ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}
+
+/* --- Theme 5: Tech --- */
+.theme-tech {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  color: #e0e0e0;
+  background-color: #1e1e1e;
+  padding: 2rem;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+.theme-tech h1 {
+  font-size: 2rem;
+  color: #61dafb;
+  margin-bottom: 1rem;
+}
+.theme-tech h1::before {
+  content: "> ";
+  color: #88c0d0;
+}
+.theme-tech h2 {
+  font-size: 1.3rem;
+  color: #c678dd;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px dashed #555;
+  padding-bottom: 0.25rem;
+}
+.theme-tech h2::before {
+  content: "# ";
+  color: #c678dd;
+}
+.theme-tech h3 {
+  font-size: 1rem;
+  color: #e5c07b;
+}
+.theme-tech p, .theme-tech li {
+  font-size: 0.9rem;
+}
+.theme-tech ul {
+  list-style-type: none;
+  padding-left: 1rem;
+}
+.theme-tech li::before {
+  content: "* ";
+  color: #98c379;
+}
+.theme-tech a {
+  color: #61dafb;
+}
+
+/* --- Theme 6: Creative --- */
+.theme-creative {
+  font-family: 'Montserrat', 'Trebuchet MS', sans-serif;
+  color: #2d3748;
+  line-height: 1.7;
+}
+.theme-creative h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #e53e3e;
+  text-transform: lowercase;
+  margin-bottom: 0.5rem;
+}
+.theme-creative h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ed8936;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  background-color: #feebc8;
+  padding: 0.25rem 0.5rem;
+  display: inline-block;
+  border-radius: 4px;
+}
+.theme-creative h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #4a5568;
+}
+.theme-creative p, .theme-creative li {
+  font-size: 1.05rem;
+}
+.theme-creative ul {
+  list-style-type: circle;
+  padding-left: 1.5rem;
+}
+.theme-creative ul li::marker {
+  color: #e53e3e;
+}

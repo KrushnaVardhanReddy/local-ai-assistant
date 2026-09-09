@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { renderMarkdown } from "$lib/markdownRenderer";
+  import "./resume-styles.css";
 
   let editorText = $state("");
   let renderedMarkdown = $state("");
   let isTailoring = $state(false);
   let statusMessage = $state("");
+  let selectedTheme = $state("theme-modern");
+  let isPrinting = $state(false);
 
   // Re-render when editorText changes
   $effect(() => {
@@ -90,10 +93,18 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
+  async function handlePdfExport() {
+    isPrinting = true;
+    await tick();
+    window.print();
+    isPrinting = false;
+  }
 </script>
 
-<div class="resume-builder-container glass-panel pointer-events-auto h-full flex flex-col overflow-hidden w-full max-w-7xl mx-auto rounded-[24px] shadow-2xl relative">
+<div class="resume-builder-container glass-panel pointer-events-auto h-full flex flex-col overflow-hidden w-full max-w-7xl mx-auto rounded-[24px] shadow-2xl relative {isPrinting ? 'printing' : ''}">
   <!-- Header -->
+  {#if !isPrinting}
   <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 shrink-0">
     <div class="flex items-center gap-3">
       <span class="material-symbols-outlined text-primary text-[24px]" data-icon="description">description</span>
@@ -104,6 +115,18 @@
       {#if statusMessage}
         <span class="text-sm {statusMessage.startsWith('Error') ? 'text-red-400' : 'text-green-400'} animate-pulse">{statusMessage}</span>
       {/if}
+
+      <select
+        bind:value={selectedTheme}
+        class="bg-black/20 border border-white/10 rounded-md text-on-surface-variant px-3 py-1 text-sm outline-none focus:border-primary transition-colors"
+      >
+        <option value="theme-modern">Modern</option>
+        <option value="theme-classic">Classic</option>
+        <option value="theme-minimal">Minimal</option>
+        <option value="theme-executive">Executive</option>
+        <option value="theme-tech">Tech</option>
+        <option value="theme-creative">Creative</option>
+      </select>
 
       <button
         class="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary hover:bg-primary/30 transition-colors font-label-caps text-label-caps tracking-wider {isTailoring ? 'opacity-50 cursor-not-allowed' : ''}"
@@ -120,14 +143,25 @@
         disabled={!editorText}
       >
         <span class="material-symbols-outlined text-[18px]">download</span>
-        EXPORT
+        MD
+      </button>
+
+      <button
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-on-surface-variant transition-colors font-label-caps text-label-caps tracking-wider border border-white/10 {!editorText ? 'opacity-50 cursor-not-allowed' : ''}"
+        onclick={handlePdfExport}
+        disabled={!editorText}
+      >
+        <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+        PDF
       </button>
     </div>
   </div>
+  {/if}
 
   <!-- Workspace: Split View -->
   <div class="flex-1 flex overflow-hidden">
     <!-- Editor Pane -->
+    {#if !isPrinting}
     <div class="w-1/2 flex flex-col border-r border-white/5 relative">
       <div class="absolute top-2 right-4 bg-surface-variant/80 px-2 py-1 rounded text-xs font-mono text-on-surface-variant/50 pointer-events-none z-10">MARKDOWN</div>
       <textarea
@@ -137,17 +171,19 @@
         spellcheck="false"
       ></textarea>
     </div>
+    {/if}
 
     <!-- Preview Pane -->
-    <div class="w-1/2 flex flex-col bg-black/10 relative">
+    <div class="flex flex-col relative bg-black/10 {isPrinting ? 'w-full bg-white resume-print-area' : 'w-1/2'}">
+      {#if !isPrinting}
       <div class="absolute top-2 right-4 bg-surface-variant/80 px-2 py-1 rounded text-xs font-mono text-on-surface-variant/50 pointer-events-none z-10">PREVIEW</div>
-      <div class="flex-1 overflow-y-auto p-8 markdown-preview">
+      {/if}
+      <div class="flex-1 overflow-y-auto p-8 {isPrinting ? '' : 'markdown-preview'} {selectedTheme}">
         {@html renderedMarkdown}
       </div>
     </div>
   </div>
 </div>
-
 <style>
   .resume-builder-container {
     backdrop-filter: blur(20px);
@@ -155,13 +191,21 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
+  .printing {
+    backdrop-filter: none;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
   /* Basic markdown preview styles (similar to what might be in global CSS but scoped here just in case) */
-  :global(.markdown-preview) {
+  /* These will be overwritten by themes if a theme is applied and has conflicting styles */
+  :global(.markdown-preview:not([class*="theme-"])) {
     color: #cbd5e1;
     font-size: 0.95rem;
     line-height: 1.6;
   }
-  :global(.markdown-preview h1) {
+  :global(.markdown-preview:not([class*="theme-"]) h1) {
     font-size: 1.8rem;
     font-weight: 700;
     color: #f8fafc;
@@ -170,41 +214,41 @@
     border-bottom: 1px solid rgba(255,255,255,0.1);
     padding-bottom: 0.5rem;
   }
-  :global(.markdown-preview h2) {
+  :global(.markdown-preview:not([class*="theme-"]) h2) {
     font-size: 1.4rem;
     font-weight: 600;
     color: #e2e8f0;
     margin-bottom: 0.75rem;
     margin-top: 1.5rem;
   }
-  :global(.markdown-preview h3) {
+  :global(.markdown-preview:not([class*="theme-"]) h3) {
     font-size: 1.1rem;
     font-weight: 600;
     color: #cbd5e1;
     margin-bottom: 0.5rem;
     margin-top: 1rem;
   }
-  :global(.markdown-preview p) {
+  :global(.markdown-preview:not([class*="theme-"]) p) {
     margin-bottom: 1rem;
   }
-  :global(.markdown-preview ul) {
+  :global(.markdown-preview:not([class*="theme-"]) ul) {
     list-style-type: disc;
     margin-left: 1.5rem;
     margin-bottom: 1rem;
   }
-  :global(.markdown-preview ol) {
+  :global(.markdown-preview:not([class*="theme-"]) ol) {
     list-style-type: decimal;
     margin-left: 1.5rem;
     margin-bottom: 1rem;
   }
-  :global(.markdown-preview li) {
+  :global(.markdown-preview:not([class*="theme-"]) li) {
     margin-bottom: 0.25rem;
   }
-  :global(.markdown-preview strong) {
+  :global(.markdown-preview:not([class*="theme-"]) strong) {
     color: #f8fafc;
     font-weight: 600;
   }
-  :global(.markdown-preview em) {
+  :global(.markdown-preview:not([class*="theme-"]) em) {
     font-style: italic;
   }
 </style>
