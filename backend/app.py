@@ -164,6 +164,21 @@ async def set_language(body: LanguagePreference):
 async def get_language():
     return {"language": preferred_language}
 
+class LocalSTTEngineModel(BaseModel):
+    engine: str
+
+@app.post("/api/stt_engine")
+async def set_stt_engine(body: LocalSTTEngineModel):
+    config.LOCAL_STT_ENGINE = body.engine
+    if transcriber and transcriber.provider == "local":
+        transcriber.load()
+    return {"status": "success", "engine": config.LOCAL_STT_ENGINE}
+
+@app.get("/api/stt_engine")
+async def get_stt_engine():
+    return {"engine": config.LOCAL_STT_ENGINE}
+
+
 class InterviewLanguage(BaseModel):
     language: str
 
