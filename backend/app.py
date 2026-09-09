@@ -21,13 +21,14 @@ from config import config, PROVIDER_CONFIG
 import stripe_webhook
 import resume_builder
 from audio_listener import AudioListener, get_audio_devices
-from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan, check_and_register_device, acquire_session_lock, release_session_lock, increment_and_check_monthly_sessions
+from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_session_token, get_user_plan, check_and_register_device, acquire_session_lock, release_session_lock, increment_and_check_monthly_sessions, get_user_org
 from keys import key_store
 from transcriber import Transcriber
 from llm_client import LLMClient
 from gemini_live_client import GeminiLiveClient
 from rag import ingestor
 from rag import retriever
+from rag import team_ingest
 from rag.web_search import search_web
 from smart_filter import SilenceBuffer, passes_filter, passes_filter_for_speaker
 
@@ -55,6 +56,7 @@ app.add_middleware(
 )
 
 app.include_router(ingestor.router, prefix="/rag")
+app.include_router(team_ingest.router, prefix="/rag")
 app.include_router(retriever.retriever_router, prefix="/rag")
 
 frontend_dist = os.path.join(os.path.dirname(__file__), "../frontend/dist")
@@ -233,6 +235,9 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
 
                 websocket._session_lock_id = session_result["session_id"]
                 websocket._user_id_for_lock = user_id
+
+                # Fetch org_id for team RAG
+                websocket.org_id = await get_user_org(user_id)
 
                 # P19: Check Monthly Session Cap
                 if user_plan == "monthly" and not custom_key:
@@ -714,7 +719,8 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                     tasks = []
 
                     if config.RAG_ENABLED:
-                        tasks.append(loop.run_in_executor(None, retriever.retrieve, transcript))
+                        org_id = getattr(websocket, "org_id", None)
+                        tasks.append(loop.run_in_executor(None, retriever.retrieve, transcript, None, org_id))
                     else:
                         tasks.append(asyncio.sleep(0, result=""))
 
