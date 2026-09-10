@@ -16,6 +16,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@capacitor-community/microphone": "npm:@dimer47/capacitor-microphone@^8.1.1",
     "@capacitor/android": "^8.5.1",
     "@capacitor/cli": "^8.5.1",
     "@capacitor/core": "^8.5.1",
