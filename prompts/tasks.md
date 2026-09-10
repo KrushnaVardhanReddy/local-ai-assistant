@@ -87,3 +87,13 @@
 | P34-T2 | `frontend/src/lib/MemoryTimeline.svelte` | **Timeline UI:** Create a timeline view where users can scrub back through their entire day's audio transcripts and search for specific keywords from past meetings. | ⬜ | — |
 | P34-T3 | `backend/task_extractor.py` | **Action Item Extraction:** Run an async LLM post-processing job over the `faster-whisper` transcripts every 15 minutes to automatically extract Action Items and To-Dos. | ⬜ | — |
 | P34-T4 | `backend/integrations/` | **Jira & Trello Sync:** Add OAuth/API sync capability to automatically push extracted Action Items into the user's Jira board or Trello list. | ⬜ | — |
+
+---
+
+## Phase 35 — UI Polish ✨
+
+> Minor UI and UX improvements for a seamless desktop experience.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P35-T1 | `frontend/src/` | **Hotkeys Side Panel:** Slide-out drawer for hotkeys so users don't lose context. | ⏳ | — |
