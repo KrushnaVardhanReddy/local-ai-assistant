@@ -54,7 +54,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P30-T1 | `chrome-extension/` | **Google Meet Chrome Extension:** Injects a BarnOwl sidebar into Google Meet. Reads live captions via DOM MutationObserver and streams them to the local backend for real-time suggestions. Pure HTML/CSS/JS, load as unpacked extension. | ⏳ | — |
+| P30-T1 | `chrome-extension/` | **Google Meet Chrome Extension:** Injects a BarnOwl sidebar into Google Meet. Reads live captions via DOM MutationObserver and streams them to the local backend for real-time suggestions. Pure HTML/CSS/JS, load as unpacked extension. | ✅ | #107 |
 | P30-T2 | `slack-bot/` | **Slack Bot:** `/barnowl ask`, `/barnowl summarize`, and `@BarnOwl` mention support. Uses Slack Bolt SDK with Socket Mode (no public URL needed). Posts session summaries as rich Block Kit messages. | ⬜ | — |
 | P30-T3 | `zoom-app/` | **Zoom App (In-Meeting Sidebar):** Embeds BarnOwl as a Zoom Apps iframe panel. Uses the Zoom JS SDK to get meeting context and user identity. Minimal Express server to host the app for local testing. | ⬜ | — |
 | P30-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Chrome Extension sidebar, Pytest stubs for Slack bot and Zoom app. | ⬜ | — |
@@ -69,8 +69,8 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P32-T6 | `tests/test_local_intelligence.py`, `tests/test_qa_cache.py` | **Unit Tests:** Tests for turn-detection accuracy (COMPLETE/INCOMPLETE), cache hit/miss logic, similarity threshold, and cache clearing via the API endpoint. | ⏳ | — |
-| P32-T7 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Cache UI (stats display, Clear Cache button, confirmation dialog). Pytest integration tests for `GET /api/cache/stats` and `DELETE /api/cache` endpoints. | ⏳ | — |
+| P32-T6 | `tests/test_local_intelligence.py`, `tests/test_qa_cache.py` | **Unit Tests:** Tests for turn-detection accuracy (COMPLETE/INCOMPLETE), cache hit/miss logic, similarity threshold, and cache clearing via the API endpoint. | ✅ | #108 |
+| P32-T7 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Cache UI (stats display, Clear Cache button, confirmation dialog). Pytest integration tests for `GET /api/cache/stats` and `DELETE /api/cache` endpoints. | ✅ | #106 |
 | P32-T8 | `backend/app.py`, `frontend/src/lib/Assistant.svelte` | **Proactive Cache Pre-Warming (Mind Reader):** Add a `POST /api/cache/prewarm` endpoint. It takes the candidate's Resume and Job Description, asks the cloud LLM to generate the 50 most likely interview questions + perfect answers, and bulk-inserts them into the ChromaDB `qa_cache` prior to the interview. | ⬜ | — |
 | P32-T10 | `backend/local_intelligence.py`, `backend/app.py` | **SmolLM2 Auto-Download on First Run:** On backend startup, if `SMOLLM2_ENABLED=true` but the GGUF model file is missing from `backend/models/`, automatically download `SmolLM2-135M-Instruct-Q4_K_M.gguf` (~100MB) from HuggingFace with a progress bar logged to stderr. Keep the ZIP small — ship without the model, download it once silently on first launch. Also add `llama-cpp-python` to `backend/requirements.txt` as an optional dep. | ⬜ | — |
 
