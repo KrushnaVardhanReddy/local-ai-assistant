@@ -57,8 +57,6 @@
     </button>
     <Settings />
   </div>
-
-  <HotkeysPanel />
 </div>
 
 <style>

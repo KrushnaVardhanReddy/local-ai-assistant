@@ -2,21 +2,11 @@
     import { uiState } from '$lib/stores/uiState.svelte.ts';
 </script>
 
-{#if uiState.hotkeysPanelOpen}
-    <!-- Backdrop -->
-    <div
-        class="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm pointer-events-auto"
-        onclick={() => uiState.hotkeysPanelOpen = false}
-        onkeydown={(e) => e.key === 'Escape' && (uiState.hotkeysPanelOpen = false)}
-        role="button"
-        tabindex="0"
-        aria-label="Close hotkeys panel"
-    ></div>
-{/if}
+
 
 <!-- Drawer Panel -->
 <div
-    class="glass-panel fixed top-0 right-0 h-full w-96 max-w-[90vw] z-[9999] bg-surface-variant/90 backdrop-blur-md border-l border-white/10 shadow-2xl transition-transform duration-300 ease-in-out flex flex-col pointer-events-auto {uiState.hotkeysPanelOpen ? 'translate-x-0' : 'translate-x-full'}"
+    class="glass-panel rounded-[24px] bg-surface-variant/90 backdrop-blur-md border border-white/10 shadow-2xl transition-all duration-300 ease-in-out flex flex-col pointer-events-auto {uiState.hotkeysPanelOpen ? 'w-80 opacity-100' : 'w-0 opacity-0 p-0 min-w-0 border-0'}"
 >
     <!-- Header -->
     <div class="flex items-center justify-between border-b border-white/10 p-6">

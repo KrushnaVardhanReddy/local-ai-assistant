@@ -5,6 +5,7 @@
   import ResumeBuilder from './ResumeBuilder.svelte';
   import { authState } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
+  import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
 
   let showSessionReport = $state(false);
   let currentView = $state<'interview' | 'resume'>('interview');
@@ -358,20 +359,7 @@
       {/if}
     </div>
 
-    <!-- Central Chat Input (Stealth) -->
-    <div class="flex-1 max-w-xl mx-8">
-      <div class="relative flex items-center w-full h-8 bg-white/5 rounded-lg border border-white/10 transition-colors focus-within:bg-white/10 focus-within:border-white/20">
-        <span class="material-symbols-outlined text-[18px] text-on-surface-variant ml-3" data-icon="search" style="font-variation-settings: 'FILL' 0;">chat</span>
-        <input 
-          class="w-full bg-transparent border-none text-on-surface-variant font-body-sm text-body-sm focus:ring-0 placeholder-on-surface-variant/50 h-full px-3 outline-none pointer-events-auto" 
-          placeholder="Silent chat (Helper Mode)..." 
-          type="text"
-          bind:value={chatText}
-          onkeydown={handleChatKeydown}
-        />
-        <button class="font-mono-data text-mono-data text-on-surface-variant/40 hover:text-primary mr-3 text-[10px] pointer-events-auto" onclick={handleChatSubmit}>SEND</button>
-      </div>
-    </div>
+
 
     <!-- Trailing Actions -->
     <div class="flex items-center gap-2">
@@ -590,6 +578,20 @@
           </div>
         {/if}
       </div>
+
+      <!-- Chat Input (Moved from Header) -->
+      <div class="p-5 border-t border-white/5 bg-black/20 flex-shrink-0 h-[25%] min-h-[160px] flex flex-col">
+        <div class="relative flex w-full h-full bg-white/5 rounded-2xl border border-white/10 transition-colors focus-within:bg-white/10 focus-within:border-white/20 shadow-inner">
+          <span class="absolute top-4 left-4 material-symbols-outlined text-[24px] text-on-surface-variant pointer-events-none" style="font-variation-settings: 'FILL' 0;">chat</span>
+          <textarea 
+            class="w-full h-full bg-transparent border-none text-on-background text-lg focus:ring-0 placeholder-on-surface-variant/50 outline-none pointer-events-auto resize-none hide-scrollbar pt-4 pl-12 pr-4 pb-14" 
+            placeholder="Type message to assistant (Press Enter to send)..." 
+            bind:value={chatText}
+            onkeydown={handleChatKeydown}
+          ></textarea>
+          <button class="absolute bottom-3 right-3 font-mono-data text-mono-data text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-xl text-[12px] font-bold tracking-widest pointer-events-auto transition-all" onclick={handleChatSubmit}>SEND</button>
+        </div>
+      </div>
     </aside>
 
     <!-- Expand Live Ears button (shown when collapsed) -->
@@ -725,6 +727,7 @@
     {/if}
     {/if}
     {/if}
+    <HotkeysPanel />
   </main>
 
   {#if showSessionReport}

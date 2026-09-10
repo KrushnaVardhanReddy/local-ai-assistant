@@ -96,4 +96,4 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P35-T1 | `frontend/src/` | **Hotkeys Side Panel:** Slide-out drawer for hotkeys so users don't lose context. | ⏳ | — |
+| P35-T1 | `frontend/src/` | **Hotkeys Side Panel:** Slide-out drawer for hotkeys so users don't lose context. | ✅ | #109 |
