@@ -7,6 +7,7 @@ import time
 import sys
 import threading
 from config import config
+from local_intelligence import get_local_intelligence
 
 FILLER_PHRASES = {
     "okay", "ok", "yeah", "yes", "no", "mm-hmm", "hmm", "uh", "um",
@@ -64,6 +65,11 @@ def passes_filter(text: str) -> tuple[bool, str]:
     if not is_question(text):
         print(f"[FILTER] Dropped (not a question): '{text}'", file=sys.stderr)
         return False, "not_question"
+
+    li = get_local_intelligence()
+    if not li.is_complete(text):
+        print(f"[INTENT] Dropped (incomplete turn): '{text}'", file=sys.stderr)
+        return False, "incomplete_turn"
 
     print(f"[INTENT] Accepted: '{text}'", file=sys.stderr)
     return True, "accepted"
