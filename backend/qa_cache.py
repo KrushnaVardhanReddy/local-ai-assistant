@@ -1,0 +1,86 @@
+import sys
+import chromadb
+from config import config
+from local_intelligence import get_local_intelligence
+
+COLLECTION_NAME = "qa_cache"
+SIMILARITY_THRESHOLD = 0.92
+_client = None
+_collection = None
+
+def _get_collection():
+    global _client, _collection
+    if _collection is None:
+        _client = chromadb.PersistentClient(path=config.CHROMA_DIR)
+        _collection = _client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            metadata={"hnsw:space": "cosine"}
+        )
+    return _collection
+
+def lookup(question: str) -> str | None:
+    """
+    Returns cached answer string if a similar question was seen before.
+    Returns None on cache miss or if SmolLM2 is disabled.
+    """
+    li = get_local_intelligence()
+    vector = li.encode(question)
+    if not vector:
+        return None
+    try:
+        col = _get_collection()
+        results = col.query(query_embeddings=[vector], n_results=1, include=["documents", "distances"])
+        if results["ids"] and results["ids"][0]:
+            distance = results["distances"][0][0]
+            similarity = 1.0 - distance
+            if similarity >= SIMILARITY_THRESHOLD:
+                answer = results["documents"][0][0]
+                print(f"[QACache] Hit (similarity={similarity:.3f})", file=sys.stderr)
+                return answer
+    except Exception as e:
+        print(f"[QACache] lookup error: {e}", file=sys.stderr)
+    return None
+
+def store(question: str, answer: str) -> None:
+    """Stores a Q&A pair in the cache for future lookups."""
+    li = get_local_intelligence()
+    vector = li.encode(question)
+    if not vector:
+        return
+    try:
+        col = _get_collection()
+        import hashlib, time
+        doc_id = hashlib.md5(question.encode()).hexdigest()
+        col.upsert(
+            ids=[doc_id],
+            embeddings=[vector],
+            documents=[answer],
+            metadatas=[{"question": question[:200], "timestamp": str(int(time.time()))}]
+        )
+        print(f"[QACache] Stored new Q&A pair (total: {col.count()})", file=sys.stderr)
+    except Exception as e:
+        print(f"[QACache] store error: {e}", file=sys.stderr)
+
+def clear() -> int:
+    """Deletes all entries from the qa_cache collection. Returns count deleted."""
+    try:
+        col = _get_collection()
+        count = col.count()
+        all_ids = col.get(include=[])["ids"]
+        if all_ids:
+            col.delete(ids=all_ids)
+        print(f"[QACache] Cleared {count} entries.", file=sys.stderr)
+        return count
+    except Exception as e:
+        print(f"[QACache] clear error: {e}", file=sys.stderr)
+        return 0
+
+def stats() -> dict:
+    """Returns cache statistics."""
+    try:
+        col = _get_collection()
+        count = col.count()
+        estimated_tokens_saved = count * 256  # rough avg tokens per answer
+        return {"cached_pairs": count, "estimated_tokens_saved": estimated_tokens_saved}
+    except Exception as e:
+        return {"cached_pairs": 0, "estimated_tokens_saved": 0, "error": str(e)}
