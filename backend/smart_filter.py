@@ -15,34 +15,12 @@ FILLER_PHRASES = {
     "got it", "i see", "i know", "oh", "ah", "so", "yep", "nope",
 }
 
-QUESTION_SIGNALS = [
-    r"\?$",
-    r"\b(what|how|why|when|where|which|who|explain|describe)\b",
-    r"\b(can you|could you|should|is there|are there|tell me|help me)\b",
-    r"\b(difference between|what is|what are|how do|how does|how can)\b",
-    r"\b(give me|show me|write|create|generate|provide)\b",
-]
-
-def is_question(text: str) -> bool:
-    """Returns True if the text appears to be a meaningful question or request."""
-    lower = text.lower().strip()
-    
-    # Check for basic negations that negate a command
-    negation_pattern = r"\b(don't|doesn't|didn't|can't|won't|never)\b\s+\w*\s*(tell me|show me|explain|give me|write|create|generate)\b"
-    if re.search(negation_pattern, lower):
-        return False
-
-    for pattern in QUESTION_SIGNALS:
-        if re.search(pattern, lower):
-            return True
-    return False
-
 def is_filler(text: str) -> bool:
     """Returns True if the text is a known noise or filler phrase."""
     normalized = text.lower().strip().rstrip(" .?!,;:")
     return normalized in FILLER_PHRASES
 
-def passes_filter(text: str) -> tuple[bool, str]:
+async def passes_filter(text: str) -> tuple[bool, str]:
     """
     Run all heuristic filter layers.
     Returns (should_send: bool, reason: str).
@@ -62,11 +40,11 @@ def passes_filter(text: str) -> tuple[bool, str]:
         print(f"[FILTER] Dropped (filler): '{text}'", file=sys.stderr)
         return False, "filler"
 
-    if not is_question(text):
-        print(f"[FILTER] Dropped (not a question): '{text}'", file=sys.stderr)
+    li = get_local_intelligence()
+    if not await li.is_question(text):
+        print(f"Ignored conversational filler", file=sys.stderr)
         return False, "not_question"
 
-    li = get_local_intelligence()
     if not li.is_complete(text):
         print(f"[INTENT] Dropped (incomplete turn): '{text}'", file=sys.stderr)
         return False, "incomplete_turn"
@@ -113,11 +91,11 @@ class SilenceBuffer:
         with self._lock:
             return len(self._buffer) == 0
 
-def passes_filter_for_speaker(text: str, speaker: str | None) -> tuple[bool, str]:
+async def passes_filter_for_speaker(text: str, speaker: str | None) -> tuple[bool, str]:
     """
     When speaker is INTERVIEWER: always passes (return True).
     When speaker is CANDIDATE or None: use normal passes_filter() logic.
     """
     if speaker == "INTERVIEWER":
         return True, "interviewer_bypass"
-    return passes_filter(text)
+    return await passes_filter(text)
