@@ -1,4 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* STEALTH MODE: Force default arrow cursor on all elements — prevents the OS pointer/hand cursor
+   from appearing over BarnOwl's invisible overlay during screen share, which would expose the app. */
+*, *::before, *::after, button, a, [role="button"], input, select, textarea { cursor: default !important; }
 body { background: transparent; font-family: 'Inter', sans-serif; }
 @keyframes fade-up { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }

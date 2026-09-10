@@ -22,6 +22,10 @@ cryptography>=42.0.0
 
 # Utilities
 python-dotenv>=1.0.0
+<<<<<<< HEAD
+=======
+requests>=2.31.0
+>>>>>>> origin/main
 
 # RAG
 chromadb>=0.5
@@ -35,5 +39,9 @@ edge-tts
 supabase
 
 # Optional: SmolLM2 local intelligence layer (P32-T1)
+<<<<<<< HEAD
 # Install manually: pip install llama-cpp-python
 # llama-cpp-python>=0.2.90
+=======
+llama-cpp-python>=0.2.90
+>>>>>>> origin/main

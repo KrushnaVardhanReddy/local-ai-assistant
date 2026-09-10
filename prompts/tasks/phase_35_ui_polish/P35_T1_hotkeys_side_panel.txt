@@ -1,0 +1,67 @@
+TASK: P35-T1 — Hotkeys Side Panel (Drawer)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement a slide-out Side Panel (drawer) in the Tauri Svelte 5 frontend
+to display application hotkeys, replacing any full-page navigation. 
+This allows users to reference hotkeys while staying in their active context 
+(main chat or timeline) without breaking flow.
+
+Key behaviors:
+  1. Create a new `HotkeysPanel.svelte` component that slides in from the right edge of the window.
+  2. Move any existing hotkey reference content into this panel.
+  3. Manage the panel's visibility using a global state store (Svelte 5 `$state`).
+  4. Add a global keyboard shortcut (e.g. `Ctrl + /` or `Cmd + /`) that toggles the panel.
+  5. The panel should overlay the main view with a subtle shadow, and clicking outside of it should close it.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS & RULES
+═══════════════════════════════════════════════════════════════
+- Only modify files in `frontend/` (SvelteKit / Tauri frontend). Do NOT touch the backend.
+- Use Svelte 5 runes (`$state`, `$derived`, `$effect`) for all reactivity.
+- The panel must animate smoothly (CSS `transform: translateX(100%)` to `0` with a transition).
+- Ensure the z-index is high enough to cover the main chat but not break the stealth UI.
+- No new OS-level windows should be created.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+
+1. FILE: frontend/src/lib/stores/uiState.svelte.ts (CREATE or MODIFY)
+   ```typescript
+   export const uiState = $state({
+       hotkeysPanelOpen: false
+   });
+   ```
+
+2. FILE: frontend/src/lib/components/HotkeysPanel.svelte (CREATE)
+   A right-aligned fixed panel with a close button and the list of hotkeys.
+   Should include a backdrop div that sets `uiState.hotkeysPanelOpen = false` when clicked.
+
+3. FILE: frontend/src/routes/+layout.svelte (MODIFY)
+   - Mount `<HotkeysPanel />` at the root.
+   - Add a global `svelte:window` keydown listener for `Ctrl + /` to toggle the panel.
+
+═══════════════════════════════════════════════════════════════
+VISUAL REFERENCE
+═══════════════════════════════════════════════════════════════
+
+  Main Window:
+  ┌─────────────────────────────────┬───────────┐
+  │                                 │ Hotkeys   │
+  │  (Main Chat / Timeline)         │           │
+  │                                 │ Ctrl+H... │
+  │                                 │ Ctrl+/... │
+  │                                 │           │
+  └─────────────────────────────────┴───────────┘
+
+FILES TO CREATE:
+- frontend/src/lib/components/HotkeysPanel.svelte
+
+FILES TO MODIFY:
+- frontend/src/routes/+layout.svelte
+- frontend/src/lib/stores/uiState.svelte.ts
+
+Commit: "jules: P35-T1 add hotkeys side panel drawer"
+Target branch: main

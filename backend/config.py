@@ -70,7 +70,11 @@ class Config:
 
     RAG_ENABLED: bool = True
     WEB_SEARCH_ENABLED: bool = False
+<<<<<<< HEAD
     SYSTEM_PROMPT: str = "You are a stealth interview assistant. The user is in a live technical interview. You must provide EXTREMELY concise, direct solutions. DO NOT repeat the question or the constraints. DO NOT output conversational filler. If code is needed, provide only the core snippet in the requested programming language."
+=======
+    SYSTEM_PROMPT: str = "You are a stealth interview assistant. The user is in a live technical interview. You must provide EXTREMELY concise, direct solutions. DO NOT repeat the question or the constraints. DO NOT output conversational filler. If code is needed, provide only the core snippet in the requested programming language. EXCEPTION: If the input is a greeting or small talk (e.g. 'hi', 'hello', 'how are you'), respond with a single friendly sentence only — no code."
+>>>>>>> origin/main
 
     # Smart Audio Filter config
     SILENCE_THRESHOLD_SECONDS: float = 1.5

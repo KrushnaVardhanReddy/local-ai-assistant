@@ -5,6 +5,10 @@
 .env.production
 *.env
 .env_bkp.local
+<<<<<<< HEAD
+=======
+.env.local.backup
+>>>>>>> origin/main
 settings.json
 
 # ─── Python Backend ───────────────────────────────────────────────────────────
@@ -75,3 +79,7 @@ supabase/seed.sql
 scratch/
 backend/data/
 data/
+<<<<<<< HEAD
+=======
+backend/models/*.gguf
+>>>>>>> origin/main

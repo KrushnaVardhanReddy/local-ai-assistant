@@ -1,0 +1,147 @@
+TASK: P36-T2 — Smart Context Pipeline (Multi-Class Routing + RAG)
+
+PARALLEL BATCH: 1 — Supersedes P36-T1.
+Files touched: backend/local_intelligence.py, backend/app.py, backend/qa_cache.py
+PREREQUISITE: SmolLM2 (SMOLLM2_ENABLED=true) and ChromaDB are already operational.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build a fully automated, local-first "smart context pipeline" that runs before every
+cloud LLM call. It has two stages:
+
+STAGE 1 — SmolLM2 Multi-Class Question Classifier:
+  Automatically classify the interviewer's question into one of several categories,
+  then dynamically adjust the LLM system prompt for that turn only. The user never
+  has to manually select a mode or click a button.
+
+STAGE 2 — ChromaDB RAG Context Retrieval:
+  Before sending to the cloud LLM, do a vector similarity search in the local
+  ChromaDB for relevant chunks (resume bullets, job description, past Q&A pairs).
+  Inject the top-3 results as grounding context into the LLM prompt so answers
+  are personalized to the candidate's actual experience.
+
+Both stages run LOCALLY and IN PARALLEL with each other (asyncio.gather).
+Only the final assembled prompt is sent to the cloud LLM. Resume/JD data
+never leave the machine.
+
+═══════════════════════════════════════════════════════════════
+STAGE 1: CHANGES — backend/local_intelligence.py
+═══════════════════════════════════════════════════════════════
+
+1. Replace (or expand) the single `is_behavioral_question()` function with a new
+   function `classify_question(transcript: str) -> str` that returns one of:
+
+   "behavioral"     — "Tell me about a time...", "Give me an example of...", "Describe a situation..."
+   "coding"         — "Write a function...", "Implement...", "What is the time complexity of..."
+   "system_design"  — "How would you design...", "Architect a system that...", "Walk me through..."
+   "conceptual"     — "What is X?", "Explain Y", "How does Z work?"
+   "opinion"        — "What do you prefer?", "Why do you like...", "What's your experience with..."
+   "noise"          — Filler words, acknowledgements ("Thank you", "Okay", "Got it", "Mhm", "Sure")
+
+   Prompt to use (keep it short for speed):
+   """
+   Classify this interview question into exactly one category.
+   Categories: behavioral, coding, system_design, conceptual, opinion, noise
+   Question: {transcript}
+   Answer with only the category name.
+   """
+
+   Parse the SmolLM2 output: strip, lowercase, and match against the valid categories.
+   If no valid match, default to "conceptual".
+
+2. Add a dict `SYSTEM_PROMPT_INJECTIONS` that maps each category to a short
+   instruction string to append to the system prompt for that turn:
+
+   "behavioral":    "Structure your response using STAR format (Situation, Task, Action, Result). Be concise — 4 bullet points maximum."
+   "coding":        "Provide: 1) Pseudocode or a minimal code snippet, 2) Time/Space complexity, 3) One edge case to watch for. No lengthy prose."
+   "system_design": "Structure as: 1) Clarify requirements, 2) High-level components, 3) Data flow, 4) Scalability considerations. Use bullet points."
+   "conceptual":    "Give a concise 1-sentence definition, then 2-3 key properties or features. No padding."
+   "opinion":       "State a clear 1-sentence opinion, then give 2 concrete reasons from your experience."
+   "noise":         None   # No LLM call needed — skip entirely.
+
+═══════════════════════════════════════════════════════════════
+STAGE 2: CHANGES — backend/qa_cache.py
+═══════════════════════════════════════════════════════════════
+
+1. Add a new function `retrieve_context(query: str, n_results: int = 3) -> list[str]`:
+   - Query the existing ChromaDB `qa_cache` collection using the transcript as the query text.
+   - Return up to `n_results` document strings (the stored answers/chunks).
+   - If ChromaDB is unavailable or returns no results, return an empty list silently.
+   - This is a pure read operation — it must not write anything to the collection.
+
+2. Add a second function `retrieve_resume_context(query: str, n_results: int = 3) -> list[str]`:
+   - Query a SEPARATE ChromaDB collection named `resume_context` (create it lazily if missing).
+   - This collection is populated by the existing `/api/cache/prewarm` endpoint.
+   - Return up to `n_results` relevant resume/JD chunk strings.
+   - If the collection is empty or missing, return an empty list silently — never raise.
+
+═══════════════════════════════════════════════════════════════
+STAGE 3: CHANGES — backend/app.py
+═══════════════════════════════════════════════════════════════
+
+In `ws_endpoint`, after receiving a complete, accepted transcript (post-smart-filter),
+replace the existing LLM call block with this new pipeline:
+
+```python
+# --- Smart Context Pipeline ---
+
+# 1. Run SmolLM2 classification + ChromaDB retrieval in parallel (local, fast)
+if config.SMOLLM2_ENABLED:
+    question_type, qa_context, resume_context = await asyncio.gather(
+        asyncio.to_thread(local_intelligence.classify_question, transcript),
+        asyncio.to_thread(qa_cache.retrieve_context, transcript),
+        asyncio.to_thread(qa_cache.retrieve_resume_context, transcript),
+    )
+else:
+    question_type = "conceptual"
+    qa_context, resume_context = [], []
+
+# 2. If noise, skip LLM entirely
+if question_type == "noise":
+    continue
+
+# 3. Emit star_primed event to UI for behavioral questions (visual feedback)
+if question_type == "behavioral":
+    await websocket.send_json({"type": "star_primed"})
+
+# 4. Build dynamic system prompt for this turn
+turn_injection = local_intelligence.SYSTEM_PROMPT_INJECTIONS.get(question_type, "")
+dynamic_system_prompt = base_system_prompt
+if turn_injection:
+    dynamic_system_prompt += f"\n\nFor this response: {turn_injection}"
+
+# 5. Assemble RAG context block
+context_chunks = []
+if resume_context:
+    context_chunks.append("Relevant background from candidate's profile:\n" + "\n".join(f"- {c}" for c in resume_context))
+if qa_context:
+    context_chunks.append("Related past answers from this session:\n" + "\n".join(f"- {c}" for c in qa_context))
+
+if context_chunks:
+    dynamic_system_prompt += "\n\n--- CONTEXT ---\n" + "\n\n".join(context_chunks)
+
+# 6. Call cloud LLM with the enriched prompt
+messages = [{"role": "system", "content": dynamic_system_prompt}] + conversation_history
+response = await llm_client.chat(messages)
+```
+
+Key notes for implementation:
+- `base_system_prompt` is the existing system prompt loaded from config.
+- `conversation_history` is the existing rolling message list already in the ws_endpoint.
+- The SmolLM2 call must use `asyncio.to_thread()` since llama_cpp is synchronous.
+- Do NOT change the QA cache store logic — new answers should still be stored as before.
+- Emit a `{"type": "question_type", "value": question_type}` WebSocket message so
+  the frontend can optionally display a small badge (e.g. "🎭 Behavioral" or "💻 Coding").
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/local_intelligence.py   (Add classify_question + SYSTEM_PROMPT_INJECTIONS)
+- backend/qa_cache.py             (Add retrieve_context + retrieve_resume_context)
+- backend/app.py                  (Replace LLM call block with smart context pipeline)
+
+Commit: "jules: P36-T2 smart context pipeline — SmolLM2 multi-class routing + ChromaDB RAG"
+Target branch: main

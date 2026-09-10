@@ -1,7 +1,39 @@
 name: Build Windows EXE
 on: [workflow_dispatch]
 jobs:
+<<<<<<< HEAD
   build-windows:
+=======
+  build-backend:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          
+      - name: Build Python Backend
+        working-directory: backend
+        run: |
+          uv pip install --system -r requirements.txt
+          uv pip install --system pyinstaller
+          pyinstaller --name "local-ai-backend-windows" --onefile --exclude-module tkinter --exclude-module matplotlib --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module IPython --exclude-module notebook --exclude-module pytest --exclude-module tensorboard --hidden-import fastapi --hidden-import uvicorn --hidden-import faster_whisper --hidden-import websockets --hidden-import sounddevice --hidden-import chromadb --hidden-import sentence_transformers app.py
+          
+      - name: Upload Backend EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: stealth-assistant-backend-exe
+          path: backend/dist/local-ai-backend-windows.exe
+
+  build-frontend:
+>>>>>>> origin/main
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -9,9 +41,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
+<<<<<<< HEAD
           node-version: 20
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
+=======
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+          
+>>>>>>> origin/main
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -21,6 +60,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: frontend/src-tauri -> target
+<<<<<<< HEAD
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -37,11 +77,18 @@ jobs:
       - name: Install Frontend Dependencies
         working-directory: frontend
         run: npm install
+=======
+          
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+>>>>>>> origin/main
         
       - name: Build Tauri App
         working-directory: frontend
         run: npm run tauri build
         
+<<<<<<< HEAD
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
@@ -49,3 +96,10 @@ jobs:
           path: |
             frontend/src-tauri/target/release/bundle/nsis/*.exe
             backend/dist/local-ai-backend-windows.exe
+=======
+      - name: Upload Frontend EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: stealth-assistant-frontend-exe
+          path: frontend/src-tauri/target/release/bundle/nsis/*.exe
+>>>>>>> origin/main

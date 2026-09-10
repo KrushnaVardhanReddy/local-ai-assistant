@@ -13,6 +13,13 @@ FILLER_PHRASES = {
     "okay", "ok", "yeah", "yes", "no", "mm-hmm", "hmm", "uh", "um",
     "right", "sure", "thanks", "thank you", "bye", "alright", "all right",
     "got it", "i see", "i know", "oh", "ah", "so", "yep", "nope",
+<<<<<<< HEAD
+=======
+    # Greetings — should not trigger a code response
+    "hi", "hello", "hey", "hi there", "hello there", "hey there",
+    "good morning", "good afternoon", "good evening", "good night",
+    "how are you", "how's it going", "what's up", "sup",
+>>>>>>> origin/main
 }
 
 def is_filler(text: str) -> bool:
@@ -25,6 +32,10 @@ async def passes_filter(text: str) -> tuple[bool, str]:
     Run all heuristic filter layers.
     Returns (should_send: bool, reason: str).
     """
+<<<<<<< HEAD
+=======
+    t0 = time.time()
+>>>>>>> origin/main
     if not config.SMART_FILTER_ENABLED:
         return True, "filter_disabled"
 
@@ -33,15 +44,24 @@ async def passes_filter(text: str) -> tuple[bool, str]:
     word_count = len(clean_text.split())
 
     if word_count < config.MIN_WORDS:
+<<<<<<< HEAD
         print(f"[FILTER] Dropped (too short / noise): '{text}'", file=sys.stderr)
         return False, "too_short"
 
     if is_filler(text):
         print(f"[FILTER] Dropped (filler): '{text}'", file=sys.stderr)
+=======
+        print(f"[FILTER] {int((time.time() - t0) * 1000)}ms Dropped (too short / noise): '{text}'", file=sys.stderr)
+        return False, "too_short"
+
+    if is_filler(text):
+        print(f"[FILTER] {int((time.time() - t0) * 1000)}ms Dropped (filler): '{text}'", file=sys.stderr)
+>>>>>>> origin/main
         return False, "filler"
 
     li = get_local_intelligence()
     if not await li.is_question(text):
+<<<<<<< HEAD
         print(f"Ignored conversational filler", file=sys.stderr)
         return False, "not_question"
 
@@ -53,6 +73,20 @@ async def passes_filter(text: str) -> tuple[bool, str]:
     return True, "accepted"
 
 
+=======
+        print(f"[FILTER] {int((time.time() - t0) * 1000)}ms Ignored conversational filler", file=sys.stderr)
+        return False, "not_question"
+
+    if not li.is_complete(text):
+        print(f"[INTENT] {int((time.time() - t0) * 1000)}ms Dropped (incomplete turn): '{text}'", file=sys.stderr)
+        return False, "incomplete_turn"
+
+    print(f"[INTENT] {int((time.time() - t0) * 1000)}ms Accepted: '{text}'", file=sys.stderr)
+    return True, "accepted"
+
+
+
+>>>>>>> origin/main
 class SilenceBuffer:
     """
     Accumulates transcript fragments. When SILENCE_THRESHOLD_SECONDS of

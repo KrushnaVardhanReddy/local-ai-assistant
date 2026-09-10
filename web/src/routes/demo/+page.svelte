@@ -39,7 +39,7 @@
 </script>
 
 <svelte:head>
-  <title>Free Demo - Local AI Assistant</title>
+  <title>Free Demo - BarnOwl</title>
 </svelte:head>
 
 <main>
@@ -55,11 +55,11 @@
           <p><strong>Expires:</strong> {new Date(sessionToken.expiresAt).toLocaleString()}</p>
           <p class="token-value"><strong>Token:</strong> <code>{sessionToken.token}</code></p>
         </div>
-        <p class="instructions">Open the Local AI Assistant desktop app and use this token to authenticate your session.</p>
+        <p class="instructions">Open the BarnOwl desktop app and use this token to authenticate your session.</p>
       </div>
     {:else}
       <p class="intro">
-        You've been invited to try Local AI Assistant!
+        You've been invited to try BarnOwl!
         Click the button below to generate your 15-minute free demo token.
       </p>
 

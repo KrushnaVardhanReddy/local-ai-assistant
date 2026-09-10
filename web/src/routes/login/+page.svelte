@@ -108,7 +108,7 @@
 
 <div class="login-container">
 	<div class="login-box">
-		<h2>Welcome to Local AI Assistant</h2>
+		<h2>Welcome to BarnOwl</h2>
 
 		<div class="tabs">
 			<button

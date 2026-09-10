@@ -20,6 +20,7 @@ class LocalIntelligence:
             self._load_model()
 
     def _load_model(self):
+<<<<<<< HEAD
         try:
             from llama_cpp import Llama
             model_path = config.SMOLLM2_MODEL_PATH
@@ -27,6 +28,37 @@ class LocalIntelligence:
                 print(f"[SmolLM2] Model not found at {model_path}. Disabling.", file=sys.stderr)
                 self._enabled = False
                 return
+=======
+        if not self._enabled:
+            return
+
+        try:
+            from llama_cpp import Llama
+            model_path = config.SMOLLM2_MODEL_PATH
+
+            if not os.path.exists(model_path):
+                print("[SmolLM2] First run detected. Downloading ~100MB local intelligence model...", file=sys.stderr)
+                os.makedirs(os.path.dirname(model_path), exist_ok=True)
+
+                import urllib.request
+                url = "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf"
+
+                def _progress_hook(count, block_size, total_size):
+                    percent = int(count * block_size * 100 / total_size)
+                    sys.stderr.write(f"\r[SmolLM2] Downloading: {percent}%")
+                    sys.stderr.flush()
+
+                try:
+                    urllib.request.urlretrieve(url, model_path, reporthook=_progress_hook)
+                    print("\n[SmolLM2] Download complete.", file=sys.stderr)
+                except Exception as e:
+                    print(f"\n[SmolLM2] Download failed: {e}. Disabling.", file=sys.stderr)
+                    self._enabled = False
+                    if os.path.exists(model_path):
+                        os.remove(model_path)
+                    return
+
+>>>>>>> origin/main
             self._llm = Llama(
                 model_path=model_path,
                 n_ctx=512,
@@ -44,6 +76,7 @@ class LocalIntelligence:
 
     def is_complete(self, text: str) -> bool:
         """Returns True if the transcript is a complete thought. Falls back to True if disabled."""
+<<<<<<< HEAD
         if not self._enabled or self._llm is None:
             return True
         prompt = (
@@ -59,19 +92,33 @@ class LocalIntelligence:
         except Exception as e:
             print(f"[SmolLM2] is_complete error: {e}", file=sys.stderr)
             return True
+=======
+        # The 135M model struggles heavily with zero-shot classification and drops valid queries.
+        # Bypassing this for now so the app is actually usable.
+        return True
+>>>>>>> origin/main
 
     def encode(self, text: str) -> list:
         """Returns a semantic embedding vector. Returns empty list if disabled."""
         if not self._enabled or self._llm is None:
             return []
         try:
+<<<<<<< HEAD
             return self._llm.embed(text)
+=======
+            res = self._llm.embed(text)
+            # llama_cpp.embed returns a list of embeddings (list of lists) even for a single string
+            if res and isinstance(res, list) and isinstance(res[0], list):
+                return res[0]
+            return res
+>>>>>>> origin/main
         except Exception as e:
             print(f"[SmolLM2] encode error: {e}", file=sys.stderr)
             return []
 
     async def is_question(self, text: str) -> bool:
         """Returns True if the text appears to be a meaningful question or request using SmolLM2."""
+<<<<<<< HEAD
         if not self._enabled or self._llm is None:
             return True
 
@@ -89,3 +136,8 @@ class LocalIntelligence:
         except Exception as e:
             print(f"[SmolLM2] is_question error: {e}", file=sys.stderr)
             return True
+=======
+        # The 135M model struggles heavily with zero-shot classification and drops valid queries.
+        # Bypassing this for now; smart_filter.py already catches basic conversational filler.
+        return True
+>>>>>>> origin/main

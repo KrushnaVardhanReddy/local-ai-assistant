@@ -806,13 +806,21 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                     full_response = ""
                     try:
                         print(f"[DEBUG] Calling LLM with {len(messages)} messages...", file=sys.stderr)
+<<<<<<< HEAD
+=======
+                        llm_start = time.time()
+>>>>>>> origin/main
                         async for token in connection_llm_client.stream(messages):
                             full_response += token
                             interview_session.append_response_token(token)
                             for out_q in list(active_outbound_queues):
                                 out_q.put_nowait({"type": "token", "text": token})
                         interview_session.complete_turn()
+<<<<<<< HEAD
                         print(f"[DEBUG] Finished calling LLM.", file=sys.stderr)
+=======
+                        print(f"[DEBUG] {int((time.time() - llm_start) * 1000)}ms Finished calling LLM.", file=sys.stderr)
+>>>>>>> origin/main
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "end"})
 
@@ -1134,7 +1142,76 @@ async def health_check():
         "auth_enabled": bool(config.SUPABASE_JWT_SECRET)
     }
 
+<<<<<<< HEAD
 @app.get("/api/cache/stats")
+=======
+
+class PrewarmRequest(BaseModel):
+    resume_text: str
+    job_description: str
+
+@app.post("/api/cache/prewarm")
+async def prewarm_cache(body: PrewarmRequest):
+    if not llm_client:
+        raise HTTPException(status_code=503, detail="LLM Client not initialized")
+
+    system_prompt = (
+        "Generate a JSON array of the 10 most likely interview questions and concise perfect answers "
+        "based on this Resume and Job Description. Return ONLY valid JSON as a list of objects with "
+        "keys 'question' and 'answer'."
+    )
+    user_prompt = f"---\nRESUME:\n{body.resume_text}\n\n---\nJOB DESCRIPTION:\n{body.job_description}"
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    result = ""
+    try:
+        async for token in llm_client.stream(messages):
+            result += token
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
+
+    llm_response_text = result.strip()
+
+    import re
+    import json
+    
+    # Robustly extract whatever complete JSON objects the LLM managed to generate
+    # This completely bypasses errors caused by unterminated strings or trailing commas
+    qa_pairs = []
+    object_strings = re.findall(r'\{[^{}]*\}', llm_response_text)
+    
+    for obj_str in object_strings:
+        try:
+            obj = json.loads(obj_str)
+            if isinstance(obj, dict) and 'question' in obj and 'answer' in obj:
+                qa_pairs.append(obj)
+        except json.JSONDecodeError:
+            continue
+            
+    if not qa_pairs:
+        raise HTTPException(status_code=500, detail="Failed to parse LLM response: No valid Q&A pairs found.")
+
+    stored_count = 0
+    for pair in qa_pairs:
+        try:
+            qa_cache.store(pair["question"], pair["answer"])
+            stored_count += 1
+        except Exception as e:
+            print(f"Error storing Q&A pair: {e}")
+
+    return {
+        "status": "success",
+        "message": f"Cache warmed with {stored_count} questions",
+        "stored_count": stored_count
+    }
+
+@app.get("/api/cache/stats")
+
+>>>>>>> origin/main
 async def get_cache_stats():
     """Returns Q&A cache statistics: total pairs and estimated tokens saved."""
     return qa_cache.stats()

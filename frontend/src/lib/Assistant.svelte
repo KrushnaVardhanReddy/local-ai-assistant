@@ -4,6 +4,7 @@
   import SessionReport from './SessionReport.svelte';
   import ResumeBuilder from './ResumeBuilder.svelte';
   import { authState } from "$lib/auth.svelte";
+<<<<<<< HEAD
 
   let showSessionReport = $state(false);
   let currentView = $state<'interview' | 'resume'>('interview');
@@ -12,6 +13,23 @@
   let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
   let cacheStats = $state<{ cached_pairs: number; estimated_tokens_saved: number } | null>(null);
   let clearingCache = $state(false);
+=======
+  import { uiState } from "$lib/stores/uiState.svelte.ts";
+  import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
+
+  let showSessionReport = $state(false);
+  let currentView = $state<'interview' | 'resume'>('interview');
+  let starPrimed = $state(false);
+  let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let clearingCache = $state(false);
+  let cacheStats = $state<{ cached_pairs: number; estimated_tokens_saved: number } | null>(null);
+
+  // Pre-warm state
+  let showPrewarmModal = $state(false);
+  let prewarmJobDescription = $state("");
+  let prewarmingCache = $state(false);
+>>>>>>> origin/main
 
   function handleMockModeToggle() {
     const isNowEnabled = !wsState.isMockMode;
@@ -78,7 +96,50 @@
     }
   }
 
+<<<<<<< HEAD
   async function clearCache() {
+=======
+
+  async function prewarmCache() {
+    prewarmingCache = true;
+    try {
+      const storedBackendUrl = localStorage.getItem("backend_url") || "127.0.0.1:8765";
+      const apiUrl = storedBackendUrl.startsWith('http') ? storedBackendUrl : `http://${storedBackendUrl}`;
+
+      const resContext = await fetch(`${apiUrl}/api/resume/context`);
+      let baseResume = "";
+      if (resContext.ok) {
+        const contextData = await resContext.json();
+        baseResume = contextData.context || "";
+      }
+
+      const res = await fetch(`${apiUrl}/api/cache/prewarm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume_text: baseResume,
+          job_description: prewarmJobDescription
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to prewarm cache");
+      }
+
+      const data = await res.json();
+      showPrewarmModal = false;
+      alert(`Cache Warmed with ${data.stored_count || 10} Questions`);
+      await fetchCacheStats();
+    } catch (e: any) {
+      alert(`Error pre-warming cache: ${e.message}`);
+    } finally {
+      prewarmingCache = false;
+    }
+  }
+
+  async function clearCache() {
+
+>>>>>>> origin/main
     const confirmed = window.confirm(
       `Are you sure you want to clear all ${cacheStats?.cached_pairs ?? 0} cached Q&A pairs? This cannot be undone.`
     );
@@ -98,10 +159,17 @@
     fetchCacheStats();
 
     const unlistenScrollDown = listen("scroll-down", () => {
+<<<<<<< HEAD
       contentEl?.scrollBy({ top: 100, behavior: 'smooth' });
     });
     const unlistenScrollUp = listen("scroll-up", () => {
       contentEl?.scrollBy({ top: -100, behavior: 'smooth' });
+=======
+      responseEl?.scrollBy({ top: 100, behavior: 'smooth' });
+    });
+    const unlistenScrollUp = listen("scroll-up", () => {
+      responseEl?.scrollBy({ top: -100, behavior: 'smooth' });
+>>>>>>> origin/main
     });
 
     // Check if we are running in a regular browser instead of Tauri
@@ -338,7 +406,11 @@
   <header class="toolbar glass-pill {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" onmousedown={startDrag}>
     <!-- Brand / Primary Action -->
     <div class="flex items-center gap-4 pointer-events-none">
+<<<<<<< HEAD
       <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">Local AI</span>
+=======
+      <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">BarnOwl</span>
+>>>>>>> origin/main
       <!-- Live Indicator -->
       <div class="flex items-center gap-2 bg-white/5 rounded-full px-3 py-1 border border-white/5 {wsState.isListening ? '' : 'opacity-50'}">
         <div class="w-2 h-2 rounded-full {wsState.isListening ? 'bg-secondary animate-pulse shadow-[0_0_8px_rgba(78,222,163,0.6)]' : 'bg-gray-500'}"></div>
@@ -358,6 +430,7 @@
       {/if}
     </div>
 
+<<<<<<< HEAD
     <!-- Central Chat Input (Stealth) -->
     <div class="flex-1 max-w-xl mx-8">
       <div class="relative flex items-center w-full h-8 bg-white/5 rounded-lg border border-white/10 transition-colors focus-within:bg-white/10 focus-within:border-white/20">
@@ -372,6 +445,9 @@
         <button class="font-mono-data text-mono-data text-on-surface-variant/40 hover:text-primary mr-3 text-[10px] pointer-events-auto" onclick={handleChatSubmit}>SEND</button>
       </div>
     </div>
+=======
+
+>>>>>>> origin/main
 
     <!-- Trailing Actions -->
     <div class="flex items-center gap-2">
@@ -410,7 +486,11 @@
         aria-label="Hotkeys Cheatsheet"
         title="Hotkeys Cheatsheet"
         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
+<<<<<<< HEAD
         onclick={() => showHotkeys = true}
+=======
+        onclick={() => uiState.hotkeysPanelOpen = true}
+>>>>>>> origin/main
       >
         <span class="material-symbols-outlined text-[20px]" data-icon="keyboard">keyboard</span>
       </button>
@@ -590,6 +670,23 @@
           </div>
         {/if}
       </div>
+<<<<<<< HEAD
+=======
+
+      <!-- Chat Input (Moved from Header) -->
+      <div class="p-5 border-t border-white/5 bg-black/20 flex-shrink-0 h-[25%] min-h-[160px] flex flex-col">
+        <div class="relative flex w-full h-full bg-white/5 rounded-2xl border border-white/10 transition-colors focus-within:bg-white/10 focus-within:border-white/20 shadow-inner">
+          <span class="absolute top-4 left-4 material-symbols-outlined text-[24px] text-on-surface-variant pointer-events-none" style="font-variation-settings: 'FILL' 0;">chat</span>
+          <textarea 
+            class="w-full h-full bg-transparent border-none text-on-background text-lg focus:ring-0 placeholder-on-surface-variant/50 outline-none pointer-events-auto resize-none hide-scrollbar pt-4 pl-12 pr-4 pb-14" 
+            placeholder="Type message to assistant (Press Enter to send)..." 
+            bind:value={chatText}
+            onkeydown={handleChatKeydown}
+          ></textarea>
+          <button class="absolute bottom-3 right-3 font-mono-data text-mono-data text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-xl text-[12px] font-bold tracking-widest pointer-events-auto transition-all" onclick={handleChatSubmit}>SEND</button>
+        </div>
+      </div>
+>>>>>>> origin/main
     </aside>
 
     <!-- Expand Live Ears button (shown when collapsed) -->
@@ -663,7 +760,11 @@
         {#if wsState.response || wsState.isThinking}
           <div class="flex-1 flex flex-col gap-4">
             <div class="group flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 cursor-default relative">
+<<<<<<< HEAD
               <div class="ml-1 response-content leading-relaxed prose prose-invert max-w-none">
+=======
+              <div class="ml-1 min-w-0 w-full response-content leading-relaxed prose prose-invert max-w-none break-words">
+>>>>>>> origin/main
                 {@html renderedResponse}
                 {#if wsState.isThinking}
                   <span class="inline-block w-1.5 h-4 bg-primary align-middle animate-pulse ml-1"></span>
@@ -691,6 +792,7 @@
           {:else}
             <p class="muted-text text-on-surface-variant/50 text-[12px] mb-3">Cache unavailable (SmolLM2 not enabled)</p>
           {/if}
+<<<<<<< HEAD
           <button
             class="btn-danger"
             onclick={clearCache}
@@ -698,6 +800,23 @@
           >
             {clearingCache ? "Clearing..." : "Clear Cache"}
           </button>
+=======
+          <div class="flex gap-2 mt-3">
+            <button
+              class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors"
+              onclick={() => showPrewarmModal = true}
+            >
+              Pre-Warm Cache
+            </button>
+            <button
+              class="btn-danger"
+              onclick={clearCache}
+              disabled={clearingCache || !cacheStats || cacheStats.cached_pairs === 0}
+            >
+              {clearingCache ? "Clearing..." : "Clear Cache"}
+            </button>
+          </div>
+>>>>>>> origin/main
         </div>
       </div>
 
@@ -725,6 +844,10 @@
     {/if}
     {/if}
     {/if}
+<<<<<<< HEAD
+=======
+    <HotkeysPanel />
+>>>>>>> origin/main
   </main>
 
   {#if showSessionReport}
@@ -736,6 +859,7 @@
 
 
 
+<<<<<<< HEAD
 {#if showHotkeys}
   <div class="fixed inset-0 z-[9998] pointer-events-auto flex items-center justify-center bg-black/50 backdrop-blur-sm" onclick={() => showHotkeys = false}>
     <div class="glass-panel bg-surface-variant/90 backdrop-blur-md p-8 rounded-2xl max-w-lg w-full flex flex-col gap-6 shadow-2xl border border-white/10 relative overflow-hidden" onclick={(e) => e.stopPropagation()}>
@@ -780,11 +904,53 @@
           <span class="font-bold">Panic Clear / Hide</span>
           <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+X</kbd>
         </div>
+=======
+{#if showPrewarmModal}
+  <div class="fixed inset-0 z-[9999] pointer-events-auto flex items-center justify-center bg-black/80 backdrop-blur-md">
+    <div class="glass-panel p-8 rounded-2xl max-w-lg w-full flex flex-col gap-4 shadow-2xl border border-white/10 relative">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-xl font-headline-md text-on-background tracking-wide">Pre-Warm Cache</h2>
+        <button class="text-on-surface-variant hover:text-white" onclick={() => showPrewarmModal = false}>
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <p class="text-on-surface-variant text-sm mb-2">Paste the Job Description to proactively cache the 10 most likely interview questions and perfect answers based on your stored resume.</p>
+      <textarea
+        class="w-full h-40 p-4 bg-black/40 border border-white/10 rounded-xl text-on-surface focus:outline-none focus:border-primary font-mono text-sm resize-none"
+        placeholder="Paste Job Description here..."
+        bind:value={prewarmJobDescription}
+      ></textarea>
+
+      <div class="flex justify-end gap-3 mt-4">
+        <button
+          class="px-4 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-on-background transition-colors"
+          onclick={() => showPrewarmModal = false}
+          disabled={prewarmingCache}
+        >
+          Cancel
+        </button>
+        <button
+          class="px-6 py-2 rounded-lg text-sm bg-primary text-background font-bold hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(78,222,163,0.3)] flex items-center gap-2 disabled:opacity-50"
+          onclick={prewarmCache}
+          disabled={prewarmingCache || !prewarmJobDescription.trim()}
+        >
+          {#if prewarmingCache}
+            <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+            Pre-warming...
+          {:else}
+            <span class="material-symbols-outlined text-[18px]">bolt</span>
+            Pre-Warm
+          {/if}
+        </button>
+>>>>>>> origin/main
       </div>
     </div>
   </div>
 {/if}
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 {#if wsState.sessionExpired}
   <div class="fixed inset-0 z-[9999] pointer-events-auto flex items-center justify-center bg-black/80 backdrop-blur-md">
     <div class="glass-panel p-8 rounded-2xl max-w-md w-full text-center flex flex-col items-center gap-6 shadow-2xl border border-white/10 relative overflow-hidden">
@@ -800,7 +966,11 @@
       </h2>
 
       <p class="text-on-surface-variant text-body-sm font-body-sm">
+<<<<<<< HEAD
         Your current session limit has been reached. Choose an option below to continue using the Local AI Assistant.
+=======
+        Your current session limit has been reached. Choose an option below to continue using the BarnOwl.
+>>>>>>> origin/main
       </p>
 
       <div class="flex flex-col sm:flex-row gap-4 w-full mt-4">

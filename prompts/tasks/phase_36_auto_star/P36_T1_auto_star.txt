@@ -1,0 +1,42 @@
+TASK: P36-T1 — Auto STAR (Behavioral Question Detection)
+
+PARALLEL BATCH: 1 — Start of Phase 36.
+Files touched: backend/local_intelligence.py, backend/app.py
+PREREQUISITE: None.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Automate the "STAR" primer. Use the local SmolLM2 (135M) model to classify incoming 
+transcripts in real-time to detect behavioral interview questions. If a question is behavioral,
+automatically inject the STAR formatting instructions into the LLM context so the user doesn't
+have to manually click the STAR button in the UI.
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/local_intelligence.py
+═══════════════════════════════════════════════════════════════
+1. Add a new function `is_behavioral_question(transcript: str) -> bool`:
+   - Create a fast zero-shot classification prompt. For example:
+     "Analyze the following interview question. Is it a behavioral question asking for a past story or example? (e.g. 'Tell me about a time', 'Give me an example', 'Describe a situation'). Answer strictly 'yes' or 'no'."
+   - Call the local SmolLM2 generator.
+   - Return True if the response starts with "yes".
+
+═══════════════════════════════════════════════════════════════
+CHANGES: backend/app.py
+═══════════════════════════════════════════════════════════════
+1. In the `ws_endpoint` loop, after receiving a complete transcript and before generating the LLM response:
+2. If `config.SMOLLM2_ENABLED` is true, call `is_behavioral_question(transcript)`.
+3. If it returns True, append a hidden message to the LLM context just for this turn:
+   "For your next response only, structure your answer using the STAR format (Situation, Task, Action, Result) if applicable, or break it into a clear step-by-step methodology. Keep it concise."
+4. (Optional) Emit a WebSocket message `{"type": "star_primed"}` so the UI can still glow the STAR button automatically to give the user visual feedback!
+
+═══════════════════════════════════════════════════════════════
+FILES LIST
+═══════════════════════════════════════════════════════════════
+
+FILES TO MODIFY:
+- backend/local_intelligence.py (Add is_behavioral_question)
+- backend/app.py (Auto-inject STAR prompt)
+
+Commit: "jules: P36-T1 implement automatic STAR behavioral classification via SmolLM2"
+Target branch: main

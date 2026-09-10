@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+import hashlib
+import time
+>>>>>>> origin/main
 import sys
 import chromadb
 from config import config
@@ -21,6 +26,7 @@ def _get_collection():
 def lookup(question: str) -> str | None:
     """
     Returns cached answer string if a similar question was seen before.
+<<<<<<< HEAD
     Returns None on cache miss or if SmolLM2 is disabled.
     """
     li = get_local_intelligence()
@@ -30,19 +36,36 @@ def lookup(question: str) -> str | None:
     try:
         col = _get_collection()
         results = col.query(query_embeddings=[vector], n_results=1, include=["documents", "distances"])
+=======
+    Returns None on cache miss.
+    """
+    t0 = time.time()
+    try:
+        col = _get_collection()
+        results = col.query(query_texts=[question], n_results=1, include=["documents", "metadatas", "distances"])
+>>>>>>> origin/main
         if results["ids"] and results["ids"][0]:
             distance = results["distances"][0][0]
             similarity = 1.0 - distance
             if similarity >= SIMILARITY_THRESHOLD:
+<<<<<<< HEAD
                 answer = results["documents"][0][0]
                 print(f"[QACache] Hit (similarity={similarity:.3f})", file=sys.stderr)
                 return answer
+=======
+                # Answer is now stored in metadata, not documents
+                answer = results["metadatas"][0][0]["answer"]
+                print(f"[QACache] {int((time.time() - t0) * 1000)}ms Hit (similarity={similarity:.3f})", file=sys.stderr)
+                return answer
+        print(f"[QACache] {int((time.time() - t0) * 1000)}ms Miss", file=sys.stderr)
+>>>>>>> origin/main
     except Exception as e:
         print(f"[QACache] lookup error: {e}", file=sys.stderr)
     return None
 
 def store(question: str, answer: str) -> None:
     """Stores a Q&A pair in the cache for future lookups."""
+<<<<<<< HEAD
     li = get_local_intelligence()
     vector = li.encode(question)
     if not vector:
@@ -56,12 +79,73 @@ def store(question: str, answer: str) -> None:
             embeddings=[vector],
             documents=[answer],
             metadatas=[{"question": question[:200], "timestamp": str(int(time.time()))}]
+=======
+    try:
+        col = _get_collection()
+
+        doc_id = hashlib.md5(question.encode()).hexdigest()
+        col.upsert(
+            ids=[doc_id],
+            documents=[question],
+            metadatas=[{"answer": answer, "timestamp": str(int(time.time()))}]
+>>>>>>> origin/main
         )
         print(f"[QACache] Stored new Q&A pair (total: {col.count()})", file=sys.stderr)
     except Exception as e:
         print(f"[QACache] store error: {e}", file=sys.stderr)
 
+<<<<<<< HEAD
 def clear() -> int:
+=======
+
+def store_bulk(qa_pairs: list[dict]) -> int:
+    """
+    Bulk stores a list of Q&A pairs.
+    Each pair must have 'question' and 'answer' keys.
+    Returns the number of pairs successfully stored.
+    """
+    li = get_local_intelligence()
+    ids = []
+    embeddings = []
+    documents = []
+    metadatas = []
+
+
+    for pair in qa_pairs:
+        q = pair.get("question", "")
+        a = pair.get("answer", "")
+        if not q or not a:
+            continue
+        vector = li.encode(q)
+        if not vector:
+            continue
+
+        doc_id = hashlib.md5(q.encode()).hexdigest()
+        ids.append(doc_id)
+        embeddings.append(vector)
+        documents.append(a)
+        metadatas.append({"question": q[:200], "timestamp": str(int(time.time()))})
+
+    if not ids:
+        return 0
+
+    try:
+        col = _get_collection()
+        col.upsert(
+            ids=ids,
+            embeddings=embeddings,
+            documents=documents,
+            metadatas=metadatas
+        )
+        print(f"[QACache] Bulk stored {len(ids)} Q&A pairs (total: {col.count()})", file=sys.stderr)
+        return len(ids)
+    except Exception as e:
+        print(f"[QACache] bulk store error: {e}", file=sys.stderr)
+        return 0
+
+def clear() -> int:
+
+>>>>>>> origin/main
     """Deletes all entries from the qa_cache collection. Returns count deleted."""
     try:
         col = _get_collection()
