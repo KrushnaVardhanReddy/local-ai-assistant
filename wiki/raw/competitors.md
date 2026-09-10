@@ -26,8 +26,8 @@ This matrix compares the **Local AI Assistant** (Project Parakeet) against exist
 1. **Undetectable Stealth (Portable App + Ghost Cursor):**
    Competitors rely on Chrome extensions or heavy desktop applications which are easily flagged by proctoring software. Our assistant uses a zero-install **Portable ZIP** combined with advanced hotkeys and a **Ghost Cursor** (via Remote Helper). The candidate never touches their mouse, making detection practically impossible via screen-share or OS monitoring.
 
-2. **Ultra-Low Latency (Gemini Live):** 
-   In an interview, a 5-second delay is fatal. By wiring directly into the Gemini Live streaming API and skipping the STT bottleneck, our latency is sub-second, matching or beating the fastest competitors.
+2. **Ultra-Low Latency (Local STT + SmolLM2 Edge Caching):** 
+   In an interview, a 5-second delay is fatal. By running STT locally on-device (`faster-whisper` or `parakeet`) and using our `SmolLM2` Gatekeeper to filter out partial sentences, we drastically cut down on wasted cloud calls. Furthermore, if a question hits our local ChromaDB semantic cache, the answer is served instantly (zero latency), completely skipping the cloud LLM bottleneck.
 
 3. **Speaker Diarization & Routing:**
    Unlike competitors that just read a wall of text, our app splits the audio channels to tag `[INTERVIEWER]` and `[CANDIDATE]`, ensuring the LLM understands the flow of the conversation and can even provide real-time coaching on the candidate's answers.
