@@ -103,6 +103,40 @@ def store_bulk(qa_pairs: list[dict]) -> int:
         print(f"[QACache] bulk store error: {e}", file=sys.stderr)
         return 0
 
+def retrieve_context(query: str, n_results: int = 3) -> list[str]:
+    """
+    Query the qa_cache collection using the transcript as query text.
+    Return up to n_results document strings (the stored answers).
+    """
+    try:
+        col = _get_collection()
+        results = col.query(query_texts=[query], n_results=n_results)
+        if results and results.get("documents") and results["documents"]:
+            return results["documents"][0]
+        return []
+    except Exception as e:
+        print(f"[QACache] retrieve_context error: {e}", file=sys.stderr)
+        return []
+
+def retrieve_resume_context(query: str, n_results: int = 3) -> list[str]:
+    """
+    Query the resume_context collection using the transcript as query text.
+    Return up to n_results relevant resume/JD chunk strings.
+    """
+    try:
+        global _client
+        if _client is None:
+            _client = chromadb.PersistentClient(path=config.CHROMA_DIR)
+
+        col = _client.get_or_create_collection(name="resume_context")
+        results = col.query(query_texts=[query], n_results=n_results)
+
+        if results and results.get("documents") and results["documents"]:
+            return results["documents"][0]
+        return []
+    except Exception:
+        return []
+
 def clear() -> int:
 
     """Deletes all entries from the qa_cache collection. Returns count deleted."""
