@@ -116,6 +116,7 @@
 | P32-T5 | `frontend/src/lib/Assistant.svelte` | **Cache UI Controls:** Add a "Cache" section in the settings panel showing cache stats (e.g. "47 answers cached — ~12,000 tokens saved"). Include a red "Clear Cache" button that calls the `DELETE /api/cache` endpoint with a confirmation dialog. | ⏳ | — |
 | P32-T6 | `tests/test_local_intelligence.py`, `tests/test_qa_cache.py` | **Unit Tests:** Tests for turn-detection accuracy (COMPLETE/INCOMPLETE), cache hit/miss logic, similarity threshold, and cache clearing via the API endpoint. | ⬜ | — |
 | P32-T7 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Cache UI (stats display, Clear Cache button, confirmation dialog). Pytest integration tests for `GET /api/cache/stats` and `DELETE /api/cache` endpoints. | ⬜ | — |
+| P32-T8 | `backend/app.py`, `frontend/src/lib/Assistant.svelte` | **Proactive Cache Pre-Warming (Mind Reader):** Add a `POST /api/cache/prewarm` endpoint. It takes the candidate's Resume and Job Description, asks the cloud LLM to generate the 50 most likely interview questions + perfect answers, and bulk-inserts them into the ChromaDB `qa_cache` prior to the interview. | ⬜ | — |
 
 ---
 
@@ -130,3 +131,17 @@
 | P33-T2 | `frontend/src/lib/audio/` | **Native Microphone:** Replace the Web Audio API with `@capacitor-community/microphone` for seamless audio capture on mobile devices without browser permission prompts. | ⏳ | — |
 | P33-T3 | `frontend/src/lib/audio/` | **Background Audio Plugin:** Integrate a Capacitor background task plugin so the assistant can continue listening for the wake word even when the phone screen is locked. | ⏳ | — |
 | P33-T4 | `frontend/e2e/` | **Mobile E2E Tests:** Add mobile viewport emulation to Playwright tests to ensure the UI remains responsive and functional on smaller screens. | ✅ | — |
+
+---
+
+## Phase 34 — Meeting Memory & Task Sync (Enterprise Timeline) 🧠🗓️
+
+> Bridges the gap between a real-time copilot and an async enterprise assistant (Otter/Limitless style).
+> Automatically records, indexes, and extracts actionable items from every conversation.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P34-T1 | `backend/database/` | **Persistent SQLite Timeline:** Update the backend to silently log all spoken transcripts into a localized timeline DB, allowing for infinite searchable memory across all days and sessions. | ⬜ | — |
+| P34-T2 | `frontend/src/lib/MemoryTimeline.svelte` | **Timeline UI:** Create a timeline view where users can scrub back through their entire day's audio transcripts and search for specific keywords from past meetings. | ⬜ | — |
+| P34-T3 | `backend/task_extractor.py` | **Action Item Extraction:** Run an async LLM post-processing job over the `faster-whisper` transcripts every 15 minutes to automatically extract Action Items and To-Dos. | ⬜ | — |
+| P34-T4 | `backend/integrations/` | **Jira & Trello Sync:** Add OAuth/API sync capability to automatically push extracted Action Items into the user's Jira board or Trello list. | ⬜ | — |

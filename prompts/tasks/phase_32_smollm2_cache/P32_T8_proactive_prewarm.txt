@@ -1,0 +1,27 @@
+TASK: P32-T8 — Proactive Cache Pre-Warming (Mind Reader)
+
+PARALLEL BATCH: 3 — After P32-T1 and P32-T3.
+Files touched: backend/app.py, frontend/src/lib/Assistant.svelte
+PREREQUISITE: P32-T3
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build a "Mind Reader" feature that proactively pre-warms the Semantic Q&A Cache 
+before an interview starts. Given a candidate's resume and a job description, 
+the app will generate the 50 most likely interview questions and their perfect 
+answers, and inject them straight into ChromaDB. During the interview, these 
+cached answers will be served instantly with zero latency.
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+1. In `backend/app.py`, add a new POST endpoint: `/api/cache/prewarm`.
+2. The endpoint should accept `resume_text` and `job_description`.
+3. Use the Cloud LLM (via `llm_client.py`) with a system prompt: "Generate a JSON array of the 50 most likely interview questions and concise perfect answers based on this Resume and Job Description."
+4. Iterate over the JSON array, run each question through the `SmolLM2` encoder (from P32-T1) to get its vector, and bulk-insert the vectors + answers into the `qa_cache` ChromaDB collection (from P32-T3).
+5. In `frontend/src/lib/Assistant.svelte`, add a "Pre-Warm Cache" button in the Settings panel (next to the Clear Cache button). When clicked, it should open a small modal to paste the Job Description (resume is already stored/known) and call the `/api/cache/prewarm` endpoint.
+6. Show a loading spinner during the pre-warm generation, and a success toast ("Cache Warmed with 50 Questions") when done.
+
+Commit: "jules: P32-T8 add proactive cache pre-warming endpoint and UI"
+Target branch: main
