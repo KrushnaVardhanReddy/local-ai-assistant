@@ -206,6 +206,10 @@
                   <span class="material-symbols-outlined text-[16px]">download</span>
                   Download as Markdown
                 </button>
+                <button class="px-4 py-3 text-left text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2" onclick={() => window.print()}>
+                  <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                  Download as PDF
+                </button>
                 <button class="px-4 py-3 text-left text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors flex items-center gap-2" onclick={draftEmail}>
                   <span class="material-symbols-outlined text-[16px]">mail</span>
                   Draft as Email

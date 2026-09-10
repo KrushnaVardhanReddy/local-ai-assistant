@@ -11,7 +11,7 @@ This matrix compares the **Local AI Assistant** (Project Parakeet) against exist
 | **Turn Detection & Caching** | **Yes (Local SmolLM2 Engine)** | No | No | No | No | No |
 | **Enterprise Knowledge Base** | **Yes (Shared RAG Playbooks)** | No | No | No | Basic Search | Basic Search |
 | **Native Mobile App** | **Yes (iOS/Android via Capacitor)** | No | No | No | Yes | Yes |
-| **Export Options** | **Universal (MD, Email, Copy)** | Web/PDF | Web | Copy | Web/PDF/Email | Web/PDF |
+| **Export Options** | **Universal (MD, PDF, Email, Copy)** | Web/PDF | Web | Copy | Web/PDF/Email | Web/PDF |
 | **End-to-End Latency** | **Zero / Sub-second** | 3-5+ Seconds | 1-2 Seconds | 2-3 Seconds | 2-3 Seconds | N/A (Async) |
 | **Stealth Mode** | **Portable ZIP + Ghost Cursor** | Browser/App | Chrome Extension | Basic Python UI | None | None |
 | **Speaker Diarization** | **Yes (Interviewer vs Candidate)** | No / Basic | No | No | Yes | No |
