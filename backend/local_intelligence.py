@@ -55,7 +55,7 @@ class LocalIntelligence:
         try:
             output = self._llm(prompt, max_tokens=5, temperature=0.0, stop=["\n", "<"])
             answer = output["choices"][0]["text"].strip().upper()
-            return "COMPLETE" in answer
+            return answer == "COMPLETE"
         except Exception as e:
             print(f"[SmolLM2] is_complete error: {e}", file=sys.stderr)
             return True
