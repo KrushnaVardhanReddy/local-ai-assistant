@@ -4,10 +4,10 @@
   import SessionReport from './SessionReport.svelte';
   import ResumeBuilder from './ResumeBuilder.svelte';
   import { authState } from "$lib/auth.svelte";
+  import { uiState } from "$lib/stores/uiState.svelte.ts";
 
   let showSessionReport = $state(false);
   let currentView = $state<'interview' | 'resume'>('interview');
-  let showHotkeys = $state(false);
   let starPrimed = $state(false);
   let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
   let cacheStats = $state<{ cached_pairs: number; estimated_tokens_saved: number } | null>(null);
@@ -410,7 +410,7 @@
         aria-label="Hotkeys Cheatsheet"
         title="Hotkeys Cheatsheet"
         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
-        onclick={() => showHotkeys = true}
+        onclick={() => uiState.hotkeysPanelOpen = true}
       >
         <span class="material-symbols-outlined text-[20px]" data-icon="keyboard">keyboard</span>
       </button>
@@ -735,55 +735,6 @@
 </div>
 
 
-
-{#if showHotkeys}
-  <div class="fixed inset-0 z-[9998] pointer-events-auto flex items-center justify-center bg-black/50 backdrop-blur-sm" onclick={() => showHotkeys = false}>
-    <div class="glass-panel bg-surface-variant/90 backdrop-blur-md p-8 rounded-2xl max-w-lg w-full flex flex-col gap-6 shadow-2xl border border-white/10 relative overflow-hidden" onclick={(e) => e.stopPropagation()}>
-      <!-- Header -->
-      <div class="flex items-center justify-between border-b border-white/10 pb-4">
-        <h2 class="text-xl font-headline-md text-on-background tracking-wide flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary">keyboard</span>
-          Hotkeys Cheatsheet
-        </h2>
-        <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-red-400 transition-colors" onclick={() => showHotkeys = false}>
-          <span class="material-symbols-outlined text-[20px]">close</span>
-        </button>
-      </div>
-
-      <!-- Hotkeys List -->
-      <div class="flex flex-col gap-3 font-body-sm text-on-surface-variant">
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="font-bold">Push to Talk</span>
-          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+Space</kbd>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="font-bold">Screenshot Vision</span>
-          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+S</kbd>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="font-bold">Send Transcript Chip 1-6</span>
-          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+1...6</kbd>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="font-bold">Scroll Answer Down / Up</span>
-          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+↓/↑</kbd>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="font-bold">Toggle Click-through Mode</span>
-          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+M</kbd>
-        </div>
-        <div class="flex items-center justify-between py-2 border-b border-white/5">
-          <span class="font-bold">Session Report</span>
-          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+E</kbd>
-        </div>
-        <div class="flex items-center justify-between py-2">
-          <span class="font-bold">Panic Clear / Hide</span>
-          <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+X</kbd>
-        </div>
-      </div>
-    </div>
-  </div>
-{/if}
 
 {#if wsState.sessionExpired}
   <div class="fixed inset-0 z-[9999] pointer-events-auto flex items-center justify-center bg-black/80 backdrop-blur-md">

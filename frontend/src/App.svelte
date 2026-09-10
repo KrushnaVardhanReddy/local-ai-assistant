@@ -4,7 +4,9 @@
   import Assistant from "$lib/Assistant.svelte";
   import KnowledgeBase from "$lib/KnowledgeBase.svelte";
   import Settings from "$lib/Settings.svelte";
+  import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
   import { restoreSession, authState } from "$lib/auth.svelte";
+  import { uiState } from "$lib/stores/uiState.svelte.ts";
 
   let showKnowledgeBase = $state(false);
 
@@ -18,7 +20,17 @@
   onDestroy(() => {
     disconnect();
   });
+
+  function handleKeydown(e: KeyboardEvent) {
+    // Check for Ctrl+/ or Cmd+/
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+      e.preventDefault();
+      uiState.hotkeysPanelOpen = !uiState.hotkeysPanelOpen;
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="app-shell pointer-events-none">
   {#if showKnowledgeBase}
@@ -45,6 +57,8 @@
     </button>
     <Settings />
   </div>
+
+  <HotkeysPanel />
 </div>
 
 <style>
