@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BarnOwl Sidebar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <div class="sidebar-container">
+
+    <header class="sidebar-header">
+      <div class="logo">
+        <span>🦉</span>
+        <h1>BarnOwl</h1>
+      </div>
+      <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
+    </header>
+
+    <div id="settings-panel" class="settings-panel hidden">
+      <label for="backend-url">Backend URL</label>
+      <input type="text" id="backend-url" placeholder="http://127.0.0.1:8765">
+      <button id="save-settings-btn" class="primary-btn">Save</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="transcript">Transcript</button>
+      <button class="tab-btn" data-tab="chat">Chat</button>
+    </div>
+
+    <div id="transcript-tab" class="tab-content active">
+      <div class="actions-bar">
+        <button id="copy-transcript-btn" class="text-btn">Copy</button>
+        <button id="clear-transcript-btn" class="text-btn text-danger">Clear</button>
+      </div>
+      <div id="transcript-log" class="transcript-log">
+        <!-- Transcript lines will be appended here -->
+      </div>
+    </div>
+
+    <div id="chat-tab" class="tab-content">
+      <div id="chat-log" class="chat-log">
+        <!-- Chat messages will be appended here -->
+        <div class="message assistant-msg">
+          <div class="msg-bubble">Hi! I'm BarnOwl. I'm listening to the meeting. What can I help you with?</div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <form id="chat-form">
+          <textarea id="chat-input" placeholder="Ask about the meeting..." rows="2"></textarea>
+          <button type="submit" id="send-btn" class="primary-btn">Send</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+  <script src="sidebar.js"></script>
+</body>
+</html>
