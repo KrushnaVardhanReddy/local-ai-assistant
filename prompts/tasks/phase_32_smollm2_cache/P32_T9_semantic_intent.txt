@@ -1,0 +1,27 @@
+TASK: P32-T9 — Semantic Intent Classification
+
+PARALLEL BATCH: 4 — After P32-T2
+Files touched: backend/local_intelligence.py, backend/smart_filter.py
+PREREQUISITE: P32-T2
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Replace the fragile keyword-based intent filtering (checking for "what", "why", "how") 
+with a bulletproof Semantic Intent Classifier using our local `SmolLM2-135M` engine. 
+This will prevent conversational filler ("I see", "That's good") from triggering 
+expensive Cloud LLM or Cache lookups, while accurately catching implicit questions 
+like "Walk me through your system design."
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+1. In `backend/local_intelligence.py`, add a new async method `is_question(text: str) -> bool`.
+2. This method should prompt `SmolLM2` with: 
+   "You are a strict classification engine. Does the following text require a factual answer, explanation, or response from an AI? Reply ONLY with YES or NO. Text: '{text}'"
+3. Parse the output. If it starts with "YES", return True, else return False.
+4. In `backend/smart_filter.py`, remove the old keyword matching logic.
+5. Update `smart_filter.py` to `await local_intelligence.is_question(transcript)`. If False, drop the audio and log "Ignored conversational filler". If True, pass it down the pipeline.
+
+Commit: "jules: P32-T9 add SmolLM2 semantic intent classification"
+Target branch: main
