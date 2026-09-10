@@ -31,6 +31,7 @@ from rag import retriever
 from rag import team_ingest
 from rag.web_search import search_web
 from smart_filter import SilenceBuffer, passes_filter, passes_filter_for_speaker
+from qa_cache import lookup as cache_lookup, store as cache_store
 
 from session_manager import session as interview_session
 from history_store import append_session, load_history
@@ -786,6 +787,20 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
 
                     interview_session.start_turn(transcript)
                     is_streaming.set()
+
+                    cached = cache_lookup(transcript)
+                    if cached:
+                        for out_q in list(active_outbound_queues):
+                            out_q.put_nowait({"type": "token", "text": cached})
+                            out_q.put_nowait({"type": "end"})
+                        interview_session.append_response_token(cached)
+                        interview_session.complete_turn()
+                        is_streaming.clear()
+                        if not pending_questions.empty():
+                            next_q = pending_questions.get_nowait()
+                            ws_queue.put_nowait({"type": "chat", "text": next_q})
+                        continue
+
                     full_response = ""
                     try:
                         print(f"[DEBUG] Calling LLM with {len(messages)} messages...", file=sys.stderr)
@@ -798,6 +813,8 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                         print(f"[DEBUG] Finished calling LLM.", file=sys.stderr)
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "end"})
+
+                        cache_store(transcript, full_response)
 
                         # Live Answer Coaching (optional — COACHING_ENABLED=true)
                         if config.COACHING_ENABLED and transcript:
