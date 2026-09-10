@@ -5,6 +5,7 @@
 .env.production
 *.env
 .env_bkp.local
+.env.local.backup
 settings.json
 
 # ─── Python Backend ───────────────────────────────────────────────────────────
