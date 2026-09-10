@@ -4,20 +4,22 @@ This matrix compares the **Local AI Assistant** (Project Parakeet) against exist
 
 ## Feature Matrix
 
-| Feature | Local AI Assistant (Ours) | Final Round AI | Sensei Copilot | Ecoute (Open Source) | Otter.ai / Enterprise |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Pricing** | **Freemium + BYOK + Pro Subscription** | $30 - $100+/mo | Subscription | Free / API Costs | $10 - $20+/mo |
-| **STT Processing** | Local (`faster-whisper` / `parakeet`) | Cloud | Cloud | Local (Whisper) | Cloud |
-| **Turn Detection & Caching** | **Yes (Local SmolLM2 Engine)** | No | No | No | No |
-| **Enterprise Knowledge Base** | **Yes (Shared RAG Playbooks)** | No | No | No | Basic Search |
-| **Native Mobile App** | **Yes (iOS/Android via Capacitor)** | No | No | No | Yes |
-| **Export Options** | **Universal (MD, Email, Copy)** | Web/PDF | Web | Copy | Web/PDF/Email |
-| **End-to-End Latency** | **Zero / Sub-second** | 3-5+ Seconds | 1-2 Seconds | 2-3 Seconds | 2-3 Seconds |
-| **Stealth Mode** | **Portable ZIP + Ghost Cursor** | Browser/App | Chrome Extension | Basic Python UI | None |
-| **Speaker Diarization** | **Yes (Interviewer vs Candidate)** | No / Basic | No | No | Yes |
-| **Coding/LeetCode Extraction** | **Yes (Vision Copilot)** | Yes | Yes | No | No |
-| **Resume Extraction** | Yes (Local LLM Pass / Context) | Yes | Yes | No | No |
-| **Mock Interview Mode** | ❌ Missing | Yes | Yes | No | No |
+| Feature | Local AI Assistant (Ours) | Final Round AI | Sensei Copilot | Ecoute (Open Source) | Otter.ai / Enterprise | Evernote |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Pricing** | **Freemium + BYOK + Pro** | $30 - $100+/mo | Subscription | Free / API Costs | $10 - $20+/mo | $15 - $18+/mo |
+| **STT Processing** | Local (`faster-whisper` / `parakeet`) | Cloud | Cloud | Local (Whisper) | Cloud | Cloud (Paid) |
+| **Turn Detection & Caching** | **Yes (Local SmolLM2 Engine)** | No | No | No | No | No |
+| **Enterprise Knowledge Base** | **Yes (Shared RAG Playbooks)** | No | No | No | Basic Search | Basic Search |
+| **Native Mobile App** | **Yes (iOS/Android via Capacitor)** | No | No | No | Yes | Yes |
+| **Export Options** | **Universal (MD, Email, Copy)** | Web/PDF | Web | Copy | Web/PDF/Email | Web/PDF |
+| **End-to-End Latency** | **Zero / Sub-second** | 3-5+ Seconds | 1-2 Seconds | 2-3 Seconds | 2-3 Seconds | N/A (Async) |
+| **Stealth Mode** | **Portable ZIP + Ghost Cursor** | Browser/App | Chrome Extension | Basic Python UI | None | None |
+| **Speaker Diarization** | **Yes (Interviewer vs Candidate)** | No / Basic | No | No | Yes | No |
+| **Coding/LeetCode Extraction** | **Yes (Vision Copilot)** | Yes | Yes | No | No | No |
+| **Resume Extraction** | Yes (Local LLM Pass / Context) | Yes | Yes | No | No | No |
+| **Meeting Memory/Timeline** | ❌ Missing | No | No | No | Yes | Yes |
+| **Action Item/Task Sync** | ❌ Missing | No | No | No | Yes | Yes (Jira/Trello) |
+| **Mock Interview Mode** | ❌ Missing | Yes | Yes | No | No | No |
 
 ---
 
@@ -48,3 +50,11 @@ Based on checking what features drive sales for Final Round AI and Sensei Copilo
 2. **Explicit Multilingual Support**
    * **The Gap:** Sensei advertises 30+ languages as a core feature.
    * **The Fix:** Add a dropdown in our Settings UI to force the STT/LLM pipeline into specific languages (Spanish, Hindi, Mandarin) for international interviews.
+
+3. **Infinite Meeting Memory (Rewind/Limitless Style)**
+   * **The Gap:** Tools like Evernote and Otter are great at keeping a searchable historical timeline of all your meetings. We currently only have single-session reports.
+   * **The Fix:** Build a persistent local SQLite/ChromaDB timeline that automatically records and indexes every single meeting/conversation the app hears in the background, making it instantly searchable later.
+
+4. **Action Item & Task Sync (Jira/Trello)**
+   * **The Gap:** Evernote and Otter can extract action items and push them to task trackers. Our "Universal Export" is manual.
+   * **The Fix:** Add an LLM post-processing step that explicitly extracts "To-Do's" from the conversation and syncs them via API to Jira, Trello, or Linear.
