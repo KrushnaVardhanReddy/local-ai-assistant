@@ -6,7 +6,7 @@
 
 <div class="dashboard-layout">
   <aside class="sidebar">
-    <div class="logo">✦ Local AI</div>
+    <div class="logo">✦ BarnOwl</div>
     <nav class="nav-menu">
       <a href="/dashboard" class="nav-item {($page.url.pathname as string) === '/dashboard' ? 'active' : ''}">Overview</a>
       <a href="/dashboard/keys" class="nav-item {($page.url.pathname as string) === '/dashboard/keys' ? 'active' : ''}">API Keys</a>

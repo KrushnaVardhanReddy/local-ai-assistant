@@ -25,7 +25,7 @@
 </script>
 
 <svelte:head>
-  <title>API Keys - Local AI Assistant</title>
+  <title>API Keys - BarnOwl</title>
 </svelte:head>
 
 <main class="content">

@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.localai.assistant',
-  appName: 'Local AI',
+  appName: 'BarnOwl',
   webDir: 'build'
 };
 

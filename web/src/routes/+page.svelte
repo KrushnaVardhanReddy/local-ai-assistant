@@ -23,11 +23,11 @@
 </script>
 
 <svelte:head>
-  <title>Local AI Assistant</title>
+  <title>BarnOwl</title>
 </svelte:head>
 
 <nav class="navbar">
-  <div class="logo">✦ Local AI</div>
+  <div class="logo">✦ BarnOwl</div>
   <div class="nav-links">
     <a href="/download" class="btn btn-secondary">Download</a>
     <a href="/login" class="btn btn-primary">Sign In</a>
@@ -95,7 +95,7 @@
 <footer>
   <a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
   <a href="/privacy">Privacy Policy</a>
-  <span>© 2025 Local AI Assistant</span>
+  <span>© 2025 BarnOwl</span>
 </footer>
 
 <style>

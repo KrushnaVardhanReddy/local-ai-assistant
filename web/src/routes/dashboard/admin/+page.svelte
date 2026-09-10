@@ -84,7 +84,7 @@
 </script>
 
 <svelte:head>
-  <title>Admin Dashboard - Local AI Assistant</title>
+  <title>Admin Dashboard - BarnOwl</title>
 </svelte:head>
 
 <main class="content">
