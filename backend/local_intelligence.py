@@ -20,13 +20,35 @@ class LocalIntelligence:
             self._load_model()
 
     def _load_model(self):
+        if not self._enabled:
+            return
+
         try:
             from llama_cpp import Llama
             model_path = config.SMOLLM2_MODEL_PATH
+
             if not os.path.exists(model_path):
-                print(f"[SmolLM2] Model not found at {model_path}. Disabling.", file=sys.stderr)
-                self._enabled = False
-                return
+                print("[SmolLM2] First run detected. Downloading ~100MB local intelligence model...", file=sys.stderr)
+                os.makedirs(os.path.dirname(model_path), exist_ok=True)
+
+                import urllib.request
+                url = "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf"
+
+                def _progress_hook(count, block_size, total_size):
+                    percent = int(count * block_size * 100 / total_size)
+                    sys.stderr.write(f"\r[SmolLM2] Downloading: {percent}%")
+                    sys.stderr.flush()
+
+                try:
+                    urllib.request.urlretrieve(url, model_path, reporthook=_progress_hook)
+                    print("\n[SmolLM2] Download complete.", file=sys.stderr)
+                except Exception as e:
+                    print(f"\n[SmolLM2] Download failed: {e}. Disabling.", file=sys.stderr)
+                    self._enabled = False
+                    if os.path.exists(model_path):
+                        os.remove(model_path)
+                    return
+
             self._llm = Llama(
                 model_path=model_path,
                 n_ctx=512,
