@@ -11,8 +11,14 @@
   let currentView = $state<'interview' | 'resume'>('interview');
   let starPrimed = $state(false);
   let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
-  let cacheStats = $state<{ cached_pairs: number; estimated_tokens_saved: number } | null>(null);
+
   let clearingCache = $state(false);
+  let cacheStats = $state<{ cached_pairs: number; estimated_tokens_saved: number } | null>(null);
+
+  // Pre-warm state
+  let showPrewarmModal = $state(false);
+  let prewarmJobDescription = $state("");
+  let prewarmingCache = $state(false);
 
   function handleMockModeToggle() {
     const isNowEnabled = !wsState.isMockMode;
@@ -79,7 +85,46 @@
     }
   }
 
+
+  async function prewarmCache() {
+    prewarmingCache = true;
+    try {
+      const storedBackendUrl = localStorage.getItem("backend_url") || "127.0.0.1:8765";
+      const apiUrl = storedBackendUrl.startsWith('http') ? storedBackendUrl : `http://${storedBackendUrl}`;
+
+      const resContext = await fetch(`${apiUrl}/api/resume/context`);
+      let baseResume = "";
+      if (resContext.ok) {
+        const contextData = await resContext.json();
+        baseResume = contextData.context || "";
+      }
+
+      const res = await fetch(`${apiUrl}/api/cache/prewarm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume_text: baseResume,
+          job_description: prewarmJobDescription
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to prewarm cache");
+      }
+
+      const data = await res.json();
+      showPrewarmModal = false;
+      alert(`Cache Warmed with ${data.stored_count || 50} Questions`);
+      await fetchCacheStats();
+    } catch (e: any) {
+      alert(`Error pre-warming cache: ${e.message}`);
+    } finally {
+      prewarmingCache = false;
+    }
+  }
+
   async function clearCache() {
+
     const confirmed = window.confirm(
       `Are you sure you want to clear all ${cacheStats?.cached_pairs ?? 0} cached Q&A pairs? This cannot be undone.`
     );
@@ -739,6 +784,47 @@
 
 
 
+{#if showPrewarmModal}
+  <div class="fixed inset-0 z-[9999] pointer-events-auto flex items-center justify-center bg-black/80 backdrop-blur-md">
+    <div class="glass-panel p-8 rounded-2xl max-w-lg w-full flex flex-col gap-4 shadow-2xl border border-white/10 relative">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-xl font-headline-md text-on-background tracking-wide">Pre-Warm Cache</h2>
+        <button class="text-on-surface-variant hover:text-white" onclick={() => showPrewarmModal = false}>
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <p class="text-on-surface-variant text-sm mb-2">Paste the Job Description to proactively cache the 50 most likely interview questions and perfect answers based on your stored resume.</p>
+      <textarea
+        class="w-full h-40 p-4 bg-black/40 border border-white/10 rounded-xl text-on-surface focus:outline-none focus:border-primary font-mono text-sm resize-none"
+        placeholder="Paste Job Description here..."
+        bind:value={prewarmJobDescription}
+      ></textarea>
+
+      <div class="flex justify-end gap-3 mt-4">
+        <button
+          class="px-4 py-2 rounded-lg text-sm bg-white/10 hover:bg-white/20 text-on-background transition-colors"
+          onclick={() => showPrewarmModal = false}
+          disabled={prewarmingCache}
+        >
+          Cancel
+        </button>
+        <button
+          class="px-6 py-2 rounded-lg text-sm bg-primary text-background font-bold hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(78,222,163,0.3)] flex items-center gap-2 disabled:opacity-50"
+          onclick={prewarmCache}
+          disabled={prewarmingCache || !prewarmJobDescription.trim()}
+        >
+          {#if prewarmingCache}
+            <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+            Pre-warming...
+          {:else}
+            <span class="material-symbols-outlined text-[18px]">bolt</span>
+            Pre-Warm
+          {/if}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 {#if wsState.sessionExpired}
   <div class="fixed inset-0 z-[9999] pointer-events-auto flex items-center justify-center bg-black/80 backdrop-blur-md">
     <div class="glass-panel p-8 rounded-2xl max-w-md w-full text-center flex flex-col items-center gap-6 shadow-2xl border border-white/10 relative overflow-hidden">

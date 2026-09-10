@@ -1,3 +1,5 @@
+import hashlib
+import time
 import sys
 import chromadb
 from config import config
@@ -49,7 +51,7 @@ def store(question: str, answer: str) -> None:
         return
     try:
         col = _get_collection()
-        import hashlib, time
+
         doc_id = hashlib.md5(question.encode()).hexdigest()
         col.upsert(
             ids=[doc_id],
@@ -61,7 +63,54 @@ def store(question: str, answer: str) -> None:
     except Exception as e:
         print(f"[QACache] store error: {e}", file=sys.stderr)
 
+
+def store_bulk(qa_pairs: list[dict]) -> int:
+    """
+    Bulk stores a list of Q&A pairs.
+    Each pair must have 'question' and 'answer' keys.
+    Returns the number of pairs successfully stored.
+    """
+    li = get_local_intelligence()
+    ids = []
+    embeddings = []
+    documents = []
+    metadatas = []
+
+
+    for pair in qa_pairs:
+        q = pair.get("question", "")
+        a = pair.get("answer", "")
+        if not q or not a:
+            continue
+        vector = li.encode(q)
+        if not vector:
+            continue
+
+        doc_id = hashlib.md5(q.encode()).hexdigest()
+        ids.append(doc_id)
+        embeddings.append(vector)
+        documents.append(a)
+        metadatas.append({"question": q[:200], "timestamp": str(int(time.time()))})
+
+    if not ids:
+        return 0
+
+    try:
+        col = _get_collection()
+        col.upsert(
+            ids=ids,
+            embeddings=embeddings,
+            documents=documents,
+            metadatas=metadatas
+        )
+        print(f"[QACache] Bulk stored {len(ids)} Q&A pairs (total: {col.count()})", file=sys.stderr)
+        return len(ids)
+    except Exception as e:
+        print(f"[QACache] bulk store error: {e}", file=sys.stderr)
+        return 0
+
 def clear() -> int:
+
     """Deletes all entries from the qa_cache collection. Returns count deleted."""
     try:
         col = _get_collection()
