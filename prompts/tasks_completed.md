@@ -347,3 +347,82 @@
 
 ---
 
+## Phase 26 — Enterprise B2B Features 🏢
+
+> Shifting from B2C to B2B. Requires Supabase authentication upgrades and SSO integration.
+> Allows IT Admins to manage seats, and creates a Team Knowledge Base.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P26-T1 | `backend/auth.py`, `backend/app.py`, `frontend/src/routes/login/+page.svelte` | **SSO Integration:** Integrate SAML/SSO via Supabase for enterprise login, auto-provisioning a Seat based on the email domain. | ✅ | — |
+| P26-T2 | `frontend/src/lib/AdminDashboard.svelte` | **Seat Management:** Simple admin panel for the Org Admin to view active seats, invite via email, and instantly revoke API access. | ✅ | — |
+| P26-T3 | `backend/rag/` | **Team Knowledge Base:** Expand RAG to allow uploading company-wide Playbooks/Docs to a shared vector database. | ✅ | — |
+| P26-T4 | `frontend/src/lib/SessionReport.svelte` | **Universal Export Menu:** Add an export dropdown menu containing "Copy to Clipboard", "Download as Markdown", and "Draft as Email" options in the Session Report panel. | ✅ | — |
+
+---
+
+## Phase 28 — Agentic Computer Control (OS Level) 🤖
+
+> Gives BarnOwl "hands". Upgrades the LLM client to support tool-calling (function calling) so it can execute Python scripts to control the OS.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P28-T1 | `backend/llm_client.py` | **Tool Calling Integration:** Add `tools` and `tool_choice` parameters to the OpenAI API requests to allow the LLM to emit function calls instead of text responses. | ✅ | — |
+
+---
+
+## Phase 29 — Auto-Tailored Resume Builder 📄
+
+> Generates an ATS-optimized, tailored resume in Markdown using the user's base resume and target Job Description. Features a dual-pane editor and PDF export with 5-10 professional CSS templates.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P29-T1 | `backend/resume_builder.py`, `backend/app.py` | **Resume Generation API:** Endpoint that uses the LLM to output a perfectly tailored Markdown resume. | ✅ | — |
+| P29-T2 | `frontend/src/lib/ResumeBuilder.svelte` | **Resume Editor UI:** Dual-pane view with a Markdown editor on the left and a live preview on the right. | ✅ | — |
+| P29-T3 | `frontend/src/lib/resume-styles.css` | **Templates & Export:** 5-10 selectable CSS themes and a `window.print()` PDF export button. | ✅ | — |
+| P29-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Resume Builder. | ✅ | — |
+
+---
+
+## Phase 31 — Freemium PLG Model 💸
+
+> Implementing the Product-Led Growth freemium model. Free users get unlimited local transcription (faster-whisper) at zero cloud cost. Paid users unlock Cloud LLMs for summaries, chat, and agentic tools.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P31-T1 | `backend/app.py`, `backend/config.py` | **Freemium Engine:** Lock LLM chat, summary, and CRM sync behind a subscription check. Force free users to strictly use local STT (`faster-whisper` or `parakeet`) and disable cloud LLM endpoints. | ✅ | — |
+| P31-T2 | `backend/audio_listener.py` | **Multi-Engine Local STT:** Allow power users to select their local STT engine in settings. Support `faster-whisper` (universal/CPU/Mac) and Nvidia `parakeet` (for RTX GPU owners). | ✅ | — |
+
+---
+
+## Phase 32 — SmolLM2 Local Intelligence Layer 🧠
+
+> Adds a tiny on-device SmolLM2 model (135M params, ~100MB RAM) as a local pre-filter and semantic cache.
+> This layer runs entirely offline, cuts cloud API costs by 40-60%, and makes the assistant feel instant.
+> Two core jobs: (1) turn-taking gatekeeper — stops premature LLM calls mid-sentence; (2) semantic cache encoder — finds similar past Q&As in ChromaDB to serve answers instantly without hitting the cloud.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P32-T1 | `backend/local_intelligence.py` | **SmolLM2 Engine:** Load `SmolLM2-135M-Instruct` (GGUF quantized) via `llama-cpp-python` at server startup. Expose two async methods: `is_complete(text) → bool` (turn detection) and `encode(text) → vector` (semantic embedding). | ✅ | — |
+| P32-T2 | `backend/smart_filter.py` | **Turn-Taking Gatekeeper:** Before firing any STT transcript to the cloud LLM, call `local_intelligence.is_complete()`. If `INCOMPLETE`, reset the silence timer and keep listening. Log skipped incomplete turns. | ✅ | — |
+| P32-T3 | `backend/qa_cache.py`, `backend/app.py` | **Semantic Q&A Cache:** Use the SmolLM2 encoder to convert each question into a vector and store/look up past Q&A pairs in a dedicated ChromaDB collection (`qa_cache`). On cache hit (cosine similarity > 0.92), serve the cached answer instantly, skipping cloud LLM entirely. | ✅ | — |
+| P32-T4 | `backend/app.py` | **Cache Management API:** Add `DELETE /api/cache` endpoint to wipe all entries from the `qa_cache` ChromaDB collection. Add `GET /api/cache/stats` to show total cached pairs and estimated tokens saved. | ✅ | — |
+| P32-T5 | `frontend/src/lib/Assistant.svelte` | **Cache UI Controls:** Add a "Cache" section in the settings panel showing cache stats (e.g. "47 answers cached — ~12,000 tokens saved"). Include a red "Clear Cache" button that calls the `DELETE /api/cache` endpoint with a confirmation dialog. | ✅ | — |
+| P32-T9 | `backend/local_intelligence.py`, `backend/smart_filter.py` | **Semantic Intent Classification:** Add an `is_question(text) -> bool` method to `SmolLM2` using a zero-shot prompt. Replace the old hardcoded keyword logic in `smart_filter.py` with this semantic check, saving API calls on conversational filler (e.g., "I see", "That's good"). | ✅ | — |
+
+---
+
+## Phase 33 — Native Mobile App (Capacitor) 📱
+
+> Wraps our existing Svelte web app into a native iOS and Android application using Ionic Capacitor.
+> Enables native mobile distribution (App Store / Play Store) with full access to device hardware.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P33-T1 | `capacitor.config.ts`, `package.json` | **Capacitor Scaffolding:** Install `@capacitor/core` and `@capacitor/cli`. Initialize the project and add iOS and Android targets. Configure SvelteKit adapter-static for native builds. | ✅ | — |
+| P33-T2 | `frontend/src/lib/audio/` | **Native Microphone:** Replace the Web Audio API with `@capacitor-community/microphone` for seamless audio capture on mobile devices without browser permission prompts. | ✅ | — |
+| P33-T3 | `frontend/src/lib/audio/` | **Background Audio Plugin:** Integrate a Capacitor background task plugin so the assistant can continue listening for the wake word even when the phone screen is locked. | ✅ | — |
+| P33-T4 | `frontend/e2e/` | **Mobile E2E Tests:** Add mobile viewport emulation to Playwright tests to ensure the UI remains responsive and functional on smaller screens. | ✅ | — |
+
+---
+
