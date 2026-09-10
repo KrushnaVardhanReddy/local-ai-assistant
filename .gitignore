@@ -75,3 +75,4 @@ supabase/seed.sql
 scratch/
 backend/data/
 data/
+backend/models/*.gguf
