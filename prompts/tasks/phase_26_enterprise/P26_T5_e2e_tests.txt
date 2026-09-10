@@ -9,8 +9,16 @@ guarantee the stability of all features introduced in Phase 26.
 DELIVERABLES:
 1. `web/tests/e2e/enterprise.spec.ts`: Playwright tests for SSO login
    flow (mocked) and Seat Management Admin dashboard.
+   - Specifically test the "Sign in with SSO" button and the rendering of the seat management table.
+   - **CRITICAL BUG FIX**: While writing the SSO login test, you will likely encounter a Svelte reactivity / hydration bug where email inputs are prematurely cleared when navigating or authenticating. You must identify and fix this bug in the frontend component (likely `Auth.svelte` or `Settings.svelte`).
+   - **MOCKING TIP (Playwright)**: Use `page.route('**/auth/v1/**', ...)` to intercept Supabase authentication calls. Do not try to perform a real OAuth login with Google/Github. Instead, mock the network response to return a valid fake session and user object.
+
 2. `tests/e2e/test_team_rag.py`: Pytest integration tests for the Team 
    Knowledge Base endpoints and RAG retrieval.
+   - Test document upload to a specific team namespace.
+   - Test vector search correctly isolating documents by team namespace (cross-tenant data leakage prevention).
+   - **MOCKING TIP (Pytest)**: Use an `EphemeralClient` for ChromaDB during tests so you don't write to disk. Use `unittest.mock.patch` to mock the embedding function (e.g. `local_intelligence.encode`) to return a fake dummy vector (like `[0.1] * 384`) so the test doesn't try to load the real SmolLM2 model.
+
 3. Verify that `npm run test:e2e` and `pytest` pass.
 
 Commit: "jules: P26-T5 add enterprise e2e tests"

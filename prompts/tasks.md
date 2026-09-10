@@ -81,3 +81,11 @@
 
 ---|---|---|---|---|
 | P35-T1 | `frontend/src/` | **Hotkeys Side Panel:** Slide-out drawer for hotkeys so users don't lose context. | ✅ | #109 |
+
+---
+
+## Phase 36 — Auto STAR & Smart Context Pipeline
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P36-T2 | `backend/app.py`, `backend/local_intelligence.py` | **Smart Context Pipeline:** SmolLM2 multi-class routing + ChromaDB RAG | ✅ | #113 |
