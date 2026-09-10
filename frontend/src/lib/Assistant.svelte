@@ -10,6 +10,8 @@
   let showHotkeys = $state(false);
   let starPrimed = $state(false);
   let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
+  let cacheStats = $state<{ cached_pairs: number; estimated_tokens_saved: number } | null>(null);
+  let clearingCache = $state(false);
 
   function handleMockModeToggle() {
     const isNowEnabled = !wsState.isMockMode;
@@ -61,7 +63,40 @@
   let renderedResponse = $state('');
   let renderTimer: ReturnType<typeof setTimeout> | null = null;
 
+  async function fetchCacheStats() {
+    try {
+      const configuredUrl = localStorage.getItem('backend_url') || '127.0.0.1:8765';
+      const apiUrl = configuredUrl.startsWith('http') ? configuredUrl : `http://${configuredUrl}`;
+      const res = await fetch(`${apiUrl}/api/cache/stats`);
+      if (res.ok) {
+        cacheStats = await res.json();
+      } else {
+        cacheStats = null;
+      }
+    } catch {
+      cacheStats = null;
+    }
+  }
+
+  async function clearCache() {
+    const confirmed = window.confirm(
+      `Are you sure you want to clear all ${cacheStats?.cached_pairs ?? 0} cached Q&A pairs? This cannot be undone.`
+    );
+    if (!confirmed) return;
+    clearingCache = true;
+    try {
+      const configuredUrl = localStorage.getItem('backend_url') || '127.0.0.1:8765';
+      const apiUrl = configuredUrl.startsWith('http') ? configuredUrl : `http://${configuredUrl}`;
+      await fetch(`${apiUrl}/api/cache`, { method: "DELETE" });
+      await fetchCacheStats();
+    } finally {
+      clearingCache = false;
+    }
+  }
+
   onMount(() => {
+    fetchCacheStats();
+
     const unlistenScrollDown = listen("scroll-down", () => {
       contentEl?.scrollBy({ top: 100, behavior: 'smooth' });
     });
@@ -637,6 +672,33 @@
             </div>
           </div>
         {/if}
+
+        <!-- Local Cache Section -->
+        <div class="settings-section mt-4 pt-4 border-t border-white/5">
+          <h3 class="settings-section-title text-on-surface-variant font-label-caps text-label-caps tracking-wider flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-[16px]">database</span>
+            Local Q&A Cache
+          </h3>
+          {#if cacheStats}
+            <div class="cache-stats-row">
+              <span class="cache-stat">
+                <strong>{cacheStats.cached_pairs}</strong> answers cached
+              </span>
+              <span class="cache-stat muted">
+                ~{cacheStats.estimated_tokens_saved.toLocaleString()} tokens saved
+              </span>
+            </div>
+          {:else}
+            <p class="muted-text text-on-surface-variant/50 text-[12px] mb-3">Cache unavailable (SmolLM2 not enabled)</p>
+          {/if}
+          <button
+            class="btn-danger"
+            onclick={clearCache}
+            disabled={clearingCache || !cacheStats || cacheStats.cached_pairs === 0}
+          >
+            {clearingCache ? "Clearing..." : "Clear Cache"}
+          </button>
+        </div>
       </div>
 
       <!-- Generating Indicator (Bottom pinned) -->
@@ -976,5 +1038,37 @@
   .speaker-badge {
     font-size: 11px;
     flex-shrink: 0;
+  }
+
+  .cache-stats-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .cache-stat {
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+  }
+  .cache-stat strong {
+    color: #fff;
+    font-size: 16px;
+  }
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #f87171;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.3);
+  }
+  .btn-danger:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 </style>
