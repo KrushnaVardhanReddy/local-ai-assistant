@@ -1,0 +1,24 @@
+TASK: P33-T3 — Background Audio Plugin
+
+PARALLEL BATCH: 2 — Phase 33.
+Files touched: frontend/package.json, frontend/src/lib/audio/background.ts
+PREREQUISITE: P33-T1
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Integrate a Capacitor background task plugin so the assistant can continue 
+listening for the wake word even when the phone screen is locked or the app 
+is pushed to the background.
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+1. Install `@capawesome/capacitor-background-task`.
+2. Create `frontend/src/lib/audio/background.ts`.
+3. Import `Capacitor` and the BackgroundTask plugin.
+4. Implement a function `registerBackgroundAudioTask()` that registers a background task using `BackgroundTask.beforeExit()`.
+5. Ensure the task keeps the microphone instance (from P33-T2 or Web Audio fallback) active and processing while in the background. Note: To avoid merge conflicts with P33-T2, put all background registration logic in this separate `background.ts` file, exposing a simple start/stop API.
+
+Commit: "jules: P33-T3 add Capacitor background task for continuous listening"
+Target branch: main

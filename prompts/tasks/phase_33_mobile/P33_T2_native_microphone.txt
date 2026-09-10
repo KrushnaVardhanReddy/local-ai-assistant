@@ -1,0 +1,24 @@
+TASK: P33-T2 — Native Microphone Integration
+
+PARALLEL BATCH: 2 — Phase 33.
+Files touched: frontend/package.json, frontend/src/lib/audio/microphone.ts
+PREREQUISITE: P33-T1
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Replace the browser's Web Audio API with native microphone access when running 
+on mobile devices. This prevents annoying browser permission prompts and provides 
+more stable audio capture.
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+1. Install `@capacitor-community/microphone`.
+2. Create/update `frontend/src/lib/audio/microphone.ts`. 
+3. Import `Capacitor` from `@capacitor/core`. 
+4. Implement logic: If `Capacitor.isNativePlatform()` is true, use `@capacitor-community/microphone` to request permissions and capture the audio stream. If false, fallback to standard `navigator.mediaDevices.getUserMedia()`.
+5. Ensure the recorded audio chunk is exported in a uniform format that the rest of the app expects.
+
+Commit: "jules: P33-T2 add Capacitor native microphone plugin"
+Target branch: main
