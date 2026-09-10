@@ -1145,7 +1145,7 @@ async def prewarm_cache(body: PrewarmRequest):
         raise HTTPException(status_code=503, detail="LLM Client not initialized")
 
     system_prompt = (
-        "Generate a JSON array of the 50 most likely interview questions and concise perfect answers "
+        "Generate a JSON array of the 10 most likely interview questions and concise perfect answers "
         "based on this Resume and Job Description. Return ONLY valid JSON as a list of objects with "
         "keys 'question' and 'answer'."
     )
@@ -1165,22 +1165,32 @@ async def prewarm_cache(body: PrewarmRequest):
 
     llm_response_text = result.strip()
 
-    if llm_response_text.startswith("```json"):
-        llm_response_text = llm_response_text[7:]
-    elif llm_response_text.startswith("```"):
-        llm_response_text = llm_response_text[3:]
-    if llm_response_text.endswith("```"):
-        llm_response_text = llm_response_text[:-3]
-    llm_response_text = llm_response_text.strip()
+    import re
+    import json
+    
+    # Robustly extract whatever complete JSON objects the LLM managed to generate
+    # This completely bypasses errors caused by unterminated strings or trailing commas
+    qa_pairs = []
+    object_strings = re.findall(r'\{[^{}]*\}', llm_response_text)
+    
+    for obj_str in object_strings:
+        try:
+            obj = json.loads(obj_str)
+            if isinstance(obj, dict) and 'question' in obj and 'answer' in obj:
+                qa_pairs.append(obj)
+        except json.JSONDecodeError:
+            continue
+            
+    if not qa_pairs:
+        raise HTTPException(status_code=500, detail="Failed to parse LLM response: No valid Q&A pairs found.")
 
-    try:
-        qa_pairs = json.loads(llm_response_text)
-        if not isinstance(qa_pairs, list):
-            raise ValueError("Response is not a JSON array")
-    except (json.JSONDecodeError, ValueError) as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse LLM response: {str(e)}")
-
-    stored_count = qa_cache.store_bulk(qa_pairs)
+    stored_count = 0
+    for pair in qa_pairs:
+        try:
+            qa_cache.store(pair["question"], pair["answer"])
+            stored_count += 1
+        except Exception as e:
+            print(f"Error storing Q&A pair: {e}")
 
     return {
         "status": "success",

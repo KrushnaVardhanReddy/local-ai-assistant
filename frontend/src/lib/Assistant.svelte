@@ -114,7 +114,7 @@
 
       const data = await res.json();
       showPrewarmModal = false;
-      alert(`Cache Warmed with ${data.stored_count || 50} Questions`);
+      alert(`Cache Warmed with ${data.stored_count || 10} Questions`);
       await fetchCacheStats();
     } catch (e: any) {
       alert(`Error pre-warming cache: ${e.message}`);
@@ -738,13 +738,21 @@
           {:else}
             <p class="muted-text text-on-surface-variant/50 text-[12px] mb-3">Cache unavailable (SmolLM2 not enabled)</p>
           {/if}
-          <button
-            class="btn-danger"
-            onclick={clearCache}
-            disabled={clearingCache || !cacheStats || cacheStats.cached_pairs === 0}
-          >
-            {clearingCache ? "Clearing..." : "Clear Cache"}
-          </button>
+          <div class="flex gap-2 mt-3">
+            <button
+              class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors"
+              onclick={() => showPrewarmModal = true}
+            >
+              Pre-Warm Cache
+            </button>
+            <button
+              class="btn-danger"
+              onclick={clearCache}
+              disabled={clearingCache || !cacheStats || cacheStats.cached_pairs === 0}
+            >
+              {clearingCache ? "Clearing..." : "Clear Cache"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -793,7 +801,7 @@
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      <p class="text-on-surface-variant text-sm mb-2">Paste the Job Description to proactively cache the 50 most likely interview questions and perfect answers based on your stored resume.</p>
+      <p class="text-on-surface-variant text-sm mb-2">Paste the Job Description to proactively cache the 10 most likely interview questions and perfect answers based on your stored resume.</p>
       <textarea
         class="w-full h-40 p-4 bg-black/40 border border-white/10 rounded-xl text-on-surface focus:outline-none focus:border-primary font-mono text-sm resize-none"
         placeholder="Paste Job Description here..."

@@ -65,7 +65,11 @@ class LocalIntelligence:
         if not self._enabled or self._llm is None:
             return []
         try:
-            return self._llm.embed(text)
+            res = self._llm.embed(text)
+            # llama_cpp.embed returns a list of embeddings (list of lists) even for a single string
+            if res and isinstance(res, list) and isinstance(res[0], list):
+                return res[0]
+            return res
         except Exception as e:
             print(f"[SmolLM2] encode error: {e}", file=sys.stderr)
             return []
