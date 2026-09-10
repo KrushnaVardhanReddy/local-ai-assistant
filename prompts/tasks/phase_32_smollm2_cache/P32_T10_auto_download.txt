@@ -1,0 +1,27 @@
+TASK: P32-T10 — SmolLM2 Auto-Download on First Run
+
+PARALLEL BATCH: 3 — After P32-T1 and P32-T3.
+Files touched: backend/local_intelligence.py, backend/requirements.txt
+PREREQUISITE: None
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Make the Local Intelligence layer seamless for end users. The SmolLM2 GGUF model 
+is ~100MB, which is too large to bundle into our portable zip releases. We want 
+to auto-download it on the first launch of the backend if `SMOLLM2_ENABLED=true` 
+and the model file doesn't exist locally.
+
+═══════════════════════════════════════════════════════════════
+CHANGES
+═══════════════════════════════════════════════════════════════
+1. In `backend/local_intelligence.py`, update `_load_model()`. Before checking if `llama_cpp` is importable, check if `config.SMOLLM2_ENABLED` is True.
+2. If the model file (`config.SMOLLM2_MODEL_PATH`) does not exist on disk, do NOT immediately disable the feature. Instead, automatically download it from HuggingFace.
+   - URL: `https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf`
+   - Use standard `urllib.request` or `requests` to download it.
+   - Print a user-friendly progress message to `sys.stderr` like `[SmolLM2] First run detected. Downloading 100MB local intelligence model...`
+   - Create the parent directories (`models/`) if they do not exist.
+3. In `backend/requirements.txt`, add `requests` (if not already there) and add `llama-cpp-python` as an optional/standard dependency so it's installed by default during `pip install -r requirements.txt`.
+
+Commit: "jules: P32-T10 add auto-download for SmolLM2 on first run"
+Target branch: main
