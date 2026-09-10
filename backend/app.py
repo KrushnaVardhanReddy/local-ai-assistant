@@ -1134,7 +1134,62 @@ async def health_check():
         "auth_enabled": bool(config.SUPABASE_JWT_SECRET)
     }
 
+
+class PrewarmRequest(BaseModel):
+    resume_text: str
+    job_description: str
+
+@app.post("/api/cache/prewarm")
+async def prewarm_cache(body: PrewarmRequest):
+    if not llm_client:
+        raise HTTPException(status_code=503, detail="LLM Client not initialized")
+
+    system_prompt = (
+        "Generate a JSON array of the 50 most likely interview questions and concise perfect answers "
+        "based on this Resume and Job Description. Return ONLY valid JSON as a list of objects with "
+        "keys 'question' and 'answer'."
+    )
+    user_prompt = f"---\nRESUME:\n{body.resume_text}\n\n---\nJOB DESCRIPTION:\n{body.job_description}"
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
+    ]
+
+    result = ""
+    try:
+        async for token in llm_client.stream(messages):
+            result += token
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Error: {str(e)}")
+
+    llm_response_text = result.strip()
+
+    if llm_response_text.startswith("```json"):
+        llm_response_text = llm_response_text[7:]
+    elif llm_response_text.startswith("```"):
+        llm_response_text = llm_response_text[3:]
+    if llm_response_text.endswith("```"):
+        llm_response_text = llm_response_text[:-3]
+    llm_response_text = llm_response_text.strip()
+
+    try:
+        qa_pairs = json.loads(llm_response_text)
+        if not isinstance(qa_pairs, list):
+            raise ValueError("Response is not a JSON array")
+    except (json.JSONDecodeError, ValueError) as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse LLM response: {str(e)}")
+
+    stored_count = qa_cache.store_bulk(qa_pairs)
+
+    return {
+        "status": "success",
+        "message": f"Cache warmed with {stored_count} questions",
+        "stored_count": stored_count
+    }
+
 @app.get("/api/cache/stats")
+
 async def get_cache_stats():
     """Returns Q&A cache statistics: total pairs and estimated tokens saved."""
     return qa_cache.stats()
