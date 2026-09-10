@@ -13,6 +13,10 @@ FILLER_PHRASES = {
     "okay", "ok", "yeah", "yes", "no", "mm-hmm", "hmm", "uh", "um",
     "right", "sure", "thanks", "thank you", "bye", "alright", "all right",
     "got it", "i see", "i know", "oh", "ah", "so", "yep", "nope",
+    # Greetings — should not trigger a code response
+    "hi", "hello", "hey", "hi there", "hello there", "hey there",
+    "good morning", "good afternoon", "good evening", "good night",
+    "how are you", "how's it going", "what's up", "sup",
 }
 
 def is_filler(text: str) -> bool:
