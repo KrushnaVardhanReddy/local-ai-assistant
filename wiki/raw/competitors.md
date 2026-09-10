@@ -4,19 +4,20 @@ This matrix compares the **Local AI Assistant** (Project Parakeet) against exist
 
 ## Feature Matrix
 
-| Feature | Local AI Assistant (Ours) | Final Round AI | Sensei Copilot | Ecoute (Open Source) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Pricing** | Subscription / PAYG | $30 - $100+/mo | Subscription | Free / API Costs |
-| **STT Processing** | Local (faster-whisper) + Gemini Live | Cloud | Cloud | Local (Whisper) |
-| **End-to-End Latency** | **Zero / Sub-second (Gemini Live)** | 3-5+ Seconds | 1-2 Seconds | 2-3 Seconds |
-| **Stealth Mode** | **Portable ZIP + Ghost Cursor / Hotkeys** | Browser/App | Chrome Extension | Basic Python UI |
-| **Speaker Diarization** | **Yes (Interviewer vs Candidate)** | No / Basic | No | No |
-| **Session Analytics** | **Yes (Post-Interview Scorecard)** | Yes (Debrief) | No | No |
-| **Resume Extraction** | Yes (Local LLM Pass / Context) | Yes | Yes | No |
-| **Remote Helper Mode** | **Yes (Cloudflare Tunnel Broadcast)** | No | No | No |
-| **Coding/LeetCode Extraction** | **Yes (Vision Copilot)** | Yes | Yes | No |
-| **Multilingual Support** | Basic (Whisper auto-detect) | Partial | **Yes (30+ Languages)** | Basic |
-| **Mock Interview Mode** | ❌ Missing | Yes | Yes | No |
+| Feature | Local AI Assistant (Ours) | Final Round AI | Sensei Copilot | Ecoute (Open Source) | Otter.ai / Enterprise |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Pricing** | **Freemium + BYOK + Pro Subscription** | $30 - $100+/mo | Subscription | Free / API Costs | $10 - $20+/mo |
+| **STT Processing** | Local (`faster-whisper` / `parakeet`) | Cloud | Cloud | Local (Whisper) | Cloud |
+| **Turn Detection & Caching** | **Yes (Local SmolLM2 Engine)** | No | No | No | No |
+| **Enterprise Knowledge Base** | **Yes (Shared RAG Playbooks)** | No | No | No | Basic Search |
+| **Native Mobile App** | **Yes (iOS/Android via Capacitor)** | No | No | No | Yes |
+| **Export Options** | **Universal (MD, Email, Copy)** | Web/PDF | Web | Copy | Web/PDF/Email |
+| **End-to-End Latency** | **Zero / Sub-second** | 3-5+ Seconds | 1-2 Seconds | 2-3 Seconds | 2-3 Seconds |
+| **Stealth Mode** | **Portable ZIP + Ghost Cursor** | Browser/App | Chrome Extension | Basic Python UI | None |
+| **Speaker Diarization** | **Yes (Interviewer vs Candidate)** | No / Basic | No | No | Yes |
+| **Coding/LeetCode Extraction** | **Yes (Vision Copilot)** | Yes | Yes | No | No |
+| **Resume Extraction** | Yes (Local LLM Pass / Context) | Yes | Yes | No | No |
+| **Mock Interview Mode** | ❌ Missing | Yes | Yes | No | No |
 
 ---
 
