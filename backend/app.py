@@ -32,6 +32,7 @@ from rag import team_ingest
 from rag.web_search import search_web
 from smart_filter import SilenceBuffer, passes_filter, passes_filter_for_speaker
 from qa_cache import lookup as cache_lookup, store as cache_store
+import qa_cache
 
 from session_manager import session as interview_session
 from history_store import append_session, load_history
@@ -1131,6 +1132,17 @@ async def health_check():
         "llm_provider": config.LLM_PROVIDER,
         "auth_enabled": bool(config.SUPABASE_JWT_SECRET)
     }
+
+@app.get("/api/cache/stats")
+async def get_cache_stats():
+    """Returns Q&A cache statistics: total pairs and estimated tokens saved."""
+    return qa_cache.stats()
+
+@app.delete("/api/cache")
+async def clear_cache():
+    """Deletes all entries from the Q&A cache. Returns count of deleted pairs."""
+    count = qa_cache.clear()
+    return {"deleted": count, "message": f"Cleared {count} cached Q&A pairs."}
 
 @app.get("/rag/status")
 async def rag_status():
