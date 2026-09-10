@@ -82,3 +82,20 @@ build-frontend-portable:
 	@echo "Building Tauri portable app..."
 	@cd frontend && npm run tauri build -- --target x86_64-pc-windows-msvc
 	@echo "Portable output: frontend/src-tauri/target/release/bundle/app/"
+
+# ─── Mobile Build (Capacitor) ──────────────────────────────────────────────────
+
+# Build Svelte static files and sync them to iOS/Android Capacitor projects
+sync-mobile:
+	@echo "Building frontend and syncing to Capacitor..."
+	cd frontend && npm run build && npx cap sync
+
+# Open Android Studio for the Capacitor project
+dev-android: sync-mobile
+	@echo "Opening Android Studio..."
+	cd frontend && npx cap open android
+
+# Open Xcode for the Capacitor project
+dev-ios: sync-mobile
+	@echo "Opening Xcode..."
+	cd frontend && npx cap open ios
