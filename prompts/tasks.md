@@ -110,13 +110,14 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P32-T1 | `backend/local_intelligence.py` | **SmolLM2 Engine:** Load `SmolLM2-135M-Instruct` (GGUF quantized) via `llama-cpp-python` at server startup. Expose two async methods: `is_complete(text) → bool` (turn detection) and `encode(text) → vector` (semantic embedding). | ✅ | — |
-| P32-T2 | `backend/smart_filter.py` | **Turn-Taking Gatekeeper:** Before firing any STT transcript to the cloud LLM, call `local_intelligence.is_complete()`. If `INCOMPLETE`, reset the silence timer and keep listening. Log skipped incomplete turns. | ⏳ | — |
-| P32-T3 | `backend/qa_cache.py`, `backend/app.py` | **Semantic Q&A Cache:** Use the SmolLM2 encoder to convert each question into a vector and store/look up past Q&A pairs in a dedicated ChromaDB collection (`qa_cache`). On cache hit (cosine similarity > 0.92), serve the cached answer instantly, skipping cloud LLM entirely. | ⏳ | — |
+| P32-T2 | `backend/smart_filter.py` | **Turn-Taking Gatekeeper:** Before firing any STT transcript to the cloud LLM, call `local_intelligence.is_complete()`. If `INCOMPLETE`, reset the silence timer and keep listening. Log skipped incomplete turns. | ✅ | — |
+| P32-T3 | `backend/qa_cache.py`, `backend/app.py` | **Semantic Q&A Cache:** Use the SmolLM2 encoder to convert each question into a vector and store/look up past Q&A pairs in a dedicated ChromaDB collection (`qa_cache`). On cache hit (cosine similarity > 0.92), serve the cached answer instantly, skipping cloud LLM entirely. | ✅ | — |
 | P32-T4 | `backend/app.py` | **Cache Management API:** Add `DELETE /api/cache` endpoint to wipe all entries from the `qa_cache` ChromaDB collection. Add `GET /api/cache/stats` to show total cached pairs and estimated tokens saved. | ⬜ | — |
 | P32-T5 | `frontend/src/lib/Assistant.svelte` | **Cache UI Controls:** Add a "Cache" section in the settings panel showing cache stats (e.g. "47 answers cached — ~12,000 tokens saved"). Include a red "Clear Cache" button that calls the `DELETE /api/cache` endpoint with a confirmation dialog. | ⏳ | — |
 | P32-T6 | `tests/test_local_intelligence.py`, `tests/test_qa_cache.py` | **Unit Tests:** Tests for turn-detection accuracy (COMPLETE/INCOMPLETE), cache hit/miss logic, similarity threshold, and cache clearing via the API endpoint. | ⬜ | — |
 | P32-T7 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Cache UI (stats display, Clear Cache button, confirmation dialog). Pytest integration tests for `GET /api/cache/stats` and `DELETE /api/cache` endpoints. | ⬜ | — |
 | P32-T8 | `backend/app.py`, `frontend/src/lib/Assistant.svelte` | **Proactive Cache Pre-Warming (Mind Reader):** Add a `POST /api/cache/prewarm` endpoint. It takes the candidate's Resume and Job Description, asks the cloud LLM to generate the 50 most likely interview questions + perfect answers, and bulk-inserts them into the ChromaDB `qa_cache` prior to the interview. | ⬜ | — |
+| P32-T9 | `backend/local_intelligence.py`, `backend/smart_filter.py` | **Semantic Intent Classification:** Add an `is_question(text) -> bool` method to `SmolLM2` using a zero-shot prompt. Replace the old hardcoded keyword logic in `smart_filter.py` with this semantic check, saving API calls on conversational filler (e.g., "I see", "That's good"). | ⬜ | — |
 
 ---
 
@@ -128,7 +129,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P33-T1 | `capacitor.config.ts`, `package.json` | **Capacitor Scaffolding:** Install `@capacitor/core` and `@capacitor/cli`. Initialize the project and add iOS and Android targets. Configure SvelteKit adapter-static for native builds. | ✅ | — |
-| P33-T2 | `frontend/src/lib/audio/` | **Native Microphone:** Replace the Web Audio API with `@capacitor-community/microphone` for seamless audio capture on mobile devices without browser permission prompts. | ⏳ | — |
+| P33-T2 | `frontend/src/lib/audio/` | **Native Microphone:** Replace the Web Audio API with `@capacitor-community/microphone` for seamless audio capture on mobile devices without browser permission prompts. | ✅ | — |
 | P33-T3 | `frontend/src/lib/audio/` | **Background Audio Plugin:** Integrate a Capacitor background task plugin so the assistant can continue listening for the wake word even when the phone screen is locked. | ⏳ | — |
 | P33-T4 | `frontend/e2e/` | **Mobile E2E Tests:** Add mobile viewport emulation to Playwright tests to ensure the UI remains responsive and functional on smaller screens. | ✅ | — |
 
