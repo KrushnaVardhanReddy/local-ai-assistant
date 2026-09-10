@@ -630,7 +630,7 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                                     for out_q in list(active_outbound_queues):
                                         out_q.put_nowait({"type": "transcript", "text": f"🎤 {text}", "speaker": "interviewer"})
                                 else:
-                                    should_send, reason = passes_filter(text)
+                                    should_send, reason = await passes_filter(text)
                                     if should_send:
                                         if candidate_transcript:
                                             candidate_transcript += " "
@@ -656,7 +656,7 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                             if not assembled:
                                 continue
 
-                            should_send, reason = passes_filter(assembled)
+                            should_send, reason = await passes_filter(assembled)
                             if not should_send:
                                 continue
 
