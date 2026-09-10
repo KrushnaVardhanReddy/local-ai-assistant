@@ -59,16 +59,7 @@
 | P30-T3 | `zoom-app/` | **Zoom App (In-Meeting Sidebar):** Embeds BarnOwl as a Zoom Apps iframe panel. Uses the Zoom JS SDK to get meeting context and user identity. Minimal Express server to host the app for local testing. | ⬜ | — |
 | P30-T4 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Chrome Extension sidebar, Pytest stubs for Slack bot and Zoom app. | ⬜ | — |
 
----
-
-## Phase 32 — SmolLM2 Local Intelligence Layer 🧠
-
-> Adds a tiny on-device SmolLM2 model (135M params, ~100MB RAM) as a local pre-filter and semantic cache.
-> This layer runs entirely offline, cuts cloud API costs by 40-60%, and makes the assistant feel instant.
-> Two core jobs: (1) turn-taking gatekeeper — stops premature LLM calls mid-sentence; (2) semantic cache encoder — finds similar past Q&As in ChromaDB to serve answers instantly without hitting the cloud.
-
-| Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
+---|---|---|---|---|
 | P32-T6 | `tests/test_local_intelligence.py`, `tests/test_qa_cache.py` | **Unit Tests:** Tests for turn-detection accuracy (COMPLETE/INCOMPLETE), cache hit/miss logic, similarity threshold, and cache clearing via the API endpoint. | ✅ | #108 |
 | P32-T7 | `frontend/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright tests for Cache UI (stats display, Clear Cache button, confirmation dialog). Pytest integration tests for `GET /api/cache/stats` and `DELETE /api/cache` endpoints. | ✅ | #106 |
 | P32-T8 | `backend/app.py`, `frontend/src/lib/Assistant.svelte` | **Proactive Cache Pre-Warming (Mind Reader):** Add a `POST /api/cache/prewarm` endpoint. It takes the candidate's Resume and Job Description, asks the cloud LLM to generate the 50 most likely interview questions + perfect answers, and bulk-inserts them into the ChromaDB `qa_cache` prior to the interview. | ⏳ | — |
@@ -88,12 +79,5 @@
 | P34-T3 | `backend/task_extractor.py` | **Action Item Extraction:** Run an async LLM post-processing job over the `faster-whisper` transcripts every 15 minutes to automatically extract Action Items and To-Dos. | ⬜ | — |
 | P34-T4 | `backend/integrations/` | **Jira & Trello Sync:** Add OAuth/API sync capability to automatically push extracted Action Items into the user's Jira board or Trello list. | ⬜ | — |
 
----
-
-## Phase 35 — UI Polish ✨
-
-> Minor UI and UX improvements for a seamless desktop experience.
-
-| Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
+---|---|---|---|---|
 | P35-T1 | `frontend/src/` | **Hotkeys Side Panel:** Slide-out drawer for hotkeys so users don't lose context. | ✅ | #109 |

@@ -426,3 +426,25 @@
 
 ---
 
+
+
+---
+
+## Phase 32 — SmolLM2 Local Intelligence Layer 🧠
+
+> Adds a tiny on-device SmolLM2 model (135M params, ~100MB RAM) as a local pre-filter and semantic cache.
+> This layer runs entirely offline, cuts cloud API costs by 40-60%, and makes the assistant feel instant.
+> Two core jobs: (1) turn-taking gatekeeper — stops premature LLM calls mid-sentence; (2) semantic cache encoder — finds similar past Q&As in ChromaDB to serve answers instantly without hitting the cloud.
+
+| Task ID | File(s) | Description | Status | PR |
+|
+
+
+---
+
+## Phase 35 — UI Polish ✨
+
+> Minor UI and UX improvements for a seamless desktop experience.
+
+| Task ID | File(s) | Description | Status | PR |
+|
