@@ -144,10 +144,10 @@
     fetchCacheStats();
 
     const unlistenScrollDown = listen("scroll-down", () => {
-      contentEl?.scrollBy({ top: 100, behavior: 'smooth' });
+      responseEl?.scrollBy({ top: 100, behavior: 'smooth' });
     });
     const unlistenScrollUp = listen("scroll-up", () => {
-      contentEl?.scrollBy({ top: -100, behavior: 'smooth' });
+      responseEl?.scrollBy({ top: -100, behavior: 'smooth' });
     });
 
     // Check if we are running in a regular browser instead of Tauri
@@ -710,7 +710,7 @@
         {#if wsState.response || wsState.isThinking}
           <div class="flex-1 flex flex-col gap-4">
             <div class="group flex items-start gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 cursor-default relative">
-              <div class="ml-1 response-content leading-relaxed prose prose-invert max-w-none">
+              <div class="ml-1 min-w-0 w-full response-content leading-relaxed prose prose-invert max-w-none break-words">
                 {@html renderedResponse}
                 {#if wsState.isThinking}
                   <span class="inline-block w-1.5 h-4 bg-primary align-middle animate-pulse ml-1"></span>
