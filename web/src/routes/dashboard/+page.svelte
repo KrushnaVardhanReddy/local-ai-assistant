@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-  <title>Dashboard - Local AI Assistant</title>
+  <title>Dashboard - BarnOwl</title>
 </svelte:head>
 
 <main class="content">
@@ -17,7 +17,7 @@
     <p>Connect your desktop app to the cloud dashboard.</p>
 
     <ol class="steps">
-      <li>Open the Local AI Assistant desktop app.</li>
+      <li>Open the BarnOwl desktop app.</li>
       <li>Go to <strong>Settings</strong> > <strong>Account</strong>.</li>
       <li>Click <strong>Sign In</strong> and authenticate with your account.</li>
       <li>Your API keys will now sync securely across all your devices.</li>

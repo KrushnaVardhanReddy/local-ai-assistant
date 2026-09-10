@@ -4,11 +4,11 @@
 </script>
 
 <svelte:head>
-  <title>Pricing - Local AI Assistant</title>
+  <title>Pricing - BarnOwl</title>
 </svelte:head>
 
 <nav class="navbar">
-  <a href="/" class="logo">✦ Local AI</a>
+  <a href="/" class="logo">✦ BarnOwl</a>
   <div class="nav-links">
     <a href="/download" class="btn btn-secondary">Download</a>
     <a href="/login" class="btn btn-primary">Sign In</a>

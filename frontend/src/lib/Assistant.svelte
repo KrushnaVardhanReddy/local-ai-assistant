@@ -338,7 +338,7 @@
   <header class="toolbar glass-pill {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" onmousedown={startDrag}>
     <!-- Brand / Primary Action -->
     <div class="flex items-center gap-4 pointer-events-none">
-      <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">Local AI</span>
+      <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">BarnOwl</span>
       <!-- Live Indicator -->
       <div class="flex items-center gap-2 bg-white/5 rounded-full px-3 py-1 border border-white/5 {wsState.isListening ? '' : 'opacity-50'}">
         <div class="w-2 h-2 rounded-full {wsState.isListening ? 'bg-secondary animate-pulse shadow-[0_0_8px_rgba(78,222,163,0.6)]' : 'bg-gray-500'}"></div>
@@ -800,7 +800,7 @@
       </h2>
 
       <p class="text-on-surface-variant text-body-sm font-body-sm">
-        Your current session limit has been reached. Choose an option below to continue using the Local AI Assistant.
+        Your current session limit has been reached. Choose an option below to continue using the BarnOwl.
       </p>
 
       <div class="flex flex-col sm:flex-row gap-4 w-full mt-4">
