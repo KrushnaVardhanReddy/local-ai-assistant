@@ -17,6 +17,10 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'Mobile Safari',
+      use: { ...devices['iPhone SE'] },
+    },
   ],
   webServer: {
     command: 'npm run dev',
