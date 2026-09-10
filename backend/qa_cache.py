@@ -23,41 +23,35 @@ def _get_collection():
 def lookup(question: str) -> str | None:
     """
     Returns cached answer string if a similar question was seen before.
-    Returns None on cache miss or if SmolLM2 is disabled.
+    Returns None on cache miss.
     """
-    li = get_local_intelligence()
-    vector = li.encode(question)
-    if not vector:
-        return None
+    t0 = time.time()
     try:
         col = _get_collection()
-        results = col.query(query_embeddings=[vector], n_results=1, include=["documents", "distances"])
+        results = col.query(query_texts=[question], n_results=1, include=["documents", "metadatas", "distances"])
         if results["ids"] and results["ids"][0]:
             distance = results["distances"][0][0]
             similarity = 1.0 - distance
             if similarity >= SIMILARITY_THRESHOLD:
-                answer = results["documents"][0][0]
-                print(f"[QACache] Hit (similarity={similarity:.3f})", file=sys.stderr)
+                # Answer is now stored in metadata, not documents
+                answer = results["metadatas"][0][0]["answer"]
+                print(f"[QACache] {int((time.time() - t0) * 1000)}ms Hit (similarity={similarity:.3f})", file=sys.stderr)
                 return answer
+        print(f"[QACache] {int((time.time() - t0) * 1000)}ms Miss", file=sys.stderr)
     except Exception as e:
         print(f"[QACache] lookup error: {e}", file=sys.stderr)
     return None
 
 def store(question: str, answer: str) -> None:
     """Stores a Q&A pair in the cache for future lookups."""
-    li = get_local_intelligence()
-    vector = li.encode(question)
-    if not vector:
-        return
     try:
         col = _get_collection()
 
         doc_id = hashlib.md5(question.encode()).hexdigest()
         col.upsert(
             ids=[doc_id],
-            embeddings=[vector],
-            documents=[answer],
-            metadatas=[{"question": question[:200], "timestamp": str(int(time.time()))}]
+            documents=[question],
+            metadatas=[{"answer": answer, "timestamp": str(int(time.time()))}]
         )
         print(f"[QACache] Stored new Q&A pair (total: {col.count()})", file=sys.stderr)
     except Exception as e:

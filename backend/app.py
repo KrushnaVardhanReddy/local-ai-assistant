@@ -806,13 +806,14 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                     full_response = ""
                     try:
                         print(f"[DEBUG] Calling LLM with {len(messages)} messages...", file=sys.stderr)
+                        llm_start = time.time()
                         async for token in connection_llm_client.stream(messages):
                             full_response += token
                             interview_session.append_response_token(token)
                             for out_q in list(active_outbound_queues):
                                 out_q.put_nowait({"type": "token", "text": token})
                         interview_session.complete_turn()
-                        print(f"[DEBUG] Finished calling LLM.", file=sys.stderr)
+                        print(f"[DEBUG] {int((time.time() - llm_start) * 1000)}ms Finished calling LLM.", file=sys.stderr)
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "end"})
 

@@ -66,21 +66,9 @@ class LocalIntelligence:
 
     def is_complete(self, text: str) -> bool:
         """Returns True if the transcript is a complete thought. Falls back to True if disabled."""
-        if not self._enabled or self._llm is None:
-            return True
-        prompt = (
-            f"<|system|>You are a turn-detection classifier. Reply with exactly one word.<|end|>\n"
-            f"<|user|>Transcript: \"{text}\"\n"
-            f"Is this a complete thought? Reply COMPLETE or INCOMPLETE.<|end|>\n"
-            f"<|assistant|>"
-        )
-        try:
-            output = self._llm(prompt, max_tokens=5, temperature=0.0, stop=["\n", "<"])
-            answer = output["choices"][0]["text"].strip().upper()
-            return answer == "COMPLETE"
-        except Exception as e:
-            print(f"[SmolLM2] is_complete error: {e}", file=sys.stderr)
-            return True
+        # The 135M model struggles heavily with zero-shot classification and drops valid queries.
+        # Bypassing this for now so the app is actually usable.
+        return True
 
     def encode(self, text: str) -> list:
         """Returns a semantic embedding vector. Returns empty list if disabled."""
@@ -98,20 +86,6 @@ class LocalIntelligence:
 
     async def is_question(self, text: str) -> bool:
         """Returns True if the text appears to be a meaningful question or request using SmolLM2."""
-        if not self._enabled or self._llm is None:
-            return True
-
-        prompt = (
-            f"You are a strict classification engine. Does the following text require a factual answer, explanation, or response from an AI? Reply ONLY with YES or NO. Text: '{text}'"
-        )
-
-        try:
-            def _run_llm():
-                return self._llm(prompt, max_tokens=5, temperature=0.0)
-
-            output = await asyncio.to_thread(_run_llm)
-            answer = output["choices"][0]["text"].strip().upper()
-            return answer.startswith("YES")
-        except Exception as e:
-            print(f"[SmolLM2] is_question error: {e}", file=sys.stderr)
-            return True
+        # The 135M model struggles heavily with zero-shot classification and drops valid queries.
+        # Bypassing this for now; smart_filter.py already catches basic conversational filler.
+        return True
