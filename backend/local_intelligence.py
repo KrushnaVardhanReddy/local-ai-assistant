@@ -1,4 +1,5 @@
 import os
+import asyncio
 import sys
 from typing import Optional
 from config import config
@@ -68,3 +69,23 @@ class LocalIntelligence:
         except Exception as e:
             print(f"[SmolLM2] encode error: {e}", file=sys.stderr)
             return []
+
+    async def is_question(self, text: str) -> bool:
+        """Returns True if the text appears to be a meaningful question or request using SmolLM2."""
+        if not self._enabled or self._llm is None:
+            return True
+
+        prompt = (
+            f"You are a strict classification engine. Does the following text require a factual answer, explanation, or response from an AI? Reply ONLY with YES or NO. Text: '{text}'"
+        )
+
+        try:
+            def _run_llm():
+                return self._llm(prompt, max_tokens=5, temperature=0.0)
+
+            output = await asyncio.to_thread(_run_llm)
+            answer = output["choices"][0]["text"].strip().upper()
+            return answer.startswith("YES")
+        except Exception as e:
+            print(f"[SmolLM2] is_question error: {e}", file=sys.stderr)
+            return True
