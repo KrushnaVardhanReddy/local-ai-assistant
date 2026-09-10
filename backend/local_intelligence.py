@@ -6,6 +6,15 @@ from config import config
 
 _instance: Optional["LocalIntelligence"] = None
 
+SYSTEM_PROMPT_INJECTIONS = {
+    "behavioral": "Structure your response using STAR format (Situation, Task, Action, Result). Be concise — 4 bullet points maximum.",
+    "coding": "Provide: 1) Pseudocode or a minimal code snippet, 2) Time/Space complexity, 3) One edge case to watch for. No lengthy prose.",
+    "system_design": "Structure as: 1) Clarify requirements, 2) High-level components, 3) Data flow, 4) Scalability considerations. Use bullet points.",
+    "conceptual": "Give a concise 1-sentence definition, then 2-3 key properties or features. No padding.",
+    "opinion": "State a clear 1-sentence opinion, then give 2 concrete reasons from your experience.",
+    "noise": None
+}
+
 def get_local_intelligence() -> "LocalIntelligence":
     global _instance
     if _instance is None:
@@ -89,3 +98,29 @@ class LocalIntelligence:
         # The 135M model struggles heavily with zero-shot classification and drops valid queries.
         # Bypassing this for now; smart_filter.py already catches basic conversational filler.
         return True
+
+    def classify_question(self, transcript: str) -> str:
+        if not self._enabled or self._llm is None:
+            return "conceptual"
+
+        prompt = f"""Classify this interview question into exactly one category.
+Categories: behavioral, coding, system_design, conceptual, opinion, noise
+Question: {transcript}
+Answer with only the category name."""
+
+        try:
+            res = self._llm.create_chat_completion(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=10,
+                temperature=0.0
+            )
+            output = res["choices"][0]["message"]["content"].strip().lower()
+
+            valid = ["behavioral", "coding", "system_design", "conceptual", "opinion", "noise"]
+            for category in valid:
+                if category in output:
+                    return category
+            return "conceptual"
+        except Exception as e:
+            print(f"[SmolLM2] classify error: {e}", file=sys.stderr)
+            return "conceptual"

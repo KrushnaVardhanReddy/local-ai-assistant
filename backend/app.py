@@ -33,6 +33,7 @@ from rag.web_search import search_web
 from smart_filter import SilenceBuffer, passes_filter, passes_filter_for_speaker
 from qa_cache import lookup as cache_lookup, store as cache_store
 import qa_cache
+import local_intelligence
 
 from session_manager import session as interview_session
 from history_store import append_session, load_history
@@ -764,7 +765,37 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
 
                     combined_context = "\n\n".join(filter(None, [rag_context, web_context]))
 
-                    system_content = config.SYSTEM_PROMPT
+                    # Smart Context Pipeline
+                    li = local_intelligence.get_local_intelligence()
+                    if config.SMOLLM2_ENABLED and li:
+                        q_type, qa_ctx, res_ctx = await asyncio.gather(
+                            asyncio.to_thread(li.classify_question, transcript),
+                            asyncio.to_thread(qa_cache.retrieve_context, transcript),
+                            asyncio.to_thread(qa_cache.retrieve_resume_context, transcript),
+                        )
+                    else:
+                        q_type, qa_ctx, res_ctx = "conceptual", [], []
+
+                    if q_type == "noise":
+                        # Noise implies skipping the LLM entirely for this turn
+                        continue
+
+                    for out_q in list(active_outbound_queues):
+                        out_q.put_nowait({"type": "question_type", "value": q_type})
+                        if q_type == "behavioral":
+                            out_q.put_nowait({"type": "star_primed"})
+
+                    injection = local_intelligence.SYSTEM_PROMPT_INJECTIONS.get(q_type, "")
+                    system_content = config.SYSTEM_PROMPT + (f"\n\nFor this response: {injection}" if injection else "")
+
+                    ctx_parts = []
+                    if res_ctx:
+                        ctx_parts.append("Candidate background:\n" + "\n".join(f"- {c}" for c in res_ctx))
+                    if qa_ctx:
+                        ctx_parts.append("Related past answers:\n" + "\n".join(f"- {c}" for c in qa_ctx))
+                    if ctx_parts:
+                        system_content += "\n\n--- CONTEXT ---\n" + "\n\n".join(ctx_parts)
+
                     if config.JOB_DESCRIPTION:
                         system_content += (
                             "\n\n--- TARGET JOB DESCRIPTION ---\n"
@@ -1185,13 +1216,7 @@ async def prewarm_cache(body: PrewarmRequest):
     if not qa_pairs:
         raise HTTPException(status_code=500, detail="Failed to parse LLM response: No valid Q&A pairs found.")
 
-    stored_count = 0
-    for pair in qa_pairs:
-        try:
-            qa_cache.store(pair["question"], pair["answer"])
-            stored_count += 1
-        except Exception as e:
-            print(f"Error storing Q&A pair: {e}")
+    stored_count = qa_cache.store_bulk(qa_pairs)
 
     return {
         "status": "success",
