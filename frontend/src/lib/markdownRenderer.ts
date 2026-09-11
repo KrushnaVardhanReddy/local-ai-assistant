@@ -20,8 +20,8 @@ const renderer = new marked.Renderer();
   const validLang = lang || 'text';
   const label = validLang === 'text' ? 'code' : validLang;
   
-  // Escape backticks and backslashes for safe inline onclick embedding
-  const escaped = text.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+  // Safely encode text to avoid breaking HTML attributes
+  const encodedText = encodeURIComponent(text);
 
   let highlighted = '';
   if (highlighter && highlighter.getLoadedLanguages().includes(validLang)) {
@@ -38,8 +38,9 @@ const renderer = new marked.Renderer();
   return `<div class="code-block-wrapper">
   <div class="code-block-header">
     <span>${label}</span>
-    <button class="code-copy-btn" onclick="(function(btn){
-      navigator.clipboard.writeText(\`${escaped}\`).then(()=>{
+    <button class="code-copy-btn" data-code="${encodedText}" onclick="(function(btn){
+      const code = decodeURIComponent(btn.getAttribute('data-code'));
+      navigator.clipboard.writeText(code).then(()=>{
         btn.textContent='Copied!';
         setTimeout(()=>btn.textContent='Copy',1500);
       });
