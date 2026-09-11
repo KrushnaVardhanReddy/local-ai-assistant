@@ -8,10 +8,10 @@ from config import config
 _instance: Optional["LocalIntelligence"] = None
 
 SYSTEM_PROMPT_INJECTIONS = {
-    "behavioral": "Structure your response using STAR format (Situation, Task, Action, Result). Be concise — 4 bullet points maximum.",
-    "coding": "Provide: 1) Pseudocode or a minimal code snippet, 2) Time/Space complexity, 3) One edge case to watch for. No lengthy prose.",
+    "behavioral": "Structure your response using STAR format (Situation, Task, Action, Result). Limit to 4 bullet points.",
+    "coding": "Provide: 1) Pseudocode or a minimal code snippet, 2) Time/Space complexity, 3) One edge case to watch for.",
     "system_design": "Structure as: 1) Clarify requirements, 2) High-level components, 3) Data flow, 4) Scalability considerations. Use bullet points.",
-    "conceptual": "Give a clear definition, followed by a brief example or core syntax snippet, and 1-2 key properties. Keep it concise but practical.",
+    "conceptual": "Give a clear definition, followed by a brief example or core syntax snippet, and 1-2 key properties.",
     "opinion": "State a clear 1-sentence opinion, then give 2 concrete reasons from your experience.",
     "noise": None
 }
