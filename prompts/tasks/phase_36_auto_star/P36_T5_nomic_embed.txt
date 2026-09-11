@@ -1,0 +1,57 @@
+TASK: P36-T5 — Replace SmolLM2 with Nomic-Embed-Text for High-Quality Local Embeddings
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We recently implemented a hybrid intent router (regex keyword rules + ML classifier).
+The ML classifier (Logistic Regression) was trained on top of `SmolLM2-135M` embeddings.
+However, SmolLM2 is a generative model, and its embeddings are too low quality
+(blurry intent separation) to classify complex edge-case questions accurately.
+
+We are replacing `SmolLM2-135M` with a dedicated embedding model:
+`nomic-embed-text-v1.5`
+
+Since it is also a GGUF model, we will continue using `llama-cpp-python` to run it,
+making this a seamless drop-in replacement that drastically boosts embedding quality
+for both the intent router and our ChromaDB RAG cache.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. UPDATE `backend/config.py`
+   - Rename `SMOLLM2_ENABLED` to `LOCAL_EMBEDDING_ENABLED`
+   - Rename `SMOLLM2_MODEL_PATH` to `LOCAL_EMBEDDING_MODEL_PATH`
+   - Set the default path to: `os.path.join(os.path.dirname(__file__), "models", "nomic-embed-text-v1.5.Q4_K_M.gguf")`
+
+2. UPDATE `backend/local_intelligence.py`
+   - Replace all `config.SMOLLM2_...` references with `config.LOCAL_EMBEDDING_...`
+   - Update the model download URL in `_load_model` to:
+     `https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf`
+   - Change all internal print logs from `[SmolLM2]` to `[Nomic]`
+   - Delete any local SmolLM2 models from `backend/models/` if they exist to save space (e.g., `os.remove()` the old path if found during init, or just instruct the user it's deprecated).
+   - In `Llama()` initialization, ensure `embedding=True` is still passed (this is required for Nomic to work as an embedder in llama-cpp).
+
+3. RETRAIN THE CLASSIFIER
+   - Now that the base embedding model is swapped, the old classifier weights are invalid!
+   - You MUST run `cd backend && PYTHONPATH=. .venv/bin/python3 ../scripts/train_classifier.py`
+   - This will download the Nomic model (~80MB), encode the dataset with Nomic, train a new LogisticRegression, and overwrite `backend/models/question_classifier.pkl`.
+   - (Note: if `scripts/train_classifier.py` throws any module errors, ensure you run it from the correct venv as shown above).
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION (Basic Testing)
+═══════════════════════════════════════════════════════════════
+
+Run the following test suites to ensure the integration is flawless:
+
+1. Validate the smart router:
+   `cd backend && PYTHONPATH=. .venv/bin/pytest tests/test_smart_routing.py -v`
+   (All 12 tests must pass perfectly).
+
+2. Validate the RAG cache (which also relies on embeddings):
+   `cd backend && PYTHONPATH=. .venv/bin/pytest tests/test_qa_cache.py -v`
+   (All tests must pass).
+
+Commit message: "jules: P36-T5 replace SmolLM2 with nomic-embed-text for high-quality embeddings"
+Target branch: main
