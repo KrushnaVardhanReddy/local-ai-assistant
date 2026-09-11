@@ -76,11 +76,14 @@
 		ssoError = '';
 		ssoLoading = true;
 
+		const submittedEmail = ssoEmail;
+		ssoEmail = '';
+
 		try {
-			if (!ssoEmail || !ssoEmail.includes('@')) {
+			if (!submittedEmail || !submittedEmail.includes('@')) {
 				throw new Error('Please enter a valid work email.');
 			}
-			const domain = ssoEmail.split('@')[1];
+			const domain = submittedEmail.split('@')[1];
 
 			const res = await fetch('/api/enterprise/sso-init', {
 				method: 'POST',
