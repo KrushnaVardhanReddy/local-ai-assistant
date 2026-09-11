@@ -26,7 +26,17 @@ class LocalIntelligence:
     def __init__(self):
         self._llm = None
         self._classifier = None
-        self._enabled = config.SMOLLM2_ENABLED
+        self._enabled = config.LOCAL_EMBEDDING_ENABLED
+
+        # Cleanup old SmolLM2 model if it exists
+        smollm_path = os.path.join(os.path.dirname(__file__), "models", "smollm2-135m-instruct-q4_k_m.gguf")
+        if os.path.exists(smollm_path):
+            try:
+                os.remove(smollm_path)
+                print(f"[Nomic] Removed deprecated SmolLM2 model at {smollm_path}", file=sys.stderr)
+            except Exception as e:
+                print(f"[Nomic] Failed to remove deprecated SmolLM2 model: {e}", file=sys.stderr)
+
         if self._enabled:
             self._load_model()
         self._load_classifier()
@@ -37,11 +47,11 @@ class LocalIntelligence:
             if os.path.exists(model_path):
                 with open(model_path, "rb") as f:
                     self._classifier = pickle.load(f)
-                print(f"[SmolLM2] Loaded classifier from {model_path}", file=sys.stderr)
+                print(f"[Nomic] Loaded classifier from {model_path}", file=sys.stderr)
             else:
-                print(f"[SmolLM2] Classifier not found at {model_path}", file=sys.stderr)
+                print(f"[Nomic] Classifier not found at {model_path}", file=sys.stderr)
         except Exception as e:
-            print(f"[SmolLM2] Failed to load classifier: {e}", file=sys.stderr)
+            print(f"[Nomic] Failed to load classifier: {e}", file=sys.stderr)
 
     def _load_model(self):
         if not self._enabled:
@@ -49,25 +59,25 @@ class LocalIntelligence:
 
         try:
             from llama_cpp import Llama
-            model_path = config.SMOLLM2_MODEL_PATH
+            model_path = config.LOCAL_EMBEDDING_MODEL_PATH
 
             if not os.path.exists(model_path):
-                print("[SmolLM2] First run detected. Downloading ~100MB local intelligence model...", file=sys.stderr)
+                print("[Nomic] First run detected. Downloading ~80MB local intelligence model...", file=sys.stderr)
                 os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
                 import urllib.request
-                url = "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf"
+                url = "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf"
 
                 def _progress_hook(count, block_size, total_size):
                     percent = int(count * block_size * 100 / total_size)
-                    sys.stderr.write(f"\r[SmolLM2] Downloading: {percent}%")
+                    sys.stderr.write(f"\r[Nomic] Downloading: {percent}%")
                     sys.stderr.flush()
 
                 try:
                     urllib.request.urlretrieve(url, model_path, reporthook=_progress_hook)
-                    print("\n[SmolLM2] Download complete.", file=sys.stderr)
+                    print("\n[Nomic] Download complete.", file=sys.stderr)
                 except Exception as e:
-                    print(f"\n[SmolLM2] Download failed: {e}. Disabling.", file=sys.stderr)
+                    print(f"\n[Nomic] Download failed: {e}. Disabling.", file=sys.stderr)
                     self._enabled = False
                     if os.path.exists(model_path):
                         os.remove(model_path)
@@ -80,12 +90,12 @@ class LocalIntelligence:
                 embedding=True,
                 verbose=False,
             )
-            print(f"[SmolLM2] Local intelligence loaded from {model_path}", file=sys.stderr)
+            print(f"[Nomic] Local intelligence loaded from {model_path}", file=sys.stderr)
         except ImportError:
-            print("[SmolLM2] llama-cpp-python not installed. Disabling.", file=sys.stderr)
+            print("[Nomic] llama-cpp-python not installed. Disabling.", file=sys.stderr)
             self._enabled = False
         except Exception as e:
-            print(f"[SmolLM2] Failed to load model: {e}", file=sys.stderr)
+            print(f"[Nomic] Failed to load model: {e}", file=sys.stderr)
             self._enabled = False
 
     def is_complete(self, text: str) -> bool:
@@ -105,11 +115,11 @@ class LocalIntelligence:
                 return res[0]
             return res
         except Exception as e:
-            print(f"[SmolLM2] encode error: {e}", file=sys.stderr)
+            print(f"[Nomic] encode error: {e}", file=sys.stderr)
             return []
 
     async def is_question(self, text: str) -> bool:
-        """Returns True if the text appears to be a meaningful question or request using SmolLM2."""
+        """Returns True if the text appears to be a meaningful question or request using Nomic."""
         # The 135M model struggles heavily with zero-shot classification and drops valid queries.
         # Bypassing this for now; smart_filter.py already catches basic conversational filler.
         return True
@@ -213,7 +223,7 @@ class LocalIntelligence:
             if keyword_result is not None:
                 return keyword_result
 
-            # Stage 2: ML classifier on top of SmolLM2 embeddings
+            # Stage 2: ML classifier on top of Nomic embeddings
             query_vec = self.encode(transcript)
             if not query_vec:
                 return "conceptual"
@@ -223,7 +233,7 @@ class LocalIntelligence:
                     prediction = self._classifier.predict([query_vec])[0]
                     return prediction
                 except Exception as e:
-                    print(f"[SmolLM2] classifier prediction error: {e}", file=sys.stderr)
+                    print(f"[Nomic] classifier prediction error: {e}", file=sys.stderr)
 
             # Stage 3: cosine similarity fallback
             anchor_embeddings = self._get_anchor_embeddings()
@@ -236,5 +246,5 @@ class LocalIntelligence:
                     best_category = category
             return best_category
         except Exception as e:
-            print(f"[SmolLM2] classify error: {e}", file=sys.stderr)
+            print(f"[Nomic] classify error: {e}", file=sys.stderr)
             return "conceptual"

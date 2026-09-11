@@ -767,7 +767,7 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
 
                     # Smart Context Pipeline
                     li = local_intelligence.get_local_intelligence()
-                    if config.SMOLLM2_ENABLED and li:
+                    if config.LOCAL_EMBEDDING_ENABLED and li:
                         q_type, qa_ctx, res_ctx = await asyncio.gather(
                             asyncio.to_thread(li.classify_question, transcript),
                             asyncio.to_thread(qa_cache.retrieve_context, transcript),
