@@ -82,8 +82,8 @@ class Config:
 
     LANGUAGE_OVERRIDE: str = "auto"
 
-    SMOLLM2_ENABLED: bool = False
-    SMOLLM2_MODEL_PATH: str = "./models/smollm2-135m-instruct-q4_k_m.gguf"
+    LOCAL_EMBEDDING_ENABLED: bool = False
+    LOCAL_EMBEDDING_MODEL_PATH: str = os.path.join(os.path.dirname(__file__), "models", "nomic-embed-text-v1.5.Q4_K_M.gguf")
 
     AGENT_MODE_ENABLED: bool = False
     FORCE_PRO_MODE: bool = False
@@ -106,8 +106,8 @@ class Config:
         self.AGENT_MODE_ENABLED = os.environ.get("AGENT_MODE_ENABLED", "false").lower() == "true"
         self.FORCE_PRO_MODE = os.environ.get("FORCE_PRO_MODE", "false").lower() == "true"
 
-        self.SMOLLM2_ENABLED = os.environ.get("SMOLLM2_ENABLED", "false").lower() == "true"
-        self.SMOLLM2_MODEL_PATH = os.environ.get("SMOLLM2_MODEL_PATH", self.SMOLLM2_MODEL_PATH)
+        self.LOCAL_EMBEDDING_ENABLED = os.environ.get("LOCAL_EMBEDDING_ENABLED", "false").lower() == "true"
+        self.LOCAL_EMBEDDING_MODEL_PATH = os.environ.get("LOCAL_EMBEDDING_MODEL_PATH", self.LOCAL_EMBEDDING_MODEL_PATH)
 
         self.LLM_PROVIDER = os.environ.get("LLM_PROVIDER", self.LLM_PROVIDER)
         self.LLM_MODEL = os.environ.get("LLM_MODEL", self.LLM_MODEL)
