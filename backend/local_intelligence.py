@@ -1,6 +1,7 @@
 import os
 import asyncio
 import sys
+import pickle
 from typing import Optional
 from config import config
 
@@ -24,9 +25,23 @@ def get_local_intelligence() -> "LocalIntelligence":
 class LocalIntelligence:
     def __init__(self):
         self._llm = None
+        self._classifier = None
         self._enabled = config.SMOLLM2_ENABLED
         if self._enabled:
             self._load_model()
+        self._load_classifier()
+
+    def _load_classifier(self):
+        try:
+            model_path = os.path.join(os.path.dirname(__file__), "models", "question_classifier.pkl")
+            if os.path.exists(model_path):
+                with open(model_path, "rb") as f:
+                    self._classifier = pickle.load(f)
+                print(f"[SmolLM2] Loaded classifier from {model_path}", file=sys.stderr)
+            else:
+                print(f"[SmolLM2] Classifier not found at {model_path}", file=sys.stderr)
+        except Exception as e:
+            print(f"[SmolLM2] Failed to load classifier: {e}", file=sys.stderr)
 
     def _load_model(self):
         if not self._enabled:
@@ -166,14 +181,51 @@ class LocalIntelligence:
             self._anchor_embeddings[category] = avg
         return self._anchor_embeddings
 
+    _KEYWORD_RULES = [
+        # coding — unambiguous imperative verb openers
+        (r'^\s*(write|implement|code|create a function|build a function|design a function)\b', "coding"),
+        # system_design — design-at-scale openers
+        (r'^\s*(design\s+(?:the|a|an)\s+(?:architecture|system|database|infrastructure)|how would you (design|architect))\b', "system_design"),
+        # behavioral — STAR signal phrases
+        (r'\b(tell me about a time|describe a situation|give me an example of|walk me through a (time|challenge))\b', "behavioral"),
+        # opinion — preference/opinion openers
+        (r'^\s*(do you prefer|what (is your|do you) (opinion|take|preference|preferred)|which do you prefer|what do you think about)\b', "opinion"),
+        # conceptual — definition/explanation openers
+        (r'^\s*(what is (the|a|an) |explain (how|what|the|why)|how does .+ work)\b', "conceptual"),
+    ]
+
+    def _keyword_classify(self, transcript: str) -> str | None:
+        """Fast keyword pre-filter. Returns category if confident, else None."""
+        import re
+        t = transcript.strip().lower()
+        for pattern, category in self._KEYWORD_RULES:
+            if re.search(pattern, t, re.IGNORECASE):
+                return category
+        return None
+
     def classify_question(self, transcript: str) -> str:
-        """Classify transcript into a category using embedding cosine similarity."""
+        """Classify transcript into a category using keyword pre-filter + ML classifier."""
         if not self._enabled or self._llm is None:
             return "conceptual"
         try:
+            # Stage 1: fast keyword rules for unambiguous patterns
+            keyword_result = self._keyword_classify(transcript)
+            if keyword_result is not None:
+                return keyword_result
+
+            # Stage 2: ML classifier on top of SmolLM2 embeddings
             query_vec = self.encode(transcript)
             if not query_vec:
                 return "conceptual"
+
+            if self._classifier is not None:
+                try:
+                    prediction = self._classifier.predict([query_vec])[0]
+                    return prediction
+                except Exception as e:
+                    print(f"[SmolLM2] classifier prediction error: {e}", file=sys.stderr)
+
+            # Stage 3: cosine similarity fallback
             anchor_embeddings = self._get_anchor_embeddings()
             best_category = "conceptual"
             best_score = -1.0
