@@ -34,10 +34,11 @@
             if (!res.ok) {
                 errorMsg = result.error || 'Failed to send invite';
             } else {
+                const submittedEmail = inviteEmail;
                 inviteModalOpen = false;
                 inviteEmail = '';
                 // Optimistically add to list
-                members = [...members, { email: inviteEmail, plan: 'enterprise', active_session_at: null, id: 'temp-' + Date.now() }];
+                members = [...members, { email: submittedEmail, plan: 'enterprise', active_session_at: null, id: 'temp-' + Date.now() }];
             }
         } catch (e: any) {
             errorMsg = e.message;

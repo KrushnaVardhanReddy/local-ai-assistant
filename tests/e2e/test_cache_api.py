@@ -1,13 +1,19 @@
 import pytest
-import httpx
+from fastapi.testclient import TestClient
 
-BASE_URL = "http://127.0.0.1:8765"
+import sys
+sys.path.append('backend')
+from backend.app import app
 
 class TestCacheAPI:
 
+    @pytest.fixture(autouse=True)
+    def setup_client(self):
+        self.client = TestClient(app)
+
     def test_stats_returns_200(self):
         """GET /api/cache/stats should return 200 with correct shape."""
-        resp = httpx.get(f"{BASE_URL}/api/cache/stats", timeout=5)
+        resp = self.client.get("/api/cache/stats")
         assert resp.status_code == 200
         data = resp.json()
         assert "cached_pairs" in data
@@ -17,7 +23,7 @@ class TestCacheAPI:
 
     def test_clear_cache_returns_200(self):
         """DELETE /api/cache should return 200 with deleted count."""
-        resp = httpx.delete(f"{BASE_URL}/api/cache", timeout=5)
+        resp = self.client.delete("/api/cache")
         assert resp.status_code == 200
         data = resp.json()
         assert "deleted" in data
@@ -26,7 +32,7 @@ class TestCacheAPI:
 
     def test_stats_after_clear_is_zero(self):
         """After DELETE /api/cache, GET /api/cache/stats should show 0 pairs."""
-        httpx.delete(f"{BASE_URL}/api/cache", timeout=5)
-        resp = httpx.get(f"{BASE_URL}/api/cache/stats", timeout=5)
+        self.client.delete("/api/cache")
+        resp = self.client.get("/api/cache/stats")
         data = resp.json()
         assert data["cached_pairs"] == 0
