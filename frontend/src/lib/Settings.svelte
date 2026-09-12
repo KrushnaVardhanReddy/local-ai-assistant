@@ -42,6 +42,9 @@
   let resumeStatus = $state("");
   let resumeFilename = $state("");
 
+  // System Status state
+  let systemStatus = $state<any>(null);
+
   // Job Description state
   let jobDescription = $state("");
   let jobDescriptionStatus = $state("");
@@ -53,6 +56,10 @@
       if (healthRes.ok) {
         const healthData = await healthRes.json();
         currentLLMProvider = healthData.llm_provider;
+      }
+      const statusRes = await fetch(`${apiUrl}/api/status`);
+      if (statusRes.ok) {
+        systemStatus = await statusRes.json();
       }
     } catch (e) { console.error("Failed to load health", e); }
     try {
@@ -285,6 +292,38 @@
   <div style="display: flex; justify-content: space-between; align-items: center;">
     <h2>Settings</h2>
   </div>
+
+  <div class="config-section">
+    <div class="section-label">System Status</div>
+    {#if systemStatus}
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="status-key">LLM Provider</span>
+          <span class="status-value badge">{systemStatus.llm_provider}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-key">LLM Model</span>
+          <span class="status-value badge">{systemStatus.llm_model}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-key">STT Provider</span>
+          <span class="status-value badge">{systemStatus.stt_provider}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-key">STT Model</span>
+          <span class="status-value badge">{systemStatus.stt_model}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-key">Local STT Engine</span>
+          <span class="status-value badge">{systemStatus.local_stt_engine}</span>
+        </div>
+      </div>
+    {:else}
+      <div class="status-indicator">Loading status...</div>
+    {/if}
+  </div>
+
+  <hr class="divider" />
 
   <div class="config-section">
     <div style="margin-bottom: 1rem;">
@@ -745,6 +784,32 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #666;
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+
+  .status-key {
+    color: #aaa;
+  }
+
+  .status-value {
+    color: #fff;
+    font-weight: 500;
   }
 
   .status-indicator {
