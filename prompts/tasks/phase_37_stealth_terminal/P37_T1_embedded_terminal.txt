@@ -1,0 +1,49 @@
+TASK: P37-T1 — Implement Embedded Stealth Terminal via Tauri Sidecars
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+To maximize stealth during live interviews, we need to launch and monitor the Python backend directly from the frontend UI. This prevents floating console windows from appearing on the user's screen during screen sharing.
+
+The frontend is built with Tauri v2. We want to embed a small terminal component that can spawn the backend process using Tauri's Shell plugin and stream the stdout/stderr into the UI.
+
+The user explicitly wants this to support BOTH development (spawning the `python` process) and production (spawning a bundled Tauri Sidecar, e.g., the packaged backend `.exe`).
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. SETUP TAURI SHELL PLUGIN
+   - Add `tauri-plugin-shell = "2"` to `frontend/src-tauri/Cargo.toml`
+   - Initialize it in `frontend/src-tauri/src/main.rs` via `tauri_plugin_shell::init()`
+   - Install the JS package: `npm install @tauri-apps/plugin-shell`
+   - Update Tauri capability files (e.g. `capabilities/default.json`) to allow executing shell commands and sidecars for the backend.
+
+2. CONFIGURE SIDECAR (Production)
+   - Read the Tauri v2 Sidecar documentation.
+   - Configure `tauri.conf.json` so that the packaged PyInstaller backend executable is recognized as a Sidecar during production builds.
+
+3. CREATE `StealthTerminal.svelte`
+   - Create a new UI component `frontend/src/lib/StealthTerminal.svelte`.
+   - The UI should feature a scrollable, black, monospace `div` representing the console output.
+   - Add logic to spawn the backend process via `@tauri-apps/plugin-shell`.
+     - In Dev (`import.meta.env.DEV` or similar): Execute the raw python script (e.g., `Command.create('python', ['backend/app.py'])`).
+     - In Prod: Execute the Tauri Sidecar (`Command.sidecar(...)`).
+   - Listen to the `stdout` and `stderr` events from the spawned child process and append the lines to the console `div`.
+   - Include a "Start Backend" / "Stop Backend" control button. Ensure the child process is properly killed on stop.
+
+4. INTEGRATE INTO UI
+   - Embed the `StealthTerminal` component into the main application UI (e.g., as a new collapsible panel or a dedicated tab in the Settings pane).
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Launch the app in development mode using `npm run tauri dev`.
+2. Click "Start Backend" in the UI.
+3. Verify that the Python server starts successfully and its startup logs appear within the new embedded terminal UI.
+4. Click "Stop Backend" and verify the child process is terminated.
+
+Commit message: "jules: P37-T1 implement embedded stealth terminal via tauri shell"
+Target branch: feature/krushna
