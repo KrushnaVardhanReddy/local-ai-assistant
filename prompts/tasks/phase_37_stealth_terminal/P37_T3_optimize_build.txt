@@ -1,0 +1,37 @@
+TASK: P37-T3 — Optimize Backend Build Size
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+The PyInstaller executable for the backend is currently too massive (over 2.5GB) because it automatically pulls in the full CUDA-enabled version of PyTorch and many heavy data-science libraries that we do not actually use in the production `.exe`. 
+
+Since our default STT and LLM providers are cloud-based (Groq and OpenAI), and our local Nomic embeddings run fast enough on the CPU, we do not need to bundle the gigantic NVIDIA CUDA drivers. We want to heavily optimize the build to drastically reduce the application file size.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. UPDATE `backend/requirements.txt`
+   - Modify the `torch` and `torchaudio` dependencies to explicitly download the CPU-only versions.
+   - You can do this by pointing to the CPU index, e.g.:
+     `--extra-index-url https://download.pytorch.org/whl/cpu`
+     `torch==2.4.1+cpu`
+     `torchaudio==2.4.1+cpu`
+
+2. UPDATE `Makefile`
+   - Modify the `build-backend-exe` target (around line 73).
+   - Add multiple `--exclude-module` flags to the `pyinstaller` command to aggressively strip out unnecessary massive packages.
+   - Please exclude at least: `matplotlib`, `tkinter`, `scipy`, `IPython`, `notebook`, `pandas`, `pytest`, `unittest`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION (Basic Testing)
+═══════════════════════════════════════════════════════════════
+
+1. Build the backend:
+   Run `make build-backend-exe`. Ensure that PyInstaller completes successfully without errors.
+2. Verify size reduction:
+   Check the size of the compiled binary in `backend/dist/`. It should be dramatically smaller than the previous build.
+
+Commit message: "jules: P37-T3 optimize backend build size by switching to CPU torch and stripping unused modules"
+Target branch: feature/krushna
