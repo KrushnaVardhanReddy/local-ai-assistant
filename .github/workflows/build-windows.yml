@@ -17,42 +17,49 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "backend/requirements*.txt"
 
-      # Install CUDA 12 Toolkit + cuDNN 9 so we can bundle the DLLs into the EXE.
-      # Chocolatey is pre-installed on windows-latest runners.
-      - name: Install CUDA 12 Toolkit
+      # Jimver/cuda-toolkit correctly installs CUDA on Windows runners.
+      # It downloads the network installer directly from NVIDIA — no Chocolatey needed.
+      - name: Install CUDA 12.6 Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.19
+        id: cuda-toolkit
+        with:
+          cuda: '12.6.0'
+          method: 'network'
+          # Only install the runtime + cuBLAS components; skip the full driver/docs
+          sub-packages: '["cudart", "cublas", "cublas_dev"]'
+
+      - name: Install cuDNN 9 (public redistributable)
         shell: pwsh
         run: |
-          choco install cuda --version=12.6.2 -y --no-progress
-          # Refresh PATH so subsequent steps can see nvcc / CUDA bin
-          echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          # NVIDIA publishes cuDNN redistributable zips publicly (no login required)
+          $url = "https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/windows-x86_64/cudnn-windows-x86_64-9.5.1.17_cuda12-archive.zip"
+          Write-Host "Downloading cuDNN 9..."
+          Invoke-WebRequest -Uri $url -OutFile cudnn.zip -UseBasicParsing
+          Expand-Archive cudnn.zip -DestinationPath cudnn_out -Force
 
-      - name: Install cuDNN 9
-        shell: pwsh
-        run: |
-          # Download cuDNN 9 for CUDA 12 (zip redistributable — no login needed)
-          $cudnnUrl = "https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/windows-x86_64/cudnn-windows-x86_64-9.5.1.17_cuda12-archive.zip"
-          Invoke-WebRequest -Uri $cudnnUrl -OutFile cudnn.zip -UseBasicParsing
-          Expand-Archive cudnn.zip -DestinationPath cudnn_extracted -Force
-          # Copy DLLs into CUDA toolkit bin so the spec file can find them
-          $cudabin = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin"
-          Copy-Item "cudnn_extracted\cudnn-windows-x86_64-9.5.1.17_cuda12-archive\bin\*" $cudabin -Force
-          echo "cuDNN DLLs installed to $cudabin"
-          Get-ChildItem $cudabin | Where-Object { $_.Name -like "cudnn*" } | Select-Object Name
+          # Copy DLLs next to the CUDA toolkit bin so the spec file finds them
+          $cudaBin = "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}\bin"
+          Write-Host "Copying cuDNN DLLs to $cudaBin"
+          Get-ChildItem -Recurse "cudnn_out" -Filter "*.dll" | Copy-Item -Destination $cudaBin -Force
+          Write-Host "cuDNN DLLs present:"
+          Get-ChildItem $cudaBin -Filter "cudnn*" | Select-Object -ExpandProperty Name
 
-      - name: Build Python Backend (with CUDA DLLs)
+      - name: Build Python Backend (with CUDA DLLs bundled)
         working-directory: backend
         shell: pwsh
+        env:
+          CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
         run: |
           uv pip install --system -r requirements.txt
           uv pip install --system pyinstaller
-          # Use the Windows spec file — it discovers and bundles CUDA DLLs automatically
+          # The spec searches CUDA_PATH\bin and common locations for DLLs
           pyinstaller local-ai-backend-windows.spec
 
       - name: Upload Backend (folder with CUDA DLLs)
         uses: actions/upload-artifact@v4
         with:
           name: stealth-assistant-backend-exe
-          # Upload the whole onedir output folder (EXE + all bundled DLLs)
+          # onedir output: upload the whole folder (EXE + all bundled DLLs)
           path: backend/dist/local-ai-backend-windows/
 
 
