@@ -16,19 +16,45 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "backend/requirements*.txt"
-          
-      - name: Build Python Backend
+
+      # Install CUDA 12 Toolkit + cuDNN 9 so we can bundle the DLLs into the EXE.
+      # Chocolatey is pre-installed on windows-latest runners.
+      - name: Install CUDA 12 Toolkit
+        shell: pwsh
+        run: |
+          choco install cuda --version=12.6.2 -y --no-progress
+          # Refresh PATH so subsequent steps can see nvcc / CUDA bin
+          echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+
+      - name: Install cuDNN 9
+        shell: pwsh
+        run: |
+          # Download cuDNN 9 for CUDA 12 (zip redistributable — no login needed)
+          $cudnnUrl = "https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/windows-x86_64/cudnn-windows-x86_64-9.5.1.17_cuda12-archive.zip"
+          Invoke-WebRequest -Uri $cudnnUrl -OutFile cudnn.zip -UseBasicParsing
+          Expand-Archive cudnn.zip -DestinationPath cudnn_extracted -Force
+          # Copy DLLs into CUDA toolkit bin so the spec file can find them
+          $cudabin = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin"
+          Copy-Item "cudnn_extracted\cudnn-windows-x86_64-9.5.1.17_cuda12-archive\bin\*" $cudabin -Force
+          echo "cuDNN DLLs installed to $cudabin"
+          Get-ChildItem $cudabin | Where-Object { $_.Name -like "cudnn*" } | Select-Object Name
+
+      - name: Build Python Backend (with CUDA DLLs)
         working-directory: backend
+        shell: pwsh
         run: |
           uv pip install --system -r requirements.txt
           uv pip install --system pyinstaller
-          pyinstaller --name "local-ai-backend-windows" --onefile --exclude-module tkinter --exclude-module matplotlib --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module IPython --exclude-module notebook --exclude-module pytest --exclude-module tensorboard --hidden-import fastapi --hidden-import uvicorn --hidden-import faster_whisper --hidden-import websockets --hidden-import sounddevice --hidden-import chromadb --hidden-import sentence_transformers app.py
-          
-      - name: Upload Backend EXE
+          # Use the Windows spec file — it discovers and bundles CUDA DLLs automatically
+          pyinstaller local-ai-backend-windows.spec
+
+      - name: Upload Backend (folder with CUDA DLLs)
         uses: actions/upload-artifact@v4
         with:
           name: stealth-assistant-backend-exe
-          path: backend/dist/local-ai-backend-windows.exe
+          # Upload the whole onedir output folder (EXE + all bundled DLLs)
+          path: backend/dist/local-ai-backend-windows/
+
 
   build-frontend:
     runs-on: windows-latest
