@@ -1,0 +1,12 @@
+# Task: P37-T2 Model Status API & Display
+
+We want the user to know exactly what models and providers are currently running in the backend.
+
+1. In `backend/app.py`, create a new FastAPI endpoint `GET /api/status` that returns:
+   - `llm_provider`: config.LLM_PROVIDER
+   - `llm_model`: config.LLM_MODEL
+   - `stt_provider`: config.STT_PROVIDER
+   - `stt_model`: config.STT_MODEL
+   - `local_stt_engine`: config.LOCAL_STT_ENGINE
+
+2. In the frontend `frontend/src/lib/Settings.svelte`, add a new non-editable "System Status" section. Fetch from `GET /api/status` on mount and display these details neatly (e.g., using badges or a simple key-value table).
