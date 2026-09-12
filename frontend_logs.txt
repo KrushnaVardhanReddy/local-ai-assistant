@@ -1,0 +1,35 @@
+Starting frontend...
+cd frontend && npm run tauri dev
+
+> frontend@0.1.0 tauri
+> tauri dev
+
+     Running BeforeDevCommand (`npm run dev`)
+
+> frontend@0.1.0 dev
+> vite
+
+
+  VITE v6.4.3  ready in 536 ms
+
+  ➜  Local:   http://localhost:1420/
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching /app/frontend/src-tauri for changes...
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 0.53s
+[1m[92m     Running[0m `target/debug/AudioService`
+libEGL warning: DRI3 error: Could not get DRI3 device
+libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering
+2:58:31 PM [vite-plugin-svelte] src/App.svelte:45:6 Elements with the 'dialog' interactive role must have a tabindex value
+https://svelte.dev/e/a11y_interactive_supports_focus
+2:58:31 PM [vite-plugin-svelte] src/lib/Assistant.svelte:384:2 `<header>` with a mousedown handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions
+2:58:31 PM [vite-plugin-svelte] src/lib/Assistant.svelte:590:6 `<div>` with a mousedown handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions
+2:58:31 PM [vite-plugin-svelte] src/lib/Assistant.svelte:658:6 `<div>` with a mousedown handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions
+2:58:31 PM [vite-plugin-svelte] src/lib/Assistant.svelte:906:2 Unused CSS selector ".animate-\\[shimmer_2s_infinite\\]"
+https://svelte.dev/e/css_unused_selector
+2:59:15 PM [vite] (client) page reload playwright-report/index.html
+2:59:59 PM [vite] (client) page reload playwright-report/index.html
+2:59:59 PM [vite] (client) page reload playwright-report/index.html
+3:08:05 PM [vite] (client) hmr update /src/lib/StealthTerminal.svelte

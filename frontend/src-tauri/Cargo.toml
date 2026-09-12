@@ -32,6 +32,7 @@ uuid = { version = "1.26.0", features = ["v4"] }
 xcap = "0.9.8"
 image = "0.25.10"
 base64 = "0.23.1"
+tauri-plugin-shell = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"
