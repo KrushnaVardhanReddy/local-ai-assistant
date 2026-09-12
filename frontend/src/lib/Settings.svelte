@@ -4,6 +4,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
   import * as pdfjsLib from 'pdfjs-dist';
+  import StealthTerminal from "$lib/StealthTerminal.svelte";
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -286,6 +287,13 @@
   </div>
 
   <div class="config-section">
+    <div style="margin-bottom: 1rem;">
+      <h3 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: #ddd;">Embedded Stealth Terminal</h3>
+      <StealthTerminal />
+    </div>
+
+    <hr class="divider" style="margin-top: 0;" />
+
     <div class="input-group">
       <label for="backendUrl">Backend API URL</label>
       <input type="text" id="backendUrl" bind:value={backendUrl} placeholder="127.0.0.1:8765" data-testid="backend-url-input" />
