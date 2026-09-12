@@ -8,13 +8,70 @@ from config import config
 _instance: Optional["LocalIntelligence"] = None
 
 SYSTEM_PROMPT_INJECTIONS = {
-    "behavioral": "Structure your response using STAR format (Situation, Task, Action, Result). Limit to 4 bullet points.",
-    "coding": "Provide: 1) Pseudocode or a minimal code snippet, 2) Time/Space complexity, 3) One edge case to watch for.",
-    "system_design": "Structure as: 1) Clarify requirements, 2) High-level components, 3) Data flow, 4) Scalability considerations. Use bullet points.",
-    "conceptual": "Give a clear definition, followed by a brief example or core syntax snippet, and 1-2 key properties.",
-    "opinion": "State a clear 1-sentence opinion, then give 2 concrete reasons from your experience.",
+    "behavioral": (
+        "This is a behavioral interview question. Use the STAR format strictly:\n"
+        "• **Situation** (1-2 sentences): Set the scene — team size, company stage, or project context.\n"
+        "• **Task** (1-2 sentences): What you were personally responsible for.\n"
+        "• **Action** (3-5 bullet points): Specific steps YOU took. Use first-person, active verbs. "
+        "Include tools, frameworks, or decisions made. Be specific — avoid vague phrases like 'I helped' or 'I worked on'.\n"
+        "• **Result** (1-2 sentences): Quantified outcome (%, time saved, revenue impact, etc.). "
+        "If no number is available, describe the qualitative impact.\n"
+        "Do NOT truncate the Action section. Complete all 4 STAR components fully before ending your response."
+    ),
+
+    "coding": (
+        "This is a coding/algorithmic question. Your response MUST include ALL of the following sections — do not skip any:\n"
+        "1. **Approach** (2-3 sentences): State your chosen algorithm/data structure and why.\n"
+        "2. **Code** (complete, runnable solution): Write the full implementation — no placeholders like '...' or '# rest of logic here'. "
+        "The code must handle the base case, edge cases, and the main logic.\n"
+        "3. **Complexity**: State Time complexity and Space complexity with a one-line justification for each.\n"
+        "4. **Edge Cases** (2-3 bullet points): List inputs that could break a naive solution and how your code handles them.\n"
+        "5. **Follow-up** (optional, 1-2 sentences): Mention one optimization or variant the interviewer might ask next.\n"
+        "Write production-quality code. Use meaningful variable names. Add a comment above each non-obvious block."
+    ),
+
+    "system_design": (
+        "This is a system design question. Structure your answer with ALL of these sections:\n"
+        "1. **Clarify Requirements** (2-3 bullets): State the scale assumptions (users/day, data volume, latency SLA) "
+        "and functional/non-functional requirements you are designing for.\n"
+        "2. **High-Level Architecture**: Describe the key components (load balancer, API gateway, services, DB, cache, queue). "
+        "Name the specific technologies you'd use (e.g. PostgreSQL, Redis, Kafka, S3) and why.\n"
+        "3. **Data Model** (1 short paragraph or table): Key entities and relationships.\n"
+        "4. **Deep Dive — Critical Path**: Walk through the most important request flow end-to-end "
+        "(e.g., how a write or read propagates through every layer).\n"
+        "5. **Scalability & Reliability**: Address horizontal scaling, sharding/partitioning strategy, "
+        "replication, failover, and rate limiting.\n"
+        "6. **Trade-offs**: Name 1-2 explicit trade-offs in your design (e.g., consistency vs. availability).\n"
+        "Be specific with technology choices. Avoid vague statements like 'use a database' — always name the DB and justify it."
+    ),
+
+    "conceptual": (
+        "This is a conceptual/knowledge question. Your answer must be thorough and structured:\n"
+        "1. **Definition** (2-3 sentences): Give a clear, precise definition. Avoid circular definitions.\n"
+        "2. **How It Works** (3-5 bullet points or a short paragraph): Explain the underlying mechanism. "
+        "Go one level deeper than the surface — explain WHY, not just WHAT.\n"
+        "3. **Code Example** (if applicable): Provide a minimal but complete runnable snippet that demonstrates the concept. "
+        "Add inline comments to explain what each important line does.\n"
+        "4. **Key Properties / Gotchas** (2-3 bullet points): List the most important characteristics, "
+        "common misconceptions, or interview-trap edge cases.\n"
+        "5. **Real-world Use Case** (1 sentence): Where is this concept used in production systems?\n"
+        "Do NOT stop after the definition. Complete all applicable sections before ending your response."
+    ),
+
+    "opinion": (
+        "This is an opinion/preference question. Give a confident, well-reasoned answer:\n"
+        "1. **Position** (1 sentence): State your clear preference or recommendation directly — do not hedge.\n"
+        "2. **Reason 1** (2-3 sentences): First concrete technical or organizational reason, grounded in real experience.\n"
+        "3. **Reason 2** (2-3 sentences): Second concrete reason, ideally from a different angle "
+        "(e.g., one technical, one team/process-related).\n"
+        "4. **Concession** (1 sentence): Acknowledge when the alternative would be a better choice — "
+        "this shows maturity and nuance.\n"
+        "Speak in first person. Avoid wishy-washy phrases like 'it depends' without following up with concrete criteria."
+    ),
+
     "noise": None
 }
+
 
 def get_local_intelligence() -> "LocalIntelligence":
     global _instance
