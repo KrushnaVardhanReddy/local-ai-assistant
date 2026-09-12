@@ -659,6 +659,9 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
 
                             should_send, reason = await passes_filter(assembled)
                             if not should_send:
+                                chat_history.append({"role": "user", "content": assembled})
+                                if len(chat_history) > 10:
+                                    chat_history.pop(0)
                                 continue
 
                             transcript = assembled
@@ -777,7 +780,11 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                         q_type, qa_ctx, res_ctx = "conceptual", [], []
 
                     if q_type == "noise":
-                        # Noise implies skipping the LLM entirely for this turn
+                        # Noise implies skipping the LLM entirely for this turn, 
+                        # but we retain it in history for context
+                        chat_history.append({"role": "user", "content": transcript})
+                        if len(chat_history) > 10:
+                            chat_history.pop(0)
                         continue
 
                     for out_q in list(active_outbound_queues):
@@ -816,7 +823,6 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                     messages = [{"role": "system", "content": system_content}]
                     messages.extend(chat_history)
                     messages.append({"role": "user", "content": transcript})
-                    chat_history.clear()
 
                     interview_session.start_turn(transcript)
                     is_streaming.set()
@@ -829,6 +835,12 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                         interview_session.append_response_token(cached)
                         interview_session.complete_turn()
                         is_streaming.clear()
+                        
+                        chat_history.append({"role": "user", "content": transcript})
+                        chat_history.append({"role": "assistant", "content": cached})
+                        if len(chat_history) > 10:
+                            chat_history = chat_history[-10:]
+
                         if not pending_questions.empty():
                             next_q = pending_questions.get_nowait()
                             ws_queue.put_nowait({"type": "chat", "text": next_q})
@@ -847,6 +859,11 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                         print(f"[DEBUG] {int((time.time() - llm_start) * 1000)}ms Finished calling LLM.", file=sys.stderr)
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "end"})
+
+                        chat_history.append({"role": "user", "content": transcript})
+                        chat_history.append({"role": "assistant", "content": full_response})
+                        if len(chat_history) > 10:
+                            chat_history = chat_history[-10:]
 
                         cache_store(transcript, full_response)
 
