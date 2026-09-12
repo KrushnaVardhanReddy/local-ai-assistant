@@ -89,3 +89,11 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P36-T2 | `backend/app.py`, `backend/local_intelligence.py` | **Smart Context Pipeline:** SmolLM2 multi-class routing + ChromaDB RAG | ✅ | #113 |
+
+---
+
+## Phase 37 — Embedded Stealth Terminal
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P37-T1 | `frontend/src-tauri/tauri.conf.json`, `frontend/src/lib/StealthTerminal.svelte` | **Embedded UI Terminal:** Run backend silently within Tauri via Sidecar/Shell plugin | ⏳ In Progress | Jules |
