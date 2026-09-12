@@ -8,6 +8,29 @@
     "core:window:allow-start-dragging",
     "core:window:allow-set-content-protected",
     "core:window:allow-set-ignore-cursor-events",
-    "opener:default"
+    "opener:default",
+    "shell:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "python",
+          "cmd": "python",
+          "args": [
+            "backend/app.py"
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "backend",
+          "cmd": "",
+          "sidecar": true
+        }
+      ]
+    }
   ]
 }

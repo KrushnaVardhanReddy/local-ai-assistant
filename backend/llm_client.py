@@ -52,7 +52,8 @@ class LLMClient:
         payload = {
             "model": self.model,
             "messages": msgs,
-            "stream": True
+            "stream": True,
+            "max_tokens": 4096
         }
 
         try:

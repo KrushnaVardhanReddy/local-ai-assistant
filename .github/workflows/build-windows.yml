@@ -64,10 +64,17 @@ jobs:
 
 
   build-frontend:
+    needs: build-backend
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       
+      - name: Download Backend Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: stealth-assistant-backend-exe
+          path: frontend/src-tauri/resources/backend
+          
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

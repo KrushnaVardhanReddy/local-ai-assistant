@@ -4,6 +4,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
   import * as pdfjsLib from 'pdfjs-dist';
+  import StealthTerminal from "$lib/StealthTerminal.svelte";
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -41,6 +42,9 @@
   let resumeStatus = $state("");
   let resumeFilename = $state("");
 
+  // System Status state
+  let systemStatus = $state<any>(null);
+
   // Job Description state
   let jobDescription = $state("");
   let jobDescriptionStatus = $state("");
@@ -52,6 +56,10 @@
       if (healthRes.ok) {
         const healthData = await healthRes.json();
         currentLLMProvider = healthData.llm_provider;
+      }
+      const statusRes = await fetch(`${apiUrl}/api/status`);
+      if (statusRes.ok) {
+        systemStatus = await statusRes.json();
       }
     } catch (e) { console.error("Failed to load health", e); }
     try {
@@ -286,6 +294,45 @@
   </div>
 
   <div class="config-section">
+    <div class="section-label">System Status</div>
+    {#if systemStatus}
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="status-key">LLM Provider</span>
+          <span class="status-value badge">{systemStatus.llm_provider}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-key">LLM Model</span>
+          <span class="status-value badge">{systemStatus.llm_model}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-key">STT Provider</span>
+          <span class="status-value badge">{systemStatus.stt_provider}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-key">STT Model</span>
+          <span class="status-value badge">{systemStatus.stt_model}</span>
+        </div>
+        <div class="status-item">
+          <span class="status-key">Local STT Engine</span>
+          <span class="status-value badge">{systemStatus.local_stt_engine}</span>
+        </div>
+      </div>
+    {:else}
+      <div class="status-indicator">Loading status...</div>
+    {/if}
+  </div>
+
+  <hr class="divider" />
+
+  <div class="config-section">
+    <div style="margin-bottom: 1rem;">
+      <h3 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: #ddd;">Embedded Stealth Terminal</h3>
+      <StealthTerminal />
+    </div>
+
+    <hr class="divider" style="margin-top: 0;" />
+
     <div class="input-group">
       <label for="backendUrl">Backend API URL</label>
       <input type="text" id="backendUrl" bind:value={backendUrl} placeholder="127.0.0.1:8765" data-testid="backend-url-input" />
@@ -737,6 +784,32 @@
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #666;
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+
+  .status-key {
+    color: #aaa;
+  }
+
+  .status-value {
+    color: #fff;
+    font-weight: 500;
   }
 
   .status-indicator {
