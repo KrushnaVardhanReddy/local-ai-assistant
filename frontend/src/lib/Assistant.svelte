@@ -412,13 +412,12 @@
         id="mock-mode-btn"
         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant transition-colors pointer-events-auto {wsState.isMockMode ? 'text-green-400 animate-pulse bg-green-400/10' : 'hover:text-primary'}"
         onclick={handleMockModeToggle}
-        title={wsState.isMockMode ? "Stop Mock Interview" : "Start Mock Interview Practice"}
+        aria-label={wsState.isMockMode ? "Stop Mock Interview" : "Start Mock Interview Practice"}
       >
         <span class="material-symbols-outlined text-[20px]">record_voice_over</span>
       </button>
       <button
         aria-label="Screenshot"
-        title={wsState.plan === 'demo' || wsState.plan === 'payg' ? 'Vision features require a Monthly or Founding plan.' : 'Screenshot'}
         class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto {(wsState.plan === 'demo' || wsState.plan === 'payg') ? 'opacity-50 cursor-not-allowed text-on-surface-variant' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary ' + (wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : '')}"
         onclick={triggerVision}
         disabled={wsState.plan === 'demo' || wsState.plan === 'payg'}
@@ -428,7 +427,6 @@
       <!-- STAR Method Preset -->
       <button
         aria-label="STAR Method Preset"
-        title="Prime next answer with STAR format (Situation → Task → Action → Result)"
         class="flex items-center gap-1 px-2.5 py-1 rounded-full
                transition-colors pointer-events-auto text-[11px] font-bold
                tracking-wider border
@@ -441,7 +439,6 @@
       </button>
       <button
         aria-label="Hotkeys Cheatsheet"
-        title="Hotkeys Cheatsheet"
         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
         onclick={() => uiState.hotkeysPanelOpen = true}
       >
@@ -451,14 +448,13 @@
         id="session-report-btn"
         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
         onclick={() => showSessionReport = true}
-        title="Session Report (Ctrl+Shift+E)"
+        aria-label="Session Report"
       >
         <span class="material-symbols-outlined text-[20px]">analytics</span>
       </button>
 
       <button
         aria-label="Toggle Resume Builder"
-        title={currentView === 'interview' ? 'Switch to Resume Builder' : 'Switch to Live Interview'}
         class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto {currentView === 'resume' ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
         onclick={() => currentView = currentView === 'interview' ? 'resume' : 'interview'}
       >
@@ -471,7 +467,6 @@
       <!-- Click-through toggle -->
       <button
         aria-label="Toggle Click-Through"
-        title="Click-Through Mode (Ctrl+Shift+M) — lets you click apps behind the overlay"
         class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto
                {clickthrough ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
         onclick={toggleClickthrough}
@@ -481,11 +476,11 @@
       <!-- Separator -->
       <div class="w-px h-5 bg-white/10 mx-1"></div>
       <!-- Hide window (Ctrl+Shift+Space to restore) -->
-      <button aria-label="Hide" title="Hide (Ctrl+Shift+Space to restore)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-yellow-400 transition-colors pointer-events-auto" onclick={hideWindow}>
+      <button aria-label="Hide" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-yellow-400 transition-colors pointer-events-auto" onclick={hideWindow}>
         <span class="material-symbols-outlined text-[20px]" data-icon="visibility_off">visibility_off</span>
       </button>
       <!-- Close / Quit app -->
-      <button aria-label="Close" title="Quit App" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/20 text-on-surface-variant hover:text-red-400 transition-colors pointer-events-auto" onclick={closeApp}>
+      <button aria-label="Close" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/20 text-on-surface-variant hover:text-red-400 transition-colors pointer-events-auto" onclick={closeApp}>
         <span class="material-symbols-outlined text-[20px]" data-icon="close">close</span>
       </button>
     </div>
@@ -504,7 +499,6 @@
                  animate-chip-in flex-shrink-0"
           onclick={() => sendChip(chip)}
           onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') sendChip(chip); }}
-          title="Click to send: {chip.text}"
         >
           {#if chip.speaker === 'interviewer'}
             <span class="speaker-badge interviewer-badge">🎤</span>
@@ -601,7 +595,6 @@
         <button
           class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant/60 hover:text-primary transition-colors pointer-events-auto flex-shrink-0"
           onclick={() => liveEarsCollapsed = !liveEarsCollapsed}
-          title="Collapse Live Ears (Ctrl+Shift+L)"
           aria-label="Collapse Live Ears"
         >
           <span class="material-symbols-outlined text-[18px]">chevron_left</span>
@@ -645,7 +638,6 @@
         class="self-center flex-shrink-0 w-8 h-16 glass-panel rounded-xl flex items-center justify-center pointer-events-auto
                text-on-surface-variant/50 hover:text-primary hover:bg-white/10 transition-all duration-200 shadow-xl border border-white/5"
         onclick={() => liveEarsCollapsed = false}
-        title="Expand Live Ears (Ctrl+Shift+L)"
         aria-label="Expand Live Ears"
       >
         <span class="material-symbols-outlined text-[18px]">chevron_right</span>
@@ -681,7 +673,6 @@
                    {wsState.isThinking || wsState.transcriptHistory.length === 0
                      ? 'text-on-surface-variant/30 cursor-not-allowed'
                      : 'text-on-surface-variant/60 hover:text-secondary'}"
-            title="Catch me up — summarize conversation so far"
             aria-label="Catch Me Up"
             onclick={triggerCatchMeUp}
             disabled={wsState.isThinking || wsState.transcriptHistory.length === 0}
@@ -691,7 +682,6 @@
           <button
             class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant/60 hover:text-primary transition-colors pointer-events-auto"
             onclick={() => brainCollapsed = !brainCollapsed}
-            title="Collapse Brain Panel (Ctrl+Shift+B)"
             aria-label="Collapse Brain Panel"
           >
             <span class="material-symbols-outlined text-[18px]">chevron_right</span>
@@ -772,7 +762,6 @@
         class="self-center flex-shrink-0 w-8 h-16 glass-panel rounded-xl flex items-center justify-center pointer-events-auto
                text-on-surface-variant/50 hover:text-primary hover:bg-white/10 transition-all duration-200 shadow-xl border border-white/5"
         onclick={() => brainCollapsed = false}
-        title="Expand Brain Panel (Ctrl+Shift+B)"
         aria-label="Expand Brain Panel"
       >
         <span class="material-symbols-outlined text-[18px]">chevron_left</span>

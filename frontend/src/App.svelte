@@ -52,7 +52,7 @@
   <Assistant />
   
   <div class="fixed bottom-6 right-8 z-[100] pointer-events-auto flex gap-4">
-    <button class="text-on-surface-variant hover:text-primary transition-colors text-xl" onclick={() => showKnowledgeBase = !showKnowledgeBase} title="Knowledge Base">
+    <button class="text-on-surface-variant hover:text-primary transition-colors text-xl" onclick={() => showKnowledgeBase = !showKnowledgeBase} aria-label="Knowledge Base">
       📚
     </button>
     <Settings />

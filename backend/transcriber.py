@@ -110,6 +110,22 @@ class Transcriber:
     # Local (faster-whisper) backend
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _is_gpu_available() -> bool:
+        """Returns True if a CUDA-capable GPU is present AND the required CUDA
+        runtime libraries (cublas, cudnn) can actually be loaded."""
+        try:
+            import ctranslate2
+            return "cuda" in ctranslate2.get_supported_compute_types("cuda")
+        except Exception:
+            pass
+        try:
+            import torch
+            return torch.cuda.is_available()
+        except Exception:
+            pass
+        return False
+
     def _load_local(self) -> None:
         if config.LOCAL_STT_ENGINE == "parakeet":
             print("✅ STT model loaded: Parakeet", file=sys.stderr)
@@ -120,6 +136,19 @@ class Transcriber:
         import multiprocessing
         cpu_threads = min(multiprocessing.cpu_count(), 8)
 
+        # If config requests GPU, verify it is actually usable before attempting
+        # to load the model. Missing CUDA DLLs (e.g. cublas64_12.dll on Windows)
+        # raise an OSError whose message does NOT contain the word "cuda", so a
+        # simple string-match fallback would not catch them.
+        if self.device == "cuda" and not self._is_gpu_available():
+            print(
+                "⚠️  GPU requested but CUDA runtime libraries not found — "
+                "falling back to CPU (install CUDA 12 + cuDNN to enable GPU)",
+                file=sys.stderr
+            )
+            self.device = "cpu"
+            self.compute_type = "int8"
+
         start = time.perf_counter()
         try:
             self.model = WhisperModel(
@@ -129,8 +158,21 @@ class Transcriber:
                 cpu_threads=cpu_threads
             )
         except Exception as e:
-            if "cuda" in str(e).lower():
-                print("⚠️  CUDA unavailable — falling back to CPU", file=sys.stderr)
+            err = str(e).lower()
+            # Catch both "cuda not available" messages AND missing DLL errors
+            # such as "Library cublas64_12.dll is not found or cannot be loaded".
+            is_cuda_error = (
+                "cuda" in err
+                or "cublas" in err
+                or "cudnn" in err
+                or "dll" in err
+                or "library" in err and "not found" in err
+            )
+            if self.device == "cuda" and is_cuda_error:
+                print(
+                    f"⚠️  CUDA error ({e}) — falling back to CPU",
+                    file=sys.stderr
+                )
                 self.device = "cpu"
                 self.compute_type = "int8"
                 self.model = WhisperModel(

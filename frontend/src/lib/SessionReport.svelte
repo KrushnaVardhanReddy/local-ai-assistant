@@ -191,7 +191,7 @@
       <div class="header-actions">
         {#if scorecard}
           <div class="relative">
-            <button class="action-btn flex items-center gap-2 px-3 py-1.5" onclick={() => showExportMenu = !showExportMenu} title="Export Report">
+            <button class="action-btn flex items-center gap-2 px-3 py-1.5" onclick={() => showExportMenu = !showExportMenu} aria-label="Export Report">
               <span class="material-symbols-outlined text-[18px]">ios_share</span>
               <span class="text-sm font-medium">Export</span>
             </button>
@@ -223,7 +223,7 @@
             {/if}
           </div>
         {/if}
-        <button class="action-btn close-btn" onclick={onClose} title="Close">
+        <button class="action-btn close-btn" onclick={onClose} aria-label="Close">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
