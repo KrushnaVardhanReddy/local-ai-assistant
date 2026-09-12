@@ -1116,7 +1116,19 @@ async def extract_resume(body: ResumeModel):
         "detected_language": detected_language
     }
 
+
+@app.get("/api/status")
+async def get_system_status():
+    return {
+        "llm_provider": config.LLM_PROVIDER,
+        "llm_model": config.LLM_MODEL,
+        "stt_provider": config.STT_PROVIDER,
+        "stt_model": config.STT_MODEL,
+        "local_stt_engine": config.LOCAL_STT_ENGINE
+    }
+
 @app.get("/api/resume/context")
+
 async def get_resume_context():
     return {"context": candidate_context}
 
