@@ -357,13 +357,49 @@ export default {
 				console.error("Webhook error", e);
 				response = Response.json({ status: 'error', message: e.message }, { status: 400 });
 			}
+		} else if (path === '/ws') {
+			const upgradeHeader = request.headers.get('Upgrade');
+			if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
+				response = new Response('Upgrade Required', { status: 426 });
+			} else {
+				const webSocketPair = new WebSocketPair();
+				const client = webSocketPair[0];
+				const server = webSocketPair[1];
+
+				server.accept();
+
+				server.addEventListener('message', (event) => {
+					try {
+						if (typeof event.data === 'string') {
+							JSON.parse(event.data);
+						}
+					} catch (e) {
+						// Ignored for now
+					}
+				});
+
+				server.addEventListener('close', () => {
+					// Cleanup
+				});
+
+				server.addEventListener('error', (error) => {
+					console.error('WebSocket error:', error);
+				});
+
+				return new Response(null, {
+					status: 101,
+					webSocket: client,
+				});
+			}
 		} else {
 			response = new Response('Not Found', { status: 404 });
 		}
 
 		// Apply CORS headers to the response
-		for (const [key, value] of Object.entries(corsHeaders)) {
-			response.headers.set(key, value);
+		if (response) {
+			for (const [key, value] of Object.entries(corsHeaders)) {
+				response.headers.set(key, value);
+			}
 		}
 
 		return response;
