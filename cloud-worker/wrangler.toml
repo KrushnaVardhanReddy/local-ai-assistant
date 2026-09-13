@@ -1,0 +1,10 @@
+name = "cloud-worker"
+main = "src/index.ts"
+compatibility_date = "2024-09-13"
+
+[observability]
+enabled = true
+
+[[kv_namespaces]]
+binding = "KV_CACHE"
+id = "mock_cache"
