@@ -53,8 +53,8 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P40-T1 | `frontend/src/lib/api.ts` | **Centralized API Config:** Create a single `api.ts` module with `getApiUrl()` / `getWsUrl()` helpers driven by `VITE_API_BASE` env var. Foundation for all other tasks. | ✅ | #123 |
-| P40-T2 | `frontend/src/lib/*.svelte`, `frontend/src/lib/ws.svelte.ts` | **Refactor Hardcoded URLs:** Replace all ~25 hardcoded `127.0.0.1:8765` references across 6 files with the new `getApiUrl()` / `getWsUrl()` helpers. | ⬜ | — |
-| P40-T3 | `cloud-worker/` | **Cloudflare Worker Backend:** Implement a Worker that mirrors all FastAPI endpoints (`/ws`, `/api/ask`, `/api/status`, `/api/cache`, `/api/resume/context`, etc.) calling Groq/OpenAI. Auth via Cloudflare KV API keys. | ⬜ | — |
+| P40-T2 | `frontend/src/lib/*.svelte`, `frontend/src/lib/ws.svelte.ts` | **Refactor Hardcoded URLs:** Replace all ~25 hardcoded `127.0.0.1:8765` references across 6 files with the new `getApiUrl()` / `getWsUrl()` helpers. | ⏳ Submitted | Jules |
+| P40-T3 | `cloud-worker/` | **Cloudflare Worker Backend:** Implement a Worker that mirrors all FastAPI endpoints (`/ws`, `/api/ask`, `/api/status`, `/api/cache`, `/api/resume/context`, etc.) calling Groq/OpenAI. Auth via Cloudflare KV API keys. | ⏳ Submitted | Jules |
 | P40-T4 | `cloud-worker/`, `frontend/src/lib/auth.svelte.ts` | **Cloud User Auth & Session Management:** User signup → API key provisioned in Cloudflare KV → key stored in Tauri `localStorage` → sent as `Authorization: Bearer` on every request. | ⬜ | — |
 | P40-T5 | `src-tauri/tauri.cloud.conf.json`, `.env.cloud` | **Tauri Cloud Build Config:** Create cloud-specific Tauri config (no sidecar, product name `BarnOwl Cloud`, new bundle ID) and `.env.cloud` pointing `VITE_API_BASE` at the Worker URL. | ⬜ | — |
 | P40-T6 | `.github/workflows/build-windows-cloud.yml` | **CI/CD Cloud Build Pipeline:** Fast (~2 min) GitHub Actions workflow — no PyInstaller, just `npm build` + `cargo tauri build`. Produces a `~10-15MB` `.msi` installer. | ⬜ | — |
