@@ -112,3 +112,11 @@
 | P38-T2 | `src-tauri/src/main.rs` | **API to Tauri IPC:** Rewrite all Python FastAPI HTTP/WebSocket endpoints as native Tauri Commands (`#[tauri::command]`) for zero IPC overhead. | ⬜ | — |
 | P38-T3 | `src-tauri/src/vector_db.rs` | **Vector DB Migration:** Replace Python `chromadb` with a Rust-native embedded alternative (e.g., Qdrant or `sqlite-vec`). | ⬜ | — |
 | P38-T4 | `src-tauri/src/ml_routing.rs` | **Intent Router Migration:** Export the Scikit-learn `question_classifier.pkl` to ONNX and rewrite the tensor math pipeline in Rust. | ⬜ | — |
+
+---
+
+## Phase 39 — Dynamic Cache Pre-Warmer
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P39-T1 | `scripts/dynamic_prewarmer.py` | **Dynamic Cache Pre-Warmer:** Generate 100+ Q&A pairs using an LLM + JD + Resume and store them in ChromaDB. | ⏳ Submitted | Jules |

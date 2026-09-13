@@ -1,0 +1,39 @@
+TASK: P39-T1 — Dynamic Cache Pre-Warmer
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We use ChromaDB to cache semantic Q&A pairs to bypass API costs and latency.
+To fully utilize this, we want to pre-warm the cache before an interview by proactively 
+generating 100+ highly probable interview questions using an LLM.
+
+We want to dynamically generate these questions based on a Job Description (JD) and a Resume.
+Critically, the answers MUST follow the exact formatting guidelines our users love, which 
+are stored in `SYSTEM_PROMPT_INJECTIONS` in `backend/local_intelligence.py`.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. Create a script: `scripts/dynamic_prewarmer.py`
+2. MOCK DATA: Include a mocked Job Description and Resume for a Frontend or Backend engineer directly in the script.
+3. LLM PROMPT INJECTION: 
+   - Read the exact `SYSTEM_PROMPT_INJECTIONS` dictionary from `backend/local_intelligence.py` (import it).
+   - Inject these detailed format instructions into the prompt you send to the LLM.
+4. LLM GENERATION:
+   - Call the LLM API (e.g., OpenAI or Groq, using the `LLMClient` from `backend.llm_client`) to generate ~100 Q&A pairs in JSON format based on the mock JD and Resume.
+5. CHROMADB INGESTION:
+   - Instantiate the `QACache` from `backend.qa_cache`.
+   - Instantiate the `LocalIntelligence` engine to get the Nomic embeddings.
+   - Loop over the JSON array, embed each question, and store the Q&A in ChromaDB using `qa_cache.add_qa_pair(question, answer, embedding)`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION (Basic Testing)
+═══════════════════════════════════════════════════════════════
+
+1. Verify that `scripts/dynamic_prewarmer.py` successfully runs end-to-end.
+2. Verify that running the script adds new entries to the ChromaDB cache.
+
+Commit message: "jules: P39-T1 dynamic cache prewarmer script"
+Target branch: feature/krushna
