@@ -1,0 +1,51 @@
+name: Build Windows Cloud EXE
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/krushna
+    paths:
+      - '.github/workflows/build-windows-cloud.yml'
+
+jobs:
+  build-cloud:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri -> target
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Cloud Frontend
+        working-directory: frontend
+        run: npm run build:cloud
+
+      - name: Build Cloud Tauri App
+        working-directory: frontend
+        run: npm run tauri build -- --config src-tauri/tauri.cloud.conf.json
+
+      - name: Upload Cloud Frontend EXE and MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: stealth-assistant-cloud-exe-msi
+          path: |
+            frontend/src-tauri/target/release/**/*.msi
+            frontend/src-tauri/target/release/**/*.exe
