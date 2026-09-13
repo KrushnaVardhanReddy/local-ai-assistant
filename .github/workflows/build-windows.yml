@@ -1,84 +1,11 @@
 name: Build Windows EXE
 on: [workflow_dispatch]
 jobs:
-  build-backend:
+  build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-          cache-dependency-glob: "backend/requirements*.txt"
-
-      # Jimver/cuda-toolkit correctly installs CUDA on Windows runners.
-      # It downloads the network installer directly from NVIDIA — no Chocolatey needed.
-      - name: Install CUDA 12.6 Toolkit
-        uses: Jimver/cuda-toolkit@v0.2.19
-        id: cuda-toolkit
-        with:
-          cuda: '12.6.0'
-          method: 'network'
-          # Only install the runtime + cuBLAS components; skip the full driver/docs
-          sub-packages: '["cudart", "cublas", "cublas_dev"]'
-
-      - name: Install cuDNN 9 (public redistributable)
-        shell: pwsh
-        run: |
-          # NVIDIA publishes cuDNN redistributable zips publicly (no login required)
-          $url = "https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/windows-x86_64/cudnn-windows-x86_64-9.5.1.17_cuda12-archive.zip"
-          Write-Host "Downloading cuDNN 9..."
-          Invoke-WebRequest -Uri $url -OutFile cudnn.zip -UseBasicParsing
-          Expand-Archive cudnn.zip -DestinationPath cudnn_out -Force
-
-          # Copy DLLs next to the CUDA toolkit bin so the spec file finds them
-          $cudaBin = "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}\bin"
-          Write-Host "Copying cuDNN DLLs to $cudaBin"
-          Get-ChildItem -Recurse "cudnn_out" -Filter "*.dll" | Copy-Item -Destination $cudaBin -Force
-          Write-Host "cuDNN DLLs present:"
-          Get-ChildItem $cudaBin -Filter "cudnn*" | Select-Object -ExpandProperty Name
-
-      - name: Build Python Backend (with CUDA DLLs bundled)
-        working-directory: backend
-        shell: pwsh
-        env:
-          CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
-        run: |
-          uv pip install --system -r requirements.txt
-          uv pip install --system pyinstaller
-          # The spec searches CUDA_PATH\bin and common locations for DLLs
-          pyinstaller local-ai-backend-windows.spec
-
-      - name: Upload Backend
-        uses: actions/upload-artifact@v4
-        with:
-          name: stealth-assistant-backend-exe
-          path: backend/dist/local-ai-backend-windows.exe
-
-
-  build-frontend:
-    needs: build-backend
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Download Backend Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: stealth-assistant-backend-exe
-          path: frontend/src-tauri/
-          
-      - name: Rename sidecar binary
-        working-directory: frontend/src-tauri
-        shell: pwsh
-        run: Rename-Item local-ai-backend-windows.exe backend-x86_64-pc-windows-msvc.exe
-          
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -95,6 +22,65 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: frontend/src-tauri -> target
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/requirements*.txt"
+
+      - name: Install CUDA 12.6 Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.19
+        id: cuda-toolkit
+        with:
+          cuda: '12.6.0'
+          method: 'network'
+          sub-packages: '["cudart", "cublas", "cublas_dev"]'
+
+      - name: Cache cuDNN
+        id: cache-cudnn
+        uses: actions/cache@v4
+        with:
+          path: cudnn.zip
+          key: cudnn-9.5.1.17-windows-x86_64
+
+      - name: Install cuDNN 9 (public redistributable)
+        shell: pwsh
+        run: |
+          if ("${{ steps.cache-cudnn.outputs.cache-hit }}" -ne "true") {
+            $url = "https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/windows-x86_64/cudnn-windows-x86_64-9.5.1.17_cuda12-archive.zip"
+            Write-Host "Downloading cuDNN 9..."
+            Invoke-WebRequest -Uri $url -OutFile cudnn.zip -UseBasicParsing
+          } else {
+            Write-Host "cuDNN loaded from cache!"
+          }
+          Expand-Archive cudnn.zip -DestinationPath cudnn_out -Force
+
+          $cudaBin = "${{ steps.cuda-toolkit.outputs.CUDA_PATH }}\bin"
+          Write-Host "Copying cuDNN DLLs to $cudaBin"
+          Get-ChildItem -Recurse "cudnn_out" -Filter "*.dll" | Copy-Item -Destination $cudaBin -Force
+          Write-Host "cuDNN DLLs present:"
+          Get-ChildItem $cudaBin -Filter "cudnn*" | Select-Object -ExpandProperty Name
+
+      - name: Build Python Backend
+        working-directory: backend
+        shell: pwsh
+        env:
+          CUDA_PATH: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}
+        run: |
+          uv pip install --system -r requirements.txt
+          uv pip install --system pyinstaller
+          pyinstaller local-ai-backend-windows.spec
+          
+      - name: Move and Rename sidecar binary
+        shell: pwsh
+        run: |
+          Move-Item backend/dist/local-ai-backend-windows.exe frontend/src-tauri/backend-x86_64-pc-windows-msvc.exe
           
       - name: Install Frontend Dependencies
         working-directory: frontend
@@ -104,7 +90,7 @@ jobs:
         working-directory: frontend
         run: npm run tauri build
         
-      - name: Upload Frontend EXE
+      - name: Upload Final Executable
         uses: actions/upload-artifact@v4
         with:
           name: stealth-assistant-frontend-exe
