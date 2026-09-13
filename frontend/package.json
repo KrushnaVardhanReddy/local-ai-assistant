@@ -12,7 +12,8 @@
     "tauri dev": "tauri dev",
     "tauri build": "tauri build",
     "cap sync": "cap sync",
-    "cap build": "cap build"
+    "cap build": "cap build",
+    "build:cloud": "vite build --mode cloud"
   },
   "license": "MIT",
   "dependencies": {
