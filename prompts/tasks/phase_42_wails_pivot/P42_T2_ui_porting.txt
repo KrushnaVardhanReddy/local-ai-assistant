@@ -1,0 +1,9 @@
+TITLE: P42-T2 Port Svelte UI to Wails
+OBJECTIVE
+Copy the existing Svelte frontend code into the new Wails app.
+
+INSTRUCTIONS
+1. Copy the contents of `frontend/src/` into `wails-app/frontend/src/`.
+2. Copy the contents of `frontend/static/` into `wails-app/frontend/static/`.
+3. Copy the Tailwind CSS configuration (`tailwind.config.js`, `postcss.config.js`) into `wails-app/frontend/`.
+4. Update `wails-app/frontend/package.json` to include any missing dependencies from `frontend/package.json` (like svelte-routing, lucide-svelte, etc).

@@ -1,0 +1,8 @@
+TITLE: P42-T3 Swap Tauri APIs for Wails APIs
+OBJECTIVE
+Remove Tauri-specific frontend bindings and replace them with Wails equivalents.
+
+INSTRUCTIONS
+1. Search through `wails-app/frontend/src/**/*.svelte` and `.ts` files for `@tauri-apps/api`.
+2. Replace Tauri IPC calls (like `invoke(...)`) with the Wails equivalent (`window.go.main.App...`).
+3. Replace Tauri window controls (`WebviewWindow`) with Wails runtime calls (`@wailsio/runtime`).

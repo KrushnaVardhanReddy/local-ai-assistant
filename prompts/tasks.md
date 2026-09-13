@@ -42,3 +42,37 @@
 | P41-T1 | `cloud-worker/src/index.ts` | **Worker WebSocket Upgrade:** Implement the `/ws` endpoint in the worker to accept incoming WebSocket upgrade requests and handle connection lifecycle. | ✅ | #134 |
 | P41-T2 | `cloud-worker/src/index.ts` | **Supabase Session Validation:** Handle the initial `{"type": "auth"}` message over WS. Validate the API Key against Supabase and check if the user has `payg_sessions > 0`. | ✅ | #135 |
 | P41-T3 | `cloud-worker/src/index.ts` | **LLM Streaming & Vector Cache Integration:** Handle the `{"type": "chat"}` message over WS. Generate embeddings, query the `pgvector` cache, stream to Groq, and stream tokens back. | ⬜ | — |
+
+---
+
+## Phase 42 — The Wails Pivot (Frontend & Desktop Core) 🚀
+
+> Replacing Tauri (Rust) with Wails (Go) for a unified single-binary architecture.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P42-T1 | `wails-app/` | **Init Wails:** Run the Wails CLI to generate a new Svelte+TS template (`wails init -n local-ai-assistant -t svelte-ts`). | ⬜ | — |
+| P42-T2 | `wails-app/frontend/src/` | **UI Porting:** Copy existing Svelte components, lib files, and Tailwind configuration into the new Wails frontend directory. Fix any imports. | ⬜ | — |
+| P42-T3 | `wails-app/frontend/src/lib/` | **API Swap:** Replace Tauri frontend calls (e.g., `invoke('command')`, `WebviewWindow`) with Wails Go bindings (`@wailsio/runtime`). | ⬜ | — |
+| P42-T4 | `wails-app/frontend/src/lib/api.ts` | **Cloud Worker Proxy (Wails Edition):** Ensure the Cloud Edition Svelte logic correctly points to the existing Cloudflare Worker URL. | ⬜ | — |
+
+---
+
+## Phase 43 — Go Native AI Backend (Local ML) 🧠
+
+> Re-implementing the Python local AI server in pure Go.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P43-T1 | `wails-app/backend/vector_db.go` | **Local Vector DB:** Replace ChromaDB with embedded SQLite + `sqlite-vec` extension in Go. | ⬜ | — |
+| P43-T2 | `wails-app/backend/embeddings.go` | **Embeddings & Intent:** Use `onnxruntime-go` to run SmolLM2 ONNX models directly in the Go process for fast vector generation. | ⬜ | — |
+| P43-T3 | `wails-app/backend/stt.go` | **Local STT:** Integrate `whisper.go` (CGO bindings for whisper.cpp) for offline Speech-to-Text inference, replacing `faster-whisper`. | ⬜ | — |
+
+---
+
+## Phase 44 — Finalization & Cleanup 🧹
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P44-T1 | `frontend/`, `backend/`, `src-tauri/` | **The Great Deletion:** Safely remove the legacy Tauri frontend, Rust backend, and Python sidecar directories. | ⬜ | — |
+| P44-T2 | `Makefile`, `.github/workflows/` | **Update CI Pipelines:** Switch build scripts to use `wails build` instead of `cargo tauri build` and `PyInstaller`. | ⬜ | — |
