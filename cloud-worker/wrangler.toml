@@ -8,3 +8,6 @@ enabled = true
 [[kv_namespaces]]
 binding = "KV_CACHE"
 id = "mock_cache"
+
+[vars]
+SUPABASE_URL = "http://mock.url"
