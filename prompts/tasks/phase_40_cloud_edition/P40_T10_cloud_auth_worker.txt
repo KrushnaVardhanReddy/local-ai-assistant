@@ -1,0 +1,35 @@
+TASK: P40-T10 — Cloud Worker Backend Auth (Supabase Validation)
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+The Frontend already injects the `cloud_api_key` as a `Bearer` token into all requests (completed in P40-T4 PR 126). 
+Now, the Cloudflare Worker backend needs to validate this key against our Supabase PostgreSQL database to ensure the user is authorized and has credits.
+
+We have a Supabase `user_api_keys` table and a `profiles` table.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. AUTH MIDDLEWARE / VALIDATOR:
+   - Inside the Cloudflare Worker (`cloud-worker/src/index.ts`), implement a function to extract the Bearer token from the `Authorization` header.
+   - Query the Supabase `user_api_keys` table to verify the API key is valid.
+
+2. CREDIT CHECK:
+   - If the key is valid, join or query the `profiles` table to check if the user has `payg_sessions > 0` (or allow free tier based on a rule).
+
+3. ROUTE PROTECTION:
+   - Protect `/api/ask`, `/api/cache`, and `/api/status` with this validation logic. 
+   - Return 401 Unauthorized if the key is missing or invalid.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Make a request to `/api/status` without a header -> 401 Unauthorized.
+2. Make a request with a valid mocked key in Supabase -> 200 OK.
+
+Commit message: "jules: P40-T10 implement backend auth validation with supabase"
+Target branch: feature/krushna

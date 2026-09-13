@@ -1,10 +1,12 @@
-TASK: P40-T8 — Stripe Payment Integration
+TASK: P40-T8 — Stripe Payment Integration (Supabase Edition)
 
 ═══════════════════════════════════════════════════════════════
 BACKGROUND & CONTEXT
 ═══════════════════════════════════════════════════════════════
 
-To monetize the Cloud Edition, we are using a usage-based billing model (LLM API Cost Pass-through + $2 Service Fee per Interview). We need to integrate Stripe Checkout so users can purchase prepaid credits or start a session.
+The Cloud Edition uses a usage-based billing model. Users pay a $2 service fee per interview session + the API pass-through cost. They will purchase "credits" (sessions) via Stripe Checkout.
+
+We are using Supabase Postgres as our database. The `profiles` table has a `payg_sessions` column.
 
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
@@ -12,23 +14,22 @@ OBJECTIVE
 
 1. CHECKOUT ENDPOINT:
    - Add a `/api/checkout` endpoint to the Cloudflare Worker.
-   - It uses the Stripe Node API to generate a Stripe Checkout Session URL for usage-based billing (e.g. paying the $2 service fee + LLM API costs).
+   - It uses the Stripe Node API to generate a Stripe Checkout Session URL for purchasing "Interview Credits" (e.g., a $2.00 session pass).
 
 2. STRIPE WEBHOOK:
    - Add a `/api/webhook/stripe` endpoint to listen for `checkout.session.completed` events.
-   - On success, provision a new API Key for the user and save it to Cloudflare KV. If they are purchasing credits, update their credit balance.
+   - On success, find the user in the Supabase `profiles` table (via customer email or a passed client_reference_id) and increment their `payg_sessions` balance by the purchased amount using the Supabase REST API (or `@supabase/supabase-js`).
 
 3. FRONTEND INTEGRATION:
    - Add a "Top Up Balance" or "Buy Credits" button in `Settings.svelte`.
    - On click, hit `/api/checkout` and redirect the user's browser to the returned Stripe URL.
-   - Upon successful return, fetch and store their new API key in `localStorage`.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
 
-1. Run the Worker locally and hit `/api/checkout` to confirm it returns a valid Stripe test-mode URL.
-2. (Mock) sending a webhook event and confirm KV is updated with credits.
+1. Hit `/api/checkout` to confirm it returns a valid Stripe test-mode URL.
+2. Send a mocked Stripe webhook event and confirm the `payg_sessions` column increments in Supabase.
 
-Commit message: "jules: P40-T8 integrate stripe usage based payments"
+Commit message: "jules: P40-T8 integrate stripe billing with supabase"
 Target branch: feature/krushna

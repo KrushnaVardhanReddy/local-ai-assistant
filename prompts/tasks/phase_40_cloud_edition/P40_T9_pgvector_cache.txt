@@ -1,0 +1,36 @@
+TASK: P40-T9 — Multi-Tenant Vector Cache (Supabase pgvector)
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+In the Local Edition, we use ChromaDB for the Semantic Q&A Cache. In the Cloud Edition, the Cloudflare Worker is multi-tenant, so we are using Supabase PostgreSQL with the `pgvector` extension to store and search cached Q&A pairs.
+
+We have already created the `qa_cache` table migration with columns: `id`, `user_id`, `question`, `answer`, `embedding`.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CACHE INSERTION (PRE-WARMER):
+   - Update the worker's `/api/cache/prewarm` handler to insert vectors into the Supabase `qa_cache` table.
+   - Every inserted vector must include the authenticated user's UUID in the `user_id` column to ensure strict isolation.
+
+2. CACHE RETRIEVAL (LIVE INTERVIEW):
+   - During `/api/ask`, before calling the LLM, perform a semantic similarity search against the `qa_cache` table.
+   - Use the Supabase REST API (or `supabase-js`) to query the vectors. 
+   - CRITICAL: Provide an `eq('user_id', user.id)` filter to the query to guarantee strict multi-tenant isolation.
+
+3. SELECTIVE CLEARING:
+   - Update the `/api/cache` DELETE endpoint to query and delete vectors matching the provided IDs, but strictly scoped to the authenticated `user_id`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Pre-warm the cache for User A.
+2. Query the cache as User B and verify it returns a cache miss.
+3. Query the cache as User A and verify it returns a cache hit.
+
+Commit message: "jules: P40-T9 implement pgvector cache with supabase"
+Target branch: feature/krushna
