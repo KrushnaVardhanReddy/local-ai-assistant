@@ -48,7 +48,7 @@
 ## Phase 40 — Cloud Edition (Lightweight Tauri Build) ☁️
 
 > Builds a second Tauri product from the same codebase — no local backend, all requests routed to a Cloudflare Worker.
-> Target: ~10-15MB installer. Price: $20/month SaaS.
+> Target: ~10-15MB installer. **Pricing: Usage-based per interview — actual LLM API cost (pass-through) + $2 service fee per interview session.**
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
