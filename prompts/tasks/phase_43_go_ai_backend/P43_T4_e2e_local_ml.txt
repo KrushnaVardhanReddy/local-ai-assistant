@@ -1,0 +1,26 @@
+TASK: P43-T4 — E2E Local ML Test
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Our Go backend is fully implemented. We need an End-to-End integration test that runs data through the entire local Machine Learning pipeline with absolutely zero mocking.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. IMPLEMENT ML PIPELINE TEST
+   - Create `wails-app/tests/e2e/ml_pipeline_test.go`.
+   - The test must load a REAL `.wav` audio file from the test data directory.
+   - Pass the audio to `whisper.go` to get a real transcription.
+   - Pass the transcription to `onnxruntime-go` to get a real vector embedding.
+   - Insert the embedding into `sqlite-vec` and verify it can be retrieved via similarity search.
+   - NO MOCKING. Use the real models and real sqlite database.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P43-T4 add E2E local ML pipeline test"
+Target branch: feature/krushna_golang

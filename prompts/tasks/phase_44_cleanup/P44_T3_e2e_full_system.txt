@@ -1,0 +1,23 @@
+TASK: P44-T3 — E2E Full System Test
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Phase 44 is the final cleanup phase where we delete the old Python sidecar. To ensure everything works as a single binary, we need a final E2E test.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. IMPLEMENT FULL SYSTEM TEST
+   - Create `wails-app/tests/e2e/full_system_test.go`.
+   - Build the complete Wails desktop application.
+   - Execute an automated test that interacts with the desktop UI and triggers the local ML pipeline entirely offline, verifying end-to-end functionality without any mocked components.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P44-T3 add E2E full system integration test"
+Target branch: feature/krushna_golang
