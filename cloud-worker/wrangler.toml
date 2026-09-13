@@ -11,3 +11,6 @@ id = "mock_cache"
 
 [vars]
 SUPABASE_URL = "http://mock.url"
+
+[ai]
+binding = "AI"
