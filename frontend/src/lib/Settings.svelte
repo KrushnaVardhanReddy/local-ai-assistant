@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { apiFetch } from "./api";
   import { authState, signIn, signOut } from "$lib/auth.svelte";
   import { reconnect } from "$lib/ws.svelte";
   import { invoke } from "@tauri-apps/api/core";
@@ -52,25 +53,25 @@
   onMount(async () => {
     try {
       const apiUrl = getApiUrl();
-      const healthRes = await fetch(`${apiUrl}/health`);
+      const healthRes = await apiFetch(`${apiUrl}/health`);
       if (healthRes.ok) {
         const healthData = await healthRes.json();
         currentLLMProvider = healthData.llm_provider;
       }
-      const statusRes = await fetch(`${apiUrl}/api/status`);
+      const statusRes = await apiFetch(`${apiUrl}/api/status`);
       if (statusRes.ok) {
         systemStatus = await statusRes.json();
       }
     } catch (e) { console.error("Failed to load health", e); }
     try {
       const apiUrl = getApiUrl();
-      const res = await fetch(`${apiUrl}/api/system_prompt`);
+      const res = await apiFetch(`${apiUrl}/api/system_prompt`);
       if (res.ok) {
         const data = await res.json();
         selectedPrompt = data.prompt;
       }
 
-      const audioRes = await fetch(`${apiUrl}/api/audio/devices`);
+      const audioRes = await apiFetch(`${apiUrl}/api/audio/devices`);
       if (audioRes.ok) {
         audioDevices = await audioRes.json();
       }
@@ -80,7 +81,7 @@
 
     try {
       const apiUrl = getApiUrl();
-      const resContext = await fetch(`${apiUrl}/api/resume/context`);
+      const resContext = await apiFetch(`${apiUrl}/api/resume/context`);
       if (resContext.ok) {
         const data = await resContext.json();
         if (data.context) {
@@ -93,7 +94,7 @@
 
     try {
       const apiUrl = getApiUrl();
-      const resLang = await fetch(`${apiUrl}/api/language`);
+      const resLang = await apiFetch(`${apiUrl}/api/language`);
       if (resLang.ok) {
         const data = await resLang.json();
         if (data.language) {
@@ -101,7 +102,7 @@
         }
       }
 
-      const resInterviewLang = await fetch(`${apiUrl}/api/interview_language`);
+      const resInterviewLang = await apiFetch(`${apiUrl}/api/interview_language`);
       if (resInterviewLang.ok) {
         const data = await resInterviewLang.json();
         if (data.language) {
@@ -109,7 +110,7 @@
         }
       }
 
-      const resEngine = await fetch(`${apiUrl}/api/stt_engine`);
+      const resEngine = await apiFetch(`${apiUrl}/api/stt_engine`);
       if (resEngine.ok) {
         const data = await resEngine.json();
         if (data.engine) {
@@ -157,7 +158,7 @@
     jobDescriptionStatus = "⏳ Saving job description...";
     try {
       const apiUrl = getApiUrl();
-      const res = await fetch(`${apiUrl}/config/job-description`, {
+      const res = await apiFetch(`${apiUrl}/config/job-description`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: jobDescription })
@@ -178,7 +179,7 @@
     resumeStatus = "⏳ Extracting candidate profile...";
     try {
       const apiUrl = getApiUrl();
-      const res = await fetch(`${apiUrl}/api/resume/extract`, {
+      const res = await apiFetch(`${apiUrl}/api/resume/extract`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: resumeRawText })
@@ -220,17 +221,17 @@
 
     try {
       const apiUrl = getApiUrl();
-      await fetch(`${apiUrl}/api/language`, {
+      await apiFetch(`${apiUrl}/api/language`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language: preferredLanguage })
       });
-      await fetch(`${apiUrl}/api/interview_language`, {
+      await apiFetch(`${apiUrl}/api/interview_language`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language: interviewLanguage })
       });
-      await fetch(`${apiUrl}/api/stt_engine`, {
+      await apiFetch(`${apiUrl}/api/stt_engine`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ engine: localSttEngine })
@@ -241,13 +242,13 @@
 
     try {
       const apiUrl = getApiUrl();
-      await fetch(`${apiUrl}/api/system_prompt`, {
+      await apiFetch(`${apiUrl}/api/system_prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: selectedPrompt })
       });
 
-      await fetch(`${apiUrl}/api/audio/device`, {
+      await apiFetch(`${apiUrl}/api/audio/device`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ device_id: selectedDeviceId, is_loopback: isLoopbackEnabled })

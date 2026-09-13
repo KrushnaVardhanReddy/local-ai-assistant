@@ -1,3 +1,5 @@
+import { cloudAuthState } from './auth.svelte';
+
 export function getApiUrl(): string {
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) {
     return import.meta.env.VITE_API_BASE as string;
@@ -14,4 +16,19 @@ export function getWsUrl(): string {
     return baseUrl.replace('http://', 'ws://');
   }
   return baseUrl;
+}
+
+export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+  const options = { ...init };
+  const headers = new Headers(options.headers || {});
+
+  if (url.startsWith(getApiUrl()) && cloudAuthState.apiKey) {
+    headers.set('Authorization', `Bearer ${cloudAuthState.apiKey}`);
+  }
+
+  options.headers = headers;
+
+  return fetch(input, options);
 }

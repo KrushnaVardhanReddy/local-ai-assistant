@@ -1,3 +1,4 @@
+import { apiFetch } from "../api";
 import { Capacitor } from '@capacitor/core';
 import { Microphone } from '@capacitor-community/microphone';
 
@@ -53,7 +54,7 @@ export class AudioRecorder {
       try {
         const result = await Microphone.stopRecording();
         if (result.webPath) {
-            const response = await fetch(result.webPath);
+            const response = await apiFetch(result.webPath);
             const blob = await response.blob();
             return blob;
         }

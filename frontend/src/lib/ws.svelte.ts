@@ -1,8 +1,7 @@
+import { apiFetch, getApiUrl, getWsUrl } from './api';
 import { authState, supabase } from '$lib/auth.svelte';
 import { invoke } from '@tauri-apps/api/core';
-
 import { listen } from '@tauri-apps/api/event';
-import { getApiUrl, getWsUrl } from '$lib/api';
 
 export const wsState = $state({
   transcript: "",
@@ -29,12 +28,12 @@ let listenersInitialized = false;
 function initListeners() {
   listen("ptt-start", () => {
     wsState.isPTTHeld = true;
-    fetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
+    apiFetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
   });
 
   listen("ptt-stop", () => {
     wsState.isPTTHeld = false;
-    fetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
+    apiFetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
   });
 
   listen("panic-clear", () => {
@@ -44,7 +43,7 @@ function initListeners() {
     wsState.ragSources = [];
     wsState.pendingTranscripts = [];
     wsState.transcriptHistory = [];
-    fetch(`${getApiUrl()}/history/clear`, { method: 'POST' }).catch(console.error);
+    apiFetch(`${getApiUrl()}/history/clear`, { method: 'POST' }).catch(console.error);
   });
 }
 let retryDelay = 500;

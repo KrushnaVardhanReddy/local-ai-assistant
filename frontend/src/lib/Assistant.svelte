@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { apiFetch } from "./api";
   import { wsState, sendChat, sendChip, dismissChip, clearAllChips, toggleMockMode } from "$lib/ws.svelte";
   import { onMount } from "svelte";
   import { getApiUrl } from "$lib/api";
@@ -31,11 +32,11 @@
     toggleMockMode(isNowEnabled);
     if (isNowEnabled) {
       // Start microphone for hands-free mock interview
-      fetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
+      apiFetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
     } else {
       showSessionReport = true;
       // Stop microphone
-      fetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
+      apiFetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
     }
   }
   let liveEarsCollapsed = $state(false);
@@ -79,7 +80,7 @@
   async function fetchCacheStats() {
     try {
       const apiUrl = getApiUrl();
-      const res = await fetch(`${apiUrl}/api/cache/stats`);
+      const res = await apiFetch(`${apiUrl}/api/cache/stats`);
       if (res.ok) {
         cacheStats = await res.json();
       } else {
@@ -96,14 +97,14 @@
     try {
       const apiUrl = getApiUrl();
 
-      const resContext = await fetch(`${apiUrl}/api/resume/context`);
+      const resContext = await apiFetch(`${apiUrl}/api/resume/context`);
       let baseResume = "";
       if (resContext.ok) {
         const contextData = await resContext.json();
         baseResume = contextData.context || "";
       }
 
-      const res = await fetch(`${apiUrl}/api/cache/prewarm`, {
+      const res = await apiFetch(`${apiUrl}/api/cache/prewarm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -131,7 +132,7 @@
     loadingCacheItems = true;
     try {
       const apiUrl = getApiUrl();
-      const res = await fetch(`${apiUrl}/api/cache/items`);
+      const res = await apiFetch(`${apiUrl}/api/cache/items`);
       if (res.ok) {
         cacheItems = await res.json();
       }
@@ -168,7 +169,7 @@
     deletingSelected = true;
     try {
       const apiUrl = getApiUrl();
-      await fetch(`${apiUrl}/api/cache/items`, {
+      await apiFetch(`${apiUrl}/api/cache/items`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: Array.from(selectedCacheItemIds) })
@@ -193,7 +194,7 @@
     clearingCache = true;
     try {
       const apiUrl = getApiUrl();
-      await fetch(`${apiUrl}/api/cache`, { method: "DELETE" });
+      await apiFetch(`${apiUrl}/api/cache`, { method: "DELETE" });
       await fetchCacheStats();
     } finally {
       clearingCache = false;
@@ -232,7 +233,7 @@
           headers["Authorization"] = `Bearer ${authState.accessToken}`;
         }
 
-        const res = await fetch(`${apiUrl}/vision/analyze`, {
+        const res = await apiFetch(`${apiUrl}/vision/analyze`, {
           method: "POST",
           headers,
           body: JSON.stringify({ image_base64: base64Image })
@@ -375,7 +376,7 @@
             headers["Authorization"] = `Bearer ${authState.accessToken}`;
           }
 
-          const res = await fetch(`${apiUrl}/vision/analyze`, {
+          const res = await apiFetch(`${apiUrl}/vision/analyze`, {
             method: "POST",
             headers,
             body: JSON.stringify({ image_base64: base64Image })
@@ -399,7 +400,7 @@
     wsState.pendingTranscripts = [];
     wsState.transcriptHistory = [];
     const apiUrl = getApiUrl();
-    fetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
+    apiFetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
   }
 
   function triggerCatchMeUp() {

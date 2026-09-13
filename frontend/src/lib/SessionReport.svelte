@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { apiFetch } from "./api";
   import { getApiUrl } from "$lib/api";
 
   let { onClose }: { onClose: () => void } = $props();
@@ -27,7 +28,7 @@
     if (historyEntries.length > 0) return; // already loaded
     isLoadingHistory = true;
     try {
-      const resp = await fetch(`${getApiUrl()}/session/history`);
+      const resp = await apiFetch(`${getApiUrl()}/session/history`);
       if (resp.ok) {
         historyEntries = await resp.json();
       }
@@ -66,7 +67,7 @@
     isLoading = true;
     error = null;
     try {
-      const resp = await fetch(`${getApiUrl()}/session/end`, { method: "POST" });
+      const resp = await apiFetch(`${getApiUrl()}/session/end`, { method: "POST" });
       if (!resp.ok) {
         const data = await resp.json();
         error = data.error || "Failed to generate report";
@@ -138,7 +139,7 @@
     isGeneratingEmail = true;
     emailError = null;
     try {
-      const resp = await fetch(`${getApiUrl()}/session/email-draft`, {
+      const resp = await apiFetch(`${getApiUrl()}/session/email-draft`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

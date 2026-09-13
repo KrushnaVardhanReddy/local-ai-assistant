@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { apiFetch } from "./api";
   import { onMount, tick } from "svelte";
   import { renderMarkdown } from "$lib/markdownRenderer";
   import { getApiUrl } from "$lib/api";
@@ -33,8 +34,8 @@
 
       // Fetch the context and job description
       const [resContext, resJob] = await Promise.all([
-        fetch(`${apiUrl}/api/resume/context`),
-        fetch(`${apiUrl}/config/job-description`).catch(() => new Response(JSON.stringify({}), { status: 500, statusText: "Error" }))
+        apiFetch(`${apiUrl}/api/resume/context`),
+        apiFetch(`${apiUrl}/config/job-description`).catch(() => new Response(JSON.stringify({}), { status: 500, statusText: "Error" }))
       ]);
 
       let baseResume = "";
@@ -49,7 +50,7 @@
         jobDescription = jobData.text || "";
       }
 
-      const res = await fetch(`${apiUrl}/resume/tailor`, {
+      const res = await apiFetch(`${apiUrl}/resume/tailor`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
