@@ -52,7 +52,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P42-T1 | `wails-app/` | **Init Wails:** Run the Wails CLI to generate a new Svelte+TS template (`wails init -n local-ai-assistant -t svelte-ts`). | ✅ | #137 |
-| P42-T2 | `wails-app/frontend/src/` | **UI Porting:** Copy existing Svelte components, lib files, and Tailwind configuration into the new Wails frontend directory. Fix any imports. | ⬜ | — |
+| P42-T2 | `wails-app/frontend/src/` | **UI Porting:** Copy existing Svelte components, lib files, and Tailwind configuration into the new Wails frontend directory. Fix any imports. | 🔄 | — |
 | P42-T3 | `wails-app/frontend/src/lib/` | **API Swap:** Replace Tauri frontend calls (e.g., `invoke('command')`, `WebviewWindow`) with Wails Go bindings (`@wailsio/runtime`). | ⬜ | — |
 | P42-T4 | `wails-app/frontend/src/lib/api.ts` | **Cloud Worker Proxy (Wails Edition):** Ensure the Cloud Edition Svelte logic correctly points to the existing Cloudflare Worker URL. | ⬜ | — |
 
@@ -64,7 +64,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P43-T1 | `wails-app/backend/vector_db.go` | **Local Vector DB:** Replace ChromaDB with embedded SQLite + `sqlite-vec` extension in Go. | ⬜ | — |
+| P43-T1 | `wails-app/backend/vector_db.go` | **Local Vector DB:** Replace ChromaDB with embedded SQLite + `sqlite-vec` extension in Go. | 🔄 | — |
 | P43-T2 | `wails-app/backend/embeddings.go` | **Embeddings & Intent:** Use `onnxruntime-go` to run SmolLM2 ONNX models directly in the Go process for fast vector generation. | ⬜ | — |
 | P43-T3 | `wails-app/backend/stt.go` | **Local STT:** Integrate `whisper.go` (CGO bindings for whisper.cpp) for offline Speech-to-Text inference, replacing `faster-whisper`. | ⬜ | — |
 
