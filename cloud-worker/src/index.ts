@@ -5,6 +5,8 @@ export interface Env {
 	SUPABASE_SERVICE_ROLE_KEY: string;
 	STRIPE_SECRET_KEY: string;
 	STRIPE_WEBHOOK_SECRET: string;
+	LLM_API_KEY: string;
+	AI: Ai;
 }
 
 const corsHeaders = {
@@ -431,11 +433,114 @@ export default {
 							}
 
 							// Only process subsequent messages if authorized
-							if (!isWsAuthorized) {
+							if (!wsUserId) {
 								return; // Ignore messages before auth is complete
 							}
 
-							// Note: Further message handling can be implemented here using wsUserId
+							if (msg.type === 'chat' && msg.text) {
+								let context = '';
+								try {
+									const aiRes: any = await env.AI.run('@cf/baai/bge-small-en-v1.5', { text: [msg.text] });
+									const embedding = aiRes.data[0];
+
+									if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+										const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, '');
+										const rpcUrl = `${supabaseUrl}/rest/v1/rpc/match_qa_cache`;
+
+										const rpcRes = await fetch(rpcUrl, {
+											method: 'POST',
+											headers: {
+												'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+												'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+												'Content-Type': 'application/json'
+											},
+											body: JSON.stringify({
+												query_embedding: embedding,
+												match_threshold: 0.92,
+												match_count: 3,
+												p_user_id: wsUserId
+											})
+										});
+
+										if (rpcRes.ok) {
+											const matches: any = await rpcRes.json();
+											if (matches && matches.length > 0) {
+												context = matches.map((m: any) => `Q: ${m.question}\nA: ${m.answer}`).join('\n\n');
+											}
+										}
+									}
+								} catch (err) {
+									console.error('Error fetching vector context:', err);
+								}
+
+								try {
+									const systemMessage = context
+										? `You are a helpful assistant. Use the following context to answer the user's question if relevant:\n\n${context}`
+										: `You are a helpful assistant.`;
+
+									const llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+										method: 'POST',
+										headers: {
+											'Authorization': `Bearer ${env.LLM_API_KEY}`,
+											'Content-Type': 'application/json'
+										},
+										body: JSON.stringify({
+											model: 'llama-3.1-8b-instant',
+											messages: [
+												{ role: 'system', content: systemMessage },
+												{ role: 'user', content: msg.text }
+											],
+											stream: true
+										})
+									});
+
+									if (!llmRes.ok) {
+										server.send(JSON.stringify({ type: 'error', message: 'LLM request failed' }));
+										return;
+									}
+
+									if (llmRes.body) {
+										const reader = llmRes.body.getReader();
+										const decoder = new TextDecoder();
+										let hasStarted = false;
+										let buffer = '';
+
+										while (true) {
+											const { done, value } = await reader.read();
+											if (done) break;
+
+											buffer += decoder.decode(value, { stream: true });
+											const lines = buffer.split('\n');
+
+											// Keep the last partial line in the buffer
+											buffer = lines.pop() || '';
+
+											for (const line of lines) {
+												if (line.startsWith('data: ')) {
+													const dataStr = line.slice(6).trim();
+													if (dataStr === '[DONE]') continue;
+													try {
+														const data = JSON.parse(dataStr);
+														const token = data.choices[0]?.delta?.content;
+														if (token) {
+															if (!hasStarted) {
+																server.send(JSON.stringify({ type: 'message_start' }));
+																hasStarted = true;
+															}
+															server.send(JSON.stringify({ type: 'token', text: token }));
+														}
+													} catch(e) {}
+												}
+											}
+										}
+
+										server.send(JSON.stringify({ type: 'end' }));
+									}
+								} catch (err) {
+									console.error('Error streaming LLM response:', err);
+									server.send(JSON.stringify({ type: 'error', message: 'Streaming failed' }));
+								}
+							}
 						}
 					} catch (e) {
 						// Ignored for now
