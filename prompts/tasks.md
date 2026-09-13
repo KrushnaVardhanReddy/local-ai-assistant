@@ -41,7 +41,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P39-T1 | `scripts/dynamic_prewarmer.py` | **Dynamic Cache Pre-Warmer:** Generate 100+ Q&A pairs using an LLM + JD + Resume and store them in ChromaDB. | ✅ | #121 |
-| P39-T2 | `backend/app.py`, `backend/qa_cache.py`, `frontend/...` | **Selective Cache Management:** Add API and UI to view and selectively delete specific Q&A pairs from the cache. | ⏳ Submitted | Jules |
+| P39-T2 | `backend/app.py`, `backend/qa_cache.py`, `frontend/...` | **Selective Cache Management:** Add API and UI to view and selectively delete specific Q&A pairs from the cache. | ✅ | #122 |
 
 ---
 
@@ -52,7 +52,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P40-T1 | `frontend/src/lib/api.ts` | **Centralized API Config:** Create a single `api.ts` module with `getApiUrl()` / `getWsUrl()` helpers driven by `VITE_API_BASE` env var. Foundation for all other tasks. | ⏳ Submitted | Jules |
+| P40-T1 | `frontend/src/lib/api.ts` | **Centralized API Config:** Create a single `api.ts` module with `getApiUrl()` / `getWsUrl()` helpers driven by `VITE_API_BASE` env var. Foundation for all other tasks. | ✅ | #123 |
 | P40-T2 | `frontend/src/lib/*.svelte`, `frontend/src/lib/ws.svelte.ts` | **Refactor Hardcoded URLs:** Replace all ~25 hardcoded `127.0.0.1:8765` references across 6 files with the new `getApiUrl()` / `getWsUrl()` helpers. | ⬜ | — |
 | P40-T3 | `cloud-worker/` | **Cloudflare Worker Backend:** Implement a Worker that mirrors all FastAPI endpoints (`/ws`, `/api/ask`, `/api/status`, `/api/cache`, `/api/resume/context`, etc.) calling Groq/OpenAI. Auth via Cloudflare KV API keys. | ⬜ | — |
 | P40-T4 | `cloud-worker/`, `frontend/src/lib/auth.svelte.ts` | **Cloud User Auth & Session Management:** User signup → API key provisioned in Cloudflare KV → key stored in Tauri `localStorage` → sent as `Authorization: Bearer` on every request. | ⬜ | — |
