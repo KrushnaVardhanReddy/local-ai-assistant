@@ -12,11 +12,11 @@ OBJECTIVE
 
 1. CHECKOUT ENDPOINT:
    - Add a `/api/checkout` endpoint to the Cloudflare Worker.
-   - It uses the Stripe Node API to generate a Stripe Checkout Session URL for purchasing "Interview Credits" (e.g., $3.00 for 1 interview).
+   - It uses the Stripe Node API to generate a Stripe Checkout Session URL for usage-based billing (e.g. paying the $2 service fee + LLM API costs).
 
 2. STRIPE WEBHOOK:
    - Add a `/api/webhook/stripe` endpoint to listen for `checkout.session.completed` events.
-   - On success, provision a new API Key for the user and save it to Cloudflare KV alongside their credit balance.
+   - On success, provision a new API Key for the user and save it to Cloudflare KV. If they are purchasing credits, update their credit balance.
 
 3. FRONTEND INTEGRATION:
    - Add a "Top Up Balance" or "Buy Credits" button in `Settings.svelte`.

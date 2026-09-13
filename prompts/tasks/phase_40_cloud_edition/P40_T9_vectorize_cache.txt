@@ -1,0 +1,36 @@
+TASK: P40-T9 — Multi-Tenant Vector Cache (Cloudflare Vectorize)
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+In the Local Edition, we use ChromaDB for the Semantic Q&A Cache because it is single-tenant (one user per machine). In the Cloud Edition, the Cloudflare Worker is multi-tenant. We must use Cloudflare Vectorize to store cached Q&A pairs, and we MUST strictly isolate each user's cache using metadata filtering so users never see each other's cached answers.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CLOUDFLARE VECTORIZE BINDING:
+   - Update `wrangler.toml` to bind a Cloudflare Vectorize index (e.g., `QA_CACHE`).
+
+2. CACHE INSERTION (PRE-WARMER):
+   - Update the worker's `/api/cache/prewarm` handler to insert vectors into Vectorize.
+   - CRITICAL: Every inserted vector must include `metadata: { "user_id": "<USER_API_KEY>" }`.
+
+3. CACHE RETRIEVAL (LIVE INTERVIEW):
+   - During `/api/ask` or the semantic lookup phase, query the Vectorize index.
+   - CRITICAL: Provide the filter `filter: { user_id: "<USER_API_KEY>" }` to the `.query()` method.
+
+4. SELECTIVE CLEARING:
+   - Update the `/api/cache` DELETE endpoint to query and delete only the vectors belonging to the specific `user_id`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Use two different mocked API Keys. Pre-warm the cache for Key A.
+2. Query the cache with Key B and verify it returns a cache miss (0 results).
+3. Query the cache with Key A and verify it returns a cache hit.
+
+Commit message: "jules: P40-T9 implement multi-tenant vectorize cache"
+Target branch: feature/krushna
