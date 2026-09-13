@@ -1,79 +1,108 @@
 <script lang="ts">
-  import logo from './assets/images/logo-universal.png'
-  import {Greet} from '../wailsjs/go/main/App.js'
+  import { onMount, onDestroy } from "svelte";
+  import { connect, disconnect, wsState } from "$lib/ws.svelte";
+  import Assistant from "$lib/Assistant.svelte";
+  import KnowledgeBase from "$lib/KnowledgeBase.svelte";
+  import Settings from "$lib/Settings.svelte";
+  import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
+  import { restoreSession, authState } from "$lib/auth.svelte";
+  import { uiState } from "$lib/stores/uiState.svelte.ts";
 
-  let resultText: string = "Please enter your name below 👇"
-  let name: string
+  let showKnowledgeBase = $state(false);
 
-  function greet(): void {
-    Greet(name).then(result => resultText = result)
+  onMount(async () => {
+    if (authState.authMode === "saas") {
+      await restoreSession();
+    }
+    connect();
+  });
+
+  onDestroy(() => {
+    disconnect();
+  });
+
+  function handleKeydown(e: KeyboardEvent) {
+    // Check for Ctrl+/ or Cmd+/
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+      e.preventDefault();
+      uiState.hotkeysPanelOpen = !uiState.hotkeysPanelOpen;
+    }
   }
 </script>
 
-<main>
-  <img alt="Wails logo" id="logo" src="{logo}">
-  <div class="result" id="result">{resultText}</div>
-  <div class="input-box" id="input">
-    <input autocomplete="off" bind:value={name} class="input" id="name" type="text"/>
-    <button class="btn" on:click={greet}>Greet</button>
+<svelte:window onkeydown={handleKeydown} />
+
+<div class="app-shell pointer-events-none">
+  {#if showKnowledgeBase}
+    <div
+      class="modal-overlay pointer-events-auto"
+      role="button"
+      tabindex="0"
+      aria-label="Close knowledge base"
+      onclick={() => showKnowledgeBase = false}
+      onkeydown={(e) => e.key === 'Escape' && (showKnowledgeBase = false)}
+    >
+      <div class="modal-content" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+        <button class="close-btn" onclick={() => showKnowledgeBase = false}>✖</button>
+        <KnowledgeBase />
+      </div>
+    </div>
+  {/if}
+
+  <Assistant />
+
+  <div class="fixed bottom-6 right-8 z-[100] pointer-events-auto flex gap-4">
+    <button class="text-on-surface-variant hover:text-primary transition-colors text-xl" onclick={() => showKnowledgeBase = !showKnowledgeBase} aria-label="Knowledge Base">
+      📚
+    </button>
+    <Settings />
   </div>
-</main>
+</div>
 
 <style>
-
-  #logo {
-    display: block;
-    width: 50%;
-    height: 50%;
-    margin: auto;
-    padding: 10% 0 0;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    background-origin: content-box;
+  .app-shell {
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
   }
 
-  .result {
-    height: 20px;
-    line-height: 20px;
-    margin: 1.5rem auto;
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
   }
 
-  .input-box .btn {
-    width: 60px;
-    height: 30px;
-    line-height: 30px;
-    border-radius: 3px;
+  .modal-content {
+    position: relative;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 12px;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
     border: none;
-    margin: 0 0 0 20px;
-    padding: 0 8px;
+    color: #94a3b8;
+    font-size: 1.2rem;
     cursor: pointer;
+    z-index: 10;
+    transition: color 0.2s;
   }
 
-  .input-box .btn:hover {
-    background-image: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
-    color: #333333;
+  .close-btn:hover {
+    color: #e2e8f0;
   }
-
-  .input-box .input {
-    border: none;
-    border-radius: 3px;
-    outline: none;
-    height: 30px;
-    line-height: 30px;
-    padding: 0 10px;
-    background-color: rgba(240, 240, 240, 1);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  .input-box .input:hover {
-    border: none;
-    background-color: rgba(255, 255, 255, 1);
-  }
-
-  .input-box .input:focus {
-    border: none;
-    background-color: rgba(255, 255, 255, 1);
-  }
-
 </style>
