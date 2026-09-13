@@ -1,10 +1,16 @@
 import { cloudAuthState } from './auth.svelte';
 
 export function getApiUrl(): string {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) {
-    return import.meta.env.VITE_API_BASE as string;
+  const isCloud = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
+
+  if (isCloud) {
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) {
+      return import.meta.env.VITE_API_BASE as string;
+    }
+    return 'https://ai.krushnavardhan.workers.dev';
   }
-  return 'http://127.0.0.1:8765';
+
+  throw new Error("Local Edition uses Wails IPC, not HTTP/WS API.");
 }
 
 export function getWsUrl(): string {
