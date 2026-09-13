@@ -1,0 +1,38 @@
+TASK: P40-T11 — Local E2E Testing Pipeline (No Mocks)
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We have completely pivoted the Cloud Edition architecture to use a single Supabase PostgreSQL database for User Auth, Stripe Credits, and the `pgvector` Q&A Cache. We want to test this entire flow end-to-end locally without any mocking.
+
+To do this, we need to wire the local Cloudflare Worker (`wrangler dev`) directly to a local Supabase Docker instance (`supabase start`).
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. LOCAL E2E SCRIPT:
+   - Create a script `scripts/start_cloud_e2e.sh`.
+   - The script should run `npx supabase start` in the `supabase/` directory.
+   - Parse the `API URL` and `service_role key` from the Supabase CLI output.
+   - Dynamically write these values into `cloud-worker/.dev.vars` as `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+
+2. DATABASE SEEDING:
+   - Create or update `supabase/seed.sql` to automatically insert test data when the local database starts.
+   - Insert a test user into `auth.users` and the `profiles` table with `payg_sessions = 10`.
+   - Insert a test API key into `user_api_keys` (provide the raw key in a comment so we can copy-paste it into the frontend's localStorage for testing).
+
+3. WORKER START:
+   - Have the `start_cloud_e2e.sh` script automatically run `npm run dev` in the `cloud-worker/` directory at the end.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Run `bash scripts/start_cloud_e2e.sh`.
+2. Ensure the worker starts and successfully connects to the local Supabase instance.
+3. Test a request against the worker using the seeded API key and verify it returns a 200 OK.
+
+Commit message: "jules: P40-T11 setup local e2e testing pipeline for cloud edition"
+Target branch: feature/krushna
