@@ -137,6 +137,36 @@ def retrieve_resume_context(query: str, n_results: int = 3) -> list[str]:
     except Exception:
         return []
 
+def get_all_items() -> list[dict]:
+    """Retrieves all cached questions from the collection."""
+    try:
+        col = _get_collection()
+        results = col.get(include=["documents"])
+        items = []
+        if results and results.get("ids") and results.get("documents"):
+            for i in range(len(results["ids"])):
+                items.append({
+                    "id": results["ids"][i],
+                    "question": results["documents"][i]
+                })
+        return items
+    except Exception as e:
+        print(f"[QACache] get_all_items error: {e}", file=sys.stderr)
+        return []
+
+def delete_items(ids: list[str]) -> int:
+    """Deletes specific entries from the qa_cache collection by their IDs. Returns count deleted."""
+    if not ids:
+        return 0
+    try:
+        col = _get_collection()
+        col.delete(ids=ids)
+        print(f"[QACache] Deleted {len(ids)} specific entries.", file=sys.stderr)
+        return len(ids)
+    except Exception as e:
+        print(f"[QACache] delete_items error: {e}", file=sys.stderr)
+        return 0
+
 def clear() -> int:
 
     """Deletes all entries from the qa_cache collection. Returns count deleted."""

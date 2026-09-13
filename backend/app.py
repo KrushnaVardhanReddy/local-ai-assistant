@@ -1259,6 +1259,20 @@ async def get_cache_stats():
     """Returns Q&A cache statistics: total pairs and estimated tokens saved."""
     return qa_cache.stats()
 
+@app.get("/api/cache/items")
+async def get_cache_items():
+    """Returns all cached Q&A items."""
+    return qa_cache.get_all_items()
+
+class DeleteCacheItemsRequest(BaseModel):
+    ids: list[str]
+
+@app.delete("/api/cache/items")
+async def delete_cache_items(body: DeleteCacheItemsRequest):
+    """Deletes specific entries from the Q&A cache. Returns count of deleted pairs."""
+    count = qa_cache.delete_items(body.ids)
+    return {"deleted": count, "message": f"Deleted {count} cached Q&A pairs."}
+
 @app.delete("/api/cache")
 async def clear_cache():
     """Deletes all entries from the Q&A cache. Returns count of deleted pairs."""
