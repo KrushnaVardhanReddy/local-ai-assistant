@@ -5,6 +5,11 @@ set -e
 # Navigate to the project root
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# If podman is installed, set the DOCKER_HOST to the user podman socket
+if command -v podman &> /dev/null; then
+    export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/podman/podman.sock"
+fi
+
 echo "Starting local Supabase instance..."
 cd "$PROJECT_ROOT/supabase"
 
