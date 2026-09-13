@@ -1,3 +1,4 @@
+cat << 'APPGO' > wails-app/app.go
 package main
 
 import (
@@ -134,10 +135,11 @@ func (a *App) CaptureScreen() string {
 
 func (a *App) SetClickthrough(opts map[string]interface{}) {
 	if enable, ok := opts["enable"].(bool); ok {
-		wailsruntime.WindowSetAlwaysOnTop(a.ctx, enable)
+		wailsruntime.WindowSetIgnoreMouseEvents(a.ctx, enable)
 	}
 }
 
 func (a *App) ToggleStealth(opts map[string]interface{}) {
 	// Not implemented
 }
+APPGO

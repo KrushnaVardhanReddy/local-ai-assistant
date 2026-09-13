@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { Command } from "@tauri-apps/plugin-shell";
+  import { EventsOn, EventsOff } from "../../wailsjs/runtime/runtime";
 
   let terminalOutput: string[] = $state([]);
   let isRunning = $state(false);
-  let processChild: any = null;
   let terminalRef: HTMLDivElement;
 
   $effect(() => {
@@ -13,43 +12,38 @@
     }
   });
 
+  onMount(() => {
+    EventsOn("backend-stdout", (line: string) => {
+      terminalOutput = [...terminalOutput, line];
+    });
+
+    EventsOn("backend-stderr", (line: string) => {
+      terminalOutput = [...terminalOutput, `[STDERR] ${line}`];
+    });
+
+    EventsOn("backend-close", (code: number) => {
+      terminalOutput = [...terminalOutput, `Process exited with code ${code}`];
+      isRunning = false;
+    });
+  });
+
+  onDestroy(() => {
+    EventsOff("backend-stdout");
+    EventsOff("backend-stderr");
+    EventsOff("backend-close");
+    stopBackend();
+  });
+
   async function startBackend() {
     if (isRunning) return;
 
-    if (!(window as any).__TAURI_INTERNALS__) {
-      terminalOutput = [...terminalOutput, "Running in browser mode: Tauri IPC unavailable. Backend spawn skipped."];
+    if (!window.go?.main?.App) {
+      terminalOutput = [...terminalOutput, "Running in browser mode: Wails IPC unavailable. Backend spawn skipped."];
       return;
     }
 
     try {
-      let cmd;
-      if (import.meta.env.DEV) {
-        cmd = Command.create("python", ["backend/app.py"]);
-      } else {
-        cmd = Command.sidecar("backend");
-      }
-
-      cmd.on('close', data => {
-        terminalOutput = [...terminalOutput, `Process exited with code ${data.code}`];
-        isRunning = false;
-        processChild = null;
-      });
-
-      cmd.on('error', error => {
-        terminalOutput = [...terminalOutput, `Error: "${error}"`];
-        isRunning = false;
-        processChild = null;
-      });
-
-      cmd.stdout.on('data', line => {
-        terminalOutput = [...terminalOutput, line];
-      });
-
-      cmd.stderr.on('data', line => {
-        terminalOutput = [...terminalOutput, `[STDERR] ${line}`];
-      });
-
-      processChild = await cmd.spawn();
+      await window.go.main.App.StartBackend();
       isRunning = true;
       terminalOutput = [...terminalOutput, "Backend started successfully..."];
     } catch (e: any) {
@@ -58,23 +52,19 @@
   }
 
   async function stopBackend() {
-    if (!isRunning || !processChild) return;
+    if (!isRunning) return;
 
-    if (!(window as any).__TAURI_INTERNALS__) {
+    if (!window.go?.main?.App) {
       return;
     }
 
     try {
-      await processChild.kill();
+      await window.go.main.App.StopBackend();
       terminalOutput = [...terminalOutput, "Kill signal sent to backend."];
     } catch (e: any) {
       terminalOutput = [...terminalOutput, `Failed to kill backend: ${e.message || String(e)}`];
     }
   }
-
-  onDestroy(async () => {
-    await stopBackend();
-  });
 </script>
 
 <div class="stealth-terminal-container">

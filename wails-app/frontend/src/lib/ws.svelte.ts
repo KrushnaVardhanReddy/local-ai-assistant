@@ -1,7 +1,6 @@
 import { apiFetch, getApiUrl, getWsUrl } from './api';
 import { authState, supabase } from '$lib/auth.svelte';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 
 export const wsState = $state({
   transcript: "",
@@ -26,17 +25,17 @@ let chipIdCounter = 0;
 let listenersInitialized = false;
 
 function initListeners() {
-  listen("ptt-start", () => {
+  EventsOn("ptt-start", () => {
     wsState.isPTTHeld = true;
     apiFetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
   });
 
-  listen("ptt-stop", () => {
+  EventsOn("ptt-stop", () => {
     wsState.isPTTHeld = false;
     apiFetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
   });
 
-  listen("panic-clear", () => {
+  EventsOn("panic-clear", () => {
     wsState.transcript = "";
     wsState.response = "";
     wsState.isThinking = false;
@@ -118,7 +117,7 @@ export function connect(url?: string): void {
 
     if (authState.accessToken !== null) {
       try {
-        const machine_id: string = await invoke('get_machine_id');
+        const machine_id: string = await (window as any).go.main.App.GetMachineId();
         ws?.send(JSON.stringify({ type: "auth", token: authState.accessToken, machine_id }));
       } catch (err) {
         console.error("Failed to get machine id", err);
