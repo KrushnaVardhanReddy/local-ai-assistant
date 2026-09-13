@@ -14,6 +14,21 @@ export const authState = $state({
   authMode: (supabaseUrl ? "saas" : "local") as "local" | "saas"
 });
 
+export const cloudAuthState = $state({
+  apiKey: typeof window !== 'undefined' ? localStorage.getItem('cloud_api_key') : null
+});
+
+export function setCloudApiKey(key: string | null) {
+  cloudAuthState.apiKey = key;
+  if (typeof window !== 'undefined') {
+    if (key === null) {
+      localStorage.removeItem('cloud_api_key');
+    } else {
+      localStorage.setItem('cloud_api_key', key);
+    }
+  }
+}
+
 export async function restoreSession() {
   if (authState.authMode === "local" || !supabase) return;
 

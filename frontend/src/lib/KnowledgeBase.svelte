@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { apiFetch } from "./api";
   import { onMount } from "svelte";
   import { authState } from "./auth.svelte";
   import { getApiUrl } from "$lib/api";
@@ -25,7 +26,7 @@
 
   async function fetchStatus() {
     try {
-      const res = await fetch(`${API_BASE}/rag/status`);
+      const res = await apiFetch(`${API_BASE}/rag/status`);
       if (res.ok) {
         const data = await res.json();
         ragEnabled = data.enabled;
@@ -35,7 +36,7 @@
     }
 
     try {
-      const res = await fetch(`${API_BASE}/web_search/status`);
+      const res = await apiFetch(`${API_BASE}/web_search/status`);
       if (res.ok) {
         const data = await res.json();
         webSearchEnabled = data.enabled;
@@ -47,7 +48,7 @@
 
   async function toggleRag() {
     try {
-      const res = await fetch(`${API_BASE}/rag/toggle`, { method: "POST" });
+      const res = await apiFetch(`${API_BASE}/rag/toggle`, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
         ragEnabled = data.enabled;
@@ -59,7 +60,7 @@
 
   async function toggleWebSearch() {
     try {
-      const res = await fetch(`${API_BASE}/web_search/toggle`, { method: "POST" });
+      const res = await apiFetch(`${API_BASE}/web_search/toggle`, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
         webSearchEnabled = data.enabled;
@@ -71,7 +72,7 @@
 
   async function fetchDocuments() {
     try {
-      const res = await fetch(`${API_BASE}/rag/documents`);
+      const res = await apiFetch(`${API_BASE}/rag/documents`);
       if (res.ok) {
         const data = await res.json();
         documents = data.documents;
@@ -85,7 +86,7 @@
     try {
       const token = authState.accessToken;
       const headers = token ? { "Authorization": `Bearer ${token}` } : {};
-      const res = await fetch(`${API_BASE}/rag/team/list`, { headers });
+      const res = await apiFetch(`${API_BASE}/rag/team/list`, { headers });
       if (res.ok) {
         const data = await res.json();
         teamDocuments = data.documents;
@@ -104,7 +105,7 @@
         ? `${API_BASE}/rag/team/document/${encodeURIComponent(filename)}`
         : `${API_BASE}/rag/document/${encodeURIComponent(filename)}`;
 
-      const res = await fetch(endpoint, { method: "DELETE", headers });
+      const res = await apiFetch(endpoint, { method: "DELETE", headers });
       if (res.ok) {
         if (isTeam) {
           await fetchTeamDocuments();

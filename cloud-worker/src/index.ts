@@ -1,5 +1,6 @@
 export interface Env {
 	KV_CACHE: KVNamespace;
+	USERS_KV: KVNamespace;
 }
 
 const corsHeaders = {
@@ -30,6 +31,25 @@ export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		if (request.method === 'OPTIONS') {
 			return handleOptions(request);
+		}
+
+		const authHeader = request.headers.get('Authorization');
+		let isAuthorized = false;
+
+		if (authHeader && authHeader.startsWith('Bearer ')) {
+			const token = authHeader.substring(7);
+			const user = await env.USERS_KV.get(token);
+			if (user) {
+				isAuthorized = true;
+			}
+		}
+
+		if (!isAuthorized) {
+			const unauthorizedResponse = new Response('Unauthorized', { status: 401 });
+			for (const [key, value] of Object.entries(corsHeaders)) {
+				unauthorizedResponse.headers.set(key, value);
+			}
+			return unauthorizedResponse;
 		}
 
 		const url = new URL(request.url);
