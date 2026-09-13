@@ -99,3 +99,15 @@ dev-android: sync-mobile
 dev-ios: sync-mobile
 	@echo "Opening Xcode..."
 	cd frontend && npx cap open ios
+
+# ─── Cloud Edition ─────────────────────────────────────────────────────────────
+
+# Start the Cloud backend (Supabase + Cloudflare Worker)
+dev-cloud-backend:
+	@echo "Starting Cloud E2E Backend (Supabase + Worker)..."
+	@bash scripts/start_cloud_e2e.sh
+
+# Start the Cloud frontend (Tauri Cloud Config)
+dev-cloud-frontend:
+	@echo "Starting Cloud Frontend..."
+	@cd frontend && npm run build:cloud && npm run tauri dev -- --config src-tauri/tauri.cloud.conf.json
