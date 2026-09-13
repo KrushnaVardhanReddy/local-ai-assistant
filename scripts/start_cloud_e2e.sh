@@ -13,19 +13,14 @@ fi
 echo "Starting local Supabase instance..."
 cd "$PROJECT_ROOT/supabase"
 
-# Run supabase start and capture output
-# Use npx supabase to ensure we use the local version if available, or fetch it
-SUPABASE_OUTPUT=$(npx supabase start)
+# Run supabase start (we don't need to parse this output directly)
+npx supabase start
 
-echo "$SUPABASE_OUTPUT"
+echo "Fetching status..."
+STATUS_ENV=$(npx supabase status -o env)
 
-# Extract API URL and service_role key
-# The output format is typically:
-#          API URL: http://127.0.0.1:54321
-# service_role key: eyJhb...
-
-SUPABASE_URL=$(echo "$SUPABASE_OUTPUT" | grep -i "API URL:" | awk '{print $NF}' | tr -d '\r')
-SUPABASE_SERVICE_ROLE_KEY=$(echo "$SUPABASE_OUTPUT" | grep -i "service_role key:" | awk '{print $NF}' | tr -d '\r')
+SUPABASE_URL=$(echo "$STATUS_ENV" | grep "^API_URL=" | cut -d'"' -f2)
+SUPABASE_SERVICE_ROLE_KEY=$(echo "$STATUS_ENV" | grep "^SERVICE_ROLE_KEY=" | cut -d'"' -f2)
 
 if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
     echo "Error: Failed to extract Supabase URL or Service Role Key from the output."
