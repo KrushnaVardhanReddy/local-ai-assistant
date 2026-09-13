@@ -5,6 +5,7 @@
   import { onMount } from "svelte";
   import * as pdfjsLib from 'pdfjs-dist';
   import StealthTerminal from "$lib/StealthTerminal.svelte";
+  import { getApiUrl, getWsUrl } from "$lib/api";
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
@@ -15,7 +16,6 @@
 
   // New settings state
   let showSettings = $state(false);
-  let backendUrl = $state(localStorage.getItem("backend_url") || "127.0.0.1:8765");
   let selectedProvider = $state(localStorage.getItem("custom_provider") || "auto");
   let customApiKey = $state(localStorage.getItem("custom_api_key") || "");
   let openRouterModel = $state(localStorage.getItem("openrouter_model") || "anthropic/claude-3.5-sonnet:beta");
@@ -51,7 +51,7 @@
 
   onMount(async () => {
     try {
-      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const apiUrl = getApiUrl();
       const healthRes = await fetch(`${apiUrl}/health`);
       if (healthRes.ok) {
         const healthData = await healthRes.json();
@@ -63,7 +63,7 @@
       }
     } catch (e) { console.error("Failed to load health", e); }
     try {
-      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/system_prompt`);
       if (res.ok) {
         const data = await res.json();
@@ -79,7 +79,7 @@
     }
 
     try {
-      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const apiUrl = getApiUrl();
       const resContext = await fetch(`${apiUrl}/api/resume/context`);
       if (resContext.ok) {
         const data = await resContext.json();
@@ -92,7 +92,7 @@
     }
 
     try {
-      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const apiUrl = getApiUrl();
       const resLang = await fetch(`${apiUrl}/api/language`);
       if (resLang.ok) {
         const data = await resLang.json();
@@ -156,7 +156,7 @@
     if (!jobDescription) return;
     jobDescriptionStatus = "⏳ Saving job description...";
     try {
-      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/config/job-description`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -177,7 +177,7 @@
     if (!resumeRawText) return;
     resumeStatus = "⏳ Extracting candidate profile...";
     try {
-      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/resume/extract`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -205,14 +205,13 @@
   }
 
   async function handleSaveSettings() {
-    localStorage.setItem("backend_url", backendUrl);
     localStorage.setItem("preferred_language", preferredLanguage);
     localStorage.setItem("interview_language", interviewLanguage);
     localStorage.setItem("local_stt_engine", localSttEngine);
     localStorage.setItem("custom_provider", selectedProvider);
     localStorage.setItem("custom_api_key", customApiKey);
     localStorage.setItem("openrouter_model", openRouterModel);
-    reconnect(backendUrl);
+    reconnect(getWsUrl());
     try {
       await invoke("toggle_stealth", { enable: !isDevModeChecked });
     } catch (err) {
@@ -220,7 +219,7 @@
     }
 
     try {
-      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const apiUrl = getApiUrl();
       await fetch(`${apiUrl}/api/language`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -241,7 +240,7 @@
     }
 
     try {
-      const apiUrl = backendUrl.startsWith('http') ? backendUrl : `http://${backendUrl}`;
+      const apiUrl = getApiUrl();
       await fetch(`${apiUrl}/api/system_prompt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -332,11 +331,6 @@
     </div>
 
     <hr class="divider" style="margin-top: 0;" />
-
-    <div class="input-group">
-      <label for="backendUrl">Backend API URL</label>
-      <input type="text" id="backendUrl" bind:value={backendUrl} placeholder="127.0.0.1:8765" data-testid="backend-url-input" />
-    </div>
 
     <div class="checkbox-group">
       <label>

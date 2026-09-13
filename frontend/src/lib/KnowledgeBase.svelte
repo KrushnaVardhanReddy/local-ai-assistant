@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { authState } from "./auth.svelte";
+  import { getApiUrl } from "$lib/api";
 
   let ragEnabled = $state(false);
   let webSearchEnabled = $state(false);
@@ -20,7 +21,7 @@
 
   let uploadQueue = $state<UploadItem[]>([]);
 
-  const API_BASE = "http://127.0.0.1:8765";
+  const API_BASE = getApiUrl();
 
   async function fetchStatus() {
     try {

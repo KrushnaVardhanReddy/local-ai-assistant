@@ -2,6 +2,7 @@ import { authState, supabase } from '$lib/auth.svelte';
 import { invoke } from '@tauri-apps/api/core';
 
 import { listen } from '@tauri-apps/api/event';
+import { getApiUrl, getWsUrl } from '$lib/api';
 
 export const wsState = $state({
   transcript: "",
@@ -28,12 +29,12 @@ let listenersInitialized = false;
 function initListeners() {
   listen("ptt-start", () => {
     wsState.isPTTHeld = true;
-    fetch('http://127.0.0.1:8765/ptt/start', { method: 'POST' }).catch(console.error);
+    fetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
   });
 
   listen("ptt-stop", () => {
     wsState.isPTTHeld = false;
-    fetch('http://127.0.0.1:8765/ptt/stop', { method: 'POST' }).catch(console.error);
+    fetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
   });
 
   listen("panic-clear", () => {
@@ -43,7 +44,7 @@ function initListeners() {
     wsState.ragSources = [];
     wsState.pendingTranscripts = [];
     wsState.transcriptHistory = [];
-    fetch('http://127.0.0.1:8765/history/clear', { method: 'POST' }).catch(console.error);
+    fetch(`${getApiUrl()}/history/clear`, { method: 'POST' }).catch(console.error);
   });
 }
 let retryDelay = 500;
@@ -64,28 +65,8 @@ export function connect(url?: string): void {
   }
 
 
-  let storedUrl = null;
-  if (typeof localStorage !== 'undefined') {
-    storedUrl = localStorage.getItem('backend_url');
-    // Auto-migrate stale port 8000 → 8765
-    if (storedUrl && storedUrl.includes(':8000')) {
-      storedUrl = storedUrl.replace(':8000', ':8765');
-      localStorage.setItem('backend_url', storedUrl);
-    }
-  }
-
-  let defaultUrl = "ws://127.0.0.1:8765/ws";
-  if (typeof window !== 'undefined') {
-    // Check if we are in a normal browser (not Tauri)
-    const isBrowser = typeof (window as any).__TAURI_INTERNALS__ === 'undefined';
-    if (isBrowser) {
-      const host = window.location.host;
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      defaultUrl = `${wsProtocol}//${host}/ws`;
-    }
-  }
-
-  let targetUrl = url ?? storedUrl ?? import.meta.env.VITE_WS_URL ?? defaultUrl;
+  let defaultUrl = getWsUrl();
+  let targetUrl = url ?? import.meta.env.VITE_WS_URL ?? defaultUrl;
   if (targetUrl.startsWith('http://')) {
     targetUrl = targetUrl.replace('http://', 'ws://');
   } else if (targetUrl.startsWith('https://')) {
