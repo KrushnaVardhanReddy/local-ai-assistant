@@ -117,8 +117,8 @@ async def main():
     print("Initializing Local Intelligence engine...", file=sys.stderr)
     get_local_intelligence()
 
-    total_questions = 100
-    batch_size = 10
+    total_questions = int(os.environ.get("PREWARM_TOTAL_QUESTIONS", 100))
+    batch_size = int(os.environ.get("PREWARM_BATCH_SIZE", 10))
     num_batches = total_questions // batch_size
 
     all_qa_pairs = []
