@@ -1,0 +1,37 @@
+TASK: P39-T2 — Selective Cache Management
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Now that we are bulk-generating hundreds of Q&A pairs via the Dynamic Pre-Warmer,
+we need finer control over cache deletion. Currently, we only have a "Clear All" 
+option (`DELETE /api/cache`). If the LLM generates 5 bad answers out of 100, the user 
+should not have to nuke the entire cache to get rid of them.
+
+We need a UI and API to view all cached questions and selectively delete them.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. BACKEND API (`backend/app.py` & `backend/qa_cache.py`):
+   - Create a `GET /api/cache/items` endpoint that returns a list of all cached questions. It should query ChromaDB to return the `id` and `question` (from metadata/documents).
+   - Create a `DELETE /api/cache/items` endpoint that accepts a JSON body containing a list of ChromaDB `ids` to delete, and deletes only those specific vectors.
+
+2. FRONTEND UI (`frontend/src/lib/Settings.svelte` or a new component):
+   - Replace the single "Clear Cache" button with a mini Cache Manager section.
+   - It should fetch and display a scrollable list of all cached questions.
+   - Each question should have a checkbox next to it.
+   - Provide a "Delete Selected" button (calls `DELETE /api/cache/items`).
+   - Keep the existing "Clear All Cache" button (calls `DELETE /api/cache`).
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Run the frontend/backend and verify the UI properly displays cached questions.
+2. Select a few questions, click "Delete Selected", and verify only those are removed from ChromaDB.
+
+Commit message: "jules: P39-T2 implement selective cache deletion"
+Target branch: feature/krushna

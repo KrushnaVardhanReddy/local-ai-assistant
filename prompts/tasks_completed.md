@@ -448,3 +448,31 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |
+
+
+---
+
+## Phase 26 — Enterprise B2B Features 🏢
+
+> Shifting from B2C to B2B. Requires Supabase authentication upgrades and SSO integration.
+> Allows IT Admins to manage seats, and creates a Team Knowledge Base.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P26-T5 | `web/tests/e2e/`, `tests/e2e/` | **E2E Tests:** Playwright and Pytest tests for Enterprise B2B features. | ✅ | #114 |
+
+---
+
+## Phase 35 — Hotkeys
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P35-T1 | `frontend/src/` | **Hotkeys Side Panel:** Slide-out drawer for hotkeys so users don't lose context. | ✅ | #109 |
+
+---
+
+## Phase 36 — Auto STAR & Smart Context Pipeline
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P36-T2 | `backend/app.py`, `backend/local_intelligence.py` | **Smart Context Pipeline:** SmolLM2 multi-class routing + ChromaDB RAG | ✅ | #113 |
