@@ -39,6 +39,6 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P41-T1 | `cloud-worker/src/index.ts` | **Worker WebSocket Upgrade:** Implement the `/ws` endpoint in the worker to accept incoming WebSocket upgrade requests and handle connection lifecycle. | ⬜ | — |
+| P41-T1 | `cloud-worker/src/index.ts` | **Worker WebSocket Upgrade:** Implement the `/ws` endpoint in the worker to accept incoming WebSocket upgrade requests and handle connection lifecycle. | ✅ | #134 |
 | P41-T2 | `cloud-worker/src/index.ts` | **Supabase Session Validation:** Handle the initial `{"type": "auth"}` message over WS. Validate the API Key against Supabase and check if the user has `payg_sessions > 0`. | ⬜ | — |
 | P41-T3 | `cloud-worker/src/index.ts` | **LLM Streaming & Vector Cache Integration:** Handle the `{"type": "chat"}` message over WS. Generate embeddings, query the `pgvector` cache, stream to Groq, and stream tokens back. | ⬜ | — |
