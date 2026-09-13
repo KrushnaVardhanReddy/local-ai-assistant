@@ -368,10 +368,74 @@ export default {
 
 				server.accept();
 
-				server.addEventListener('message', (event) => {
+				let wsUserId: string | null = null;
+				let isWsAuthorized = false;
+
+				server.addEventListener('message', async (event) => {
 					try {
 						if (typeof event.data === 'string') {
-							JSON.parse(event.data);
+							const msg = JSON.parse(event.data);
+
+							if (msg.type === 'auth') {
+								const token = msg.token;
+								if (!token) {
+									server.send(JSON.stringify({ type: 'auth_error', message: 'Missing token' }));
+									server.close(1008, 'Missing token');
+									return;
+								}
+
+								const fullHash = await sha256Hex(token);
+								const keyHash = fullHash.substring(0, 12);
+
+								if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+									const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, '');
+									const queryUrl = `${supabaseUrl}/rest/v1/user_api_keys?key_hash=eq.${encodeURIComponent(keyHash)}&select=user_id,profiles!inner(payg_sessions,plan)`;
+
+									try {
+										const supabaseRes = await fetch(queryUrl, {
+											method: 'GET',
+											headers: {
+												'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+												'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+												'Content-Type': 'application/json'
+											}
+										});
+
+										if (supabaseRes.ok) {
+											const data: any = await supabaseRes.json();
+											if (data && data.length > 0) {
+												const profile = data[0].profiles;
+												if (profile) {
+													if (profile.payg_sessions > 0 || profile.plan === 'lifetime') {
+														isWsAuthorized = true;
+														wsUserId = data[0].user_id;
+														server.send(JSON.stringify({ type: 'plan', plan: profile.plan || 'payg' }));
+														return;
+													} else {
+														server.send(JSON.stringify({ type: 'auth_error', message: 'You have reached your limit. Switch to BYOK or buy more credits.' }));
+														server.close(1008, 'Limit reached');
+														return;
+													}
+												}
+											}
+										}
+									} catch (error) {
+										console.error("Error validating token with Supabase in WebSocket", error);
+									}
+								}
+
+								// If we get here and aren't authorized, fail auth
+								server.send(JSON.stringify({ type: 'auth_error', message: 'Invalid token' }));
+								server.close(1008, 'Invalid token');
+								return;
+							}
+
+							// Only process subsequent messages if authorized
+							if (!isWsAuthorized) {
+								return; // Ignore messages before auth is complete
+							}
+
+							// Note: Further message handling can be implemented here using wsUserId
 						}
 					} catch (e) {
 						// Ignored for now
