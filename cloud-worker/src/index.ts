@@ -56,6 +56,8 @@ export default {
 			}
 		}
 
+		let userId = '';
+
 		if (isProtected) {
 			const authHeader = request.headers.get('Authorization');
 			let isAuthorized = false;
@@ -88,6 +90,7 @@ export default {
 								const profile = data[0].profiles;
 								if (profile && (profile.payg_sessions > 0 || profile.plan === 'lifetime')) {
 									isAuthorized = true;
+									userId = data[0].user_id;
 								}
 							}
 						}
@@ -116,8 +119,122 @@ export default {
 				total_size_bytes: 0,
 				cache_hit_rate: 0.0,
 			});
+		} else if (method === 'POST' && path === '/api/ask') {
+			try {
+				const body: any = await request.json();
+				const embedding: number[] = body.embedding;
+
+				if (!embedding) {
+					response = Response.json({ status: 'error', message: 'Missing embedding' }, { status: 400 });
+				} else if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+					const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, '');
+					const rpcUrl = `${supabaseUrl}/rest/v1/rpc/match_qa_cache`;
+
+					const rpcRes = await fetch(rpcUrl, {
+						method: 'POST',
+						headers: {
+							'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+							'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							query_embedding: embedding,
+							match_threshold: 0.92,
+							match_count: 1,
+							p_user_id: userId
+						})
+					});
+
+					if (rpcRes.ok) {
+						const matches: any = await rpcRes.json();
+						if (matches && matches.length > 0) {
+							response = Response.json({ status: 'success', cached_answer: matches[0].answer });
+						} else {
+							response = Response.json({ status: 'success', cached_answer: null });
+						}
+					} else {
+						console.error("Error calling match_qa_cache RPC", await rpcRes.text());
+						response = Response.json({ status: 'error', message: 'Failed to query cache' }, { status: 500 });
+					}
+				} else {
+					response = Response.json({ status: 'error', message: 'Supabase configuration missing' }, { status: 500 });
+				}
+			} catch (e: any) {
+				response = Response.json({ status: 'error', message: e.message }, { status: 500 });
+			}
+		} else if (method === 'POST' && path === '/api/cache/prewarm') {
+			try {
+				const body: any = await request.json();
+				const qaPairs: any[] = body.qa_pairs || [];
+
+				if (qaPairs.length > 0 && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+					const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, '');
+					const insertUrl = `${supabaseUrl}/rest/v1/qa_cache`;
+
+					const recordsToInsert = qaPairs.map(pair => ({
+						user_id: userId,
+						question: pair.question,
+						answer: pair.answer,
+						embedding: pair.embedding
+					}));
+
+					const insertRes = await fetch(insertUrl, {
+						method: 'POST',
+						headers: {
+							'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+							'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+							'Content-Type': 'application/json',
+							'Prefer': 'return=minimal'
+						},
+						body: JSON.stringify(recordsToInsert)
+					});
+
+					if (!insertRes.ok) {
+						console.error("Failed to insert prewarm vectors", await insertRes.text());
+					}
+				}
+
+				response = Response.json({ status: 'success', stored_count: qaPairs.length });
+			} catch (e: any) {
+				response = Response.json({ status: 'error', message: e.message }, { status: 500 });
+			}
 		} else if (method === 'DELETE' && path === '/api/cache') {
-			response = Response.json({ status: 'success', message: 'Cache cleared' });
+			try {
+				let ids: string[] = [];
+				if (request.body) {
+					try {
+						const body: any = await request.json();
+						ids = body.ids || [];
+					} catch (e) {
+						// Ignored, likely empty body
+					}
+				}
+
+				if (env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+					const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, '');
+					let deleteUrl = `${supabaseUrl}/rest/v1/qa_cache?user_id=eq.${userId}`;
+
+					if (ids.length > 0) {
+						deleteUrl += `&id=in.(${ids.join(',')})`;
+					}
+
+					const deleteRes = await fetch(deleteUrl, {
+						method: 'DELETE',
+						headers: {
+							'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+							'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`
+						}
+					});
+
+					if (!deleteRes.ok) {
+						console.error("Failed to delete vectors", await deleteRes.text());
+					}
+				}
+
+				response = Response.json({ status: 'success', message: 'Cache cleared' });
+			} catch (e: any) {
+				response = Response.json({ status: 'error', message: e.message }, { status: 500 });
+			}
 		} else if (method === 'POST' && path === '/api/resume/context') {
 			response = Response.json({ status: 'success', message: 'Resume context updated' });
 		} else {
