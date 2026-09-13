@@ -1,0 +1,27 @@
+TASK: P42-T6 — E2E Wails UI Test
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+With the Svelte frontend migrated to Wails, we need an automated End-to-End test that validates the UI mounts correctly inside the Go desktop wrapper and can route API calls to the Cloudflare backend WITHOUT mocking any network interactions.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CREATE E2E TEST
+   - Create a Go test file in `wails-app/tests/e2e/ui_test.go`.
+   - Use a Go testing framework (like `go test` with `wails test` support, or Playwright for Go).
+   
+2. VERIFY NO MOCKING
+   - Spin up the Wails application in the test environment.
+   - Verify that the Svelte UI mounts successfully.
+   - Assert that clicking a button or initiating a session successfully talks to the REAL Cloudflare worker endpoint. Do not use mocks.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P42-T6 add E2E wails UI test with zero mocking"
+Target branch: feature/krushna_golang

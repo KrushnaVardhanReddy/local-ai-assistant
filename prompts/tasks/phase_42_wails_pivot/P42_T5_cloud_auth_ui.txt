@@ -1,27 +1,27 @@
-TASK: P42-T5 — E2E Wails UI Test
+TASK: P42-T5 — Cloud Auth UI (Login & Registration)
 
 ═══════════════════════════════════════════════════════════════
 BACKGROUND & CONTEXT
 ═══════════════════════════════════════════════════════════════
 
-With the Svelte frontend migrated to Wails, we need an automated End-to-End test that validates the UI mounts correctly inside the Go desktop wrapper and can route API calls to the Cloudflare backend WITHOUT mocking any network interactions.
+For users running the Cloud Edition (SaaS mode), they need an interface to create an account and log in. We already have the backend logic in `auth.svelte.ts` configured for Supabase Auth, but we lack the Svelte UI components (modals/pages) for users to type in their email/password and actually register.
 
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
 
-1. CREATE E2E TEST
-   - Create a Go test file in `wails-app/tests/e2e/ui_test.go`.
-   - Use a Go testing framework (like `go test` with `wails test` support, or Playwright for Go).
-   
-2. VERIFY NO MOCKING
-   - Spin up the Wails application in the test environment.
-   - Verify that the Svelte UI mounts successfully.
-   - Assert that clicking a button or initiating a session successfully talks to the REAL Cloudflare worker endpoint. Do not use mocks.
+1. ADD REGISTRATION LOGIC
+   - In `wails-app/frontend/src/lib/auth.svelte.ts`, implement a new `signUp(email, password)` function using `supabase.auth.signUp()`.
+
+2. BUILD AUTH UI COMPONENT
+   - Create a new component `wails-app/frontend/src/lib/components/AuthModal.svelte` (or integrate it into an existing Settings/Login page).
+   - It should have a clean, modern UI for "Sign In" and "Create Account".
+   - It should handle loading states, success messages, and display any Supabase Auth errors gracefully.
+   - When the user successfully logs in or registers, the modal should close and the UI should update their session state.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
 
-Commit message: "jules: P42-T5 add E2E wails UI test with zero mocking"
+Commit message: "jules: P42-T5 implement cloud auth UI for registration and login"
 Target branch: feature/krushna_golang

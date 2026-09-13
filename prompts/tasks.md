@@ -55,7 +55,8 @@
 | P42-T2 | `wails-app/frontend/src/` | **UI Porting:** Copy existing Svelte components, lib files, and Tailwind configuration into the new Wails frontend directory. Fix any imports. | 🔄 | — |
 | P42-T3 | `wails-app/frontend/src/lib/` | **API Swap:** Replace Tauri frontend calls (e.g., `invoke('command')`, `WebviewWindow`) with Wails Go bindings (`@wailsio/runtime`). | ⬜ | — |
 | P42-T4 | `wails-app/frontend/src/lib/api.ts` | **Cloud Worker Proxy (Wails Edition):** Ensure the Cloud Edition Svelte logic correctly points to the existing Cloudflare Worker URL. | ⬜ | — |
-| P42-T5 | `wails-app/tests/e2e/` | **E2E Wails UI Test:** Wails native E2E test verifying the Svelte app mounts and successfully routes API calls with zero mocking. | ⬜ | — |
+| P42-T5 | `wails-app/frontend/src/lib/` | **Cloud Auth UI:** Implement a Login and Registration modal in Svelte that uses Supabase Auth to register users for the Cloud Edition. | ⬜ | — |
+| P42-T6 | `wails-app/tests/e2e/` | **E2E Wails UI Test:** Wails native E2E test verifying the Svelte app mounts and successfully routes API calls with zero mocking. | ⬜ | — |
 
 ---
 
