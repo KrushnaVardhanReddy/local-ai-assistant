@@ -4,7 +4,7 @@ TASK: P43-T2 — Local Embeddings in Go
 BACKGROUND & CONTEXT
 ═══════════════════════════════════════════════════════════════
 
-To populate our vector database, we need to generate embeddings locally. We will use `onnxruntime-go` to run our SmolLM2 ONNX model directly inside the Go process.
+To populate our vector database, we need to generate embeddings locally. We will use `onnxruntime-go` to run our all-MiniLM-L6-v2 ONNX embedding model directly inside the Go process.
 
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
@@ -13,7 +13,7 @@ OBJECTIVE
 1. INTEGRATE ONNX RUNTIME
    - Inside `wails-app/backend/`, create `embeddings.go`.
    - Add the dependency: `go get github.com/yalue/onnxruntime_go`
-   - Implement a function to load the ONNX model (from `models/smollm2/`) and an appropriate tokenizer.
+   - Implement a function to load the ONNX model (from `models/all-MiniLM-L6-v2/`) and an appropriate tokenizer.
 
 2. GENERATE EMBEDDINGS
    - Implement `GenerateEmbedding(text string) []float32`.
