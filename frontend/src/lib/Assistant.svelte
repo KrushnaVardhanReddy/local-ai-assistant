@@ -14,6 +14,11 @@
 
   let clearingCache = $state(false);
   let cacheStats = $state<{ cached_pairs: number; estimated_tokens_saved: number } | null>(null);
+  let cacheItems = $state<{ id: string, question: string }[]>([]);
+  let selectedCacheItemIds = $state<Set<string>>(new Set());
+  let showCacheManager = $state(false);
+  let loadingCacheItems = $state(false);
+  let deletingSelected = $state(false);
 
   // Pre-warm state
   let showPrewarmModal = $state(false);
@@ -120,6 +125,65 @@
       alert(`Error pre-warming cache: ${e.message}`);
     } finally {
       prewarmingCache = false;
+    }
+  }
+
+  async function fetchCacheItems() {
+    loadingCacheItems = true;
+    try {
+      const configuredUrl = localStorage.getItem('backend_url') || '127.0.0.1:8765';
+      const apiUrl = configuredUrl.startsWith('http') ? configuredUrl : `http://${configuredUrl}`;
+      const res = await fetch(`${apiUrl}/api/cache/items`);
+      if (res.ok) {
+        cacheItems = await res.json();
+      }
+    } catch (e) {
+      console.error("Failed to fetch cache items:", e);
+    } finally {
+      loadingCacheItems = false;
+    }
+  }
+
+  function toggleCacheManager() {
+    showCacheManager = !showCacheManager;
+    if (showCacheManager && cacheItems.length === 0) {
+      fetchCacheItems();
+    }
+  }
+
+  function toggleCacheItemSelection(id: string) {
+    if (selectedCacheItemIds.has(id)) {
+      selectedCacheItemIds.delete(id);
+    } else {
+      selectedCacheItemIds.add(id);
+    }
+    // Trigger reactivity for Svelte 5 by reassigning
+    selectedCacheItemIds = new Set(selectedCacheItemIds);
+  }
+
+  async function deleteSelectedCacheItems() {
+    if (selectedCacheItemIds.size === 0) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedCacheItemIds.size} selected Q&A pair(s)?`
+    );
+    if (!confirmed) return;
+    deletingSelected = true;
+    try {
+      const configuredUrl = localStorage.getItem('backend_url') || '127.0.0.1:8765';
+      const apiUrl = configuredUrl.startsWith('http') ? configuredUrl : `http://${configuredUrl}`;
+      await fetch(`${apiUrl}/api/cache/items`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedCacheItemIds) })
+      });
+      selectedCacheItemIds.clear();
+      selectedCacheItemIds = new Set();
+      await fetchCacheItems();
+      await fetchCacheStats();
+    } catch (e) {
+      console.error("Failed to delete selected cache items:", e);
+    } finally {
+      deletingSelected = false;
     }
   }
 
@@ -728,20 +792,66 @@
           {:else}
             <p class="muted-text text-on-surface-variant/50 text-[12px] mb-3">Cache unavailable (SmolLM2 not enabled)</p>
           {/if}
-          <div class="flex gap-2 mt-3">
-            <button
-              class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors"
-              onclick={() => showPrewarmModal = true}
-            >
-              Pre-Warm Cache
-            </button>
-            <button
-              class="btn-danger"
-              onclick={clearCache}
-              disabled={clearingCache || !cacheStats || cacheStats.cached_pairs === 0}
-            >
-              {clearingCache ? "Clearing..." : "Clear Cache"}
-            </button>
+          <div class="flex flex-col gap-2 mt-3">
+            <div class="flex gap-2">
+              <button
+                class="px-3 py-1.5 rounded bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors"
+                onclick={() => showPrewarmModal = true}
+              >
+                Pre-Warm Cache
+              </button>
+              <button
+                class="px-3 py-1.5 rounded bg-secondary/20 text-secondary text-sm font-medium hover:bg-secondary/30 transition-colors"
+                onclick={toggleCacheManager}
+                disabled={!cacheStats || cacheStats.cached_pairs === 0}
+              >
+                {showCacheManager ? "Hide Manager" : "Manage Cache"}
+              </button>
+              <button
+                class="btn-danger ml-auto"
+                onclick={clearCache}
+                disabled={clearingCache || !cacheStats || cacheStats.cached_pairs === 0}
+              >
+                {clearingCache ? "Clearing All..." : "Clear All"}
+              </button>
+            </div>
+
+            {#if showCacheManager}
+              <div class="mt-2 bg-black/20 border border-white/5 rounded p-3">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-xs font-medium text-on-surface-variant/70 uppercase tracking-wider">Cached Questions</span>
+                  <button
+                    class="btn-danger text-xs px-2 py-1"
+                    onclick={deleteSelectedCacheItems}
+                    disabled={deletingSelected || selectedCacheItemIds.size === 0}
+                  >
+                    {deletingSelected ? "Deleting..." : `Delete Selected (${selectedCacheItemIds.size})`}
+                  </button>
+                </div>
+
+                {#if loadingCacheItems}
+                  <div class="text-xs text-on-surface-variant/50 text-center py-4">Loading cache items...</div>
+                {:else if cacheItems.length === 0}
+                  <div class="text-xs text-on-surface-variant/50 text-center py-4">No items in cache.</div>
+                {:else}
+                  <div class="max-h-48 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-1">
+                    {#each cacheItems as item (item.id)}
+                      <label class="flex items-start gap-2 p-1.5 hover:bg-white/5 rounded cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          class="mt-0.5 rounded border-white/20 bg-black/30 text-primary focus:ring-primary/50"
+                          checked={selectedCacheItemIds.has(item.id)}
+                          onchange={() => toggleCacheItemSelection(item.id)}
+                        />
+                        <span class="text-sm text-on-surface-variant/90 group-hover:text-white transition-colors line-clamp-2" title={item.question}>
+                          {item.question}
+                        </span>
+                      </label>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {/if}
           </div>
         </div>
       </div>
