@@ -10,6 +10,8 @@
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
+  const isCloudBuild = import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
+
   let email = $state("");
   let password = $state("");
   let signInError = $state<string | null>(null);
@@ -326,12 +328,14 @@
   <hr class="divider" />
 
   <div class="config-section">
-    <div style="margin-bottom: 1rem;">
-      <h3 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: #ddd;">Embedded Stealth Terminal</h3>
-      <StealthTerminal />
-    </div>
+    {#if !isCloudBuild}
+      <div style="margin-bottom: 1rem;">
+        <h3 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: #ddd;">Embedded Stealth Terminal</h3>
+        <StealthTerminal />
+      </div>
 
-    <hr class="divider" style="margin-top: 0;" />
+      <hr class="divider" style="margin-top: 0;" />
+    {/if}
 
     <div class="checkbox-group">
       <label>
@@ -340,23 +344,25 @@
       </label>
     </div>
 
-    <div class="input-group">
-      <label for="audioDevice">Audio Input Device</label>
-      <select id="audioDevice" bind:value={selectedDeviceId} class="custom-select">
-        <option value={null}>Default Microphone</option>
-        {#each audioDevices as dev}
-          <option value={dev.id}>{dev.name}</option>
-        {/each}
-      </select>
-    </div>
-
-    {#if audioDevices.find(d => d.id === selectedDeviceId)?.is_loopback_capable}
-      <div class="checkbox-group">
-        <label>
-          <input type="checkbox" bind:checked={isLoopbackEnabled} />
-          Enable System Audio Loopback (Windows WASAPI only)
-        </label>
+    {#if !isCloudBuild}
+      <div class="input-group">
+        <label for="audioDevice">Audio Input Device</label>
+        <select id="audioDevice" bind:value={selectedDeviceId} class="custom-select">
+          <option value={null}>Default Microphone</option>
+          {#each audioDevices as dev}
+            <option value={dev.id}>{dev.name}</option>
+          {/each}
+        </select>
       </div>
+
+      {#if audioDevices.find(d => d.id === selectedDeviceId)?.is_loopback_capable}
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" bind:checked={isLoopbackEnabled} />
+            Enable System Audio Loopback (Windows WASAPI only)
+          </label>
+        </div>
+      {/if}
     {/if}
 
     <div class="input-group">
@@ -417,13 +423,15 @@
       </div>
     {/if}
 
-    <div class="input-group">
-      <label for="localSttEngine">Local STT Engine</label>
-      <select id="localSttEngine" bind:value={localSttEngine} class="custom-select">
-        <option value="faster-whisper">Faster-Whisper (Universal)</option>
-        <option value="parakeet">Nvidia Parakeet (RTX GPUs only)</option>
-      </select>
-    </div>
+    {#if !isCloudBuild}
+      <div class="input-group">
+        <label for="localSttEngine">Local STT Engine</label>
+        <select id="localSttEngine" bind:value={localSttEngine} class="custom-select">
+          <option value="faster-whisper">Faster-Whisper (Universal)</option>
+          <option value="parakeet">Nvidia Parakeet (RTX GPUs only)</option>
+        </select>
+      </div>
+    {/if}
 
     {#if selectedProvider === 'openrouter'}
       <div class="input-group">
