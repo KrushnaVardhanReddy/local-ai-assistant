@@ -1,6 +1,7 @@
 <script lang="ts">
   import { wsState, sendChat, sendChip, dismissChip, clearAllChips, toggleMockMode } from "$lib/ws.svelte";
   import { onMount } from "svelte";
+  import { getApiUrl } from "$lib/api";
   import SessionReport from './SessionReport.svelte';
   import ResumeBuilder from './ResumeBuilder.svelte';
   import { authState } from "$lib/auth.svelte";
@@ -30,11 +31,11 @@
     toggleMockMode(isNowEnabled);
     if (isNowEnabled) {
       // Start microphone for hands-free mock interview
-      fetch('http://127.0.0.1:8765/ptt/start', { method: 'POST' }).catch(console.error);
+      fetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
     } else {
       showSessionReport = true;
       // Stop microphone
-      fetch('http://127.0.0.1:8765/ptt/stop', { method: 'POST' }).catch(console.error);
+      fetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
     }
   }
   let liveEarsCollapsed = $state(false);
@@ -77,8 +78,7 @@
 
   async function fetchCacheStats() {
     try {
-      const configuredUrl = localStorage.getItem('backend_url') || '127.0.0.1:8765';
-      const apiUrl = configuredUrl.startsWith('http') ? configuredUrl : `http://${configuredUrl}`;
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/cache/stats`);
       if (res.ok) {
         cacheStats = await res.json();
@@ -94,8 +94,7 @@
   async function prewarmCache() {
     prewarmingCache = true;
     try {
-      const storedBackendUrl = localStorage.getItem("backend_url") || "127.0.0.1:8765";
-      const apiUrl = storedBackendUrl.startsWith('http') ? storedBackendUrl : `http://${storedBackendUrl}`;
+      const apiUrl = getApiUrl();
 
       const resContext = await fetch(`${apiUrl}/api/resume/context`);
       let baseResume = "";
@@ -131,8 +130,7 @@
   async function fetchCacheItems() {
     loadingCacheItems = true;
     try {
-      const configuredUrl = localStorage.getItem('backend_url') || '127.0.0.1:8765';
-      const apiUrl = configuredUrl.startsWith('http') ? configuredUrl : `http://${configuredUrl}`;
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/cache/items`);
       if (res.ok) {
         cacheItems = await res.json();
@@ -169,8 +167,7 @@
     if (!confirmed) return;
     deletingSelected = true;
     try {
-      const configuredUrl = localStorage.getItem('backend_url') || '127.0.0.1:8765';
-      const apiUrl = configuredUrl.startsWith('http') ? configuredUrl : `http://${configuredUrl}`;
+      const apiUrl = getApiUrl();
       await fetch(`${apiUrl}/api/cache/items`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -195,8 +192,7 @@
     if (!confirmed) return;
     clearingCache = true;
     try {
-      const configuredUrl = localStorage.getItem('backend_url') || '127.0.0.1:8765';
-      const apiUrl = configuredUrl.startsWith('http') ? configuredUrl : `http://${configuredUrl}`;
+      const apiUrl = getApiUrl();
       await fetch(`${apiUrl}/api/cache`, { method: "DELETE" });
       await fetchCacheStats();
     } finally {
@@ -216,7 +212,7 @@
 
     // Check if we are running in a regular browser instead of Tauri
     isBrowser = typeof window !== 'undefined' && typeof (window as any).__TAURI_INTERNALS__ === 'undefined';
-    const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
+    const apiUrl = getApiUrl();
 
     const unlisten = listen("trigger-vision", async () => {
       if (wsState.isAnalyzingScreen) return;
@@ -370,7 +366,7 @@
       // Or just invoke directly here if we are not relying on the global hotkey
       invoke<string>("capture_screen").then(async (base64Image) => {
         wsState.isAnalyzingScreen = true;
-        const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
+        const apiUrl = getApiUrl();
         try {
           const headers: Record<string, string> = {
             "Content-Type": "application/json"
@@ -402,7 +398,7 @@
     wsState.ragSources = [];
     wsState.pendingTranscripts = [];
     wsState.transcriptHistory = [];
-    const apiUrl = isBrowser ? `${window.location.protocol}//${window.location.host}` : "http://127.0.0.1:8765";
+    const apiUrl = getApiUrl();
     fetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
   }
 

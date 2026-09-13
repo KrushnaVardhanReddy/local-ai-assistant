@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { renderMarkdown } from "$lib/markdownRenderer";
+  import { getApiUrl } from "$lib/api";
   import "./resume-styles.css";
 
   let editorText = $state("");
@@ -28,9 +29,7 @@
     statusMessage = "Tailoring resume to job description...";
 
     try {
-      // Get the backend URL from localStorage (saved by Settings.svelte) or default
-      const storedBackendUrl = localStorage.getItem("backend_url") || "127.0.0.1:8765";
-      const apiUrl = storedBackendUrl.startsWith('http') ? storedBackendUrl : `http://${storedBackendUrl}`;
+      const apiUrl = getApiUrl();
 
       // Fetch the context and job description
       const [resContext, resJob] = await Promise.all([
