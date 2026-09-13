@@ -1,6 +1,7 @@
 <script lang="ts">
   import { apiFetch } from "./api";
-  import { authState, signIn, signOut } from "$lib/auth.svelte";
+  import { authState, signOut } from "$lib/auth.svelte";
+  import AuthModal from "$lib/components/AuthModal.svelte";
   import { reconnect } from "$lib/ws.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { onMount } from "svelte";
@@ -12,13 +13,10 @@
 
   const isCloudBuild = import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
 
-  let email = $state("");
-  let password = $state("");
-  let signInError = $state<string | null>(null);
-  let isSigningIn = $state(false);
 
   // New settings state
   let showSettings = $state(false);
+  let isAuthModalOpen = $state(false);
   let selectedProvider = $state(localStorage.getItem("custom_provider") || "auto");
   let customApiKey = $state(localStorage.getItem("custom_api_key") || "");
   let openRouterModel = $state(localStorage.getItem("openrouter_model") || "anthropic/claude-3.5-sonnet:beta");
@@ -260,24 +258,7 @@
     }
   }
 
-  async function handleSignIn(e: Event) {
-    e.preventDefault();
-    if (!email || !password) {
-      signInError = "Please enter email and password.";
-      return;
-    }
 
-    isSigningIn = true;
-    signInError = null;
-    const { error } = await signIn(email, password);
-    if (error) {
-      signInError = error;
-    } else {
-      email = "";
-      password = "";
-    }
-    isSigningIn = false;
-  }
 
   async function handleSignOut() {
     await signOut();
@@ -547,29 +528,18 @@
           </div>
         </div>
       {:else}
-        <form class="signin-form" onsubmit={handleSignIn}>
+        <div class="signin-form">
           <p class="form-title">Sign In to Sync</p>
-          {#if signInError}
-            <div class="error-msg">{signInError}</div>
-          {/if}
-          <div class="input-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" bind:value={email} placeholder="you@example.com" required />
-          </div>
-          <div class="input-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" bind:value={password} placeholder="••••••••" required />
-          </div>
-          <button type="submit" class="btn-primary" disabled={isSigningIn}>
-            {isSigningIn ? 'Signing In...' : 'Sign In'}
-          </button>
-        </form>
+          <button class="btn-primary" onclick={() => isAuthModalOpen = true}>Sign In / Register</button>
+        </div>
       {/if}
     {/if}
     </div>
   </div>
   {/if}
 </div>
+
+<AuthModal bind:isOpen={isAuthModalOpen} onClose={() => isAuthModalOpen = false} />
 
 <style>
   .settings-wrapper {
