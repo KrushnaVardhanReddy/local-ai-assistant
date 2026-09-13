@@ -1,9 +1,24 @@
-TITLE: P42-T1 Init Wails Project
-OBJECTIVE
-Initialize a new Wails Go project using the Svelte-TS template to serve as the new unified codebase.
+TASK: P42-T1 — Init Wails Project
 
-INSTRUCTIONS
-1. Use the Wails CLI to generate a new project in the root directory named `wails-app`.
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We are migrating our local desktop application from Tauri (Rust) + Python to Wails (Go). This task initializes the Wails foundation using the Svelte-TS template so we can maintain our existing frontend.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. INITIALIZE PROJECT
+   - Use the Wails CLI to generate a new project in the root directory named `wails-app`.
    - Command: `wails init -n wails-app -t svelte-ts`
-2. DO NOT delete the existing `frontend/` or `src-tauri/` directories yet.
-3. Make sure the generated `wails-app/main.go` and `wails.json` are committed.
+   - DO NOT delete the existing `frontend/` or `src-tauri/` directories yet.
+   - Make sure the generated `wails-app/main.go` and `wails.json` are committed.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P42-T1 init Wails project using svelte-ts template"
+Target branch: feature/krushna_golang

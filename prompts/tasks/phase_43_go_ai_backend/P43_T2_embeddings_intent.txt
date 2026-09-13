@@ -1,9 +1,27 @@
-TITLE: P43-T2 Local Embeddings in Go
-OBJECTIVE
-Use `onnxruntime-go` to run the SmolLM2 ONNX model directly in the Go process for fast, offline text embeddings.
+TASK: P43-T2 — Local Embeddings in Go
 
-INSTRUCTIONS
-1. Inside `wails-app/backend/`, create `embeddings.go`.
-2. Add the dependency: `go get github.com/yalue/onnxruntime_go`
-3. Implement a function to load the ONNX model (from `models/smollm2/`) and a tokenizer.
-4. Implement `GenerateEmbedding(text string) []float32` that tokenizes the text, passes it through the ONNX runtime, and returns the vector.
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+To populate our vector database, we need to generate embeddings locally. We will use `onnxruntime-go` to run our SmolLM2 ONNX model directly inside the Go process.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. INTEGRATE ONNX RUNTIME
+   - Inside `wails-app/backend/`, create `embeddings.go`.
+   - Add the dependency: `go get github.com/yalue/onnxruntime_go`
+   - Implement a function to load the ONNX model (from `models/smollm2/`) and an appropriate tokenizer.
+
+2. GENERATE EMBEDDINGS
+   - Implement `GenerateEmbedding(text string) []float32`.
+   - This function should tokenize the text, pass it through the ONNX runtime, and return the 384-dimensional vector.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P43-T2 run onnx embeddings locally in go"
+Target branch: feature/krushna_golang

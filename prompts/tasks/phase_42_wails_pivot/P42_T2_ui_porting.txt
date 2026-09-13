@@ -1,9 +1,28 @@
-TITLE: P42-T2 Port Svelte UI to Wails
-OBJECTIVE
-Copy the existing Svelte frontend code into the new Wails app.
+TASK: P42-T2 — Port Svelte UI to Wails
 
-INSTRUCTIONS
-1. Copy the contents of `frontend/src/` into `wails-app/frontend/src/`.
-2. Copy the contents of `frontend/static/` into `wails-app/frontend/static/`.
-3. Copy the Tailwind CSS configuration (`tailwind.config.js`, `postcss.config.js`) into `wails-app/frontend/`.
-4. Update `wails-app/frontend/package.json` to include any missing dependencies from `frontend/package.json` (like svelte-routing, lucide-svelte, etc).
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+With the Wails `wails-app/` template created, we now need to migrate our existing Svelte UI from `frontend/` into the new Wails frontend folder.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. COPY SOURCE FILES
+   - Copy the contents of `frontend/src/` into `wails-app/frontend/src/`.
+   - Copy the contents of `frontend/static/` into `wails-app/frontend/static/`.
+
+2. COPY CONFIGURATIONS
+   - Copy the Tailwind CSS configuration (`tailwind.config.js`, `postcss.config.js`) into `wails-app/frontend/`.
+
+3. UPDATE DEPENDENCIES
+   - Update `wails-app/frontend/package.json` to include any missing dependencies from `frontend/package.json` (e.g., svelte-routing, lucide-svelte).
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P42-T2 copy Svelte frontend into Wails"
+Target branch: feature/krushna_golang

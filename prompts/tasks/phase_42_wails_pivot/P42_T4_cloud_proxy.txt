@@ -1,8 +1,22 @@
-TITLE: P42-T4 Cloud Worker Proxy (Wails Edition)
-OBJECTIVE
-Ensure that the Wails frontend correctly points to the Cloudflare Worker when running the Cloud Edition.
+TASK: P42-T4 — Cloud Worker Proxy (Wails Edition)
 
-INSTRUCTIONS
-1. Open `wails-app/frontend/src/lib/api.ts` (or wherever the `getApiUrl()` and `getWsUrl()` logic lives).
-2. Ensure that it reads `VITE_API_BASE` and correctly formats the HTTP and WS URLs.
-3. Test that in Cloud mode, the Svelte app correctly talks to the Cloudflare Worker instead of the local Go backend.
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We must ensure that the Wails frontend correctly points to the Cloudflare Worker when the user is running the Cloud Edition of the app.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CONFIGURE API ENDPOINTS
+   - Open `wails-app/frontend/src/lib/api.ts` (or wherever the `getApiUrl()` and `getWsUrl()` logic lives).
+   - Ensure that it reads `VITE_API_BASE` and correctly formats the HTTP and WS URLs to point to the Cloudflare Worker instead of the local Go backend.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P42-T4 point Wails frontend to Cloudflare Worker"
+Target branch: feature/krushna_golang

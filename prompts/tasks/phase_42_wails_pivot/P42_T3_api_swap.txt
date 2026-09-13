@@ -1,8 +1,25 @@
-TITLE: P42-T3 Swap Tauri APIs for Wails APIs
-OBJECTIVE
-Remove Tauri-specific frontend bindings and replace them with Wails equivalents.
+TASK: P42-T3 — Swap Tauri APIs for Wails APIs
 
-INSTRUCTIONS
-1. Search through `wails-app/frontend/src/**/*.svelte` and `.ts` files for `@tauri-apps/api`.
-2. Replace Tauri IPC calls (like `invoke(...)`) with the Wails equivalent (`window.go.main.App...`).
-3. Replace Tauri window controls (`WebviewWindow`) with Wails runtime calls (`@wailsio/runtime`).
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Our Svelte UI is now inside the Wails folder, but it still makes calls to Tauri-specific APIs (`@tauri-apps/api`). We need to replace all of these with equivalent Wails Go bindings.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. REPLACE IPC BINDINGS
+   - Search through `wails-app/frontend/src/**/*.svelte` and `.ts` files for `@tauri-apps/api`.
+   - Replace Tauri IPC calls (like `invoke(...)`) with the Wails equivalent (`window.go.main.App...`).
+
+2. REPLACE WINDOW CONTROLS
+   - Replace Tauri window controls (like `WebviewWindow`) with Wails runtime calls from `@wailsio/runtime`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P42-T3 replace Tauri APIs with Wails APIs"
+Target branch: feature/krushna_golang

@@ -1,9 +1,27 @@
-TITLE: P43-T3 Local STT in Go
-OBJECTIVE
-Replace `faster-whisper` (Python) by integrating `whisper.go` (CGO bindings for whisper.cpp) for offline Speech-to-Text inference.
+TASK: P43-T3 — Local STT in Go
 
-INSTRUCTIONS
-1. Inside `wails-app/backend/`, create `stt.go`.
-2. Add the dependency for `whisper.go` or a suitable CGO wrapper for whisper.cpp.
-3. Implement a function to load the ggml/gguf Whisper model.
-4. Implement `TranscribeAudio(audioPath string) string` that takes a path to a WAV file, processes it through whisper.cpp, and returns the transcribed text.
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+To replace the Python `faster-whisper` sidecar, we will integrate `whisper.go` (CGO bindings for whisper.cpp) directly into our Go backend for fast, offline speech-to-text inference.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. INTEGRATE WHISPER
+   - Inside `wails-app/backend/`, create `stt.go`.
+   - Add the dependency for `whisper.go` or a suitable CGO wrapper for whisper.cpp.
+   - Implement a function to load the local ggml/gguf Whisper model from disk.
+
+2. TRANSCRIBE AUDIO
+   - Implement `TranscribeAudio(audioPath string) string`.
+   - This function should take a path to a WAV file, process it through the whisper.cpp bindings, and return the transcribed text.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P43-T3 integrate local STT using whisper.go"
+Target branch: feature/krushna_golang
