@@ -12,17 +12,19 @@ We are using Supabase Postgres as our database. The `profiles` table has a `payg
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
 
-1. CHECKOUT ENDPOINT:
-   - Add a `/api/checkout` endpoint to the Cloudflare Worker.
-   - It uses the Stripe Node API to generate a Stripe Checkout Session URL for purchasing "Interview Credits" (e.g., a $2.00 session pass).
+1. CREATE STRIPE CHECKOUT SESSION:
+   - Provide an endpoint (`POST /create-checkout-session`) that the Tauri frontend can call.
+   - It should generate a Stripe Checkout URL to sell a "5-Pack of Interviews" for $10.00.
+   - It must accept the user's `userId` (UUID) from the frontend and pass it into the Stripe Checkout session's `metadata` or `client_reference_id` so we know who paid when the webhook fires.
 
-2. STRIPE WEBHOOK:
-   - Add a `/api/webhook/stripe` endpoint to listen for `checkout.session.completed` events.
-   - On success, find the user in the Supabase `profiles` table (via customer email or a passed client_reference_id) and increment their `payg_sessions` balance by the purchased amount using the Supabase REST API (or `@supabase/supabase-js`).
+2. STRIPE WEBHOOK HANDLER:
+   - Provide an endpoint (`POST /api/webhook/stripe`) to receive Stripe events.
+   - When a `checkout.session.completed` event is received, extract the `userId`.
+   - Update the Supabase `profiles` table: increment `payg_sessions` by `+5`.
 
 3. FRONTEND INTEGRATION:
-   - Add a "Top Up Balance" or "Buy Credits" button in `Settings.svelte`.
-   - On click, hit `/api/checkout` and redirect the user's browser to the returned Stripe URL.
+   - Add a "Buy 5 Interviews for $10" button in `Settings.svelte`.
+   - On click, hit `/create-checkout-session` and redirect the user's browser to the returned Stripe URL.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
