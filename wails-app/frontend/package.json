@@ -15,7 +15,6 @@
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/postcss": "^4.3.3",
-    "@tauri-apps/cli": "^2",
     "@tsconfig/svelte": "^5.0.0",
     "@types/node": "^26.4.0",
     "autoprefixer": "^10.6.0",
@@ -38,9 +37,6 @@
     "@capawesome/capacitor-background-task": "^8.0.3",
     "@supabase/supabase-js": "^2.116.0",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@tauri-apps/api": "^2.11.1",
-    "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-shell": "^2.3.6",
     "marked": "^18.0.13",
     "pdfjs-dist": "^4.10.38",
     "shiki": "^4.4.3"

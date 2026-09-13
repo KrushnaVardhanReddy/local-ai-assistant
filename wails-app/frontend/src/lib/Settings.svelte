@@ -2,8 +2,7 @@
   import { apiFetch } from "./api";
   import { authState, signIn, signOut } from "$lib/auth.svelte";
   import { reconnect } from "$lib/ws.svelte";
-  import { invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
+    import { onMount } from "svelte";
   import * as pdfjsLib from 'pdfjs-dist';
   import StealthTerminal from "$lib/StealthTerminal.svelte";
   import { getApiUrl, getWsUrl } from "$lib/api";
@@ -216,7 +215,7 @@
     localStorage.setItem("openrouter_model", openRouterModel);
     reconnect(getWsUrl());
     try {
-      await invoke("toggle_stealth", { enable: !isDevModeChecked });
+      await (window as any).go.main.App.ToggleStealth({ enable: !isDevModeChecked });
     } catch (err) {
       console.error("Failed to toggle stealth", err);
     }

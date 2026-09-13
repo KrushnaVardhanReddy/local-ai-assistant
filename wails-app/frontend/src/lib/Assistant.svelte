@@ -42,9 +42,9 @@
   let liveEarsCollapsed = $state(false);
   let brainCollapsed = $state(false);
   let clickthrough = $state(false);
-  import { listen } from "@tauri-apps/api/event";
-  import { invoke } from "@tauri-apps/api/core";
-  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { EventsOn, EventsOff, WindowHide } from "../../wailsjs/runtime/runtime";
+
+
   import { renderMarkdown } from "$lib/markdownRenderer";
 
   async function startDrag(e: MouseEvent) {
@@ -53,19 +53,19 @@
     const target = e.target as HTMLElement;
     if (target.closest('button, input, select, textarea, a')) return;
     try {
-      await getCurrentWindow().startDragging();
+      // Dragging handled by CSS in Wails
     } catch (_) {}
   }
 
   async function hideWindow() {
     try {
-      await getCurrentWindow().hide();
+      WindowHide();
     } catch (_) {}
   }
 
   async function closeApp() {
     try {
-      await invoke("quit_app");
+      await (window as any).go.main.App.QuitApp();
     } catch (_) {}
   }
 
@@ -204,10 +204,10 @@
   onMount(() => {
     fetchCacheStats();
 
-    const unlistenScrollDown = listen("scroll-down", () => {
+    EventsOn("scroll-down", () => {
       responseEl?.scrollBy({ top: 100, behavior: 'smooth' });
     });
-    const unlistenScrollUp = listen("scroll-up", () => {
+    EventsOn("scroll-up", () => {
       responseEl?.scrollBy({ top: -100, behavior: 'smooth' });
     });
 
@@ -215,7 +215,7 @@
     isBrowser = typeof window !== 'undefined' && typeof (window as any).__TAURI_INTERNALS__ === 'undefined';
     const apiUrl = getApiUrl();
 
-    const unlisten = listen("trigger-vision", async () => {
+    EventsOn("trigger-vision", async () => {
       if (wsState.isAnalyzingScreen) return;
       if (wsState.plan === "demo" || wsState.plan === "payg") {
         wsState.error = "Vision features require a Monthly or Founding plan.";
@@ -224,7 +224,7 @@
 
       wsState.isAnalyzingScreen = true;
       try {
-        const base64Image = await invoke<string>("capture_screen");
+        const base64Image = await (window as any).go.main.App.CaptureScreen();
 
         const headers: Record<string, string> = {
           "Content-Type": "application/json"
@@ -251,40 +251,40 @@
       }
     });
 
-    const unlistenClickthrough = listen("toggle-clickthrough", () => {
+    EventsOn("toggle-clickthrough", () => {
       toggleClickthrough();
     });
 
-    const unlistenTranscript1 = listen("hotkey_transcript_1", () => {
+    EventsOn("hotkey_transcript_1", () => {
       if (wsState.pendingTranscripts.length > 0) sendChip(wsState.pendingTranscripts[0]);
     });
-    const unlistenTranscript2 = listen("hotkey_transcript_2", () => {
+    EventsOn("hotkey_transcript_2", () => {
       if (wsState.pendingTranscripts.length > 1) sendChip(wsState.pendingTranscripts[1]);
     });
-    const unlistenTranscript3 = listen("hotkey_transcript_3", () => {
+    EventsOn("hotkey_transcript_3", () => {
       if (wsState.pendingTranscripts.length > 2) sendChip(wsState.pendingTranscripts[2]);
     });
-    const unlistenTranscript4 = listen("hotkey_transcript_4", () => {
+    EventsOn("hotkey_transcript_4", () => {
       if (wsState.pendingTranscripts.length > 3) sendChip(wsState.pendingTranscripts[3]);
     });
-    const unlistenTranscript5 = listen("hotkey_transcript_5", () => {
+    EventsOn("hotkey_transcript_5", () => {
       if (wsState.pendingTranscripts.length > 4) sendChip(wsState.pendingTranscripts[4]);
     });
-    const unlistenTranscript6 = listen("hotkey_transcript_6", () => {
+    EventsOn("hotkey_transcript_6", () => {
       if (wsState.pendingTranscripts.length > 5) sendChip(wsState.pendingTranscripts[5]);
     });
 
     return () => {
-      unlisten.then(f => f());
-      unlistenScrollDown.then(f => f());
-      unlistenScrollUp.then(f => f());
-      unlistenClickthrough.then(f => f());
-      unlistenTranscript1.then(f => f());
-      unlistenTranscript2.then(f => f());
-      unlistenTranscript3.then(f => f());
-      unlistenTranscript4.then(f => f());
-      unlistenTranscript5.then(f => f());
-      unlistenTranscript6.then(f => f());
+      EventsOff("trigger-vision");
+      EventsOff("scroll-down");
+      EventsOff("scroll-up");
+      EventsOff("toggle-clickthrough");
+      EventsOff("hotkey_transcript_1");
+      EventsOff("hotkey_transcript_2");
+      EventsOff("hotkey_transcript_3");
+      EventsOff("hotkey_transcript_4");
+      EventsOff("hotkey_transcript_5");
+      EventsOff("hotkey_transcript_6");
       if (starPrimedTimer) clearTimeout(starPrimedTimer);
     };
   });
@@ -348,7 +348,7 @@
     clickthrough = !clickthrough;
     if (!isBrowser) {
       try {
-        await invoke('set_clickthrough', { enable: clickthrough });
+        await (window as any).go.main.App.SetClickthrough({ enable: clickthrough });
       } catch (e) {
         console.error('set_clickthrough failed:', e);
         clickthrough = !clickthrough; // revert on error
@@ -365,7 +365,7 @@
 
       // Dispatch a synthetic event that the backend/Tauri bridge will pick up
       // Or just invoke directly here if we are not relying on the global hotkey
-      invoke<string>("capture_screen").then(async (base64Image) => {
+      (window as any).go.main.App.CaptureScreen().then(async (base64Image) => {
         wsState.isAnalyzingScreen = true;
         const apiUrl = getApiUrl();
         try {
@@ -442,7 +442,7 @@
 
 <div class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark" id="dashboard-overlay">
   <!-- Top Toolbar -->
-  <header class="toolbar glass-pill {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" onmousedown={startDrag}>
+  <header class="toolbar glass-pill {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" style="--wails-draggable:drag">
     <!-- Brand / Primary Action -->
     <div class="flex items-center gap-4 pointer-events-none">
       <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">BarnOwl</span>
@@ -648,7 +648,7 @@
       style="{liveEarsCollapsed ? 'pointer-events:none;' : ''}"
     >
       <!-- Panel Header -->
-      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 flex-shrink-0" onmousedown={startDrag} style="cursor: grab;">
+      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 flex-shrink-0" style="--wails-draggable:drag; cursor: grab;">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="hearing">hearing</span>
           <h2 class="font-label-caps text-label-caps text-on-surface-variant tracking-wider">Live Ears</h2>
@@ -716,7 +716,7 @@
       <div class="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none"></div>
 
       <!-- Panel Header -->
-      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 z-10 flex-shrink-0" onmousedown={startDrag} style="cursor: grab;">
+      <div class="flex items-center justify-between p-4 border-b border-white/5 bg-black/20 z-10 flex-shrink-0" style="--wails-draggable:drag; cursor: grab;">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-primary text-[20px]" data-icon="memory">memory</span>
           <h2 class="font-label-caps text-label-caps text-primary tracking-wider text-glow">The Brain</h2>

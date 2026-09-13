@@ -1,4 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
 import { createClient, type User } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -33,7 +32,7 @@ export async function restoreSession() {
   if (authState.authMode === "local" || !supabase) return;
 
   try {
-    const tokenStr: string = await invoke("load_token");
+    const tokenStr: string = await (window as any).go.main.App.LoadToken();
     if (!tokenStr) return;
 
     const [access_token, refresh_token] = tokenStr.split(":");
@@ -43,7 +42,7 @@ export async function restoreSession() {
 
     if (error || !data.user) {
       console.warn("Session restore failed, clearing token", error);
-      await invoke("delete_token");
+      await (window as any).go.main.App.DeleteToken();
       authState.user = null;
       authState.accessToken = null;
     } else {
@@ -67,7 +66,7 @@ export async function signIn(email: string, password: string) {
   if (data.session) {
     const token = `${data.session.access_token}:${data.session.refresh_token}`;
     try {
-      await invoke("save_token", { token });
+      await (window as any).go.main.App.SaveToken({ token });
       authState.user = data.user;
       authState.accessToken = data.session.access_token;
     } catch (err) {
@@ -85,7 +84,7 @@ export async function signOut() {
   await supabase.auth.signOut();
 
   try {
-    await invoke("delete_token");
+    await (window as any).go.main.App.DeleteToken();
   } catch (err) {
     console.error("Failed to delete token from keychain", err);
   }
@@ -101,7 +100,7 @@ if (supabase) {
       authState.accessToken = session.access_token;
       const token = `${session.access_token}:${session.refresh_token}`;
       try {
-        await invoke("save_token", { token });
+        await (window as any).go.main.App.SaveToken({ token });
       } catch (err) {
         console.error("Failed to update token in keychain", err);
       }
@@ -109,7 +108,7 @@ if (supabase) {
       authState.user = null;
       authState.accessToken = null;
       try {
-        await invoke("delete_token");
+        await (window as any).go.main.App.DeleteToken();
       } catch (err) {
         console.error("Failed to delete token from keychain", err);
       }

@@ -1,0 +1,2 @@
+With wails, dragging is typically handled via CSS: style="--wails-draggable: drag;" or similar, and not via a JS runtime call like Tauri's startDragging(), right? Wait, Wails v2 uses CSS: "wailsjs/runtime" has WindowCenter, WindowHide, etc. Yes, the documentation says: Add style="--wails-draggable:drag" to any element you want to be able to drag the window.
+Let's verify this by checking Wails docs online if possible.
