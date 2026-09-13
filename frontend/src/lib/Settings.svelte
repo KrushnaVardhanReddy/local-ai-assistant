@@ -282,6 +282,25 @@
   async function handleSignOut() {
     await signOut();
   }
+
+  async function handleBuySessions() {
+    if (!authState.user) return;
+    try {
+      const res = await apiFetch('/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: authState.user.id })
+      });
+      if (!res.ok) throw new Error('Failed to create checkout session');
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error initiating checkout. Please try again.');
+    }
+  }
 </script>
 
 <div class="settings-wrapper">
@@ -522,6 +541,7 @@
             <span class="badge plan-badge">SaaS User</span>
           </div>
           <div class="actions">
+            <button class="btn-primary" style="background-color: #28a745; margin-bottom: 0.5rem;" onclick={handleBuySessions}>Buy 5 Interviews for $10</button>
             <a href="https://example.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn-link">Open Dashboard</a>
             <button class="btn-secondary" onclick={handleSignOut}>Sign Out</button>
           </div>

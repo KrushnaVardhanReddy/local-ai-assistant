@@ -3,6 +3,8 @@ export interface Env {
 	USERS_KV: KVNamespace;
 	SUPABASE_URL: string;
 	SUPABASE_SERVICE_ROLE_KEY: string;
+	STRIPE_SECRET_KEY: string;
+	STRIPE_WEBHOOK_SECRET: string;
 }
 
 const corsHeaders = {
@@ -47,7 +49,7 @@ export default {
 		const method = request.method;
 
 		// Only protect specific routes
-		const protectedRoutes = ['/api/ask', '/api/cache', '/api/status'];
+		const protectedRoutes = ['/api/ask', '/api/cache', '/api/status', '/create-checkout-session'];
 		let isProtected = false;
 		for (const route of protectedRoutes) {
 			if (path === route || path.startsWith(route + '/')) {
@@ -119,6 +121,48 @@ export default {
 				total_size_bytes: 0,
 				cache_hit_rate: 0.0,
 			});
+		} else if (method === 'POST' && path === '/create-checkout-session') {
+			try {
+				const body: any = await request.json();
+				const targetUserId = body.userId || userId; // Use request body userId or fallback to auth token userId
+
+				if (!env.STRIPE_SECRET_KEY) {
+					response = Response.json({ status: 'error', message: 'Stripe configuration missing' }, { status: 500 });
+				} else {
+					const origin = request.headers.get('Origin') || 'http://localhost:1420';
+
+					const stripePayload = new URLSearchParams({
+						'payment_method_types[0]': 'card',
+						'line_items[0][price_data][currency]': 'usd',
+						'line_items[0][price_data][product_data][name]': '5-Pack of Interviews',
+						'line_items[0][price_data][unit_amount]': '1000',
+						'line_items[0][quantity]': '1',
+						'mode': 'payment',
+						'success_url': `${origin}/?checkout=success`,
+						'cancel_url': `${origin}/?checkout=canceled`,
+						'client_reference_id': targetUserId
+					});
+
+					const stripeRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+						method: 'POST',
+						headers: {
+							'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
+							'Content-Type': 'application/x-www-form-urlencoded'
+						},
+						body: stripePayload.toString()
+					});
+
+					if (stripeRes.ok) {
+						const stripeData: any = await stripeRes.json();
+						response = Response.json({ url: stripeData.url });
+					} else {
+						console.error("Stripe error", await stripeRes.text());
+						response = Response.json({ status: 'error', message: 'Failed to create checkout session' }, { status: 500 });
+					}
+				}
+			} catch (e: any) {
+				response = Response.json({ status: 'error', message: e.message }, { status: 500 });
+			}
 		} else if (method === 'POST' && path === '/api/ask') {
 			try {
 				const body: any = await request.json();
@@ -237,6 +281,82 @@ export default {
 			}
 		} else if (method === 'POST' && path === '/api/resume/context') {
 			response = Response.json({ status: 'success', message: 'Resume context updated' });
+		} else if (method === 'POST' && path === '/api/webhook/stripe') {
+			try {
+				const signature = request.headers.get('stripe-signature');
+				if (!signature || !env.STRIPE_WEBHOOK_SECRET) {
+					return Response.json({ status: 'error', message: 'Missing signature or secret' }, { status: 400 });
+				}
+
+				const body = await request.text();
+
+				// Parse Stripe signature parts
+				const sigParts = signature.split(',').reduce((acc: any, part) => {
+					const [key, value] = part.split('=');
+					acc[key] = value;
+					return acc;
+				}, {});
+
+				if (!sigParts.t || !sigParts.v1) {
+					return Response.json({ status: 'error', message: 'Invalid signature format' }, { status: 400 });
+				}
+
+				// Verify the signature using Web Crypto API
+				const encoder = new TextEncoder();
+				const signedPayload = `${sigParts.t}.${body}`;
+				const key = await crypto.subtle.importKey(
+					'raw',
+					encoder.encode(env.STRIPE_WEBHOOK_SECRET),
+					{ name: 'HMAC', hash: 'SHA-256' },
+					false,
+					['verify']
+				);
+
+				// Stripe uses hex string for v1 signature, convert to Uint8Array
+				const signatureBytes = new Uint8Array(sigParts.v1.match(/.{1,2}/g)!.map((byte: string) => parseInt(byte, 16)));
+				const isValid = await crypto.subtle.verify(
+					'HMAC',
+					key,
+					signatureBytes,
+					encoder.encode(signedPayload)
+				);
+
+				if (!isValid) {
+					return Response.json({ status: 'error', message: 'Invalid signature' }, { status: 400 });
+				}
+
+				const payload = JSON.parse(body);
+				let eventType = payload.type;
+				let dataObject = payload.data?.object || {};
+
+				if (eventType === 'checkout.session.completed') {
+					const customerId = dataObject.client_reference_id;
+					if (customerId && env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+						// Call the RPC function to atomically increment payg_sessions
+						const supabaseUrl = env.SUPABASE_URL.replace(/\/$/, '');
+						const rpcUrl = `${supabaseUrl}/rest/v1/rpc/increment_payg_sessions`;
+
+						const rpcRes = await fetch(rpcUrl, {
+							method: 'POST',
+							headers: {
+								'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+								'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({ p_user_id: customerId, p_amount: 5 })
+						});
+
+						if (!rpcRes.ok) {
+							console.error("Failed to increment payg_sessions via RPC", await rpcRes.text());
+						}
+					}
+				}
+
+				response = Response.json({ status: 'success' });
+			} catch (e: any) {
+				console.error("Webhook error", e);
+				response = Response.json({ status: 'error', message: e.message }, { status: 400 });
+			}
 		} else {
 			response = new Response('Not Found', { status: 404 });
 		}
