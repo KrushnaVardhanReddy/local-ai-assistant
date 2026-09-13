@@ -1,0 +1,29 @@
+TASK: P40-T1 — Centralized API Config
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We are splitting the codebase to support two builds: a Local Edition (with bundled Python backend) and a Cloud Edition (lightweight frontend pointing to a Cloudflare Worker).
+
+Currently, all frontend components hardcode the backend URL as `http://127.0.0.1:8765`. We need a centralized configuration module that reads from environment variables at build-time to dictate where API calls should go.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CREATE CENTRAL CONFIG (`frontend/src/lib/api.ts`):
+   - Read the base URL from `import.meta.env.VITE_API_BASE`.
+   - If not set, fallback to `http://127.0.0.1:8765` for the Local Edition.
+   - Export a `getApiUrl()` function that returns the base HTTP URL.
+   - Export a `getWsUrl()` function that derives the WebSocket URL (e.g., replaces `http://` or `https://` with `ws://` or `wss://` respectively).
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Verify that `frontend/src/lib/api.ts` exports the correct functions.
+2. Verify that running with `VITE_API_BASE=https://api.example.com` correctly overrides the default values.
+
+Commit message: "jules: P40-T1 implement centralized api config"
+Target branch: feature/krushna

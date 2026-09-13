@@ -1,0 +1,32 @@
+TASK: P40-T4 — Cloud User Auth & Session Management
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+The Cloud Edition requires authentication to track usage-based billing. We need to implement a mechanism where a user signs up, receives an API key, stores it locally, and sends it with every request to the Cloudflare Worker.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CLOUDFLARE WORKER AUTH (`cloud-worker/src/index.ts`):
+   - Implement middleware to check for `Authorization: Bearer <API_KEY>` on all protected endpoints.
+   - Validate the API key against Cloudflare KV (e.g., `USERS_KV`).
+
+2. FRONTEND AUTH STATE (`frontend/src/lib/auth.svelte.ts`):
+   - Create a store/rune to manage the user's API key.
+   - It should persist the key to `localStorage` under `cloud_api_key`.
+
+3. FRONTEND REQUEST INTERCEPTION:
+   - Update `frontend/src/lib/api.ts` (created in T1) or the fetch calls directly to automatically inject `Authorization: Bearer ${cloud_api_key}` into headers when communicating with the Cloudflare Worker.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Verify that making a request without the Bearer token returns a 401 Unauthorized from the Worker.
+2. Verify that providing a valid mocked Bearer token succeeds.
+
+Commit message: "jules: P40-T4 implement cloud auth and api keys"
+Target branch: feature/krushna

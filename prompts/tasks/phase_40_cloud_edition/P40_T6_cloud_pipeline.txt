@@ -1,0 +1,30 @@
+TASK: P40-T6 — CI/CD Cloud Build Pipeline
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+The current GitHub Actions pipeline (`.github/workflows/build-windows.yml`) takes ~25 minutes because it compiles a massive PyTorch/CUDA backend using PyInstaller. The Cloud Edition does not have a backend, so the build should take <3 minutes. We need a separate pipeline specifically for building the lightweight cloud app.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CLOUD CI/CD PIPELINE:
+   - Create `.github/workflows/build-windows-cloud.yml`.
+   - Configure it to trigger manually (`workflow_dispatch`) or on pushes to a specific path/branch.
+   - The pipeline should checkout code, setup Node.js and Rust.
+   - It should NOT setup Python or run PyInstaller.
+   - It should run `npm run build:cloud` (added in P40-T5).
+   - It should run `cargo tauri build --config tauri.cloud.conf.json`.
+   - Upload the resulting `~15MB` `.msi` and `.exe` as GitHub workflow artifacts.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Review the workflow YAML to ensure no Python dependencies are accidentally included.
+2. Verify the tauri build command correctly references the cloud config.
+
+Commit message: "jules: P40-T6 implement cloud ci/cd pipeline"
+Target branch: feature/krushna

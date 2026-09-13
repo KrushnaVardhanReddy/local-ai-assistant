@@ -1,0 +1,28 @@
+TASK: P40-T2 — Refactor Hardcoded URLs
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Following P40-T1, we now have a centralized `api.ts` module. The frontend currently has over 25 hardcoded references to `127.0.0.1:8765` spread across multiple Svelte components. We need to replace all of them to use our new dynamic helpers.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. REFACTOR FRONTEND FILES:
+   - Target files: `frontend/src/lib/Assistant.svelte`, `frontend/src/lib/ws.svelte.ts`, `frontend/src/lib/Settings.svelte`, `frontend/src/lib/KnowledgeBase.svelte`, `frontend/src/lib/ResumeBuilder.svelte`, `frontend/src/lib/SessionReport.svelte`.
+   - Import `getApiUrl` and `getWsUrl` from `frontend/src/lib/api.ts`.
+   - Replace every instance of `http://127.0.0.1:8765` (or similar hardcoded ports) with `${getApiUrl()}`.
+   - Replace every instance of `ws://127.0.0.1:8765` with `${getWsUrl()}`.
+   - Remove any legacy `localStorage.getItem("backend_url")` fallbacks for API routing, as the build-time env var now dictates this.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Run the Tauri app locally (`npm run tauri dev`) and verify that the UI can still connect to the local Python backend successfully.
+2. Run a global text search in `frontend/src/` to confirm zero remaining instances of `127.0.0.1:8765`.
+
+Commit message: "jules: P40-T2 refactor hardcoded urls to use api module"
+Target branch: feature/krushna

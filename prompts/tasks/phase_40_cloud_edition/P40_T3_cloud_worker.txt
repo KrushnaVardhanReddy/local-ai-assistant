@@ -1,0 +1,31 @@
+TASK: P40-T3 — Cloudflare Worker Backend
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+For the Cloud Edition, we need a serverless backend to handle API calls that the local Python backend normally processes. We will use a Cloudflare Worker for this because it is extremely fast and integrates well with our SaaS usage-based pricing strategy.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. INITIALIZE CLOUDFLARE WORKER:
+   - Create a `cloud-worker/` directory at the repository root.
+   - Initialize a basic Cloudflare Worker (`wrangler.toml` and `src/index.ts`).
+
+2. MIRROR ESSENTIAL ENDPOINTS:
+   - Implement handlers in `index.ts` to mirror the necessary endpoints from the FastAPI backend.
+   - Critical routes: `GET /api/status`, `GET /api/cache/stats`, `DELETE /api/cache`, `POST /api/resume/context`.
+   - The implementations should interact with a mocked Cloudflare KV namespace or return stubbed successful responses for now (we will wire up real external LLMs and databases in follow-up tasks).
+   - Ensure proper CORS headers are returned for all endpoints.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Run `npx wrangler dev` inside `cloud-worker/`.
+2. Use curl or Postman to verify the endpoints return valid JSON and correct CORS headers.
+
+Commit message: "jules: P40-T3 scaffold cloudflare worker backend"
+Target branch: feature/krushna

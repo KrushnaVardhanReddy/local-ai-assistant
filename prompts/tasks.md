@@ -52,11 +52,12 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P40-T1 | `frontend/src/lib/api.ts` | **Centralized API Config:** Create a single `api.ts` module with `getApiUrl()` / `getWsUrl()` helpers driven by `VITE_API_BASE` env var. Foundation for all other tasks. | ⬜ | — |
+| P40-T1 | `frontend/src/lib/api.ts` | **Centralized API Config:** Create a single `api.ts` module with `getApiUrl()` / `getWsUrl()` helpers driven by `VITE_API_BASE` env var. Foundation for all other tasks. | ⏳ Submitted | Jules |
 | P40-T2 | `frontend/src/lib/*.svelte`, `frontend/src/lib/ws.svelte.ts` | **Refactor Hardcoded URLs:** Replace all ~25 hardcoded `127.0.0.1:8765` references across 6 files with the new `getApiUrl()` / `getWsUrl()` helpers. | ⬜ | — |
 | P40-T3 | `cloud-worker/` | **Cloudflare Worker Backend:** Implement a Worker that mirrors all FastAPI endpoints (`/ws`, `/api/ask`, `/api/status`, `/api/cache`, `/api/resume/context`, etc.) calling Groq/OpenAI. Auth via Cloudflare KV API keys. | ⬜ | — |
 | P40-T4 | `cloud-worker/`, `frontend/src/lib/auth.svelte.ts` | **Cloud User Auth & Session Management:** User signup → API key provisioned in Cloudflare KV → key stored in Tauri `localStorage` → sent as `Authorization: Bearer` on every request. | ⬜ | — |
 | P40-T5 | `src-tauri/tauri.cloud.conf.json`, `.env.cloud` | **Tauri Cloud Build Config:** Create cloud-specific Tauri config (no sidecar, product name `BarnOwl Cloud`, new bundle ID) and `.env.cloud` pointing `VITE_API_BASE` at the Worker URL. | ⬜ | — |
 | P40-T6 | `.github/workflows/build-windows-cloud.yml` | **CI/CD Cloud Build Pipeline:** Fast (~2 min) GitHub Actions workflow — no PyInstaller, just `npm build` + `cargo tauri build`. Produces a `~10-15MB` `.msi` installer. | ⬜ | — |
 | P40-T7 | `frontend/src/lib/Settings.svelte`, `frontend/src/lib/StealthTerminal.svelte` | **Hide Local-Only UI in Cloud Build:** Use `VITE_BUILD_FLAVOR=cloud` to conditionally hide `StealthTerminal`, Audio Devices selector, and STT Engine selector in the Cloud Edition. | ⬜ | — |
-| P40-T8 | `cloud-worker/`, `checkout-server/` | **Stripe Payment Integration:** Stripe Checkout for $49 Local and $20/month Cloud plans. On success, provision user API key in Cloudflare KV. | ⬜ | — |
+| P40-T8 | `cloud-worker/`, `checkout-server/` | **Stripe Payment Integration:** Stripe Checkout for usage-based billing (LLM API cost pass-through + $2 service fee per interview session). On success, provision user API key and credits in Cloudflare KV. | ⬜ | — |
+| P40-T9 | `cloud-worker/src/vector_cache.ts` | **Multi-Tenant Vector Cache (Cloudflare Vectorize):** Replace ChromaDB with Cloudflare Vectorize in the Worker. Store vectors with `user_id` metadata. All queries filter by `user_id` to guarantee strict user isolation. Pricing: ~$0.04/million dimensions (effectively free at early-adopter scale). | ⬜ | — |

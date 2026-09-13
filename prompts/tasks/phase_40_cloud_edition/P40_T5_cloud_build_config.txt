@@ -1,0 +1,33 @@
+TASK: P40-T5 — Tauri Cloud Build Config
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We need a dedicated Tauri configuration file for the Cloud Edition. This build will NOT bundle the massive PyInstaller Python backend, and it doesn't need sidecar/shell permissions. It just needs to run the Svelte frontend.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CLOUD TAURI CONFIG:
+   - Duplicate `src-tauri/tauri.conf.json` to `src-tauri/tauri.cloud.conf.json`.
+   - In `tauri.cloud.conf.json`:
+     - Remove the `bundle.externalBin` array (no Python backend).
+     - Remove the `plugins.shell` permissions entirely to drastically improve security (the cloud edition doesn't need to run OS scripts).
+     - Change `productName` to "BarnOwl Cloud".
+     - Change `identifier` to "com.barnowl.cloud".
+
+2. CLOUD ENV CONFIG:
+   - Create `.env.cloud` containing `VITE_API_BASE=https://your-worker.workers.dev`.
+   - Update `package.json` with a new script: `"build:cloud": "vite build --mode cloud"`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Verify `npm run build:cloud` compiles the frontend pointing to the Cloud API base.
+2. Verify the `tauri.cloud.conf.json` is stripped of local backend requirements.
+
+Commit message: "jules: P40-T5 create cloud tauri configuration"
+Target branch: feature/krushna

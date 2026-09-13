@@ -1,0 +1,32 @@
+TASK: P40-T7 — Hide Local-Only UI in Cloud Build
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Because the Cloud Edition runs completely in the browser/Tauri without local OS access or a Python backend, several UI components make no sense (e.g. Stealth Terminal, local Audio Device selection for PyAudio, STT Engine switching). We need to conditionally hide these based on the build flavor.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. CONDITIONAL RENDERING:
+   - In `frontend/src/lib/Settings.svelte`, read `import.meta.env.VITE_BUILD_FLAVOR`.
+   - If `VITE_BUILD_FLAVOR === 'cloud'`, hide the following dropdowns:
+     - Audio Devices (since cloud uses browser MediaRecorder or Tauri audio plugin)
+     - STT Engine (cloud relies on backend Whisper/Groq API)
+   - In `frontend/src/App.svelte` or the main layout, hide the `StealthTerminal` component entirely if it's a cloud build, as there is no local `backend.exe` to monitor.
+
+2. BUILD CONFIGURATION:
+   - Ensure the `.env.cloud` sets `VITE_BUILD_FLAVOR=cloud`.
+   - Ensure the standard `.env.local` sets `VITE_BUILD_FLAVOR=local`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Run frontend with `VITE_BUILD_FLAVOR=cloud` and verify the settings panel shrinks.
+2. Verify no references to missing sidecar commands throw JS errors in the cloud build.
+
+Commit message: "jules: P40-T7 conditionally hide local-only ui"
+Target branch: feature/krushna
