@@ -56,6 +56,16 @@ export async function restoreSession() {
   }
 }
 
+export async function signUp(email: string, password: string) {
+  if (authState.authMode === "local" || !supabase) return { error: "Local mode" };
+
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    return { error: error.message };
+  }
+  return { error: null, data };
+}
+
 export async function signIn(email: string, password: string) {
   if (authState.authMode === "local" || !supabase) return { error: "Local mode" };
 
