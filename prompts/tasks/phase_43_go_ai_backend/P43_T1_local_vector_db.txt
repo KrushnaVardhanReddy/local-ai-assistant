@@ -1,0 +1,9 @@
+TITLE: P43-T1 Local Vector DB in Go
+OBJECTIVE
+Replace the ChromaDB dependency by implementing a local Vector Database in Go using embedded SQLite and the `sqlite-vec` extension.
+
+INSTRUCTIONS
+1. Inside `wails-app/backend/`, create `vector_db.go`.
+2. Use a Go SQLite driver (like `github.com/mattn/go-sqlite3`) that supports loading extensions, or specifically use `github.com/asg017/sqlite-vec-go-bindings`.
+3. Implement a function to initialize a `qa_cache` table with a vector column for 384-dimensional embeddings.
+4. Implement `InsertVector(id string, embedding []float32, metadata string)` and `SearchVector(query []float32, limit int)`.

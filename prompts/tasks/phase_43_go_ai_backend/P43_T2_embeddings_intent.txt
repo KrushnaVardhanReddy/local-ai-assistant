@@ -1,0 +1,9 @@
+TITLE: P43-T2 Local Embeddings in Go
+OBJECTIVE
+Use `onnxruntime-go` to run the SmolLM2 ONNX model directly in the Go process for fast, offline text embeddings.
+
+INSTRUCTIONS
+1. Inside `wails-app/backend/`, create `embeddings.go`.
+2. Add the dependency: `go get github.com/yalue/onnxruntime_go`
+3. Implement a function to load the ONNX model (from `models/smollm2/`) and a tokenizer.
+4. Implement `GenerateEmbedding(text string) []float32` that tokenizes the text, passes it through the ONNX runtime, and returns the vector.
