@@ -119,4 +119,4 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P39-T1 | `scripts/dynamic_prewarmer.py` | **Dynamic Cache Pre-Warmer:** Generate 100+ Q&A pairs using an LLM + JD + Resume and store them in ChromaDB. | ⏳ Submitted | Jules |
+| P39-T1 | `scripts/dynamic_prewarmer.py` | **Dynamic Cache Pre-Warmer:** Generate 100+ Q&A pairs using an LLM + JD + Resume and store them in ChromaDB. | ✅ | #121 |

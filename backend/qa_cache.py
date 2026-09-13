@@ -83,8 +83,8 @@ def store_bulk(qa_pairs: list[dict]) -> int:
         doc_id = hashlib.md5(q.encode()).hexdigest()
         ids.append(doc_id)
         embeddings.append(vector)
-        documents.append(a)
-        metadatas.append({"question": q[:200], "timestamp": str(int(time.time()))})
+        documents.append(q)
+        metadatas.append({"answer": a, "timestamp": str(int(time.time()))})
 
     if not ids:
         return 0
