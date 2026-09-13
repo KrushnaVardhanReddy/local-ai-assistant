@@ -30,9 +30,9 @@ OBJECTIVE
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
 
-1. Run `bash scripts/start_cloud_e2e.sh`.
-2. Ensure the worker starts and successfully connects to the local Supabase instance.
-3. Test a request against the worker using the seeded API key and verify it returns a 200 OK.
+1. DO NOT run `supabase start` or the script yourself. Your environment does not have Docker and it will fail.
+2. Only write the scripts and SQL files. Ensure the syntax is correct.
+3. The human will run the E2E verification locally.
 
 Commit message: "jules: P40-T11 setup local e2e testing pipeline for cloud edition"
 Target branch: feature/krushna
