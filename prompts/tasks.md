@@ -51,7 +51,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P42-T1 | `wails-app/` | **Init Wails:** Run the Wails CLI to generate a new Svelte+TS template (`wails init -n local-ai-assistant -t svelte-ts`). | 🔄 | — |
+| P42-T1 | `wails-app/` | **Init Wails:** Run the Wails CLI to generate a new Svelte+TS template (`wails init -n local-ai-assistant -t svelte-ts`). | ✅ | #137 |
 | P42-T2 | `wails-app/frontend/src/` | **UI Porting:** Copy existing Svelte components, lib files, and Tailwind configuration into the new Wails frontend directory. Fix any imports. | ⬜ | — |
 | P42-T3 | `wails-app/frontend/src/lib/` | **API Swap:** Replace Tauri frontend calls (e.g., `invoke('command')`, `WebviewWindow`) with Wails Go bindings (`@wailsio/runtime`). | ⬜ | — |
 | P42-T4 | `wails-app/frontend/src/lib/api.ts` | **Cloud Worker Proxy (Wails Edition):** Ensure the Cloud Edition Svelte logic correctly points to the existing Cloudflare Worker URL. | ⬜ | — |
