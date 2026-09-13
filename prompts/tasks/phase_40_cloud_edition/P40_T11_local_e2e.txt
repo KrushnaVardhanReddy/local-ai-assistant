@@ -17,6 +17,7 @@ OBJECTIVE
    - The script should run `npx supabase start` in the `supabase/` directory.
    - Parse the `API URL` and `service_role key` from the Supabase CLI output.
    - Dynamically write these values into `cloud-worker/.dev.vars` as `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+   - Also append mock values for `STRIPE_SECRET_KEY=sk_test_123` and `STRIPE_WEBHOOK_SECRET=whsec_123` to the `.dev.vars` file so the worker doesn't throw errors.
 
 2. DATABASE SEEDING:
    - Create or update `supabase/seed.sql` to automatically insert test data when the local database starts.
