@@ -63,3 +63,15 @@
 | P40-T9 | `cloud-worker/src/vector_cache.ts` | **Multi-Tenant Vector Cache (Supabase pgvector):** Replace ChromaDB with Supabase `pgvector`. Cache vectors are stored in the `qa_cache` table. All queries filter by `user_id` to guarantee strict user isolation. | ✅ | #131 |
 | P40-T10 | `cloud-worker/src/index.ts` | **Cloud Worker Backend Auth (Supabase Validation):** Validate the frontend Bearer token against the Supabase `user_api_keys` table and check the `payg_sessions` balance before allowing API access. | ✅ | #129 |
 | P40-T11 | `scripts/start_cloud_e2e.sh`, `supabase/seed.sql` | **Local E2E Testing Pipeline (No Mocks):** Script to spin up local Supabase, seed test users/keys/credits, dynamically configure Worker `.dev.vars`, and start `wrangler dev` for true E2E testing. | ✅ | #133 |
+
+---
+
+## Phase 41 — Cloudflare Worker LLM & Voice Integration 🗣️
+
+> Migrates the core real-time interview loop (WebSocket connection, Auth, and LLM streaming) from the old Python backend to the Cloudflare Worker.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P41-T1 | `cloud-worker/src/index.ts` | **Worker WebSocket Upgrade:** Implement the `/ws` endpoint in the worker to accept incoming WebSocket upgrade requests and handle connection lifecycle. | ⬜ | — |
+| P41-T2 | `cloud-worker/src/index.ts` | **Supabase Session Validation:** Handle the initial `{"type": "auth"}` message over WS. Validate the API Key against Supabase and check if the user has `payg_sessions > 0`. | ⬜ | — |
+| P41-T3 | `cloud-worker/src/index.ts` | **LLM Streaming & Vector Cache Integration:** Handle the `{"type": "chat"}` message over WS. Generate embeddings, query the `pgvector` cache, stream to Groq, and stream tokens back. | ⬜ | — |

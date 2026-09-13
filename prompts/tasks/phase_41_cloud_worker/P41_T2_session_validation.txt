@@ -1,0 +1,38 @@
+TASK: P41-T2 — Supabase Session Validation & Billing for WebSocket
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Now that the Cloudflare Worker accepts WebSocket connections at `/ws`, we need to secure it. The frontend sends an initial JSON message upon connection:
+`{"type": "auth", "token": "...", "machine_id": "..."}`
+
+The `token` is a Bearer token (API Key). We need to validate this key against Supabase and check if the user has enough `payg_sessions` in their profile.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. HANDLE THE `auth` MESSAGE
+   - In `cloud-worker/src/index.ts`, when a message with `{"type": "auth"}` is received over the WebSocket, extract the `token`.
+   - If the token is missing, send `{"type": "auth_error", "message": "Missing token"}` and close the WebSocket with code `1008`.
+
+2. VALIDATE AGAINST SUPABASE
+   - Hash the token using SHA-256 (Web Crypto API) just like we do in the `/api/ask` route.
+   - Query the `user_api_keys` table in Supabase via the REST API (since pg-driver isn't available). Match the `key_hash`.
+   - If no match, send an `auth_error` and close the connection.
+   - Extract the `user_id`.
+
+3. VERIFY PAYG BALANCE
+   - Query the `profiles` table in Supabase for the `user_id`.
+   - Check the `payg_sessions` column.
+   - If `payg_sessions <= 0`, send `{"type": "auth_error", "message": "You have reached your limit. Switch to BYOK or buy more credits."}` and close the WebSocket (code `1008`).
+   - If successful, send back `{"type": "plan", "plan": "payg"}` (or whatever their plan is) to signal successful authentication.
+   - Store the authenticated state (e.g., `user_id`) in a memory map associated with that WebSocket instance so subsequent messages can be processed safely.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P41-T2 implement auth and billing validation for worker websocket"
+Target branch: feature/krushna

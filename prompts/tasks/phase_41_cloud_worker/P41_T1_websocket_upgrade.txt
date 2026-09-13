@@ -1,0 +1,36 @@
+TASK: P41-T1 — Worker WebSocket Upgrade
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We are migrating our local AI Assistant to a Cloudflare Worker (Cloud Edition). The worker currently handles REST endpoints (like `/api/status`, `/api/cache/prewarm`) but is completely missing the `/ws` WebSocket endpoint, which is required for the real-time AI audio streaming loop.
+
+In this first task, we need to implement the core WebSocket upgrade and connection handling in `cloud-worker/src/index.ts`.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. IMPLEMENT `/ws` ENDPOINT
+   - Add a route handler for `/ws` in `cloud-worker/src/index.ts`.
+   - Check the `Upgrade: websocket` header. If missing, return a `426 Upgrade Required` response.
+   - Use `new WebSocketPair()` to create the client and server sockets.
+   - Accept the server socket (`server.accept()`).
+   - Return a `101 Switching Protocols` Response with `webSocket: client`.
+
+2. IMPLEMENT BASIC MESSAGE HANDLING
+   - Add an event listener for the `message` event on the server socket.
+   - For now, just parse incoming JSON messages. If parsing fails, catch the error.
+   - Add a `close` event listener to clean up the socket.
+   - Add an `error` event listener.
+
+3. DO NOT IMPLEMENT LLM LOGIC YET
+   - We will implement authentication and LLM streaming in subsequent tasks. Just get the raw connection up and running.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P41-T1 implement websocket upgrade in cloudflare worker"
+Target branch: feature/krushna

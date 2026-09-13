@@ -1,0 +1,37 @@
+TASK: P41-T3 — LLM Streaming & Vector Cache Integration
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+The Cloudflare Worker WebSocket is now authenticated. The frontend will now send text messages (which it transcribed using Web Speech API) like this:
+`{"type": "chat", "text": "Can you explain polymorphism?"}`
+
+We need to take this text, query our Supabase `pgvector` cache for context, send a streaming request to an LLM provider (like Groq), and stream the tokens back over the WebSocket.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. HANDLE THE `chat` MESSAGE
+   - In `cloud-worker/src/index.ts`, when a message with `{"type": "chat", "text": "..."}` is received from an authenticated socket, extract the text.
+
+2. RETRIEVE VECTOR CONTEXT
+   - Just like we do in the `/api/ask` route, use Cloudflare Workers AI (`@cf/baai/bge-small-en-v1.5`) to generate an embedding for the user's text.
+   - Use the Supabase RPC `match_qa_cache` to find relevant cache entries for this `user_id`.
+
+3. STREAM THE LLM RESPONSE
+   - Construct the prompt containing the user's question and the retrieved context.
+   - Send an HTTP POST request to Groq (`https://api.groq.com/openai/v1/chat/completions`) or OpenAI, ensuring `stream: true`. (You can read the API key from a new env var `LLM_API_KEY` for now, or fetch it from the database if you prefer).
+   - Read the streaming HTTP response.
+   - For every chunk received from the LLM, parse the SSE data.
+   - Send `{"type": "message_start"}` to the WebSocket right before the first token.
+   - Send each token to the WebSocket as: `{"type": "token", "text": "..."}`.
+   - When the stream finishes, send `{"type": "end"}` to the WebSocket.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P41-T3 implement websocket llm streaming with vector cache"
+Target branch: feature/krushna
