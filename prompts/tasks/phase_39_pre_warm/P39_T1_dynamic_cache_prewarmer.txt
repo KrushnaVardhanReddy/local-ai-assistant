@@ -21,8 +21,11 @@ OBJECTIVE
 3. LLM PROMPT INJECTION: 
    - Read the exact `SYSTEM_PROMPT_INJECTIONS` dictionary from `backend/local_intelligence.py` (import it).
    - Inject these detailed format instructions into the prompt you send to the LLM.
-4. LLM GENERATION:
-   - Call the LLM API (e.g., OpenAI or Groq, using the `LLMClient` from `backend.llm_client`) to generate ~100 Q&A pairs in JSON format based on the mock JD and Resume.
+4. LLM GENERATION (BATCHING REQUIRED):
+   - Call the LLM API (using the `LLMClient` from `backend.llm_client`) to generate 100 Q&A pairs based on the mock JD and Resume.
+   - **CRITICAL:** Standard LLM APIs have a 4000-token output limit. If you ask for 100 highly detailed questions at once, the JSON will truncate and fail.
+   - You MUST implement a batching loop (e.g., generate 10 questions per batch, loop 10 times, appending to a master list).
+   - Ensure the final output is a clean, parsed list of exactly 100 dictionaries.
 5. CHROMADB INGESTION:
    - Instantiate the `QACache` from `backend.qa_cache`.
    - Instantiate the `LocalIntelligence` engine to get the Nomic embeddings.
