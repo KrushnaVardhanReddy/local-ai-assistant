@@ -77,3 +77,4 @@ scratch/
 backend/data/
 data/
 backend/models/*.gguf
+.wrangler/
