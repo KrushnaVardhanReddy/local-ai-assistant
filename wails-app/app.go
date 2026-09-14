@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"sync"
 	"wails-app/backend/stt"
+	"wails-app/backend/remote"
+	"net/http"
 	"wails-app/backend/system"
 	"wails-app/backend/window"
 
@@ -15,6 +17,8 @@ import (
 
 // App struct
 type App struct {
+
+	remoteServer *remote.Server
 	ctx context.Context
 
 	backendCmd *exec.Cmd
@@ -38,6 +42,7 @@ func NewApp() *App {
 	}
 
 	return &App{
+		remoteServer: remote.NewServer(http.FS(assets)),
 		sttManager: stt.NewSTTManager(initialEngine),
 	}
 }
@@ -48,6 +53,9 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
 	// Start background download for STT models
+	if a.remoteServer != nil {
+		a.remoteServer.Start()
+	}
 	go system.StartBackgroundDownload(ctx, func(progress float32) {
 		// Example: Emit progress event to frontend
 		wailsruntime.EventsEmit(ctx, "download_progress", progress)
@@ -102,4 +110,10 @@ func (a *App) SetClickthrough(opts map[string]interface{}) {
 
 func (a *App) ToggleStealth(opts map[string]interface{}) {
 	// Not implemented
+}
+
+func (a *App) shutdown(ctx context.Context) {
+	if a.remoteServer != nil {
+		_ = a.remoteServer.Stop(ctx)
+	}
 }

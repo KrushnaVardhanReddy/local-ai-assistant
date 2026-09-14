@@ -1,0 +1,22 @@
+mode: set
+wails-app/backend/remote/server.go:20.44,24.44 1 1
+wails-app/backend/remote/server.go:24.44,26.5 1 1
+wails-app/backend/remote/server.go:30.2,31.15 2 1
+wails-app/backend/remote/server.go:31.15,33.3 1 1
+wails-app/backend/remote/server.go:34.2,41.10 3 1
+wails-app/backend/remote/server.go:44.67,46.16 2 1
+wails-app/backend/remote/server.go:46.16,49.3 2 1
+wails-app/backend/remote/server.go:51.2,55.15 4 1
+wails-app/backend/remote/server.go:55.15,60.3 4 1
+wails-app/backend/remote/server.go:62.2,62.6 1 1
+wails-app/backend/remote/server.go:62.6,65.17 2 1
+wails-app/backend/remote/server.go:65.17,66.9 1 1
+wails-app/backend/remote/server.go:71.26,72.12 1 1
+wails-app/backend/remote/server.go:72.12,73.96 1 1
+wails-app/backend/remote/server.go:73.96,75.4 1 1
+wails-app/backend/remote/server.go:79.50,81.30 2 1
+wails-app/backend/remote/server.go:81.30,83.3 1 1
+wails-app/backend/remote/server.go:84.2,86.35 2 1
+wails-app/backend/remote/server.go:89.61,92.30 3 1
+wails-app/backend/remote/server.go:92.30,94.17 2 1
+wails-app/backend/remote/server.go:94.17,98.4 3 1
