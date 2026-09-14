@@ -96,6 +96,6 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P46-T1 | `stt/engine.go`, `whisper.go` | **STT Interface Abstraction:** Refactor the existing Whisper setup into a clean `STTEngine` interface and implement a core STT Manager. | ⬜ | — |
+| P46-T1 | `stt/engine.go`, `whisper.go` | **STT Interface Abstraction:** Refactor the existing Whisper setup into a clean `STTEngine` interface and implement a core STT Manager. | ✅ | #150 |
 | P46-T2 | `system/profiler.go`, `downloader.go` | **Hardware Profiler & Downloader:** Build a startup routine that checks for 8GB RAM + AVX2 and downloads Parakeet/sherpa-onnx DLLs from GitHub if supported. | ⬜ | — |
 | P46-T3 | `stt/parakeet.go` | **Parakeet CGO & Hot-Swap:** Implement `sherpa-onnx` bindings and hot-swap logic to seamlessly switch from Whisper to Parakeet mid-stream when downloaded. | ⬜ | — |
