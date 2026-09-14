@@ -10,6 +10,10 @@ export function DeleteToken() {
   return window['go']['main']['App']['DeleteToken']();
 }
 
+export function GetAudioDevices() {
+  return window['go']['main']['App']['GetAudioDevices']();
+}
+
 export function GetMachineId() {
   return window['go']['main']['App']['GetMachineId']();
 }
@@ -28,6 +32,10 @@ export function QuitApp() {
 
 export function SaveToken(arg1) {
   return window['go']['main']['App']['SaveToken'](arg1);
+}
+
+export function SetAudioDevice(arg1, arg2) {
+  return window['go']['main']['App']['SetAudioDevice'](arg1, arg2);
 }
 
 export function SetClickthrough(arg1) {

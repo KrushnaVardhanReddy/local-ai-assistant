@@ -4,9 +4,10 @@ go 1.25.0
 
 require (
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
+	github.com/ebitengine/purego v0.11.0
+	github.com/gen2brain/malgo v0.11.26
 	github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260911141324-1da4dc82fa79
 	github.com/go-audio/wav v1.1.0
-	github.com/gordonklaus/portaudio v0.0.0-20260203164431-765aa7dfa631
 	github.com/gorilla/websocket v1.5.3
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/shirou/gopsutil/v3 v3.24.5
@@ -20,7 +21,6 @@ require (
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
-	github.com/ebitengine/purego v0.11.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/go-audio/audio v1.0.0 // indirect
 	github.com/go-audio/riff v1.0.0 // indirect

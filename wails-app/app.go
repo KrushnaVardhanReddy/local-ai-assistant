@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"wails-app/backend/hotkeys"
 	"wails-app/backend/stt"
@@ -38,11 +39,31 @@ func NewApp() *App {
 	var initialEngine stt.STTEngine
 	modelPath := os.Getenv("WHISPER_MODEL_PATH")
 	if modelPath == "" {
-		modelPath = "models/ggml-base.en.bin"
+		// Try several candidate paths relative to the working directory
+		candidates := []string{
+			"../models/ggml-tiny.bin",
+			"../models/ggml-base.en.bin",
+			"models/ggml-tiny.bin",
+			"models/ggml-base.en.bin",
+		}
+		for _, candidate := range candidates {
+			if _, statErr := os.Stat(candidate); statErr == nil {
+				modelPath = candidate
+				break
+			}
+		}
+	}
+	if modelPath == "" {
+		log.Println("⚠️  No Whisper model found! Set WHISPER_MODEL_PATH env var. STT will be disabled.")
+	} else {
+		log.Printf("🧠 Loading Whisper model from: %s\n", modelPath)
 	}
 	whisperEngine, err := stt.LoadWhisperEngine(modelPath)
 	if err == nil {
 		initialEngine = whisperEngine
+		log.Println("✅ Whisper model loaded successfully!")
+	} else {
+		log.Printf("❌ Failed to load Whisper model: %v\n", err)
 	}
 
 	captureEngine := audio.NewCaptureEngine()
@@ -84,6 +105,21 @@ func (a *App) startup(ctx context.Context) {
 		// Example: Emit progress event to frontend
 		wailsruntime.EventsEmit(ctx, "download_progress", progress)
 	})
+
+	// Auto-start default microphone capture
+	go func() {
+		if a.sttManager == nil || a.audioCapture == nil {
+			log.Println("⚠️  STT manager or audio capture not ready, skipping auto-start")
+			return
+		}
+		log.Println("🎙️ Auto-starting default microphone capture...")
+		err := a.SetAudioDevice(-1, false)
+		if err != nil {
+			log.Printf("❌ Failed to auto-start microphone: %v\n", err)
+		} else {
+			log.Println("✅ Microphone auto-started successfully!")
+		}
+	}()
 }
 
 // Greet returns a greeting for the given name
@@ -155,8 +191,16 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 
 		go func() {
 			for transcript := range ch {
-				if transcript != "" {
-					wailsruntime.EventsEmit(a.ctx, "on_transcript", transcript)
+				if transcript != "" &&
+					transcript != "[BLANK_AUDIO]" &&
+					transcript != " [BLANK_AUDIO]" &&
+					!strings.Contains(transcript, "[MUSIC]") &&
+					!strings.Contains(transcript, "[INAUDIBLE]") {
+					log.Printf("🎤 STT OUTPUT: %q\n", transcript)
+					payload := map[string]interface{}{
+						"text": strings.TrimSpace(transcript),
+					}
+					wailsruntime.EventsEmit(a.ctx, "on_transcript", payload)
 				}
 			}
 		}()

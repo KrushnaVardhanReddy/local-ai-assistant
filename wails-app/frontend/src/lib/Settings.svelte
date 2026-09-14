@@ -70,9 +70,13 @@
         selectedPrompt = data.prompt;
       }
 
-      const audioRes = await apiFetch(`${apiUrl}/api/audio/devices`);
-      if (audioRes.ok) {
-        audioDevices = await audioRes.json();
+      if (!isCloudBuild && (window as any).go?.main?.App?.GetAudioDevices) {
+        audioDevices = await (window as any).go.main.App.GetAudioDevices();
+      } else {
+        const audioRes = await apiFetch(`${apiUrl}/api/audio/devices`);
+        if (audioRes.ok) {
+          audioDevices = await audioRes.json();
+        }
       }
     } catch (e) {
       console.error("Failed to load initial settings", e);
@@ -200,8 +204,17 @@
     }
   }
 
-  function toggleSettings() {
+  async function toggleSettings() {
     showSettings = !showSettings;
+    
+    // Fetch audio devices when opened, ensuring Wails bindings are fully loaded
+    if (showSettings && !isCloudBuild && (window as any).go?.main?.App?.GetAudioDevices) {
+      try {
+        audioDevices = await (window as any).go.main.App.GetAudioDevices();
+      } catch (e) {
+        console.error("Failed to load audio devices on open", e);
+      }
+    }
   }
 
   async function handleSaveSettings() {
@@ -247,11 +260,19 @@
         body: JSON.stringify({ prompt: selectedPrompt })
       });
 
-      await apiFetch(`${apiUrl}/api/audio/device`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ device_id: selectedDeviceId, is_loopback: isLoopbackEnabled })
-      });
+      if (!isCloudBuild && (window as any).go?.main?.App?.SetAudioDevice) {
+        if (selectedDeviceId !== null) {
+          await (window as any).go.main.App.SetAudioDevice(selectedDeviceId, isLoopbackEnabled);
+          const { wsState } = await import("$lib/ws.svelte");
+          wsState.isListening = true;
+        }
+      } else {
+        await apiFetch(`${apiUrl}/api/audio/device`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ device_id: selectedDeviceId, is_loopback: isLoopbackEnabled })
+        });
+      }
     } catch (e) {
       console.error("Failed to save settings", e);
     }
@@ -575,6 +596,8 @@
     padding: 1.5rem;
     color: #fff;
     width: 320px;
+    max-height: 80vh;
+    overflow-y: auto;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     font-family: system-ui, -apple-system, sans-serif;
     z-index: 1000;

@@ -3,9 +3,10 @@ package audio
 import (
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 
-	"github.com/gordonklaus/portaudio"
+	"github.com/gen2brain/malgo"
 )
 
 // AudioDevice represents an available system audio device for capture.
@@ -16,12 +17,13 @@ type AudioDevice struct {
 	IsLoopback bool   `json:"isLoopback"`
 }
 
-// CaptureEngine manages audio capture using PortAudio.
+// CaptureEngine manages audio capture using malgo.
 type CaptureEngine struct {
 	mu            sync.Mutex
-	stream        *portaudio.Stream
+	ctx           *malgo.AllocatedContext
+	device        *malgo.Device
 	isInitialized bool
-	inputBuffer   []float32
+	deviceList    []malgo.DeviceInfo
 }
 
 // NewCaptureEngine creates a new uninitialized capture engine.
@@ -29,7 +31,7 @@ func NewCaptureEngine() *CaptureEngine {
 	return &CaptureEngine{}
 }
 
-// Initialize initializes PortAudio.
+// Initialize initializes malgo.
 func (c *CaptureEngine) Initialize() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -38,14 +40,19 @@ func (c *CaptureEngine) Initialize() error {
 		return nil
 	}
 
-	if err := portaudio.Initialize(); err != nil {
-		return fmt.Errorf("failed to initialize portaudio: %w", err)
+	ctx, err := malgo.InitContext(nil, malgo.ContextConfig{}, func(message string) {
+		fmt.Printf("malgo: %v\n", message)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to initialize malgo: %w", err)
 	}
+
+	c.ctx = ctx
 	c.isInitialized = true
 	return nil
 }
 
-// Terminate terminates PortAudio.
+// Terminate terminates malgo.
 func (c *CaptureEngine) Terminate() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -54,10 +61,11 @@ func (c *CaptureEngine) Terminate() error {
 		return nil
 	}
 
-	c.stopCaptureInternal() // Ensure stream is stopped
+	c.stopCaptureInternal()
 
-	if err := portaudio.Terminate(); err != nil {
-		return fmt.Errorf("failed to terminate portaudio: %w", err)
+	if c.ctx != nil {
+		c.ctx.Free()
+		c.ctx = nil
 	}
 	c.isInitialized = false
 	return nil
@@ -72,43 +80,40 @@ func (c *CaptureEngine) GetDevices() ([]AudioDevice, error) {
 		return nil, errors.New("capture engine not initialized")
 	}
 
-	devices, err := portaudio.Devices()
+	// Get playback devices (for loopback)
+	playbackDevices, err := c.ctx.Devices(malgo.Playback)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get devices: %w", err)
+		return nil, fmt.Errorf("failed to get playback devices: %w", err)
+	}
+
+	// Get capture devices
+	captureDevices, err := c.ctx.Devices(malgo.Capture)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get capture devices: %w", err)
 	}
 
 	var audioDevices []AudioDevice
-	for i, dev := range devices {
-		// PortAudio on Windows WASAPI often exposes loopback devices.
-		// We consider a device an input if it has max input channels > 0.
-		// For loopback, it might be an output device that can be captured (WASAPI loopback),
-		// or an input device with loopback in the name. We'll mark them accordingly.
+	c.deviceList = []malgo.DeviceInfo{}
 
-		isInput := dev.MaxInputChannels > 0
-		isOutput := dev.MaxOutputChannels > 0
-		isLoopback := false
-
-		// Naive heuristic: if it mentions loopback in the name.
-		// Proper WASAPI loopback support requires host api specific checks, but for cross-platform compatibility
-		// with standard portaudio bindings, we'll mark all outputs as potential loopback targets if the UI wants to try,
-		// but portaudio often needs WASAPI loopback flag. Since portaudio Go bindings might not expose WASAPI flags directly easily,
-		// standard input channels will be the primary source.
-		// We'll mark them as loopback based on output channels for the purpose of the API.
-
-		if dev.HostApi.Name == "Windows WASAPI" {
-			// In WASAPI, loopback devices are often presented as input devices with loopback in their name, or we can use default loopback.
-			// Actually PortAudio core supports loopback if the device is opened with WASAPI flags, but standard go wrapper doesn't expose it.
-			// However, WASAPI loopback devices are sometimes enumerated directly as inputs in newer portaudio versions.
-			isLoopback = true
-		} else if isOutput && !isInput {
-			isLoopback = true
-		}
-
+	// Add capture devices
+	for _, info := range captureDevices {
+		c.deviceList = append(c.deviceList, info)
 		audioDevices = append(audioDevices, AudioDevice{
-			ID:         i,
-			Name:       fmt.Sprintf("%s (%s)", dev.Name, dev.HostApi.Name),
-			IsInput:    isInput,
-			IsLoopback: isLoopback,
+			ID:         len(c.deviceList) - 1,
+			Name:       info.Name(),
+			IsInput:    true,
+			IsLoopback: false,
+		})
+	}
+
+	// Add playback devices as loopback
+	for _, info := range playbackDevices {
+		c.deviceList = append(c.deviceList, info)
+		audioDevices = append(audioDevices, AudioDevice{
+			ID:         len(c.deviceList) - 1,
+			Name:       info.Name() + " (Loopback)",
+			IsInput:    false,
+			IsLoopback: true,
 		})
 	}
 
@@ -117,6 +122,7 @@ func (c *CaptureEngine) GetDevices() ([]AudioDevice, error) {
 
 // StartCapture starts capturing audio from the specified device ID,
 // calling the callback with float32 samples.
+// Pass deviceID = -1 to use the system default microphone.
 func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback func([]float32)) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -125,59 +131,92 @@ func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback fun
 		return errors.New("capture engine not initialized")
 	}
 
-	// Stop any existing stream
 	c.stopCaptureInternal()
 
-	devices, err := portaudio.Devices()
+	// Use S16 — universally supported by PulseAudio (PA_SAMPLE_S16LE)
+	deviceConfig := malgo.DefaultDeviceConfig(malgo.Capture)
+	deviceConfig.Capture.Format = malgo.FormatS16
+	deviceConfig.Capture.Channels = 1
+	deviceConfig.SampleRate = 16000
+
+	if isLoopback {
+		deviceConfig = malgo.DefaultDeviceConfig(malgo.Loopback)
+		deviceConfig.Capture.Format = malgo.FormatS16
+		deviceConfig.Capture.Channels = 1
+		deviceConfig.SampleRate = 16000
+	}
+
+	// Only set a specific device if one was requested (deviceID >= 0)
+	if deviceID >= 0 && deviceID < len(c.deviceList) {
+		info := c.deviceList[deviceID]
+		if isLoopback {
+			deviceConfig.Playback.DeviceID = info.ID.Pointer()
+		} else {
+			deviceConfig.Capture.DeviceID = info.ID.Pointer()
+		}
+	}
+
+	var sampleBuffer []float32
+	var bufferMu sync.Mutex
+
+	onRecvFrames := func(pOutputSample, pInputSamples []byte, framecount uint32) {
+		if len(pInputSamples) > 0 {
+			sampleCount := len(pInputSamples) / 2
+
+			// Convert int16 little-endian bytes → float32 [-1.0, 1.0] for Whisper
+			samples := make([]float32, sampleCount)
+			for i := 0; i < sampleCount; i++ {
+				s16 := int16(pInputSamples[i*2]) | int16(pInputSamples[i*2+1])<<8
+				samples[i] = float32(s16) / 32768.0
+			}
+
+			// Silence gate: skip silent chunks (RMS < 0.01) — same as original Python impl
+			var sumSq float32
+			for _, s := range samples {
+				sumSq += s * s
+			}
+			rms := float32(0)
+			if len(samples) > 0 {
+				rms = float32(math.Sqrt(float64(sumSq / float32(len(samples)))))
+			}
+
+			bufferMu.Lock()
+			if rms >= 0.005 {
+				sampleBuffer = append(sampleBuffer, samples...)
+			}
+			
+			// When we have accumulated 1 second of audio (16000 samples), send it
+			if len(sampleBuffer) >= 16000 {
+				samplesCopy := make([]float32, len(sampleBuffer))
+				copy(samplesCopy, sampleBuffer)
+				sampleBuffer = sampleBuffer[:0]
+				bufferMu.Unlock()
+				
+				callback(samplesCopy)
+			} else {
+				bufferMu.Unlock()
+			}
+		} else {
+			// no-op: empty callback
+		}
+	}
+
+	deviceCallbacks := malgo.DeviceCallbacks{
+		Data: onRecvFrames,
+	}
+	
+	device, err := malgo.InitDevice(c.ctx.Context, deviceConfig, deviceCallbacks)
 	if err != nil {
-		return fmt.Errorf("failed to list devices: %w", err)
+		return fmt.Errorf("failed to init device: %w", err)
 	}
 
-	if deviceID < 0 || deviceID >= len(devices) {
-		return fmt.Errorf("invalid device ID: %d", deviceID)
-	}
-
-	device := devices[deviceID]
-
-	// Configure stream parameters
-	// Whisper expects 16kHz mono audio. We capture in 16kHz mono.
-	const sampleRate = 16000
-	const channels = 1
-	const framesPerBuffer = 512
-
-	c.inputBuffer = make([]float32, framesPerBuffer*channels)
-
-	// Usually LowLatencyParameters expects an input device to have > 0 input channels.
-	// If it's a loopback device (which might only have output channels), we try setting it as input anyway,
-	// but we must be careful. If MaxInputChannels is 0, PortAudio might reject it unless it's a special WASAPI loopback device.
-
-	// Create parameters manually to avoid panics or strict checks in LowLatencyParameters if it's an output device
-	var p portaudio.StreamParameters
-	p.Input.Device = device
-	p.Input.Channels = channels
-	// Default latency
-	p.Input.Latency = device.DefaultLowInputLatency
-	p.SampleRate = float64(sampleRate)
-	p.FramesPerBuffer = framesPerBuffer
-
-	streamCallback := func(in []float32) {
-		// Make a copy to avoid data races when passing to STT which is async
-		samplesCopy := make([]float32, len(in))
-		copy(samplesCopy, in)
-		callback(samplesCopy)
-	}
-
-	stream, err := portaudio.OpenStream(p, streamCallback)
+	err = device.Start()
 	if err != nil {
-		return fmt.Errorf("failed to open stream: %w", err)
+		device.Uninit()
+		return fmt.Errorf("failed to start device: %w", err)
 	}
 
-	if err := stream.Start(); err != nil {
-		stream.Close()
-		return fmt.Errorf("failed to start stream: %w", err)
-	}
-
-	c.stream = stream
+	c.device = device
 	return nil
 }
 
@@ -195,11 +234,10 @@ func (c *CaptureEngine) StopCapture() error {
 
 // stopCaptureInternal stops the stream without acquiring the lock.
 func (c *CaptureEngine) stopCaptureInternal() error {
-	if c.stream != nil {
-		c.stream.Stop()
-		err := c.stream.Close()
-		c.stream = nil
-		return err
+	if c.device != nil {
+		c.device.Stop()
+		c.device.Uninit()
+		c.device = nil
 	}
 	return nil
 }
