@@ -25,6 +25,12 @@ OBJECTIVE
    - Ensure you mock or safely bypass CGO calls during tests so the test suite passes on standard CI environments.
    - You must have 100% test coverage for the new files introduced in this task.
 
+3. HINTS & CGO STRATEGY (CRITICAL)
+   - Jules, if you are struggling with test coverage or CGO build errors, the trick is to abstract the OS calls behind an interface (e.g., `type WindowModifier interface`).
+   - Put all your CGO and OS-specific syscalls in files with strict build constraints (e.g., `//go:build windows && !test`, `//go:build linux && !test`, `//go:build darwin && !test`).
+   - Provide a completely mocked or no-op implementation for tests (e.g., using `//go:build test`). This allows the unit tests to safely hit 100% coverage without invoking real CGO or OS APIs, and prevents test suite crashes.
+   - For Wails, you can get the window handle or hook into the lifecycle during `OnStartup(ctx context.Context)`. If you can't get the native handle directly from Wails context, use standard OS calls to find the window by title or PID.
+
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
