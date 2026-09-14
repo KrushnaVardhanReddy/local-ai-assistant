@@ -1,0 +1,28 @@
+TASK: P48-T1 — Split E2E UI Tests (Playwright)
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Our application is built on Wails v2 (Go backend + Svelte frontend). We already have Go-based E2E tests for the local ML pipeline (`ml_pipeline_test.go`), but we lack UI tests for the frontend.
+Because attaching an automated testing framework directly to a compiled OS native window is notoriously slow and flaky, we are adopting a "Split E2E" strategy.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. SETUP PLAYWRIGHT
+   - Initialize Playwright in `wails-app/frontend`.
+   - Create a `playwright.config.ts`.
+
+2. WRITE UI TESTS
+   - Create a test file (e.g., `tests/ui.spec.ts` in the frontend).
+   - Write tests to validate the main user flows (e.g., clicking buttons, checking status indicators).
+   - IMPORTANT: Mock out the Wails Go backend IPC calls so the frontend can be tested entirely in a headless browser without the Go backend running.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P48-T1 setup split e2e playwright ui tests"
+Target branch: feature/krushna_golang

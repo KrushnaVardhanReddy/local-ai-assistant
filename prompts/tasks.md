@@ -76,3 +76,13 @@
 | P47-T1 | `wails-app/backend/app.go` | **Embedded HTTP Server:** Spin up a lightweight Go HTTP server alongside Wails to serve the compiled Svelte frontend assets on port 8000. | ⬜ | — |
 | P47-T2 | `wails-app/backend/app.go`, `wails-app/frontend/src/lib/ws.svelte.ts` | **Remote WebSocket Bridge:** Expose a WebSocket route on the Go server that mirrors the Wails IPC events (audio stream, LLM tokens) to the remote browser connection. | ⬜ | — |
 | P47-T3 | `scripts/start_remote.sh` | **Update Tunnel Script:** Refactor the existing script to point the Cloudflare tunnel directly to the new embedded Go HTTP port (8000). | ⬜ | — |
+
+---
+
+## Phase 48 — Automated E2E Testing 🧪
+
+> Implement a "Split E2E" testing strategy to validate both the Svelte frontend and the Go local ML backend.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P48-T1 | `wails-app/frontend/playwright.config.ts`, `tests/` | **Split E2E UI Tests:** Setup Playwright in the frontend to test the Svelte UI flows while mocking the backend Go calls. | ⬜ | — |
