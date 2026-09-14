@@ -9,14 +9,9 @@ then
     exit 1
 fi
 
-echo "Starting FastAPI backend in the background..."
-# Assuming we are running this from the repository root
-cd backend
-if [ -d "../venv" ]; then
-    source ../venv/bin/activate
-fi
-uvicorn app:app --port 8000 &
-BACKEND_PID=$!
+echo "IMPORTANT: Please make sure the Local AI Assistant (Wails app) is running FIRST"
+echo "before continuing, as it automatically hosts the local server on port 8000."
+echo ""
 
 echo "Starting Cloudflare tunnel..."
 echo "========================================================"
@@ -26,6 +21,3 @@ echo "Send that full URL to your remote helper."
 echo "========================================================"
 
 cloudflared tunnel --url http://127.0.0.1:8000
-
-# When cloudflared exits, kill the backend
-kill $BACKEND_PID
