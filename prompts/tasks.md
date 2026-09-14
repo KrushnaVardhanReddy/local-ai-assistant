@@ -63,3 +63,13 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P48-T1 | `wails-app/frontend/playwright.config.ts`, `tests/` | **Split E2E UI Tests:** Setup Playwright in the frontend to test the Svelte UI flows while mocking the backend Go calls. | ⬜ | — |
+
+---
+
+## Phase 49 — Global Hotkeys & Window Management ⌨️
+
+> Implementing global OS-level hotkeys so the user can interact with and move the transparent Wails window without needing a mouse.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P49-T1 | `wails-app/backend/hotkeys.go` | **Global Hotkey Movement:** Use `golang.design/x/hotkey` to register global hotkeys (e.g. `Ctrl+Alt+Right`) that nudge the Wails window coordinates. | ⬜ | — |

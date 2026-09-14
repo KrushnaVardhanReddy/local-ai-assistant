@@ -1,0 +1,30 @@
+TASK: P49-T1 — Global Hotkeys & Window Management
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+Now that the app uses a transparent click-through Wails window, the user cannot easily click and drag the window using the mouse.
+We need a robust Global Hotkey system in the Go backend. 
+When specific global hotkeys are pressed (even if the app doesn't have focus), the app should either:
+1. Move the window programmatically (e.g., nudging it right/left/up/down, or toggling between predefined monitor positions).
+2. Emit IPC events to the frontend (e.g., `hotkey_transcript_1`), which the existing Svelte UI already listens for.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. GLOBAL HOTKEY LISTENER
+   - Integrate a global hotkey package in Go (e.g., `golang.design/x/hotkey` or similar robust library for cross-platform global hotkeys).
+   - In `app.go` or a dedicated `hotkeys.go`, set up a listener in a background goroutine that safely shuts down when the app closes.
+
+2. WINDOW MOVEMENT LOGIC
+   - Register hotkeys (e.g., `Ctrl+Alt+Right` / `Ctrl+Alt+Left`) to move the window.
+   - Use Wails `runtime.WindowGetPosition(ctx)` and `runtime.WindowSetPosition(ctx, x, y)` to nudge the window (e.g., +100px) without needing the mouse.
+
+3. FRONTEND IPC BINDINGS
+   - Register existing hotkeys (like `Ctrl+Alt+1`) to emit `hotkey_transcript_1` via `runtime.EventsEmit`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P49-T1 implement global hotkeys for window movement and IPC"
+Target branch: feature/krushna_golang
