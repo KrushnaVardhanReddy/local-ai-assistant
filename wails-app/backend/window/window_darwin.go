@@ -37,3 +37,8 @@ func (d *darwinModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) 
 	C.set_window_ignores_mouse_events(C.int(enable))
 	return nil
 }
+
+func (d *darwinModifier) HideFromTaskbar(ctx context.Context) error {
+	// Not implemented for macOS yet
+	return nil
+}

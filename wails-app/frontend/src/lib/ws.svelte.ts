@@ -24,6 +24,45 @@ let ws: WebSocket | null = null;
 let chipIdCounter = 0;
 let listenersInitialized = false;
 
+function handleTranscript(data: any) {
+  wsState.transcript = data.text;
+
+  // Accumulate rolling transcript history (max 10 entries)
+  if (data.text && data.text.trim().length > 3) {
+    // Avoid duplicating the last entry
+    const last = wsState.transcriptHistory[wsState.transcriptHistory.length - 1];
+    if (last !== data.text) {
+      wsState.transcriptHistory.push(data.text);
+      if (wsState.transcriptHistory.length > 10) {
+        wsState.transcriptHistory.shift();
+      }
+    }
+  }
+
+  // Accumulate as a clickable chip (deduplicate identical text)
+  const existingIdx = wsState.pendingTranscripts.findIndex(
+    (c) => c.text === data.text
+  );
+  if (existingIdx >= 0) {
+    // Update in place (keeps position, refreshes)
+    wsState.pendingTranscripts[existingIdx] = {
+      id: wsState.pendingTranscripts[existingIdx].id,
+      text: data.text,
+      speaker: data.speaker ?? null
+    };
+  } else {
+    wsState.pendingTranscripts.push({
+      id: chipIdCounter++,
+      text: data.text,
+      speaker: data.speaker ?? null
+    });
+    // Keep max 6 chips — drop oldest
+    if (wsState.pendingTranscripts.length > 6) {
+      wsState.pendingTranscripts.shift();
+    }
+  }
+}
+
 function initListeners() {
   EventsOn("ptt-start", () => {
     wsState.isPTTHeld = true;
@@ -43,6 +82,10 @@ function initListeners() {
     wsState.pendingTranscripts = [];
     wsState.transcriptHistory = [];
     apiFetch(`${getApiUrl()}/history/clear`, { method: 'POST' }).catch(console.error);
+  });
+
+  EventsOn("on_transcript", (data: any) => {
+    handleTranscript(data);
   });
 }
 let retryDelay = 500;
@@ -130,42 +173,7 @@ export function connect(url?: string): void {
       const data = JSON.parse(event.data);
       switch (data.type) {
         case "transcript":
-          wsState.transcript = data.text;
-
-          // Accumulate rolling transcript history (max 10 entries)
-          if (data.text && data.text.trim().length > 3) {
-            // Avoid duplicating the last entry
-            const last = wsState.transcriptHistory[wsState.transcriptHistory.length - 1];
-            if (last !== data.text) {
-              wsState.transcriptHistory.push(data.text);
-              if (wsState.transcriptHistory.length > 10) {
-                wsState.transcriptHistory.shift();
-              }
-            }
-          }
-
-          // Accumulate as a clickable chip (deduplicate identical text)
-          const existingIdx = wsState.pendingTranscripts.findIndex(
-            (c) => c.text === data.text
-          );
-          if (existingIdx >= 0) {
-            // Update in place (keeps position, refreshes)
-            wsState.pendingTranscripts[existingIdx] = {
-              id: wsState.pendingTranscripts[existingIdx].id,
-              text: data.text,
-              speaker: data.speaker ?? null
-            };
-          } else {
-            wsState.pendingTranscripts.push({
-              id: chipIdCounter++,
-              text: data.text,
-              speaker: data.speaker ?? null
-            });
-            // Keep max 6 chips — drop oldest
-            if (wsState.pendingTranscripts.length > 6) {
-              wsState.pendingTranscripts.shift();
-            }
-          }
+          handleTranscript(data);
           break;
         case "session_expired":
           wsState.sessionExpired = true;

@@ -73,6 +73,11 @@ func (l *linuxModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) e
     return nil
 }
 
+func (l *linuxModifier) HideFromTaskbar(ctx context.Context) error {
+	// Not implemented for Linux yet
+	return nil
+}
+
 func getWindowID() (string, error) {
     // This is a naive approach assuming we can find our own window via xdotool or wmctrl.
     // A robust Linux app would use gdk/gtk APIs natively but we are abstracted behind Wails.

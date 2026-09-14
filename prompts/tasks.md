@@ -61,8 +61,7 @@
 > Implement a "Split E2E" testing strategy to validate both the Svelte frontend and the Go local ML backend.
 
 | Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
-| P48-T1 | `wails-app/frontend/playwright.config.ts`, `tests/` | **Split E2E UI Tests:** Setup Playwright in the frontend to test the Svelte UI flows while mocking the backend Go calls. | ⬜ | — |
+| P48-T1 | `wails-app/frontend/playwright.config.ts`, `tests/` | **Split E2E UI Tests:** Setup Playwright in the frontend to test the Svelte UI flows while mocking the backend Go calls. | ✅ | #158 |
 
 ---
 
@@ -81,5 +80,4 @@
 > Re-implementing the driverless system audio loopback feature for the Go backend so users can capture the interviewer's voice natively (e.g. Windows WASAPI).
 
 | Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
-| P50-T1 | `wails-app/backend/stt/`, `app.go` | **Native Audio Loopback:** Upgrade Go audio capture to support Windows WASAPI loopback and expose device selector bindings to Wails. | ⬜ | — |
+| P50-T1 | `wails-app/backend/stt/`, `app.go` | **Native Audio Loopback:** Upgrade Go audio capture to support Windows WASAPI loopback and expose device selector bindings to Wails. | ✅ | #159 |
