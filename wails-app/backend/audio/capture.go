@@ -3,7 +3,6 @@ package audio
 import (
 	"errors"
 	"fmt"
-	"math"
 	"sync"
 
 	"github.com/gen2brain/malgo"
@@ -156,49 +155,9 @@ func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback fun
 		}
 	}
 
-	var sampleBuffer []float32
-	var bufferMu sync.Mutex
-
+	processor := NewAudioProcessor(callback)
 	onRecvFrames := func(pOutputSample, pInputSamples []byte, framecount uint32) {
-		if len(pInputSamples) > 0 {
-			sampleCount := len(pInputSamples) / 2
-
-			// Convert int16 little-endian bytes → float32 [-1.0, 1.0] for Whisper
-			samples := make([]float32, sampleCount)
-			for i := 0; i < sampleCount; i++ {
-				s16 := int16(pInputSamples[i*2]) | int16(pInputSamples[i*2+1])<<8
-				samples[i] = float32(s16) / 32768.0
-			}
-
-			// Silence gate: skip silent chunks (RMS < 0.01) — same as original Python impl
-			var sumSq float32
-			for _, s := range samples {
-				sumSq += s * s
-			}
-			rms := float32(0)
-			if len(samples) > 0 {
-				rms = float32(math.Sqrt(float64(sumSq / float32(len(samples)))))
-			}
-
-			bufferMu.Lock()
-			if rms >= 0.005 {
-				sampleBuffer = append(sampleBuffer, samples...)
-			}
-			
-			// When we have accumulated 1 second of audio (16000 samples), send it
-			if len(sampleBuffer) >= 16000 {
-				samplesCopy := make([]float32, len(sampleBuffer))
-				copy(samplesCopy, sampleBuffer)
-				sampleBuffer = sampleBuffer[:0]
-				bufferMu.Unlock()
-				
-				callback(samplesCopy)
-			} else {
-				bufferMu.Unlock()
-			}
-		} else {
-			// no-op: empty callback
-		}
+		processor.Process(pInputSamples)
 	}
 
 	deviceCallbacks := malgo.DeviceCallbacks{

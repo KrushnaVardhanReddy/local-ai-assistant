@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
-	"wails-app/backend/hotkeys"
-	"wails-app/backend/stt"
+	"wails-app/backend"
 	"wails-app/backend/audio"
+	"wails-app/backend/filter"
+	"wails-app/backend/hotkeys"
+	"wails-app/backend/llm"
 	"wails-app/backend/remote"
-	"net/http"
+	"wails-app/backend/stt"
 	"wails-app/backend/system"
 	"wails-app/backend/window"
 
@@ -30,6 +33,9 @@ type App struct {
 
 	sttManager   *stt.STTManager
 	audioCapture *audio.CaptureEngine
+
+	qaCache *backend.VectorDB
+	llmBusy sync.Mutex
 }
 
 // NewApp creates a new App application struct
@@ -70,10 +76,20 @@ func NewApp() *App {
 	// Ignore init errors since hardware might not be present.
 	_ = captureEngine.Initialize()
 
+	err := os.MkdirAll("./data", 0755)
+	if err != nil {
+		log.Printf("Failed to create data directory: %v", err)
+	}
+	db, err := backend.NewVectorDB("./data/qa_cache.db")
+	if err != nil {
+		log.Printf("Failed to init QA cache DB: %v", err)
+	}
+
 	return &App{
 		remoteServer: remote.NewServer(http.FS(assets)),
 		sttManager:   stt.NewSTTManager(initialEngine),
 		audioCapture: captureEngine,
+		qaCache:      db,
 	}
 }
 
@@ -196,11 +212,65 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 					transcript != " [BLANK_AUDIO]" &&
 					!strings.Contains(transcript, "[MUSIC]") &&
 					!strings.Contains(transcript, "[INAUDIBLE]") {
+
+					cleanTranscript := strings.TrimSpace(transcript)
+					emb := backend.GenerateEmbedding(cleanTranscript)
+
+					filterRes := filter.Check(cleanTranscript, emb)
+					if !filterRes.ShouldSend {
+						continue
+					}
+
 					log.Printf("🎤 STT OUTPUT: %q\n", transcript)
 					payload := map[string]interface{}{
-						"text": strings.TrimSpace(transcript),
+						"text": cleanTranscript,
 					}
 					wailsruntime.EventsEmit(a.ctx, "on_transcript", payload)
+
+					if !a.llmBusy.TryLock() {
+					    log.Printf("[BUSY] Discarded (LLM streaming): %q", cleanTranscript)
+					    continue
+					}
+
+					if a.qaCache != nil {
+					    cachedAns, hit := a.qaCache.SearchByEmbedding(emb, 0.92)
+					    if hit {
+					        log.Printf("[Cache] Hit (similarity=%.3f): %q", 0.92, cleanTranscript)
+
+					        // Stream cached answer via on_response_token
+					        words := strings.Split(cachedAns, " ")
+					        for i, w := range words {
+					            tok := w
+					            if i < len(words)-1 {
+					                tok += " "
+					            }
+					            wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": tok})
+					        }
+					        wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
+					        a.llmBusy.Unlock()
+					        continue
+					    }
+					    log.Printf("[Cache] Miss: %q", cleanTranscript)
+					}
+
+					go func(q string) {
+						var answerBuilder strings.Builder
+						err := llm.StreamCompletion(q, func(token string) {
+							answerBuilder.WriteString(token)
+							wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
+						}, func() {
+							wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
+						})
+						if err != nil {
+							log.Printf("LLM streaming failed: %v", err)
+						} else {
+							if a.qaCache != nil {
+								a.qaCache.Store(q, answerBuilder.String())
+							}
+							log.Printf("[LLM] Stream complete. Stored in cache.")
+						}
+						a.llmBusy.Unlock()
+					}(cleanTranscript)
 				}
 			}
 		}()
