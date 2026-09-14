@@ -1,0 +1,153 @@
+TASK: P51-T1 — Go STT → Smart Filter → Cache → LLM Pipeline
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The Go/Wails app currently captures audio, transcribes with Whisper in fixed
+1-second chunks, and emits raw transcript fragments to the frontend UI. There
+is no intelligent filtering, no silence-based VAD, no QA cache, and no LLM
+integration.
+
+This task ports the complete Python pipeline from backend/smart_filter.py,
+backend/local_intelligence.py, backend/qa_cache.py (in the feature/krushna
+branch) into the Go Wails backend.
+
+The full pipeline in order:
+
+  LAYER 1 — VAD Silence Buffer
+    Replace fixed 1-second audio chunk trigger with silence-based flushing.
+    Accumulate samples continuously. Only trigger Whisper transcription when:
+      (a) SILENCE_THRESHOLD_SECONDS of silence (RMS < 0.005) since last voiced
+          frame AND buffer has at least 0.5s of voiced samples (8000 samples).
+          Default: 1.5s, from env var SILENCE_THRESHOLD_SECONDS.
+      (b) Buffer exceeds 15 seconds total (240000 samples) — emergency flush.
+    After flushing: reset buffer and silence timer.
+
+  LAYER 2 — Smart Filter (Go port of smart_filter.py + local_intelligence.py)
+    After Whisper transcribes the assembled chunk, run in order:
+      Stage 1 (Instant): Drop if word count < MIN_WORDS (default: 3, env var).
+      Stage 2 (Instant): Drop if transcript is a known filler/noise phrase
+        (case-insensitive, strip punctuation):
+          {"okay","ok","yeah","yes","no","mm-hmm","hmm","uh","um","right",
+           "sure","thanks","thank you","bye","alright","all right","got it",
+           "i see","i know","oh","ah","so","yep","nope","hi","hello","hey",
+           "good morning","good afternoon","good evening","how are you",
+           "how's it going","what's up","sup"}
+      Stage 3 (Embedding): Generate Nomic embedding using existing
+        GenerateEmbedding() from wails-app/backend/embeddings.go.
+        Compare cosine similarity vs noise category centroid (pre-computed once
+        at startup via sync.Once). Noise anchors:
+          ["Okay.", "Sounds good, thank you.", "Hmm, let me think about that.",
+           "Mhm, sure.", "Got it."]
+        If similarity to noise centroid > 0.82: drop as noise.
+
+  LAYER 3 — QA Cache Lookup
+    Reuse embedding from Stage 3. Call VectorDB.SearchByEmbedding(emb, 0.92).
+    - CACHE HIT: emit on_transcript, stream cached answer as on_response_token
+      events (one per ~word), emit on_response_end. Skip LLM.
+    - CACHE MISS: proceed to Layer 4.
+
+  LAYER 4 — OpenAI Streaming LLM
+    Call OpenAI Chat Completions API with stream:true.
+    Config from env (with defaults):
+      OPENAI_API_KEY    — required
+      LLM_BASE_URL      — default https://api.openai.com/v1
+                          (app uses Cloudflare Workers AI compat API)
+      LLM_MODEL         — default gpt-4o
+    System prompt: "You are an expert technical interview assistant. Answer
+    the following interview question concisely, clearly, and with code
+    examples where appropriate."
+    Parse SSE data: lines. Extract choices[0].delta.content.
+    Emit on_response_token per chunk. Emit on_response_end when done.
+    After full response assembled: call VectorDB.Store(question, answer).
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE/MODIFY
+═══════════════════════════════════════════════════════════════
+
+CREATE: wails-app/backend/filter/filter.go
+  Package filter. Smart filter implementation (Layer 2).
+  Exports:
+    type FilterResult struct { ShouldSend bool; Reason string }
+    func Check(text string, embedding []float32) FilterResult
+  Pre-compute noise anchor centroid once via sync.Once at package init.
+
+CREATE: wails-app/backend/llm/openai.go
+  Package llm. OpenAI streaming client (Layer 4).
+  Exports:
+    type StreamCallback func(token string)
+    func StreamCompletion(question string, onToken StreamCallback, onDone func()) error
+  Reads OPENAI_API_KEY, LLM_BASE_URL, LLM_MODEL from os.Getenv().
+  Uses net/http for SSE streaming. Parses data: prefix lines.
+
+MODIFY: wails-app/backend/audio/capture.go
+  Change VAD flush logic in StartCapture's onRecvFrames closure:
+  - Add lastVoiceTime time.Time to closure scope.
+  - Parse SILENCE_THRESHOLD_SECONDS env var at StartCapture call time (default 1.5s).
+  - Voiced frame (rms >= 0.005): update lastVoiceTime, append to buffer.
+  - Silent frame: if lastVoiceTime nonzero AND time.Since(lastVoiceTime) >= threshold
+    AND len(buffer) >= 8000: flush to callback, reset buffer & lastVoiceTime.
+  - Emergency flush: len(buffer) >= 240000.
+
+MODIFY: wails-app/backend/vector_db.go
+  Add: func (v *VectorDB) SearchByEmbedding(embedding []float32, threshold float32) (string, bool)
+  Add: func (v *VectorDB) Store(question, answer string) error
+  Answer stored in metadata JSON field: {"answer":"...","timestamp":"..."}.
+
+MODIFY: wails-app/app.go
+  1. Initialize VectorDB in NewApp() at path ./data/qa_cache.db (create dir if needed).
+  2. Add llmBusy sync.Mutex field to App struct for busy guard.
+  3. In SetAudioDevice callback, after STT transcribes:
+     a. Run filter.Check(transcript, embedding) — drop if !ShouldSend.
+     b. Emit on_transcript.
+     c. Try llmBusy.TryLock(). If locked: log [BUSY] and return.
+     d. SearchByEmbedding cache. If hit: stream cached answer, unlock, return.
+     e. go llm.StreamCompletion(...) with unlock + cache store in onDone.
+
+MODIFY: wails-app/frontend/src/lib/ws.svelte.ts
+  In initListeners(): add EventsOn listeners for on_response_token and
+  on_response_end if not already present:
+    EventsOn("on_response_token", (data) => { wsState.response += data.text; wsState.isThinking = true; });
+    EventsOn("on_response_end", () => { wsState.isThinking = false; });
+  This is the ONLY frontend file change allowed.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Do NOT touch any other frontend files.
+- Do NOT break existing Wails bindings: GetAudioDevices, SetAudioDevice,
+  Greet, StartBackend, StopBackend, GetMachineId, LoadToken, ToggleStealth.
+- All env vars use os.Getenv() with defaults. No hard-coded API keys.
+- LLM streaming runs in a goroutine. Busy guard = discard (no queue).
+- Use log.Printf (not fmt.Printf) for all new log lines.
+- Nomic model path: ../models/nomic-embed-text-v1.5.Q4_K_M.gguf (already used in embeddings.go).
+- Build tag for Linux: wails-app must compile with make dev (webkit2_41 tag).
+
+═══════════════════════════════════════════════════════════════
+LOGGING SPEC
+═══════════════════════════════════════════════════════════════
+[VAD] Flushing %d samples after %.2fs of speech
+[FILTER] Dropped (%s): %q      -- reason: too_short, filler, noise
+[FILTER] Accepted: %q
+[Cache] Hit (similarity=%.3f): %q
+[Cache] Miss: %q
+[LLM] Streaming response for: %q
+[LLM] Stream complete. Stored in cache.
+[BUSY] Discarded (LLM streaming): %q
+
+═══════════════════════════════════════════════════════════════
+TESTS
+═══════════════════════════════════════════════════════════════
+wails-app/backend/filter/filter_test.go:
+  - "okay" → dropped (filler)
+  - "What are the features of Golang?" → accepted
+  - "Yes sure" → dropped (too_short or filler)
+
+wails-app/backend/llm/openai_test.go:
+  - Mock HTTP SSE server → verify all tokens received via callback
+  - Verify onDone called after stream end
+
+═══════════════════════════════════════════════════════════════
+BRANCH
+═══════════════════════════════════════════════════════════════
+PR title: jules: P51-T1 Go STT pipeline — VAD + smart filter + cache + OpenAI streaming

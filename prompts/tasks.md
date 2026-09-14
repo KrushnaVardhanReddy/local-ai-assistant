@@ -81,3 +81,14 @@
 
 | Task ID | File(s) | Description | Status | PR |
 | P50-T1 | `wails-app/backend/stt/`, `app.go` | **Native Audio Loopback:** Upgrade Go audio capture to support Windows WASAPI loopback and expose device selector bindings to Wails. | ✅ | #159 |
+
+---
+
+## Phase 51 — Go STT Pipeline (VAD + Smart Filter + Cache + LLM) 🎤🧠
+
+> Porting the complete Python audio intelligence pipeline into the Go backend:
+> Silence-based VAD, smart filter (filler/embedding), QA cache (sqlite-vec), and OpenAI streaming.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P51-T1 | `backend/filter/`, `backend/llm/`, `backend/audio/capture.go`, `backend/vector_db.go`, `app.go`, `frontend/ws.svelte.ts` | **Full STT Pipeline:** VAD silence buffer, smart filter (filler + Nomic embedding noise detection), sqlite-vec QA cache lookup, OpenAI streaming LLM with busy guard. | ⬜ | — |
