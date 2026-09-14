@@ -1,0 +1,42 @@
+# Task: P51-T2 — Native Go Intent Classifier
+
+## Background
+The user wants to replace the manual `questionWords` heuristic with the ML-based intent classifier originally developed in the Python `feature/krushna` branch. 
+We have updated the STT pipeline to use the **Nomic Embed Text v1.5 (768 dimensions)** INT8 quantized model.
+
+## Requirements
+To solve this cleanly in Go without introducing a Python training pipeline or ONNX conversion, we will implement a **Nearest Centroid Classifier**. This approach computes the class weights (centroids) at startup based on the current embedding space, achieving identical accuracy to Logistic Regression for this dataset.
+
+### 1. Extract the Dataset from `feature/krushna`
+- Use Git to read the Python script from the old branch: `git show origin/feature/krushna:scripts/train_classifier.py`.
+- Extract the `DATASET` dictionary from that file. It contains exactly 6 categories: `behavioral`, `coding`, `system_design`, `conceptual`, `opinion`, and `noise`.
+
+### 2. Create `wails-app/backend/filter/classifier.go`
+- Port the extracted dataset into a Go map/slice structure.
+- Create an `initCentroids()` function that runs at startup (using `sync.Once`). This function should:
+  1. Iterate over the dataset.
+  2. For each string, generate its 768-dimensional embedding using `backend.GenerateEmbedding()`.
+  3. Compute the average vector (centroid) for each of the 6 categories.
+- Provide a `Classify(embedding []float32) string` function. This function should:
+  1. Calculate the cosine similarity between the incoming text's embedding and all 6 centroids.
+  2. Return the name of the category with the highest cosine similarity.
+
+### 3. Update `wails-app/backend/filter/filter.go`
+- Remove the manual `questionWords` heuristic from Stage 3.
+- Remove the hardcoded `0.82` threshold check and the old `noiseCentroid` logic.
+- Update Stage 3 to call `predictedClass := Classify(embedding)`.
+- If `predictedClass == "noise"`, drop the text (return `FilterResult{ShouldSend: false, Reason: "noise"}`).
+- Otherwise, accept it and return true.
+
+### 4. Implementation Tips (For Jules)
+- **Centroid Math:** To compute a centroid, sum up all the embedding vectors for a category and divide by the number of examples in that category.
+- **Initialization:** Be sure to call `backend.InitEmbeddings()` or ensure the model is loaded *before* you try to embed the dataset during centroid initialization, or you might hit race conditions at startup.
+- **Exporting:** Make `Classify` capitalized so it can be called from `filter.go`.
+
+## Deliverables
+- `wails-app/backend/filter/classifier.go` implemented and integrated.
+- `wails-app/backend/filter/filter.go` updated to use the new classifier.
+- Ensure `make dev` builds successfully and the classifier accurately drops noise while accepting real questions.
+
+## Branches
+Target Branch: `feature/krushna_golang`

@@ -29,13 +29,13 @@ func InitEmbeddings() {
 	}
 
 	var err error
-	tk, err = pretrained.FromFile("models/all-MiniLM-L6-v2/tokenizer.json")
+	tk, err = pretrained.FromFile("models/nomic-embed-text-v1.5/tokenizer.json")
 	if err != nil {
 		log.Printf("[Embeddings] Tokenizer not found — run scripts/download_embeddings.sh to enable: %v", err)
 		return
 	}
 
-	s, err := onnxruntime_go.NewDynamicAdvancedSession("models/all-MiniLM-L6-v2/model.onnx",
+	s, err := onnxruntime_go.NewDynamicAdvancedSession("models/nomic-embed-text-v1.5/model.onnx",
 		[]string{"input_ids", "attention_mask", "token_type_ids"},
 		[]string{"last_hidden_state"}, nil)
 	if err != nil {

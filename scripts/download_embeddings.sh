@@ -1,8 +1,8 @@
 #!/bin/bash
-# Downloads all-MiniLM-L6-v2 ONNX model + onnxruntime for embedding noise-gate
+# Downloads nomic-embed-text-v1.5 INT8 quantized ONNX model + onnxruntime for embedding noise-gate
 set -e
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-MODELS_DIR="$REPO_ROOT/wails-app/models/all-MiniLM-L6-v2"
+MODELS_DIR="$REPO_ROOT/wails-app/models/nomic-embed-text-v1.5"
 LIB_DIR="$REPO_ROOT/wails-app"
 
 echo "📥 Creating $MODELS_DIR"
@@ -10,11 +10,11 @@ mkdir -p "$MODELS_DIR"
 
 echo "📥 Downloading model.onnx..."
 curl -L -o "$MODELS_DIR/model.onnx" \
-  "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/onnx/model.onnx"
+  "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/onnx/model_quantized.onnx"
 
 echo "📥 Downloading tokenizer.json..."
 curl -L -o "$MODELS_DIR/tokenizer.json" \
-  "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json"
+  "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/tokenizer.json"
 
 echo "📥 Downloading onnxruntime v1.18.1..."
 ONNX_ARCHIVE="onnxruntime-linux-x64-1.18.1.tgz"
