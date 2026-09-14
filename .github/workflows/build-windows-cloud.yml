@@ -18,34 +18,24 @@ jobs:
         with:
           node-version: 22
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: wails-app/frontend/package-lock.json
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          targets: x86_64-pc-windows-msvc
+          go-version: '1.23'
 
-      - name: Cache Rust
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: frontend/src-tauri -> target
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Install Frontend Dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Build Cloud Frontend
-        working-directory: frontend
-        run: npm run build:cloud
-
-      - name: Build Cloud Tauri App
-        working-directory: frontend
-        run: npm run tauri build -- --config src-tauri/tauri.cloud.conf.json
+      - name: Build Cloud Wails App
+        working-directory: wails-app
+        env:
+          VITE_BUILD_FLAVOR: cloud
+        run: wails build
 
       - name: Upload Cloud Frontend EXE and MSI
         uses: actions/upload-artifact@v4
         with:
           name: stealth-assistant-cloud-exe-msi
-          path: |
-            frontend/src-tauri/target/release/**/*.msi
-            frontend/src-tauri/target/release/**/*.exe
+          path: wails-app/build/bin/*.exe
