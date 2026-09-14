@@ -47,10 +47,10 @@ func NewApp() *App {
 	if modelPath == "" {
 		// Try several candidate paths relative to the working directory
 		candidates := []string{
-			"../models/ggml-tiny.bin",
 			"../models/ggml-base.en.bin",
-			"models/ggml-tiny.bin",
+			"../models/ggml-tiny.bin",
 			"models/ggml-base.en.bin",
+			"models/ggml-tiny.bin",
 		}
 		for _, candidate := range candidates {
 			if _, statErr := os.Stat(candidate); statErr == nil {
