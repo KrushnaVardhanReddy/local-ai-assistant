@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"fmt"
+	"log"
 	"math"
 	"os"
 	"sync"
@@ -22,24 +22,28 @@ func initEmbeddings() {
 		onnxruntime_go.SetSharedLibraryPath("./libonnxruntime.so")
 	}
 
-	err := onnxruntime_go.InitializeEnvironment()
-	if err != nil {
-		fmt.Printf("Error initializing ONNX environment: %v\n", err)
+	if err := onnxruntime_go.InitializeEnvironment(); err != nil {
+		log.Printf("[Embeddings] ONNX unavailable (embedding noise-gate disabled): %v", err)
+		return
 	}
 
+	var err error
 	tk, err = pretrained.FromFile("models/all-MiniLM-L6-v2/tokenizer.json")
 	if err != nil {
-		fmt.Printf("Error loading tokenizer: %v\n", err)
+		log.Printf("[Embeddings] Tokenizer not found — run scripts/download_embeddings.sh to enable: %v", err)
+		return
 	}
 
-    s, err := onnxruntime_go.NewDynamicAdvancedSession("models/all-MiniLM-L6-v2/model.onnx",
-	    []string{"input_ids", "attention_mask", "token_type_ids"},
-	    []string{"last_hidden_state"}, nil)
-    if err != nil {
-        fmt.Printf("Error creating dynamic ONNX session: %v\n", err)
-    }
+	s, err := onnxruntime_go.NewDynamicAdvancedSession("models/all-MiniLM-L6-v2/model.onnx",
+		[]string{"input_ids", "attention_mask", "token_type_ids"},
+		[]string{"last_hidden_state"}, nil)
+	if err != nil {
+		log.Printf("[Embeddings] ONNX session failed: %v", err)
+		return
+	}
 
-    session = s
+	session = s
+	log.Println("[Embeddings] ✅ ONNX embedding model loaded")
 }
 
 func GenerateEmbedding(text string) []float32 {
@@ -52,7 +56,7 @@ func GenerateEmbedding(text string) []float32 {
     // Tokenize
     en, err := tk.EncodeSingle(text)
     if err != nil {
-        fmt.Printf("Error encoding text: %v\n", err)
+        log.Printf("[Embeddings] Encode error: %v", err)
         return nil
     }
 
@@ -85,7 +89,7 @@ func GenerateEmbedding(text string) []float32 {
 
 	err = session.Run([]onnxruntime_go.ArbitraryTensor{in1, in2, in3}, []onnxruntime_go.ArbitraryTensor{out})
 	if err != nil {
-	    fmt.Printf("Error running session: %v\n", err)
+		log.Printf("[Embeddings] Inference error: %v", err)
 		return nil
 	}
 

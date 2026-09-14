@@ -86,6 +86,9 @@ function initListeners() {
 
   EventsOn("on_transcript", (data: any) => {
     handleTranscript(data);
+    // Clear previous response whenever a new question is accepted
+    wsState.response = "";
+    wsState.isThinking = false;
   });
 
   EventsOn("on_response_token", (data: any) => {
