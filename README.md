@@ -1,8 +1,8 @@
 # 🦉 BarnOwl AI — The Stealth Interview & Meeting Co-Pilot
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat-square&logo=go&logoColor=white)
 ![Svelte](https://img.shields.io/badge/Svelte-5-FF3E00?style=flat-square&logo=svelte&logoColor=white)
-![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?style=flat-square&logo=tauri&logoColor=white)
+![Wails](https://img.shields.io/badge/Wails-2.15-ED2737?style=flat-square&logo=wails&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 ![SaaS](https://img.shields.io/badge/SaaS%20Platform-Stripe%20%7C%20Supabase-blueviolet?style=flat-square)
 
@@ -33,15 +33,15 @@ Most AI meeting assistants (like Otter or Fireflies) join your calendar invite a
 
 ## 🏗️ Architecture & Tech Stack
 
-BarnOwl AI is a production-ready SaaS application with a dual-process architecture:
+BarnOwl AI is a production-ready SaaS application compiled into a unified single-binary architecture:
 
-1. **Frontend (Svelte 5 + Tauri 2.0):** 
+1. **Frontend (Svelte 5 + Vite):** 
    - A highly optimized, glassmorphism UI overlay that consumes minimal RAM (~30MB).
    - Global stealth hotkeys for mouse-less interaction.
-2. **Backend (Python + FastAPI):** 
-   - Captures microphone and speaker loopback audio via `sounddevice`/`pyaudio`.
-   - VAD (Voice Activity Detection) filters out noise and filler words.
-   - Streams live tokens to the frontend via WebSockets.
+2. **Backend (Go + Wails v2):** 
+   - Captures microphone audio using native CGo bindings (`go-audio`).
+   - Integrates local ML embeddings (ONNX) and local STT (`whisper.cpp`).
+   - Streams live tokens and handles OS-level window management natively.
 3. **Web Dashboard (SvelteKit + Supabase):**
    - Handles JWT authentication, device lock management (anti-sharing), and Stripe billing subscriptions.
 
@@ -51,9 +51,9 @@ BarnOwl AI is a production-ready SaaS application with a dual-process architectu
 
 ### Prerequisites
 
-- [Python 3.10+](https://www.python.org/downloads/)
+- [Go 1.25+](https://go.dev/)
 - [Node.js v18+](https://nodejs.org/)
-- [Rust](https://rustup.rs/) (required by Tauri)
+- [Wails CLI v2+](https://wails.io/)
 
 ### 1. Clone & Install
 
@@ -71,7 +71,7 @@ For local testing without a cloud provider, you can use Ollama or LM Studio.
 ### 3. Launch the Application
 
 ```bash
-make dev-all
+make dev
 ```
 
 ---

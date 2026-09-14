@@ -4,7 +4,7 @@ This document outlines the master task list for the Local AI Assistant, broken d
 
 ## Phase 1-18: Core, UX, Gemini, Intelligence & Portable (✅ Complete)
 - **Phase 1-3 (The Brain & Ears)**: Local LLM integration, audio capture, and STT pipelines.
-- **Phase 4 (UI)**: Svelte 5 + Tauri floating overlay.
+- **Phase 4 (UI)**: Svelte 5 + Wails floating overlay.
 - **Phase 5-6 (RAG & Vision)**: Document ingestion, web search, and screen capture (`Ctrl+Shift+S`).
 - **Phase 7 (Polish)**: Stealth hotkeys, remote helper mode, and testing.
 - **Phase 8-11 (SaaS & UX)**: Supabase/Stripe auth, smart audio filtering (noise/filler), and resume parsing.

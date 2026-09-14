@@ -33,7 +33,7 @@
 |---|---|---|---|---|
 | P2-T1 | `backend/audio_listener.py` | Mic capture with sounddevice, chunked streaming | ✅ | — |
 | P2-T2 | `backend/transcriber.py` | faster-whisper CUDA integration, returns text stream | ✅ | — |
-| P2-T3 | `backend/requirements.txt`, `backend/README.md` | All Python deps pinned | ✅ | — |
+| P2-T3 | `backend/requirements.txt`, `backend/README.md` | All Go deps pinned | ✅ | — |
 
 ---
 
@@ -46,15 +46,15 @@
 
 ---
 
-## Phase 4 — Floating UI (Svelte 5 + Tauri) 🖥️
+## Phase 4 — Floating UI (Svelte 5 + Wails) 🖥️
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P4-T1 | `frontend/` | Scaffold Svelte 5 + Tauri 2.0 project | ✅ | — |
+| P4-T1 | `frontend/` | Scaffold Svelte 5 + Wails v2 project | ✅ | — |
 | P4-T2 | `frontend/src/lib/ws.ts` | Reactive WebSocket store using Svelte 5 runes | ✅ | — |
 | P4-T3 | `frontend/src/lib/Assistant.svelte`, `app.css` | Glassmorphism floating overlay, streams tokens | ✅ | — |
 | P4-T4 | `frontend/src/App.svelte`, `main.ts` | Root component, mounts assistant, mic status dot | ✅ | #15 |
-| P4-T5 | `src-tauri/src/main.rs` | **Stealth Mode** — screen share safe, dock hidden, global hotkey | ✅ | — |
+| P4-T5 | `wails-app/src/main.rs` | **Stealth Mode** — screen share safe, dock hidden, global hotkey | ✅ | — |
 
 ---
 
@@ -72,12 +72,12 @@
 
 ## Phase 6 — Vision Copilot (Code Screen Reader) 👁️
 
-> Captures the screen via Tauri hotkey and sends to a Vision LLM (e.g. GPT-4o) 
+> Captures the screen via Wails hotkey and sends to a Vision LLM (e.g. GPT-4o) 
 > to analyze coding problems without speaking them aloud.
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P6-T1 | `main.rs`, `Assistant.svelte` | Tauri screenshot capture hotkey (`Ctrl+Shift+S`) to Base64 | ✅ | #22 |
+| P6-T1 | `main.rs`, `Assistant.svelte` | Wails screenshot capture hotkey (`Ctrl+Shift+S`) to Base64 | ✅ | #22 |
 | P6-T2 | `backend/app.py`, `llm_client.py` | `/vision/analyze` endpoint mapping to Vision LLM | ✅ | #25 |
 
 ---
@@ -88,11 +88,11 @@
 |---|---|---|---|---|
 | P7-T1 | `main.rs`, `ws.ts`, `Assistant.svelte` | Stealth Hotkeys: PTT, Scroll (Up/Down), Panic Clear | ✅ | #28 |
 | P7-T2 | `frontend/src/lib/Settings.svelte` | Settings panel: model selector, mic selector | ✅ | #24 |
-| P7-T3 | `scripts/build.sh` | Validate PyInstaller + Tauri bundles | ✅ | #26 |
+| P7-T3 | `scripts/build.sh` | Validate PyInstaller + Wails bundles | ✅ | #26 |
 | P7-T4 | `README.md` | Final pass — screenshots, install instructions | ✅ | #23 |
 | P7-T5 | `scripts/start_remote.sh`, `backend/app.py` | Remote Helper Mode — serve UI statically + Cloudflare tunnel | ✅ | #29 |
 | P7-T6 | `tests/`, `e2e/`, `playwright.config.ts` | E2E test suite — pytest API tests + Playwright frontend tests | ✅ | #30 |
-| P7-T7 | `frontend/src-tauri/src/main.rs`, `ws.ts` | Advanced Stealth Hotkeys — `Ctrl+Shift+1-6` to send pending transcript chips (P14). Map hidden inputs (e.g. arrow keys + Enter when UI hidden) to control Ghost Cursor for mouse-less selection. | ⬜ | — |
+| P7-T7 | `frontend/wails-app/src/main.rs`, `ws.ts` | Advanced Stealth Hotkeys — `Ctrl+Shift+1-6` to send pending transcript chips (P14). Map hidden inputs (e.g. arrow keys + Enter when UI hidden) to control Ghost Cursor for mouse-less selection. | ⬜ | — |
 
 ---
 
@@ -104,7 +104,7 @@
 | P8-T2 | `web/src/routes/login/` | Supabase auth + DB schema | ✅ | — |
 | P8-T3 | `web/src/routes/api/billing/` | Stripe billing integration | ✅ | — |
 | P8-T4 | `backend/auth.py`, `keys.py` | FastAPI JWT middleware + encrypted key storage | ✅ | #18 |
-| P8-T5 | `frontend/src/lib/auth.ts` | Tauri app auth flow — OS keychain | ✅ | #20 |
+| P8-T5 | `frontend/src/lib/auth.ts` | Wails app auth flow — OS keychain | ✅ | #20 |
 
 ---
 
@@ -237,10 +237,10 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P18-T1 | `frontend/src-tauri/tauri.conf.json` | Switch Windows bundle target to portable — no NSIS installer, no registry writes, no appwiz.cpl entry. Output: a ZIP of `AppName.exe` + `resources/`. User unzips and runs directly. | ⬜ | — |
-| P18-T2 | `frontend/src-tauri/Cargo.toml`, `tauri.conf.json` | Change default `productName` to a neutral name (e.g. `"AudioService"`). This controls the EXE filename, Task Manager process name, and window title. | ⬜ | — |
-| P18-T3 | `frontend/src-tauri/tauri.conf.json`, `backend/config.py` | User-configurable process alias — read `APP_DISPLAY_NAME` from `.env.local` or a local `settings.json` at launch. Lets each user personalise their own process name without rebuilding. | ⬜ | — |
-| P18-T4 | `scripts/build.sh`, `Makefile` | Update build pipeline: `make build-portable` target — runs PyInstaller on backend → Tauri portable build → zips both into a single `parakeet-portable-win.zip` release artifact. | ✅ | #44 |
+| P18-T1 | `frontend/wails-app/tauri.conf.json` | Switch Windows bundle target to portable — no NSIS installer, no registry writes, no appwiz.cpl entry. Output: a ZIP of `AppName.exe` + `resources/`. User unzips and runs directly. | ⬜ | — |
+| P18-T2 | `frontend/wails-app/Cargo.toml`, `tauri.conf.json` | Change default `productName` to a neutral name (e.g. `"AudioService"`). This controls the EXE filename, Task Manager process name, and window title. | ⬜ | — |
+| P18-T3 | `frontend/wails-app/tauri.conf.json`, `backend/config.py` | User-configurable process alias — read `APP_DISPLAY_NAME` from `.env.local` or a local `settings.json` at launch. Lets each user personalise their own process name without rebuilding. | ⬜ | — |
+| P18-T4 | `scripts/build.sh`, `Makefile` | Update build pipeline: `make build-portable` target — runs PyInstaller on backend → Wails portable build → zips both into a single `parakeet-portable-win.zip` release artifact. | ✅ | #44 |
 
 ---
 
@@ -317,4 +317,4 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P23-T1 | `frontend/e2e/`, `tests/e2e/`, `Makefile` | **Playwright + Pytest E2E:** Build out comprehensive UI tests mocking Tauri IPC, and backend integration tests mocking WS connections to guarantee reliability before final release. | ⬜ | — |
+| P23-T1 | `frontend/e2e/`, `tests/e2e/`, `Makefile` | **Playwright + Pytest E2E:** Build out comprehensive UI tests mocking Wails IPC, and backend integration tests mocking WS connections to guarantee reliability before final release. | ⬜ | — |
