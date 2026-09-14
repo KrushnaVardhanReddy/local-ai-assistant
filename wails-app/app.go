@@ -9,6 +9,7 @@ import (
 	"wails-app/backend/stt"
 	"wails-app/backend/system"
 	"wails-app/backend/window"
+	"log"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -21,6 +22,7 @@ type App struct {
 	cmdMutex   sync.Mutex
 
 	sttManager *stt.STTManager
+	audioCapture *stt.AudioCapture
 }
 
 // NewApp creates a new App application struct
@@ -37,9 +39,36 @@ func NewApp() *App {
 		initialEngine = engine
 	}
 
-	return &App{
+	app := &App{
 		sttManager: stt.NewSTTManager(initialEngine),
 	}
+
+	app.audioCapture = stt.NewAudioCapture(func(samples []float32) {
+		if app.sttManager == nil || app.ctx == nil {
+			return
+		}
+
+		transcriptChan, err := app.sttManager.TranscribeStream(samples)
+		if err != nil {
+			log.Printf("STT routing error: %v", err)
+			return
+		}
+
+		// Launch a goroutine to consume the transcript stream asynchronously
+		go func() {
+			for textChunk := range transcriptChan {
+				// Emit as a Wails event. We format it identically to the
+				// expected WS payload so the frontend can reuse its logic.
+				payload := map[string]interface{}{
+					"type": "transcript",
+					"text": textChunk,
+				}
+				wailsruntime.EventsEmit(app.ctx, "on_transcript", payload)
+			}
+		}()
+	})
+
+	return app
 }
 
 // startup is called when the app starts. The context is saved
@@ -102,4 +131,13 @@ func (a *App) SetClickthrough(opts map[string]interface{}) {
 
 func (a *App) ToggleStealth(opts map[string]interface{}) {
 	// Not implemented
+}
+
+
+func (a *App) GetAudioDevices() ([]stt.AudioDevice, error) {
+	return a.audioCapture.GetAudioDevices()
+}
+
+func (a *App) SetAudioDevice(id string, isLoopback bool) error {
+	return a.audioCapture.SetAudioDevice(id, isLoopback)
 }

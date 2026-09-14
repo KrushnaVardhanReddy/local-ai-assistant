@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
+	github.com/gen2brain/malgo v0.11.26
 	github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260911141324-1da4dc82fa79
 	github.com/go-audio/wav v1.1.0
 	github.com/mattn/go-sqlite3 v1.14.52
