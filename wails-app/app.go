@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os/exec"
@@ -35,76 +34,12 @@ func (a *App) Greet(name string) string {
 }
 
 func (a *App) StartBackend() error {
-	a.cmdMutex.Lock()
-	defer a.cmdMutex.Unlock()
-
-	if a.backendCmd != nil {
-		return fmt.Errorf("backend is already running")
-	}
-
-	a.backendCmd = exec.Command("python", "backend/app.py")
-
-	stdout, err := a.backendCmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-
-	stderr, err := a.backendCmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-
-	if err := a.backendCmd.Start(); err != nil {
-		a.backendCmd = nil
-		return err
-	}
-
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			wailsruntime.EventsEmit(a.ctx, "backend-stdout", scanner.Text())
-		}
-	}()
-
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			wailsruntime.EventsEmit(a.ctx, "backend-stderr", scanner.Text())
-		}
-	}()
-
-	go func() {
-		err := a.backendCmd.Wait()
-		code := 0
-		if err != nil {
-			if exiterr, ok := err.(*exec.ExitError); ok {
-				code = exiterr.ExitCode()
-			} else {
-				code = -1
-			}
-		}
-		a.cmdMutex.Lock()
-		a.backendCmd = nil
-		a.cmdMutex.Unlock()
-		wailsruntime.EventsEmit(a.ctx, "backend-close", code)
-	}()
-
+	// Legacy python spawning logic has been removed.
 	return nil
 }
 
 func (a *App) StopBackend() error {
-	a.cmdMutex.Lock()
-	defer a.cmdMutex.Unlock()
-
-	if a.backendCmd == nil || a.backendCmd.Process == nil {
-		return nil
-	}
-
-	err := a.backendCmd.Process.Kill()
-	if err != nil {
-		return err
-	}
-
+	// Legacy python spawning logic has been removed.
 	return nil
 }
 
