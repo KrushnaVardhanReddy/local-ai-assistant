@@ -2,13 +2,15 @@ import { apiFetch, getApiUrl, getWsUrl } from './api';
 import { authState, supabase } from '$lib/auth.svelte';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 
+const isCloud = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
+
 export const wsState = $state({
   transcript: "",
   response: "",
-  isListening: false,
+  isListening: !isCloud,
   isThinking: false,
   isAnalyzingScreen: false,
-  isConnected: false,
+  isConnected: !isCloud,
   error: null as string | null,
   sessionExpired: false,
   ragSources: [] as string[],
@@ -116,8 +118,6 @@ export function connect(url?: string): void {
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
   }
-
-  const isCloud = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
 
   // Bypass WebSocket connection entirely if running in Wails (Local Edition)
   if (!isCloud) {

@@ -17,7 +17,7 @@ var (
 	initOnce sync.Once
 )
 
-func initEmbeddings() {
+func InitEmbeddings() {
 	if _, err := os.Stat("./libonnxruntime.so"); err == nil {
 		onnxruntime_go.SetSharedLibraryPath("./libonnxruntime.so")
 	}
@@ -47,7 +47,7 @@ func initEmbeddings() {
 }
 
 func GenerateEmbedding(text string) []float32 {
-    initOnce.Do(initEmbeddings)
+    initOnce.Do(InitEmbeddings)
 
     if tk == nil || session == nil {
         return nil

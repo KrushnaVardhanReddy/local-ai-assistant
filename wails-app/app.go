@@ -108,6 +108,9 @@ func (a *App) startup(ctx context.Context) {
 	hotkeys.WindowSetPosition = wailsruntime.WindowSetPosition
 	hotkeys.EventsEmit = wailsruntime.EventsEmit
 
+	// Preload the ONNX embedding model during startup so it doesn't log on first microphone input
+	go backend.InitEmbeddings()
+
 	// Start hotkeys
 	if err := hotkeys.Start(ctx); err != nil {
 		log.Printf("Failed to start hotkeys (this is expected in CI without a display): %v\n", err)
