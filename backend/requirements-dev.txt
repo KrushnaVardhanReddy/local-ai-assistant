@@ -1,5 +1,0 @@
-pyinstaller
-pytest
-pytest-httpx
-pytest-asyncio
-respx
