@@ -11,6 +11,7 @@ require (
 	github.com/sugarme/tokenizer v0.3.0
 	github.com/wailsapp/wails/v2 v2.15.0
 	github.com/yalue/onnxruntime_go v1.9.0
+	golang.design/x/hotkey v0.6.1
 	golang.org/x/sys v0.46.0
 )
 

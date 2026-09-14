@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"sync"
+	"wails-app/backend/hotkeys"
 	"wails-app/backend/stt"
 	"wails-app/backend/system"
 	"wails-app/backend/window"
@@ -46,6 +48,16 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// Initialize hotkeys Wails runtime dependencies
+	hotkeys.WindowGetPosition = wailsruntime.WindowGetPosition
+	hotkeys.WindowSetPosition = wailsruntime.WindowSetPosition
+	hotkeys.EventsEmit = wailsruntime.EventsEmit
+
+	// Start hotkeys
+	if err := hotkeys.Start(ctx); err != nil {
+		log.Printf("Failed to start hotkeys (this is expected in CI without a display): %v\n", err)
+	}
 
 	// Start background download for STT models
 	go system.StartBackgroundDownload(ctx, func(progress float32) {
