@@ -146,7 +146,10 @@ func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback fun
 	}
 
 	// Only set a specific device if one was requested (deviceID >= 0)
-	if deviceID >= 0 && deviceID < len(c.deviceList) {
+	if deviceID < -1 || deviceID >= len(c.deviceList) {
+		return fmt.Errorf("invalid device ID: %d (max: %d)", deviceID, len(c.deviceList)-1)
+	}
+	if deviceID >= 0 {
 		info := c.deviceList[deviceID]
 		if isLoopback {
 			deviceConfig.Playback.DeviceID = info.ID.Pointer()
@@ -163,7 +166,7 @@ func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback fun
 	deviceCallbacks := malgo.DeviceCallbacks{
 		Data: onRecvFrames,
 	}
-	
+
 	device, err := malgo.InitDevice(c.ctx.Context, deviceConfig, deviceCallbacks)
 	if err != nil {
 		return fmt.Errorf("failed to init device: %w", err)

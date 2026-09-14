@@ -76,7 +76,7 @@ func NewApp() *App {
 	// Ignore init errors since hardware might not be present.
 	_ = captureEngine.Initialize()
 
-	err := os.MkdirAll("./data", 0755)
+	err = os.MkdirAll("./data", 0755)
 	if err != nil {
 		log.Printf("Failed to create data directory: %v", err)
 	}

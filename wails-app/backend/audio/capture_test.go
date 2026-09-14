@@ -83,8 +83,8 @@ func TestStartCapture_InvalidDevice(t *testing.T) {
 	}
 	defer engine.Terminate()
 
-	// Try to start capture with an invalid device ID
-	err := engine.StartCapture(-1, false, func([]float32) {})
+	// Try to start capture with an invalid device ID (-2) since -1 is valid for default device
+	err := engine.StartCapture(-2, false, func([]float32) {})
 	if err == nil {
 		t.Error("Expected error calling StartCapture with invalid device ID, got nil")
 	}
