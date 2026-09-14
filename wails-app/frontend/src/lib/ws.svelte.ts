@@ -1,6 +1,7 @@
 import { apiFetch, getApiUrl, getWsUrl } from './api';
 import { authState, supabase } from '$lib/auth.svelte';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { GetState } from '../../wailsjs/go/main/App';
 
 const isCloud = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
 
@@ -19,12 +20,46 @@ export const wsState = $state({
   pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>,
   plan: "unknown",
   isMockMode: false,
-  transcriptHistory: [] as string[]
+  transcriptHistory: [] as string[],
+  pollCount: 0,
+  pollError: "none"
 });
 
 let ws: WebSocket | null = null;
 let chipIdCounter = 0;
 let listenersInitialized = false;
+
+// Immediately start polling if local mode
+if (!isCloud) {
+  setInterval(async () => {
+    wsState.pollCount++;
+    try {
+      let state: any = null;
+      if (typeof GetState === 'function') {
+        state = await GetState();
+      } else if ((window as any)?.go?.main?.App?.GetState) {
+        state = await (window as any).go.main.App.GetState();
+      } else {
+        wsState.pollError = "no_binding";
+        return;
+      }
+      if (state) {
+        wsState.pollError = "ok";
+        if (typeof state.transcript === 'string' && state.transcript !== "") {
+          wsState.transcript = state.transcript;
+        }
+        if (typeof state.response === 'string' && state.response !== "") {
+          wsState.response = state.response;
+        }
+        if (typeof state.thinking === 'boolean') {
+          wsState.isThinking = state.thinking;
+        }
+      }
+    } catch (err: any) {
+      wsState.pollError = err?.message || String(err);
+    }
+  }, 200);
+}
 
 function handleTranscript(data: any) {
   wsState.transcript = data.text;
@@ -68,17 +103,28 @@ function handleTranscript(data: any) {
 function initListeners() {
   console.log('[WS] initListeners() called — registering Wails EventsOn handlers');
 
-  EventsOn("ptt-start", () => {
+  // Fallback to imported EventsOn if window.runtime is missing (e.g. dev mode without Wails)
+  const onEvent = (window as any).runtime?.EventsOn || EventsOn;
+  const onEventAll = (window as any).runtime?.EventsOnAll || null;
+
+  if (onEventAll) {
+    onEventAll((eventName: string, ...data: any[]) => {
+      // Dump everything to the transcript string just so we can see it on screen!
+      wsState.transcript = `[EVENT] ${eventName}: ${JSON.stringify(data)}`;
+    });
+  }
+
+  onEvent("ptt-start", () => {
     wsState.isPTTHeld = true;
     apiFetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
   });
 
-  EventsOn("ptt-stop", () => {
+  onEvent("ptt-stop", () => {
     wsState.isPTTHeld = false;
     apiFetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
   });
 
-  EventsOn("panic-clear", () => {
+  onEvent("panic-clear", () => {
     wsState.transcript = "";
     wsState.response = "";
     wsState.isThinking = false;
@@ -88,26 +134,26 @@ function initListeners() {
     apiFetch(`${getApiUrl()}/history/clear`, { method: 'POST' }).catch(console.error);
   });
 
-  EventsOn("on_transcript", (data: any) => {
+  onEvent("on_transcript", (data: any) => {
     console.log('[WS] on_transcript fired:', data);
     handleTranscript(data);
     console.log('[WS] wsState.transcript is now:', wsState.transcript);
   });
 
-  EventsOn("on_response_start", () => {
+  onEvent("on_response_start", () => {
     console.log('[WS] on_response_start fired');
     wsState.response = "";
     wsState.isThinking = true;
     wsState.ragSources = [];
   });
 
-  EventsOn("on_response_token", (data: any) => {
+  onEvent("on_response_token", (data: any) => {
     console.log('[WS] on_response_token:', data?.text?.slice(0, 20));
     wsState.response += data.text;
     wsState.isThinking = true;
   });
 
-  EventsOn("on_response_end", () => {
+  onEvent("on_response_end", () => {
     console.log('[WS] on_response_end fired. Final response length:', wsState.response.length);
     wsState.isThinking = false;
   });

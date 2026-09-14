@@ -10,6 +10,8 @@ export function GetAudioDevices():Promise<Array<audio.AudioDevice>>;
 
 export function GetMachineId():Promise<string>;
 
+export function GetState():Promise<Record<string, any>>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function LoadToken():Promise<string>;

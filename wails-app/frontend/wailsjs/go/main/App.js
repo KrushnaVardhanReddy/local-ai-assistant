@@ -18,6 +18,10 @@ export function GetMachineId() {
   return window['go']['main']['App']['GetMachineId']();
 }
 
+export function GetState() {
+  return window['go']['main']['App']['GetState']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }

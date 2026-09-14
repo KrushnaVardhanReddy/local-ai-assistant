@@ -36,6 +36,12 @@ type App struct {
 
 	qaCache *backend.VectorDB
 	llmBusy sync.Mutex
+
+	// UI state — polled by frontend via GetState()
+	stateMu          sync.RWMutex
+	latestTranscript string
+	latestResponse   string
+	latestThinking   bool
 }
 
 // NewApp creates a new App application struct
@@ -59,24 +65,32 @@ func NewApp() *App {
 			}
 		}
 	}
-	if modelPath == "" {
-		log.Println("⚠️  No Whisper model found! Set WHISPER_MODEL_PATH env var. STT will be disabled.")
+	sttProvider := os.Getenv("STT_PROVIDER")
+	if sttProvider == "groq" {
+		groqKey := os.Getenv("GROQ_API_KEY")
+		groqModel := os.Getenv("STT_MODEL")
+		initialEngine = stt.NewGroqEngine(groqKey, groqModel)
+		log.Printf("☁️ Using Groq Cloud STT Engine (Model: %s)\n", groqModel)
 	} else {
-		log.Printf("🧠 Loading Whisper model from: %s\n", modelPath)
-	}
-	whisperEngine, err := stt.LoadWhisperEngine(modelPath)
-	if err == nil {
-		initialEngine = whisperEngine
-		log.Println("✅ Whisper model loaded successfully!")
-	} else {
-		log.Printf("❌ Failed to load Whisper model: %v\n", err)
+		if modelPath == "" {
+			log.Println("⚠️  No Whisper model found! Set WHISPER_MODEL_PATH env var. STT will be disabled.")
+		} else {
+			log.Printf("🧠 Loading local Whisper model from: %s\n", modelPath)
+			whisperEngine, err := stt.LoadWhisperEngine(modelPath)
+			if err == nil {
+				initialEngine = whisperEngine
+				log.Println("✅ Whisper model loaded successfully!")
+			} else {
+				log.Printf("❌ Failed to load Whisper model: %v\n", err)
+			}
+		}
 	}
 
 	captureEngine := audio.NewCaptureEngine()
 	// Ignore init errors since hardware might not be present.
 	_ = captureEngine.Initialize()
 
-	err = os.MkdirAll("./data", 0755)
+	err := os.MkdirAll("./data", 0755)
 	if err != nil {
 		log.Printf("Failed to create data directory: %v", err)
 	}
@@ -144,6 +158,17 @@ func (a *App) startup(ctx context.Context) {
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+// GetState is polled by the frontend every 200ms to get the latest transcript/response state.
+func (a *App) GetState() map[string]interface{} {
+	a.stateMu.RLock()
+	defer a.stateMu.RUnlock()
+	return map[string]interface{}{
+		"transcript": a.latestTranscript,
+		"response":   a.latestResponse,
+		"thinking":   a.latestThinking,
+	}
 }
 
 func (a *App) StartBackend() error {
@@ -225,45 +250,57 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 					}
 
 					log.Printf("🎤 STT OUTPUT: %q\n", transcript)
-					payload := map[string]interface{}{
-						"text": cleanTranscript,
-					}
-					wailsruntime.EventsEmit(a.ctx, "on_transcript", payload)
+
+					// Update state for frontend polling
+					a.stateMu.Lock()
+					a.latestTranscript = cleanTranscript
+					a.latestResponse = ""
+					a.latestThinking = false
+					a.stateMu.Unlock()
+
+					// Also emit via EventsEmit (belt-and-suspenders)
+					wailsruntime.EventsEmit(a.ctx, "on_transcript", map[string]interface{}{"text": cleanTranscript})
 
 					if !a.llmBusy.TryLock() {
-					    log.Printf("[BUSY] Discarded (LLM streaming): %q", cleanTranscript)
-					    continue
+						log.Printf("[BUSY] Discarded (LLM streaming): %q", cleanTranscript)
+						continue
 					}
 
 					if a.qaCache != nil {
-					    cachedAns, hit := a.qaCache.SearchByEmbedding(emb, 0.92)
-					    if hit {
-					        log.Printf("[Cache] Hit (similarity=%.3f): %q", 0.92, cleanTranscript)
-					        wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
-
-					        // Stream cached answer via on_response_token
-					        words := strings.Split(cachedAns, " ")
-					        for i, w := range words {
-					            tok := w
-					            if i < len(words)-1 {
-					                tok += " "
-					            }
-					            wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": tok})
-					        }
-					        wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
-					        a.llmBusy.Unlock()
-					        continue
-					    }
-					    log.Printf("[Cache] Miss: %q", cleanTranscript)
+						cachedAns, hit := a.qaCache.SearchByEmbedding(emb, 0.92)
+						if hit {
+							log.Printf("[Cache] Hit (similarity=%.3f): %q", 0.92, cleanTranscript)
+							a.stateMu.Lock()
+							a.latestResponse = cachedAns
+							a.latestThinking = false
+							a.stateMu.Unlock()
+							wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
+							wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
+							a.llmBusy.Unlock()
+							continue
+						}
+						log.Printf("[Cache] Miss: %q", cleanTranscript)
 					}
 
+					a.stateMu.Lock()
+					a.latestThinking = true
+					a.latestResponse = ""
+					a.stateMu.Unlock()
 					wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
+
 					go func(q string) {
 						var answerBuilder strings.Builder
 						err := llm.StreamCompletion(q, func(token string) {
 							answerBuilder.WriteString(token)
+							a.stateMu.Lock()
+							a.latestResponse = answerBuilder.String()
+							a.latestThinking = true
+							a.stateMu.Unlock()
 							wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
 						}, func() {
+							a.stateMu.Lock()
+							a.latestThinking = false
+							a.stateMu.Unlock()
 							wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
 						})
 						if err != nil {
