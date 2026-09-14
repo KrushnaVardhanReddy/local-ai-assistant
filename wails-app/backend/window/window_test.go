@@ -26,3 +26,20 @@ func TestSetIgnoreMouseEvents(t *testing.T) {
 		t.Errorf("Expected nil error from mock modifier, got %v", err)
 	}
 }
+
+func TestHideFromTaskbar(t *testing.T) {
+	// First test with nil modifier to ensure it returns nil without error
+	defaultModifier = nil
+	err := HideFromTaskbar(context.Background())
+	if err != nil {
+		t.Errorf("Expected nil error when defaultModifier is nil, got %v", err)
+	}
+
+	// Inject mock
+	defaultModifier = &mockModifier{}
+
+	err = HideFromTaskbar(context.Background())
+	if err != nil {
+		t.Errorf("Expected nil error from mock modifier, got %v", err)
+	}
+}

@@ -10,12 +10,15 @@ import (
 )
 
 /*
-#cgo LDFLAGS: -lX11 -lXfixes
+#cgo pkg-config: gtk+-3.0 x11 xfixes
+#include <gtk/gtk.h>
+#include <gdk/gdkx.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/shape.h>
 #include <X11/extensions/Xfixes.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 void set_window_clickthrough(Window wid, int enable) {
     Display *display = XOpenDisplay(NULL);
@@ -35,34 +38,25 @@ void set_window_clickthrough(Window wid, int enable) {
     XCloseDisplay(display);
 }
 
+gboolean do_set_skip_taskbar(gpointer data) {
+    Window wid = (Window)(uintptr_t)data;
+    GdkDisplay *gdk_display = gdk_display_get_default();
+    if (gdk_display) {
+        GdkWindow *gdk_window = gdk_x11_window_lookup_for_display(gdk_display, wid);
+        if (gdk_window) {
+            gpointer widget = NULL;
+            gdk_window_get_user_data(gdk_window, &widget);
+            if (widget && GTK_IS_WINDOW(widget)) {
+                gtk_window_set_skip_taskbar_hint(GTK_WINDOW(widget), TRUE);
+                gtk_window_set_skip_pager_hint(GTK_WINDOW(widget), TRUE);
+            }
+        }
+    }
+    return G_SOURCE_REMOVE;
+}
+
 void set_window_skip_taskbar(Window wid) {
-    Display *display = XOpenDisplay(NULL);
-    if (display == NULL) return;
-
-    Atom wmState = XInternAtom(display, "_NET_WM_STATE", False);
-    Atom skipTaskbar = XInternAtom(display, "_NET_WM_STATE_SKIP_TASKBAR", False);
-    Atom skipPager = XInternAtom(display, "_NET_WM_STATE_SKIP_PAGER", False);
-
-    Atom states[2] = {skipTaskbar, skipPager};
-    XChangeProperty(display, wid, wmState, XA_ATOM, 32, PropModeAppend, (unsigned char *)states, 2);
-
-    XEvent e;
-    e.xclient.type = ClientMessage;
-    e.xclient.message_type = wmState;
-    e.xclient.display = display;
-    e.xclient.window = wid;
-    e.xclient.format = 32;
-    e.xclient.data.l[0] = 1; // 1 = _NET_WM_STATE_ADD
-    e.xclient.data.l[1] = skipTaskbar;
-    e.xclient.data.l[2] = skipPager;
-    e.xclient.data.l[3] = 0;
-    e.xclient.data.l[4] = 0;
-
-    XSendEvent(display, DefaultRootWindow(display), False,
-               SubstructureRedirectMask | SubstructureNotifyMask, &e);
-
-    XFlush(display);
-    XCloseDisplay(display);
+    g_idle_add(do_set_skip_taskbar, (gpointer)(uintptr_t)wid);
 }
 Window search_window_tree(Display *display, Window root, pid_t target_pid, Atom pid_atom) {
     Window parent, *children;
@@ -140,9 +134,6 @@ func (l *linuxModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) e
 
 func (l *linuxModifier) HideFromTaskbar(ctx context.Context) error {
     go func() {
-        // Wait for GTK to map the window and set its initial states
-        time.Sleep(1 * time.Second)
-
         // Try to get the window ID, retrying if necessary
         var wid C.Window
         for i := 0; i < 10; i++ {
