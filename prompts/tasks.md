@@ -53,7 +53,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P45-T1 | `wails-app/main.go` | **Native Click-Through:** Implement CGO/OS-level hooks to allow mouse clicks to pass completely through the transparent Wails window. | ⏳ | — |
+| P45-T1 | `wails-app/main.go` | **Native Click-Through:** Implement CGO/OS-level hooks to allow mouse clicks to pass completely through the transparent Wails window. | ✅ | #151 |
 
 ---
 
