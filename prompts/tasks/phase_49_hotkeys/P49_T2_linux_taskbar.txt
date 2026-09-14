@@ -1,0 +1,8 @@
+TASK: P49-T2 — Hide Wails App from Linux Taskbar (GTK3)
+
+We need the Wails application to NOT appear in the Linux taskbar/dock.
+We tried using raw X11 `ClientMessage` and `XChangeProperty` (`_NET_WM_STATE_SKIP_TASKBAR`) in `window_linux.go`, but it is failing because GTK3 either overrides the state when mapped, or we are targeting the wrong X11 Window ID.
+
+OBJECTIVE:
+1. Fix the taskbar hiding for Linux in `wails-app/backend/window/window_linux.go`.
+2. Instead of raw Xlib, you may need to use GTK3/GDK functions via CGO (e.g., `gdk_x11_window_lookup_for_display` -> `gdk_window_get_user_data` -> `gtk_window_set_skip_taskbar_hint`), or fix the X11 `ClientMessage` race condition so that the top-level Wails window is permanently removed from the taskbar.
