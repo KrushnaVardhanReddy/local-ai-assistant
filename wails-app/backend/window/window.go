@@ -5,6 +5,7 @@ import "context"
 // WindowModifier interface defines the methods that can be performed on the application window.
 type WindowModifier interface {
 	SetIgnoreMouseEvents(ctx context.Context, ignore bool) error
+	HideFromTaskbar(ctx context.Context) error
 }
 
 // defaultModifier is a global variable that holds the current WindowModifier implementation.
@@ -20,4 +21,12 @@ func SetIgnoreMouseEvents(ctx context.Context, ignore bool) error {
 		return nil
 	}
 	return defaultModifier.SetIgnoreMouseEvents(ctx, ignore)
+}
+
+// HideFromTaskbar hides the application window from the taskbar.
+func HideFromTaskbar(ctx context.Context) error {
+	if defaultModifier == nil {
+		return nil
+	}
+	return defaultModifier.HideFromTaskbar(ctx)
 }

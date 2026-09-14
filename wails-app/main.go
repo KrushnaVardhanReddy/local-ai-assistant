@@ -18,8 +18,8 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "Local AI Assistant",
-		Width:  1024,
+		Title:  "BarnOwl AI",
+		Width:  1440,
 		Height: 768,
 		Frameless: true,
 		AlwaysOnTop: true,

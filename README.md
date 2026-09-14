@@ -58,8 +58,8 @@ BarnOwl AI is a production-ready SaaS application compiled into a unified single
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/yourusername/Local_AI_Assistant.git
-cd Local_AI_Assistant
+git clone https://github.com/yourusername/BarnOwl_AI.git
+cd BarnOwl_AI
 make install
 ```
 

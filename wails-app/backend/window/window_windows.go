@@ -20,6 +20,7 @@ const (
 	GWL_EXSTYLE = -20
 	WS_EX_TRANSPARENT = 0x00000020
 	WS_EX_LAYERED = 0x00080000
+	WS_EX_TOOLWINDOW = 0x00000080
 )
 
 type windowsModifier struct{}
@@ -31,8 +32,8 @@ func init() {
 func (w *windowsModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) error {
 	// Wails currently does not expose the HWND directly in a cross-platform way.
 	// Since we know the window title from wails options, we can find it.
-	// We'll hardcode "Local AI Assistant" as a fallback, but ideally it should be dynamic.
-	titlePtr, _ := syscall.UTF16PtrFromString("Local AI Assistant")
+	// We'll hardcode "BarnOwl AI" as a fallback, but ideally it should be dynamic.
+	titlePtr, _ := syscall.UTF16PtrFromString("BarnOwl AI")
 
 	hwnd, _, _ := findWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd == 0 {
@@ -47,6 +48,23 @@ func (w *windowsModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool)
 		exStyle &^= WS_EX_TRANSPARENT
 	}
 
+	setWindowLong.Call(hwnd, ^uintptr(0)-uintptr(19), exStyle)
+
+	return nil
+}
+
+func (w *windowsModifier) HideFromTaskbar(ctx context.Context) error {
+	titlePtr, _ := syscall.UTF16PtrFromString("BarnOwl AI")
+
+	hwnd, _, _ := findWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	if hwnd == 0 {
+		return fmt.Errorf("could not find window by title")
+	}
+
+	exStyle, _, _ := getWindowLong.Call(hwnd, ^uintptr(0)-uintptr(19))
+	
+	exStyle |= WS_EX_TOOLWINDOW
+	
 	setWindowLong.Call(hwnd, ^uintptr(0)-uintptr(19), exStyle)
 
 	return nil

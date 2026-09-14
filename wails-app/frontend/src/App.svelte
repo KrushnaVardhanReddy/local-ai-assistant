@@ -8,9 +8,22 @@
   import { restoreSession, authState } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
 
+  import { WindowSetSize, WindowCenter } from "../wailsjs/runtime/runtime";
+
   let showKnowledgeBase = $state(false);
 
   onMount(async () => {
+    // Dynamically size window based on screen width, clamped between 1024 and 1440
+    if (typeof window !== 'undefined' && window.screen) {
+      const screenWidth = window.screen.availWidth;
+      let targetWidth = Math.floor(screenWidth * 0.9);
+      if (targetWidth < 1024) targetWidth = 1024;
+      if (targetWidth > 1440) targetWidth = 1440;
+      
+      WindowSetSize(targetWidth, 768);
+      setTimeout(WindowCenter, 100);
+    }
+
     if (authState.authMode === "saas") {
       await restoreSession();
     }

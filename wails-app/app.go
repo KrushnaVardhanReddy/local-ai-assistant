@@ -54,6 +54,11 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
+	// Hide from taskbar for maximum stealth
+	if err := window.HideFromTaskbar(ctx); err != nil {
+		log.Printf("Failed to hide from taskbar: %v\n", err)
+	}
+
 	// Initialize hotkeys Wails runtime dependencies
 	hotkeys.WindowGetPosition = wailsruntime.WindowGetPosition
 	hotkeys.WindowSetPosition = wailsruntime.WindowSetPosition

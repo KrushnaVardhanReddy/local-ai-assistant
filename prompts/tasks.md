@@ -1,4 +1,4 @@
-# 🤖 Local AI Assistant — Jules Task Tracker
+# 🤖 BarnOwl AI — Jules Task Tracker
 
 > Submit tasks to Jules one-by-one:
 > ```bash

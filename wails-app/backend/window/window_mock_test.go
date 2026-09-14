@@ -10,3 +10,7 @@ type mockModifier struct{}
 func (m *mockModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) error {
 	return nil
 }
+
+func (m *mockModifier) HideFromTaskbar(ctx context.Context) error {
+	return nil
+}

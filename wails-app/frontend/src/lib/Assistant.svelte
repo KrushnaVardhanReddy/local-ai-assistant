@@ -444,7 +444,7 @@
   <!-- Top Toolbar -->
   <header class="toolbar glass-pill {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" style="--wails-draggable:drag">
     <!-- Brand / Primary Action -->
-    <div class="flex items-center gap-4 pointer-events-none">
+    <div class="flex items-center gap-4 pointer-events-none flex-shrink-0">
       <span class="font-headline-md text-headline-md font-bold text-primary tracking-tight">BarnOwl</span>
       <!-- Live Indicator -->
       <div class="flex items-center gap-2 bg-white/5 rounded-full px-3 py-1 border border-white/5 {wsState.isListening ? '' : 'opacity-50'}">
@@ -468,81 +468,85 @@
 
 
     <!-- Trailing Actions -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1 overflow-x-auto hide-scrollbar min-w-0">
       <button
         id="mock-mode-btn"
-        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant transition-colors pointer-events-auto {wsState.isMockMode ? 'text-green-400 animate-pulse bg-green-400/10' : 'hover:text-primary'}"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-white/10 text-on-surface-variant transition-colors pointer-events-auto {wsState.isMockMode ? 'text-green-400 animate-pulse bg-green-400/10' : 'hover:text-primary'}"
         onclick={handleMockModeToggle}
         aria-label={wsState.isMockMode ? "Stop Mock Interview" : "Start Mock Interview Practice"}
       >
-        <span class="material-symbols-outlined text-[20px]">record_voice_over</span>
+        <span class="material-symbols-outlined text-[18px]">record_voice_over</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Mock</span>
       </button>
       <button
         aria-label="Screenshot"
-        class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto {(wsState.plan === 'demo' || wsState.plan === 'payg') ? 'opacity-50 cursor-not-allowed text-on-surface-variant' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary ' + (wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : '')}"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {(wsState.plan === 'demo' || wsState.plan === 'payg') ? 'opacity-50 cursor-not-allowed text-on-surface-variant' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary ' + (wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : '')}"
         onclick={triggerVision}
         disabled={wsState.plan === 'demo' || wsState.plan === 'payg'}
       >
-        <span class="material-symbols-outlined text-[20px]" data-icon="screenshot_monitor">screenshot_monitor</span>
+        <span class="material-symbols-outlined text-[18px]" data-icon="screenshot_monitor">screenshot_monitor</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Snip</span>
       </button>
       <!-- STAR Method Preset -->
       <button
         aria-label="STAR Method Preset"
-        class="flex items-center gap-1 px-2.5 py-1 rounded-full
-               transition-colors pointer-events-auto text-[11px] font-bold
-               tracking-wider border
-               {starPrimed
-                 ? 'text-yellow-300 bg-yellow-400/15 border-yellow-400/40 animate-pulse'
-                 : 'text-on-surface-variant hover:text-yellow-300 hover:bg-yellow-400/10 border-transparent hover:border-yellow-400/20'}"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto border {starPrimed ? 'text-yellow-300 bg-yellow-400/15 border-yellow-400/40 animate-pulse' : 'text-on-surface-variant hover:text-yellow-300 hover:bg-yellow-400/10 border-transparent hover:border-yellow-400/20'}"
         onclick={triggerStarPreset}
       >
-        STAR
+        <span class="material-symbols-outlined text-[18px]">star</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">STAR</span>
       </button>
       <button
         aria-label="Hotkeys Cheatsheet"
-        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
         onclick={() => uiState.hotkeysPanelOpen = true}
       >
-        <span class="material-symbols-outlined text-[20px]" data-icon="keyboard">keyboard</span>
+        <span class="material-symbols-outlined text-[18px]" data-icon="keyboard">keyboard</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Keys</span>
       </button>
       <button
         id="session-report-btn"
-        class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
         onclick={() => showSessionReport = true}
         aria-label="Session Report"
       >
-        <span class="material-symbols-outlined text-[20px]">analytics</span>
+        <span class="material-symbols-outlined text-[18px]">analytics</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Report</span>
       </button>
 
       <button
         aria-label="Toggle Resume Builder"
-        class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto {currentView === 'resume' ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {currentView === 'resume' ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
         onclick={() => currentView = currentView === 'interview' ? 'resume' : 'interview'}
       >
-        <span class="material-symbols-outlined text-[20px]">{currentView === 'resume' ? 'edit_document' : 'description'}</span>
+        <span class="material-symbols-outlined text-[18px]">{currentView === 'resume' ? 'edit_document' : 'description'}</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Resume</span>
       </button>
 
-      <button aria-label="Clear Context" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto" onclick={clearHistory}>
-        <span class="material-symbols-outlined text-[20px]" data-icon="mop">mop</span>
+      <button aria-label="Clear Context" class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto" onclick={clearHistory}>
+        <span class="material-symbols-outlined text-[18px]" data-icon="mop">mop</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Clear</span>
       </button>
       <!-- Click-through toggle -->
       <button
         aria-label="Toggle Click-Through"
-        class="w-8 h-8 flex items-center justify-center rounded-full transition-colors pointer-events-auto
-               {clickthrough ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {clickthrough ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
         onclick={toggleClickthrough}
       >
-        <span class="material-symbols-outlined text-[20px]">{clickthrough ? 'mouse' : 'back_hand'}</span>
+        <span class="material-symbols-outlined text-[18px]">{clickthrough ? 'mouse' : 'back_hand'}</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Stealth</span>
       </button>
       <!-- Separator -->
-      <div class="w-px h-5 bg-white/10 mx-1"></div>
+      <div class="flex-shrink-0 w-px h-5 bg-white/10 mx-1"></div>
       <!-- Hide window (Ctrl+Shift+Space to restore) -->
-      <button aria-label="Hide" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-yellow-400 transition-colors pointer-events-auto" onclick={hideWindow}>
-        <span class="material-symbols-outlined text-[20px]" data-icon="visibility_off">visibility_off</span>
+      <button aria-label="Hide" class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-yellow-400 transition-colors pointer-events-auto" onclick={hideWindow}>
+        <span class="material-symbols-outlined text-[18px]" data-icon="visibility_off">visibility_off</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Hide</span>
       </button>
       <!-- Close / Quit app -->
-      <button aria-label="Close" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/20 text-on-surface-variant hover:text-red-400 transition-colors pointer-events-auto" onclick={closeApp}>
-        <span class="material-symbols-outlined text-[20px]" data-icon="close">close</span>
+      <button aria-label="Close" class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-red-500/20 text-on-surface-variant hover:text-red-400 transition-colors pointer-events-auto" onclick={closeApp}>
+        <span class="material-symbols-outlined text-[18px]" data-icon="close">close</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Quit</span>
       </button>
     </div>
   </header>
