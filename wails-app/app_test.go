@@ -21,3 +21,21 @@ func TestAppGreet(t *testing.T) {
 		t.Errorf("Expected %q, got %q", expected, greeting)
 	}
 }
+
+func TestAppSetClickthrough(t *testing.T) {
+	app := NewApp()
+	app.startup(context.Background())
+
+	// Test enabling clickthrough
+	opts := map[string]interface{}{"enable": true}
+	// We just want to ensure it doesn't crash since it interacts with context and mocked window modifier.
+	app.SetClickthrough(opts)
+
+	// Test disabling clickthrough
+	opts["enable"] = false
+	app.SetClickthrough(opts)
+
+	// Test with invalid opt
+	optsInvalid := map[string]interface{}{"enable": "invalid"}
+	app.SetClickthrough(optsInvalid)
+}
