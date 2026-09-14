@@ -87,6 +87,15 @@ function initListeners() {
   EventsOn("on_transcript", (data: any) => {
     handleTranscript(data);
   });
+
+  EventsOn("on_response_token", (data: any) => {
+    wsState.response += data.text;
+    wsState.isThinking = true;
+  });
+
+  EventsOn("on_response_end", () => {
+    wsState.isThinking = false;
+  });
 }
 let retryDelay = 500;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;

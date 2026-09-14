@@ -11,6 +11,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+import "time"
+
 // DocumentSearchResult represents a result from a vector search
 type DocumentSearchResult struct {
 	ID       string
@@ -160,4 +162,51 @@ func (v *VectorDB) SearchVector(query []float32, limit int) ([]DocumentSearchRes
 	}
 
 	return results, nil
+}
+
+// SearchByEmbedding searches the cache and returns the answer if similarity > threshold.
+// threshold is expected as a similarity score (e.g. 0.92). sqlite-vec distance is (1 - similarity) / 2 for L2 or similar,
+// wait, sqlite-vec uses L2 distance or cosine distance?
+// For normalized vectors, Euclidean distance squared = 2 - 2 * cosine_similarity.
+// The task says "threshold is similarity 0.92, distance <= 0.08". This implies distance is (1 - similarity).
+// Let's check distance vs (1 - threshold).
+func (v *VectorDB) SearchByEmbedding(embedding []float32, threshold float32) (string, bool) {
+	results, err := v.SearchVector(embedding, 1)
+	if err != nil || len(results) == 0 {
+		return "", false
+	}
+
+	// Check threshold. Distance in sqlite-vec for normalized vectors is usually Euclidean distance.
+	// But the task states distance <= (1 - threshold). We will use distance <= 1.0 - threshold.
+	if results[0].Distance > (1.0 - threshold) {
+		return "", false
+	}
+
+	var meta map[string]interface{}
+	if err := json.Unmarshal([]byte(results[0].Metadata), &meta); err == nil {
+		if ans, ok := meta["answer"].(string); ok {
+			return ans, true
+		}
+	}
+
+	return "", false
+}
+
+// Store saves a question and answer into the cache
+// Allow mocking GenerateEmbedding in tests
+var GenerateEmbeddingFunc = GenerateEmbedding
+
+func (v *VectorDB) Store(question, answer string) error {
+	emb := GenerateEmbeddingFunc(question)
+	if len(emb) != 384 {
+		return fmt.Errorf("failed to generate valid embedding for question")
+	}
+
+	meta := map[string]string{
+		"answer":    answer,
+		"timestamp": time.Now().Format(time.RFC3339),
+	}
+	metaBytes, _ := json.Marshal(meta)
+
+	return v.InsertVector(question, emb, string(metaBytes))
 }

@@ -1,7 +1,10 @@
 package audio
 
 import (
+	"encoding/binary"
+	"os"
 	"testing"
+	"time"
 )
 
 func TestCaptureEngine_Lifecycle(t *testing.T) {
@@ -105,4 +108,105 @@ func TestStopCapture_Initialized(t *testing.T) {
     if err != nil {
         t.Errorf("Expected no error calling StopCapture, got %v", err)
     }
+}
+
+func generateAudioChunk(rmsTarget float64, numSamples int) []byte {
+	// Simple square wave to get target RMS
+	val := float64(0)
+	if rmsTarget > 0 {
+		val = rmsTarget * 32768.0
+	}
+
+	bytes := make([]byte, numSamples*2)
+	for i := 0; i < numSamples; i++ {
+		intVal := int16(val)
+		if i%2 == 0 {
+			intVal = int16(-val)
+		}
+		binary.LittleEndian.PutUint16(bytes[i*2:], uint16(intVal))
+	}
+	return bytes
+}
+
+func TestProcessor_NoFlushShortSilence(t *testing.T) {
+	os.Setenv("SILENCE_THRESHOLD_SECONDS", "1.0")
+	defer os.Unsetenv("SILENCE_THRESHOLD_SECONDS")
+
+	var flushed bool
+	p := NewAudioProcessor(func(s []float32) {
+		flushed = true
+	})
+
+	now := time.Now()
+	p.Now = func() time.Time { return now }
+
+	// Voice frame (RMS > 0.005)
+	p.Process(generateAudioChunk(0.01, 8000))
+	if flushed {
+		t.Error("Unexpected flush")
+	}
+
+	// Silence frame, but only 0.5s passed
+	now = now.Add(500 * time.Millisecond)
+	p.Process(generateAudioChunk(0.0, 16000))
+	if flushed {
+		t.Error("Unexpected flush on short silence")
+	}
+}
+
+func TestProcessor_FlushOnSilence(t *testing.T) {
+	os.Setenv("SILENCE_THRESHOLD_SECONDS", "1.5")
+	defer os.Unsetenv("SILENCE_THRESHOLD_SECONDS")
+
+	var flushed bool
+	p := NewAudioProcessor(func(s []float32) {
+		flushed = true
+	})
+
+	now := time.Now()
+	p.Now = func() time.Time { return now }
+
+	p.Process(generateAudioChunk(0.01, 8000))
+
+	// Move time past 1.5s silence threshold
+	now = now.Add(2 * time.Second)
+
+	// Process silent chunk
+	p.Process(generateAudioChunk(0.0, 16000))
+
+	if !flushed {
+		t.Error("Expected flush on long silence")
+	}
+}
+
+func TestProcessor_FlushEmergency(t *testing.T) {
+	var flushCount int
+	p := NewAudioProcessor(func(s []float32) {
+		flushCount++
+	})
+
+	now := time.Now()
+	p.Now = func() time.Time { return now }
+
+	// 240k samples
+	p.Process(generateAudioChunk(0.01, 240000))
+
+	if flushCount != 1 {
+		t.Errorf("Expected 1 flush for emergency, got %d", flushCount)
+	}
+}
+
+func TestProcessor_EmptyInput(t *testing.T) {
+	p := NewAudioProcessor(func(s []float32) {})
+	p.Process(nil) // Should return immediately without panic
+}
+
+func TestProcessor_InvalidEnvVar(t *testing.T) {
+	os.Setenv("SILENCE_THRESHOLD_SECONDS", "invalid")
+	defer os.Unsetenv("SILENCE_THRESHOLD_SECONDS")
+
+	p := NewAudioProcessor(func(s []float32) {})
+	if p.silenceThreshold != 1500*time.Millisecond {
+		t.Errorf("Expected default 1.5s threshold for invalid env var, got %v", p.silenceThreshold)
+	}
 }
