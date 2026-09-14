@@ -8,6 +8,7 @@ import (
 	"sync"
 	"wails-app/backend/stt"
 	"wails-app/backend/system"
+	"wails-app/backend/window"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -95,6 +96,7 @@ func (a *App) CaptureScreen() string {
 func (a *App) SetClickthrough(opts map[string]interface{}) {
 	if enable, ok := opts["enable"].(bool); ok {
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, enable)
+		window.SetIgnoreMouseEvents(a.ctx, enable)
 	}
 }
 
