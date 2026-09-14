@@ -51,7 +51,6 @@ func (s *WhisperEngine) TranscribeStream(samples []float32) (chan string, error)
 
 	go func() {
 		defer close(ch)
-		defer context.Close()
 
 		cb := func(segment whisper.Segment) {
 			ch <- segment.Text
