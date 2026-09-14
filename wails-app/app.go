@@ -9,6 +9,7 @@ import (
 	"sync"
 	"wails-app/backend/hotkeys"
 	"wails-app/backend/stt"
+	"wails-app/backend/audio"
 	"wails-app/backend/remote"
 	"net/http"
 	"wails-app/backend/system"
@@ -26,7 +27,8 @@ type App struct {
 	backendCmd *exec.Cmd
 	cmdMutex   sync.Mutex
 
-	sttManager *stt.STTManager
+	sttManager   *stt.STTManager
+	audioCapture *audio.CaptureEngine
 }
 
 // NewApp creates a new App application struct
@@ -38,14 +40,19 @@ func NewApp() *App {
 	if modelPath == "" {
 		modelPath = "models/ggml-base.en.bin"
 	}
-	engine, err := stt.LoadWhisperEngine(modelPath)
+	whisperEngine, err := stt.LoadWhisperEngine(modelPath)
 	if err == nil {
-		initialEngine = engine
+		initialEngine = whisperEngine
 	}
+
+	captureEngine := audio.NewCaptureEngine()
+	// Ignore init errors since hardware might not be present.
+	_ = captureEngine.Initialize()
 
 	return &App{
 		remoteServer: remote.NewServer(http.FS(assets)),
-		sttManager: stt.NewSTTManager(initialEngine),
+		sttManager:   stt.NewSTTManager(initialEngine),
+		audioCapture: captureEngine,
 	}
 }
 
@@ -129,7 +136,45 @@ func (a *App) ToggleStealth(opts map[string]interface{}) {
 	// Not implemented
 }
 
+func (a *App) GetAudioDevices() []audio.AudioDevice {
+	devices, err := a.audioCapture.GetDevices()
+	if err != nil {
+		log.Printf("Failed to get audio devices: %v\n", err)
+		return []audio.AudioDevice{}
+	}
+	return devices
+}
+
+func (a *App) SetAudioDevice(id int, isLoopback bool) error {
+	err := a.audioCapture.StartCapture(id, isLoopback, func(samples []float32) {
+		ch, err := a.sttManager.TranscribeStream(samples)
+		if err != nil {
+			log.Printf("Failed to transcribe stream: %v\n", err)
+			return
+		}
+
+		go func() {
+			for transcript := range ch {
+				if transcript != "" {
+					wailsruntime.EventsEmit(a.ctx, "on_transcript", transcript)
+				}
+			}
+		}()
+	})
+
+	if err != nil {
+		log.Printf("Failed to set audio device %d: %v\n", id, err)
+		return err
+	}
+
+	log.Printf("Successfully started capturing device %d (loopback: %v)\n", id, isLoopback)
+	return nil
+}
+
 func (a *App) shutdown(ctx context.Context) {
+	if a.audioCapture != nil {
+		a.audioCapture.Terminate()
+	}
 	if a.remoteServer != nil {
 		_ = a.remoteServer.Stop(ctx)
 	}
