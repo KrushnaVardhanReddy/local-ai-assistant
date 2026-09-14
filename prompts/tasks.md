@@ -52,7 +52,7 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P47-T1-T2 | `wails-app/backend/app.go` | **Embedded Server & WS Bridge:** Spin up an HTTP server on port 8000 alongside Wails and expose a `/ws` route to mirror Wails IPC events to the remote browser. | ⬜ | — |
-| P47-T3 | `scripts/start_remote.sh` | **Update Tunnel Script:** Refactor the existing script to point the Cloudflare tunnel directly to the new embedded Go HTTP port (8000). | ⬜ | — |
+| P47-T3 | `scripts/start_remote.sh` | **Update Tunnel Script:** Refactor the existing script to point the Cloudflare tunnel directly to the new embedded Go HTTP port (8000). | ✅ | #155 |
 
 ---
 
