@@ -1,0 +1,26 @@
+TASK: P44-T2 — Update CI Pipelines
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Our CI pipelines and build scripts in the `Makefile` currently execute `cargo tauri build` and `PyInstaller` for the legacy architecture. We need to update them to use `wails build` for our new single-binary architecture.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. UPDATE MAKEFILE
+   - Modify the `Makefile` to remove Tauri and Python build commands.
+   - Add a `build:` target that runs `cd wails-app && wails build`.
+   - Add a `dev:` target that runs `cd wails-app && wails dev`.
+
+2. UPDATE GITHUB ACTIONS
+   - If there are CI workflows in `.github/workflows/`, update them to install Go, install the Wails CLI, and execute `wails build` instead of setting up Rust and Python.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P44-T2 update CI pipelines and Makefile for wails"
+Target branch: feature/krushna_golang

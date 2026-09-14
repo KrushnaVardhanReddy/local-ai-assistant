@@ -1,0 +1,27 @@
+TASK: P44-T1 — The Great Deletion
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+Now that we have successfully ported the entire application to the new Wails (Go) architecture, the legacy Tauri frontend, Rust backend, and Python ML sidecar are entirely obsolete. We need to safely remove them from the repository to complete the transition.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. REMOVE LEGACY DIRECTORIES
+   - Delete the `frontend/` directory (the old Tauri Svelte frontend).
+   - Delete the `src-tauri/` directory (the old Rust backend).
+   - Delete the `backend/` directory (the old Python FastAPI ML sidecar).
+
+2. CLEANUP ROOT FILES
+   - Remove any root-level config files specific to the old architecture if they are no longer needed (e.g., Python `requirements.txt` in the root if any, old Tauri build scripts).
+   - DO NOT delete the new `wails-app/` directory or the `cloud-worker/` directory!
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P44-T1 delete legacy tauri rust and python code"
+Target branch: feature/krushna_golang
