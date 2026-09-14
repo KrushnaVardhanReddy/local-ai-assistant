@@ -92,3 +92,4 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P51-T1 | `backend/filter/`, `backend/llm/`, `backend/audio/capture.go`, `backend/vector_db.go`, `app.go`, `frontend/ws.svelte.ts` | **Full STT Pipeline:** VAD silence buffer, smart filter (filler + Nomic embedding noise detection), sqlite-vec QA cache lookup, OpenAI streaming LLM with busy guard. | ⬜ | — |
+| P51-T2 | `backend/filter/classifier.go`, `backend/filter/filter.go` | **Native Go Intent Classifier:** Replace manual questionWords heuristic with an ML-based Nearest Centroid classifier in Go based on embeddings. | ⬜ | — |
