@@ -123,7 +123,7 @@ func Check(text string, embedding []float32) FilterResult {
 
 	if !isQuestion {
 		once.Do(initNoiseCentroid)
-		if len(noiseCentroid) == 384 && len(embedding) == 384 {
+		if len(noiseCentroid) == 768 && len(embedding) == 768 {
 			similarity := cosineSimilarity(embedding, noiseCentroid)
 			if similarity > 0.82 {
 				log.Printf("[FILTER] Dropped (noise): %q", text)

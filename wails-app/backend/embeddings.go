@@ -84,8 +84,8 @@ func GenerateEmbedding(text string) []float32 {
     in3, _ := onnxruntime_go.NewTensor(shape, token_type_ids)
     defer in3.Destroy()
 
-    outShape := onnxruntime_go.NewShape(1, length, 384)
-    outData := make([]float32, 1 * length * 384)
+    outShape := onnxruntime_go.NewShape(1, length, 768)
+    outData := make([]float32, 1 * length * 768)
     out, _ := onnxruntime_go.NewTensor(outShape, outData)
     defer out.Destroy()
 
@@ -99,25 +99,25 @@ func GenerateEmbedding(text string) []float32 {
 	res := out.GetData()
 
 	// Mean pooling
-	pooled := make([]float32, 384)
+	pooled := make([]float32, 768)
 	for i := int64(0); i < length; i++ {
-	    for j := 0; j < 384; j++ {
-	        pooled[j] += res[i*384 + int64(j)]
+	    for j := 0; j < 768; j++ {
+	        pooled[j] += res[i*768 + int64(j)]
 	    }
 	}
 
-	for j := 0; j < 384; j++ {
+	for j := 0; j < 768; j++ {
         pooled[j] /= float32(length)
     }
 
     // Normalize
     var sumSq float32
-    for j := 0; j < 384; j++ {
+    for j := 0; j < 768; j++ {
         sumSq += pooled[j] * pooled[j]
     }
 
     norm := float32(math.Sqrt(float64(sumSq)))
-    for j := 0; j < 384; j++ {
+    for j := 0; j < 768; j++ {
         pooled[j] /= norm
     }
 
