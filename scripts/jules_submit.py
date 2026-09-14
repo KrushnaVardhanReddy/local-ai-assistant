@@ -62,25 +62,24 @@ SAFETY_RULES = """
 MANDATORY RULES — VIOLATION = REJECTED PR:
 1. NEVER stub, mock, or TODO existing implementation code. Write real, working code only.
 2. Commit message must start with "jules: " prefix.
-3. Use clean OOP / module design. No spaghetti scripts.
+3. Use clean module design and idiomatic Go architecture. No spaghetti code.
 4. NEVER hardcode secrets, API keys, or local paths — always read from environment variables.
-5. All Python code must be compatible with Python 3.10+ and type-hinted where practical.
+5. UNIT TESTS REQUIRED: For every Go file you create or modify, you MUST write an accompanying `_test.go` file with 100% coverage.
 
 Project: Local AI Assistant
 Tech stack:
-  - Backend:  Python 3.10+, FastAPI, faster-whisper / Parakeet-TDT
+  - Backend:  Go 1.25+, Wails v2 (github.com/wailsapp/wails/v2)
+  - STT/ML:   whisper.cpp (go bindings), ONNX embeddings (onnxruntime_go)
   - LLM:      OpenAI-compatible /v1/chat/completions API
-              Local:  Ollama (11434), LM Studio (1234), llama.cpp (8080) — no API key needed
+              Local:  Ollama (11434), LM Studio (1234), llama.cpp (8080)
               Cloud:  OpenAI, Groq, Gemini, Anthropic — API key via env var, Bearer auth header
-              Config: LLM_PROVIDER env var selects provider; LLMClient.from_config() resolves all settings
-  - Frontend: Svelte 5, Tauri 2.0, TypeScript
-  - Bridge:   WebSocket (FastAPI → Svelte reactive store)
-  - Target:   Dell XPS, 8GB VRAM, Linux/Windows desktop
+  - Frontend: Svelte 5, Vite, TailwindCSS v3, TypeScript
+  - Bridge:   Wails IPC bindings (`wailsjs` or `window.runtime`)
+  - Target:   Dell XPS, 8GB VRAM, Linux/Windows/Mac desktop
 
-Critical LLM rules:
+Critical Rules:
 - NEVER use Ollama-specific endpoints (/api/generate, /api/chat). Always use /v1/chat/completions.
-- Cloud providers need `Authorization: Bearer <key>` header. Anthropic also needs `anthropic-version: 2023-06-01`.
-- The LLMClient must work identically for all providers — only base_url, api_key, and headers differ.
+- Cloud providers need `Authorization: Bearer <key>` header.
 - NEVER log or print API keys.
 """.strip()
 

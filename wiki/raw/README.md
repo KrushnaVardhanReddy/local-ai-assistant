@@ -1,8 +1,8 @@
 # 🤖 Local AI Assistant
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![Go](https://img.shields.io/badge/Go-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Svelte](https://img.shields.io/badge/Svelte-5-FF3E00?style=flat-square&logo=svelte&logoColor=white)
-![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?style=flat-square&logo=tauri&logoColor=white)
+![Wails](https://img.shields.io/badge/Wails-2.0-FFC131?style=flat-square&logo=tauri&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 ![Status](https://img.shields.io/badge/Status-In%20Development-orange?style=flat-square)
 ![VRAM](https://img.shields.io/badge/VRAM-8GB%20Target-purple?style=flat-square&logo=nvidia)
@@ -26,12 +26,12 @@ A real-time, context-aware desktop assistant that runs **completely offline** on
 
 This application uses a **dual-process architecture** to separate heavy AI compute from the user interface:
 
-1. **Frontend (UI):** Built with **Svelte 5 + Tauri 2.0** — a lightweight, native desktop shell with reactive UI for the floating assistant overlay.
-2. **Backend (AI & Audio):** Built with **Python (FastAPI)** to capture microphone audio, handle real-time transcription, and stream LLM responses via WebSocket.
+1. **Frontend (UI):** Built with **Svelte 5 + Wails v2** — a lightweight, native desktop shell with reactive UI for the floating assistant overlay.
+2. **Backend (AI & Audio):** Built with **Go (FastAPI)** to capture microphone audio, handle real-time transcription, and stream LLM responses via WebSocket.
 
 ```
 ┌────────────────────────────────┐       ┌────────────────────────────────┐
-│    Frontend (Svelte 5 + Tauri) │ ◄───► │       Backend (Python)          │
+│    Frontend (Svelte 5 + Wails) │ ◄───► │       Backend (Go)          │
 │    (Floating Desktop Overlay)  │  WS   │  (Audio Capture & AI Orchestr) │
 └────────────────────────────────┘       └───────────────┬────────────────┘
                                                           │
@@ -55,9 +55,9 @@ This application uses a **dual-process architecture** to separate heavy AI compu
 | Accuracy (en) | State-of-the-art on LibriSpeech | Very strong, but slower |
 | Use Case | Real-time voice assistant | Batch transcription |
 
-### 🧩 Why Svelte 5 + Tauri?
+### 🧩 Why Svelte 5 + Wails?
 
-| | Plain JS/TS | Electron | **Tauri + Svelte 5** ✅ |
+| | Plain JS/TS | Electron | **Wails + Svelte 5** ✅ |
 |---|---|---|---|
 | RAM Usage | Low | ~150MB+ | ~10–30MB |
 | Bundle Size | Small | ~200MB | ~5–15MB |
@@ -72,9 +72,9 @@ This application uses a **dual-process architecture** to separate heavy AI compu
 
 ### Prerequisites
 
-- [Python 3.10+](https://www.python.org/downloads/)
+- [Go 3.10+](https://www.python.org/downloads/)
 - [Node.js v18+](https://nodejs.org/)
-- [Rust](https://rustup.rs/) (required by Tauri)
+- [Go](https://rustup.rs/) (required by Wails)
 - [Ollama](https://ollama.com) — for local LLM hosting
 - NVIDIA GPU with CUDA 11.8+ (for full GPU acceleration)
 
@@ -135,7 +135,7 @@ The assistant uses global hotkeys, meaning they work **even when the app is hidd
 
 ## 🛠️ Tech Stack
 
-### Backend (Python)
+### Backend (Go)
 | Library | Purpose |
 |---|---|
 | `faster-whisper` | Optimized STT via CTranslate2 + CUDA |
@@ -148,8 +148,8 @@ The assistant uses global hotkeys, meaning they work **even when the app is hidd
 | Tool | Purpose |
 |---|---|
 | **Svelte 5** | Reactive UI with runes — minimal boilerplate |
-| **Tauri 2.0** | Rust-backed native desktop shell, replaces Electron |
-| **WebSocket** | Streams live LLM response tokens from Python backend |
+| **Wails v2** | Go-backed native desktop shell, replaces Electron |
+| **WebSocket** | Streams live LLM response tokens from Go backend |
 
 ### AI Models
 | Role | Model | Source |
@@ -227,18 +227,18 @@ You can expose your local AI assistant's backend securely over the internet usin
 
 ```text
 Local_AI_Assistant/
-├── backend/                    # Python Backend (AI & Audio Processing)
+├── wails-app/backend/          # Go Backend (AI & Audio Processing)
 │   ├── app.py                  # FastAPI server + WebSocket broadcaster
 │   ├── audio_listener.py       # Mic capture and live transcription
-│   └── requirements.txt        # Python dependencies
-├── frontend/                   # Svelte 5 + Tauri Desktop App
+│   └── requirements.txt        # Go dependencies
+├── frontend/                   # Svelte 5 + Wails Desktop App
 │   ├── src/
 │   │   ├── App.svelte          # Root component (floating overlay)
 │   │   ├── lib/
 │   │   │   ├── Assistant.svelte   # Main chat/response panel
 │   │   │   └── ws.ts              # WebSocket store (reactive)
 │   │   └── main.ts             # App entrypoint
-│   ├── src-tauri/              # Tauri Rust shell config
+│   ├── wails-app/              # Wails Go shell config
 │   └── package.json
 ├── prompts/                    # Jules task prompts for async AI development
 │   ├── tasks.md                # Master task tracker
@@ -275,9 +275,9 @@ Local_AI_Assistant/
 2. Expose a **FastAPI WebSocket** endpoint so the frontend can receive streamed LLM responses.
 
 ### ⬜ Phase 4: Build the Floating UI 🖥️
-1. Scaffold a **Svelte 5 + Tauri 2.0** project in `frontend/`.
+1. Scaffold a **Svelte 5 + Wails v2** project in `frontend/`.
 2. Design a minimalist, transparent floating overlay panel.
-3. Connect to the Python WebSocket via a Svelte reactive store to display real-time streamed tokens as you speak.
+3. Connect to the Go WebSocket via a Svelte reactive store to display real-time streamed tokens as you speak.
 
 ---
 
@@ -320,5 +320,5 @@ This project is licensed under the [MIT License](LICENSE).
 - [NVIDIA NeMo](https://github.com/NVIDIA/NeMo) — Parakeet ASR model family
 - [Ollama](https://ollama.com) — Dead-simple local LLM hosting
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — CTranslate2-optimized Whisper
-- [Tauri](https://tauri.app) — Lightweight native desktop framework
+- [Wails](https://tauri.app) — Lightweight native desktop framework
 - [Svelte](https://svelte.dev) — Compiler-first reactive UI framework

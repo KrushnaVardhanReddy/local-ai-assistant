@@ -6,7 +6,7 @@ The Local AI Assistant operates on a **dual-process architecture** designed to c
 
 ```
 ┌────────────────────────────────┐       ┌────────────────────────────────┐
-│    Frontend (Svelte 5 + Tauri) │ ◄───► │       Backend (Python)          │
+│    Frontend (Svelte 5 + Wails) │ ◄───► │       Backend (Go)          │
 │    (Floating Desktop Overlay)  │  WS   │  (Audio Capture & AI Orchestr) │
 └────────────────────────────────┘       └───────────────┬────────────────┘
                                                           │
@@ -24,8 +24,8 @@ The Local AI Assistant operates on a **dual-process architecture** designed to c
                └─────────────────────────────┘                       └─────────────────────────────┘
 ```
 
-## 1. The Backend (Python / FastAPI)
-The Python backend is the core engine of the assistant. It is responsible for:
+## 1. The Backend (Go / FastAPI)
+The Go backend is the core engine of the assistant. It is responsible for:
 - **Audio Capture**: Listening to the system microphone.
 - **Speech-to-Text (STT)**: Converting voice to text instantly. It supports `faster-whisper` for standard hardware and NVIDIA's **Parakeet-TDT** for extreme low-latency inference on CUDA devices.
 - **Local Intelligence Layer**: Uses an on-device `SmolLM2` model to act as a gatekeeper. It checks if the user has finished their thought before allowing expensive cloud LLM calls, and handles vector embeddings for the semantic QA cache.
@@ -33,10 +33,10 @@ The Python backend is the core engine of the assistant. It is responsible for:
 - **LLM Orchestration**: Taking the transcribed text (if not cached) and routing it to the configured LLM provider (Ollama, LM Studio, or cloud APIs like OpenAI/Gemini/Groq).
 - **WebSocket Server**: Streaming the response tokens back to the frontend in real-time.
 
-## 2. The Frontend (Svelte 5 / Tauri)
+## 2. The Frontend (Svelte 5 / Wails)
 The frontend serves purely as a dumb terminal/display layer for the backend's AI output.
 - **Svelte 5**: Provides a reactive, lightweight UI using the new runes reactivity system.
-- **Tauri 2.0 (Desktop)**: Wraps the web app in a Rust-based native shell, consuming around 10-30MB of RAM (compared to Electron's 150MB+ footprint).
+- **Wails v2 (Desktop)**: Wraps the web app in a Go-based native shell, consuming around 10-30MB of RAM (compared to Electron's 150MB+ footprint).
 - **Capacitor (Mobile)**: Wraps the same Svelte app into native iOS and Android apps, leveraging native microphone APIs and background-audio tasks.
 
 ## Hardware Targets

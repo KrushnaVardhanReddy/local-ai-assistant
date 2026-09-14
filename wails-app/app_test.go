@@ -21,3 +21,13 @@ func TestAppGreet(t *testing.T) {
 		t.Errorf("Expected %q, got %q", expected, greeting)
 	}
 }
+
+func TestSetClickthrough(t *testing.T) {
+	app := NewApp()
+	app.startup(context.Background())
+	// Should not panic
+	opts := map[string]interface{}{"enable": true}
+	app.SetClickthrough(opts)
+	opts = map[string]interface{}{"enable": false}
+	app.SetClickthrough(opts)
+}

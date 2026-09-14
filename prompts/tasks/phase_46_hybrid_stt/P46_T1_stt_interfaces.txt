@@ -1,0 +1,41 @@
+TASK: P46-T1 — STT Interface Abstraction (Hybrid STT Prep)
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+We are migrating to a Hybrid STT architecture.
+Currently, `whisper.go` is deeply embedded into our backend. We want to be able to hot-swap between `whisper.cpp` and `sherpa-onnx` (Parakeet) based on the user's hardware.
+
+To do this cleanly in Go, we need to abstract the speech-to-text logic behind an interface.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. CREATE THE INTERFACE
+   - Create `wails-app/backend/stt/engine.go`
+   - Define:
+     ```go
+     type STTEngine interface {
+         TranscribeStream(audio []float32) (chan string, error)
+         Close() error
+     }
+     ```
+
+2. CREATE THE MANAGER
+   - Create `wails-app/backend/stt/manager.go`
+   - Implement `type STTManager struct { activeEngine STTEngine, mu sync.RWMutex }`
+   - Add `SwapEngine(newEngine STTEngine)` which cleanly closes the old engine (if any) and routes future audio to the new engine.
+
+3. REFACTOR WHISPER
+   - Modify the existing `wails-app/backend/stt/whisper.go` (or wherever it lives) to implement the `STTEngine` interface.
+   - Configure the backend to initialize the `STTManager` with the `WhisperEngine` by default on startup.
+
+4. COMPREHENSIVE UNIT TESTS
+   - You MUST create `manager_test.go` and `engine_test.go` with 100% test coverage.
+   - Test `SwapEngine` under concurrent load (e.g. while `TranscribeStream` is active).
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P46-T1 abstract STT into interface and manager"
+Target branch: feature/krushna_golang

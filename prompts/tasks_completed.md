@@ -505,3 +505,39 @@
 | P40-T10 | `cloud-worker/src/index.ts` | **Cloud Worker Backend Auth (Supabase Validation):** Validate the frontend Bearer token against the Supabase `user_api_keys` table and check the `payg_sessions` balance before allowing API access. | ✅ | #129 |
 | P40-T11 | `scripts/start_cloud_e2e.sh`, `supabase/seed.sql` | **Local E2E Testing Pipeline (No Mocks):** Script to spin up local Supabase, seed test users/keys/credits, dynamically configure Worker `.dev.vars`, and start `wrangler dev` for true E2E testing. | ✅ | #133 |
 
+---
+
+## Phase 41 — Cloudflare Worker LLM & Voice Integration 🗣️
+
+> Migrates the core real-time interview loop (WebSocket connection, Auth, and LLM streaming) from the old Python backend to the Cloudflare Worker.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P41-T1 | `cloud-worker/src/index.ts` | **Worker WebSocket Upgrade:** Implement the `/ws` endpoint in the worker to accept incoming WebSocket upgrade requests and handle connection lifecycle. | ✅ | #134 |
+| P41-T2 | `cloud-worker/src/index.ts` | **Supabase Session Validation:** Handle the initial `{"type": "auth"}` message over WS. Validate the API Key against Supabase and check if the user has `payg_sessions > 0`. | ✅ | #135 |
+| P41-T3 | `cloud-worker/src/index.ts` | **LLM Streaming & Vector Cache Integration:** Handle the `{"type": "chat"}` message over WS. Generate embeddings, query the `pgvector` cache, stream to Groq, and stream tokens back. | ✅ | #136 |
+
+---
+
+## Phase 42 — The Wails Pivot (Frontend & Desktop Core) 🚀
+
+> Replacing Tauri (Rust) with Wails (Go) for a unified single-binary architecture.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P42-T1 | `wails-app/` | **Init Wails:** Run the Wails CLI to generate a new Svelte+TS template (`wails init -n local-ai-assistant -t svelte-ts`). | ✅ | #137 |
+| P42-T2 | `wails-app/frontend/src/` | **UI Porting:** Copy existing Svelte components, lib files, and Tailwind configuration into the new Wails frontend directory. Fix any imports. | ✅ | #140 |
+| P42-T3 | `wails-app/frontend/src/lib/` | **API Swap:** Replace Tauri frontend calls (e.g., `invoke('command')`, `WebviewWindow`) with Wails Go bindings (`@wailsio/runtime`). | ✅ | #143 |
+| P42-T4 | `wails-app/frontend/src/lib/api.ts` | **Cloud Worker Proxy (Wails Edition):** Ensure the Cloud Edition Svelte logic correctly points to the existing Cloudflare Worker URL. | ✅ | #141 |
+| P42-T5 | `wails-app/frontend/src/lib/` | **Cloud Auth UI:** Implement a Login and Registration modal in Svelte that uses Supabase Auth to register users for the Cloud Edition. | ✅ | #142 |
+| P42-T6 | `wails-app/tests/e2e/` | **E2E Wails UI Test:** Wails native E2E test verifying the Svelte app mounts and successfully routes API calls with zero mocking. | ✅ | #146 |
+
+---
+
+## Phase 44 — Finalization & Cleanup 🧹
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P44-T1 | `frontend/`, `backend/`, `src-tauri/` | **The Great Deletion:** Safely remove the legacy Tauri frontend, Rust backend, and Python sidecar directories. | ✅ | #147 |
+| P44-T2 | `Makefile`, `.github/workflows/` | **Update CI Pipelines:** Switch build scripts to use `wails build` instead of `cargo tauri build` and `PyInstaller`. | ✅ | #148 |
+| P44-T3 | `wails-app/tests/e2e/` | **E2E Full System Test:** End-to-end Wails desktop test verifying the entire offline ML pipeline within the compiled single binary. | ✅ | #149 |

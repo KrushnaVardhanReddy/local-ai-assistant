@@ -1,0 +1,30 @@
+TASK: P46-T3 — Parakeet CGO Bindings & Hot-Swap Logic
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+This is the final step of the Hybrid STT architecture. We now have the STT Interface Manager (P46-T1) and the Background Downloader (P46-T2).
+
+We need to implement the `ParakeetEngine` that uses `sherpa-onnx` and hook it into the manager once the download finishes.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. PARAKEET ENGINE (`wails-app/backend/stt/parakeet.go`)
+   - Create `type ParakeetEngine struct` that implements `STTEngine`.
+   - It must dynamically link to the `sherpa-onnx` DLLs downloaded in P46-T2 (`~/.local/share/barnowl/models/`).
+   - Use `CGO` or a Go wrapper for `sherpa-onnx` to initialize the recognizer with the Parakeet model.
+   - **CRITICAL:** Ensure `LD_LIBRARY_PATH` (Linux), `PATH` / `SetDllDirectory` (Windows) logic is handled so CGO can find the DLLs at runtime.
+
+2. HOT-SWAP LOGIC
+   - Modify the downloader from P46-T2 so that when the zip extraction completes, it automatically calls `STTManager.SwapEngine(NewParakeetEngine())`.
+
+3. COMPREHENSIVE UNIT TESTS
+   - You MUST create `parakeet_test.go`.
+   - Since the DLLs won't be present on CI, design the tests to skip gracefully or mock the CGO boundary if the DLLs are missing.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P46-T3 integrate Parakeet engine and hot-swap"
+Target branch: feature/krushna_golang

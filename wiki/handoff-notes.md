@@ -3,7 +3,7 @@
 These notes outline the project state as of the latest handoff (August 2026), marking the completion of the core Anti-Piracy, Split-Compute SaaS platform.
 
 ## Current State
-- **Core Features Complete**: The RAG backend, faster-whisper integration, Svelte 5 frontend, and Tauri OS hooks are fully merged.
+- **Core Features Complete**: The RAG backend, faster-whisper integration, Svelte 5 frontend, and Wails OS hooks are fully merged.
 - **Killer Features Ready**: Vision Copilot (silent screen reads) and Stealth Mode (OS-level kernel hooks) are functional.
 - **SaaS Framework Ready**: Supabase auth and Stripe billing have been implemented.
 
