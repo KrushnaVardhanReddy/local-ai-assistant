@@ -73,3 +73,13 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P49-T1 | `wails-app/backend/hotkeys.go` | **Global Hotkey Movement:** Use `golang.design/x/hotkey` to register global hotkeys (e.g. `Ctrl+Alt+Right`) that nudge the Wails window coordinates. | ⬜ | — |
+
+---
+
+## Phase 50 — Go Native Audio Loopback 🎧
+
+> Re-implementing the driverless system audio loopback feature for the Go backend so users can capture the interviewer's voice natively (e.g. Windows WASAPI).
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P50-T1 | `wails-app/backend/stt/`, `app.go` | **Native Audio Loopback:** Upgrade Go audio capture to support Windows WASAPI loopback and expose device selector bindings to Wails. | ⬜ | — |

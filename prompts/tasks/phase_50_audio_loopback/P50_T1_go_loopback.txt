@@ -1,0 +1,27 @@
+TASK: P50-T1 — Go Native System Audio Loopback
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+In our old Python architecture (Phase 13), we implemented system audio loopback so the user could capture the interviewer's voice natively on Windows via WASAPI.
+When we migrated to the Go/Wails backend in Phase 43, this feature was lost because the new Go STT engine only captures the default microphone!
+We need to re-implement native driver-level loopback in Go to remain competitive with Sensei AI and Interview Coder.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. AUDIO LOOPBACK IN GO
+   - In `wails-app/backend/stt/`, upgrade the audio capture logic (using `github.com/gordonklaus/portaudio` or similar).
+   - Implement support for capturing output devices (Windows WASAPI loopback).
+   
+2. DEVICE SELECTOR BINDINGS
+   - Add Wails bound methods to `app.go`:
+     - `GetAudioDevices() []AudioDevice`
+     - `SetAudioDevice(id int, isLoopback bool) error`
+   - These bindings will allow the existing Svelte UI settings page to route the interviewer's system audio directly into the STT engine.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P50-T1 implement Go native audio loopback"
+Target branch: feature/krushna_golang
