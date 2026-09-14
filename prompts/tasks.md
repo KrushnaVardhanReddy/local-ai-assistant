@@ -81,3 +81,11 @@
 | P44-T1 | `frontend/`, `backend/`, `src-tauri/` | **The Great Deletion:** Safely remove the legacy Tauri frontend, Rust backend, and Python sidecar directories. | ✅ | #147 |
 | P44-T2 | `Makefile`, `.github/workflows/` | **Update CI Pipelines:** Switch build scripts to use `wails build` instead of `cargo tauri build` and `PyInstaller`. | ✅ | #148 |
 | P44-T3 | `wails-app/tests/e2e/` | **E2E Full System Test:** End-to-end Wails desktop test verifying the entire offline ML pipeline within the compiled single binary. | 🔄 | — |
+
+---
+
+## Phase 45 — Advanced UI Features ✨
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P45-T1 | `wails-app/main.go` | **Native Click-Through:** Implement CGO/OS-level hooks to allow mouse clicks to pass completely through the transparent Wails window. | ⬜ | — |

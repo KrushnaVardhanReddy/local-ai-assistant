@@ -1,0 +1,33 @@
+TASK: P45-T1 — Wails Click-Through Transparent Window (Ignore Mouse Events)
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+In our previous Tauri architecture, the Stealth Terminal floated invisibly on the screen and used `set_ignore_cursor_events(true)` so that users could click *through* the application window to interact with their IDE or browser behind it.
+
+Because we have migrated to Wails v2, this native OS-level "click-through" functionality is missing from the default Wails API. CSS `pointer-events: none` is not enough, as the OS window still traps the click.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. IMPLEMENT NATIVE CLICK-THROUGH VIA CGO/OS APIS
+   - Modify `wails-app/main.go` (and create platform-specific Go files if necessary, e.g., `window_linux.go`, `window_darwin.go`, `window_windows.go`).
+   - Use Go's CGO capabilities or native OS syscalls to grab the native window handle created by Wails.
+   - For Linux: Use X11 shape extension / XFixes to ignore mouse events.
+   - For macOS: Use Objective-C to set `ignoresMouseEvents = YES` on the NSWindow.
+   - For Windows: Set the `WS_EX_TRANSPARENT` | `WS_EX_LAYERED` window styles.
+   - Expose a clean Go function (e.g., `SetIgnoreMouseEvents(ctx context.Context, ignore bool)`) that the frontend can toggle if needed.
+
+2. ADD COMPREHENSIVE UNIT TESTS
+   - **CRITICAL REQUIREMENT:** For every single Go file you create or modify, you MUST write an accompanying `_test.go` file.
+   - Ensure you mock or safely bypass CGO calls during tests so the test suite passes on standard CI environments.
+   - You must have 100% test coverage for the new files introduced in this task.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P45-T1 implement native click-through window feature with tests"
+Target branch: feature/krushna_golang
