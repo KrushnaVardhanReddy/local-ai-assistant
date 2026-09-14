@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
-	"wails-app/backend"
 )
 
 type FilterResult struct {
@@ -16,12 +14,7 @@ type FilterResult struct {
 	Reason     string
 }
 
-// Allow mocking GenerateEmbedding in tests
-var GenerateEmbedding = backend.GenerateEmbedding
-
 var (
-	noiseCentroid []float32
-	once          sync.Once
 	fillerPhrases = map[string]bool{
 		"okay": true, "ok": true, "yeah": true, "yes": true, "no": true,
 		"mmhmm": true, "hmm": true, "uh": true, "um": true, "right": true,
@@ -34,34 +27,6 @@ var (
 	}
 	nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9\s]+`)
 )
-
-func initNoiseCentroid() {
-	anchors := []string{
-		"Okay.",
-		"Sounds good, thank you.",
-		"Hmm, let me think about that.",
-		"Mhm, sure.",
-		"Got it.",
-	}
-	embeddings := make([][]float32, 0, len(anchors))
-	for _, anchor := range anchors {
-		emb := GenerateEmbedding(anchor)
-		if len(emb) == 384 {
-			embeddings = append(embeddings, emb)
-		}
-	}
-	if len(embeddings) > 0 {
-		noiseCentroid = make([]float32, 384)
-		for _, emb := range embeddings {
-			for i := 0; i < 384; i++ {
-				noiseCentroid[i] += emb[i]
-			}
-		}
-		for i := 0; i < 384; i++ {
-			noiseCentroid[i] /= float32(len(embeddings))
-		}
-	}
-}
 
 func cosineSimilarity(a, b []float32) float32 {
 	if len(a) != len(b) || len(a) == 0 {
@@ -110,26 +75,10 @@ func Check(text string, embedding []float32) FilterResult {
 	}
 
 	// Stage 3: Embedding Similarity
-	// Bypass embedding noise-gate if the text is obviously a question
-	isQuestion := strings.HasSuffix(strings.TrimSpace(text), "?")
-	lowerText := strings.ToLower(strings.TrimSpace(text))
-	questionWords := []string{"what", "how", "why", "where", "who", "when", "can", "could", "should", "would"}
-	for _, word := range questionWords {
-		if strings.HasPrefix(lowerText, word+" ") {
-			isQuestion = true
-			break
-		}
-	}
-
-	if !isQuestion {
-		once.Do(initNoiseCentroid)
-		if len(noiseCentroid) == 384 && len(embedding) == 384 {
-			similarity := cosineSimilarity(embedding, noiseCentroid)
-			if similarity > 0.82 {
-				log.Printf("[FILTER] Dropped (noise): %q", text)
-				return FilterResult{ShouldSend: false, Reason: "noise"}
-			}
-		}
+	predictedClass := Classify(embedding)
+	if predictedClass == "noise" {
+		log.Printf("[FILTER] Dropped (noise): %q", text)
+		return FilterResult{ShouldSend: false, Reason: "noise"}
 	}
 
 	log.Printf("[FILTER] Accepted: %q", text)

@@ -6,49 +6,19 @@ import (
 	"sync"
 )
 
-func init() {
-	// Mock GenerateEmbedding for all tests to avoid tokenizer panics
-	GenerateEmbedding = func(text string) []float32 {
-		emb := make([]float32, 384)
-		for i := 0; i < 384; i++ {
-			emb[i] = 1.0 // identical to our mock centroid
-		}
-		return emb
-	}
-}
-
-func TestInitNoiseCentroidCoverage(t *testing.T) {
-	// Reset the sync.Once
-	once = sync.Once{}
-	noiseCentroid = nil
-
-	initNoiseCentroid()
-
-	if noiseCentroid == nil {
-		t.Errorf("Expected noiseCentroid to be initialized")
-	}
-
-	// Test nil returned by GenerateEmbedding (as if tokenizer failed)
-	once = sync.Once{}
-	noiseCentroid = nil
-	GenerateEmbedding = func(text string) []float32 { return nil }
-	initNoiseCentroid()
-	if noiseCentroid != nil {
-		t.Errorf("Expected nil noiseCentroid")
-	}
-
-	// Restore mock
-	GenerateEmbedding = func(text string) []float32 {
-		emb := make([]float32, 384)
-		for i := 0; i < 384; i++ {
-			emb[i] = 1.0
-		}
-		return emb
-	}
-}
-
 func TestCheck(t *testing.T) {
 	os.Setenv("MIN_WORDS", "3")
+
+	// Set up mock centroids for Check
+	centroidsOnce = sync.Once{}
+	centroids = map[string][]float32{
+		"noise": make([]float32, 768),
+	}
+	for i := 0; i < 768; i++ {
+		centroids["noise"][i] = 1.0
+	}
+	// Bypass initCentroids replacing it
+	centroidsOnce.Do(func() {})
 
 	tests := []struct {
 		name      string
@@ -81,7 +51,7 @@ func TestCheck(t *testing.T) {
 		{
 			name:      "accepted",
 			text:      "What are the features of Golang?",
-			embedding: make([]float32, 384), // 0s, won't match noise
+			embedding: make([]float32, 768),
 			want:      true,
 			reason:    "",
 		},
@@ -92,6 +62,24 @@ func TestCheck(t *testing.T) {
 			if tt.name == "filler (okay) forced enough words" {
 				os.Setenv("MIN_WORDS", "1")
 				tt.text = "Okay..."
+			}
+			if tt.name == "accepted" {
+				// make the embedding completely orthogonal to noise centroid to not get classified as noise
+				tt.embedding[0] = 1.0 // noise is all 1.0, this is just {1,0,0...}
+				// wait, if noise is all 1.0, any positive number will have some cosine similarity
+				// to get orthogonal, we can make part of it negative so dot product is zero, or just use another category
+				// we will just set bestScore to something that doesn't trigger "noise".
+				// Actually, we can add a dummy centroid for "behavioral" so it matches that instead of "noise".
+				centroids["behavioral"] = make([]float32, 768)
+				for i := 0; i < 768; i++ {
+					centroids["behavioral"][i] = 1.0
+					tt.embedding[i] = 1.0
+				}
+				// if we have two identical, it's non-deterministic which one it picks if they both have 1.0 score.
+				// let's explicitly make it match behavioral better.
+				for i := 0; i < 768; i++ {
+					centroids["noise"][i] = -1.0
+				}
 			}
 
 			res := Check(tt.text, tt.embedding)
@@ -109,11 +97,19 @@ func TestCheck(t *testing.T) {
 func TestCheckNoiseCentroid(t *testing.T) {
 	os.Setenv("MIN_WORDS", "3")
 
-	once = sync.Once{}
-	noiseCentroid = nil
+	// Set up mock centroids for Check
+	centroidsOnce = sync.Once{}
+	centroids = map[string][]float32{
+		"noise": make([]float32, 768),
+	}
+	for i := 0; i < 768; i++ {
+		centroids["noise"][i] = 1.0
+	}
+	// Bypass initCentroids replacing it
+	centroidsOnce.Do(func() {})
 
-	emb := make([]float32, 384)
-	for i := 0; i < 384; i++ {
+	emb := make([]float32, 768)
+	for i := 0; i < 768; i++ {
 		emb[i] = 1.0
 	}
 	res := Check("This is some text that should not be dropped by similarity but who knows", emb)
