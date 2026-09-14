@@ -31,6 +31,7 @@ func main() {
 			WindowIsTranslucent: true,
 		},
 		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
 			app,
 		},
