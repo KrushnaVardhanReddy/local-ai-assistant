@@ -34,7 +34,7 @@ type ChatRequest struct {
 type ChatResponseChunk struct {
 	Choices []struct {
 		Delta struct {
-			Content string `json:"content"`
+			Content json.RawMessage `json:"content"`
 		} `json:"delta"`
 	} `json:"choices"`
 }
@@ -110,6 +110,7 @@ func StreamCompletion(question string, onToken StreamCallback, onDone func()) er
 	log.Printf("[LLM] Streaming response for: %q", question)
 
 	scanner := bufio.NewScanner(resp.Body)
+	tokenCount := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		line = strings.TrimSpace(line)
@@ -130,13 +131,20 @@ func StreamCompletion(question string, onToken StreamCallback, onDone func()) er
 			}
 
 			if len(chunk.Choices) > 0 {
-				content := chunk.Choices[0].Delta.Content
-				if content != "" && onToken != nil {
-					onToken(content)
+				raw := chunk.Choices[0].Delta.Content
+				// Only process if it's a JSON string (not a number/token-ID)
+				var content string
+				if len(raw) >= 2 && raw[0] == '"' {
+					if err := json.Unmarshal(raw, &content); err == nil && content != "" && onToken != nil {
+						tokenCount++
+						onToken(content)
+					}
 				}
 			}
 		}
 	}
+
+	log.Printf("[LLM] Stream complete — %d tokens emitted", tokenCount)
 
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("error reading stream: %w", err)

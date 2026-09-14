@@ -66,6 +66,8 @@ function handleTranscript(data: any) {
 }
 
 function initListeners() {
+  console.log('[WS] initListeners() called — registering Wails EventsOn handlers');
+
   EventsOn("ptt-start", () => {
     wsState.isPTTHeld = true;
     apiFetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
@@ -87,18 +89,26 @@ function initListeners() {
   });
 
   EventsOn("on_transcript", (data: any) => {
+    console.log('[WS] on_transcript fired:', data);
     handleTranscript(data);
-    // Clear previous response whenever a new question is accepted
+    console.log('[WS] wsState.transcript is now:', wsState.transcript);
+  });
+
+  EventsOn("on_response_start", () => {
+    console.log('[WS] on_response_start fired');
     wsState.response = "";
-    wsState.isThinking = false;
+    wsState.isThinking = true;
+    wsState.ragSources = [];
   });
 
   EventsOn("on_response_token", (data: any) => {
+    console.log('[WS] on_response_token:', data?.text?.slice(0, 20));
     wsState.response += data.text;
     wsState.isThinking = true;
   });
 
   EventsOn("on_response_end", () => {
+    console.log('[WS] on_response_end fired. Final response length:', wsState.response.length);
     wsState.isThinking = false;
   });
 }

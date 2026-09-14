@@ -239,6 +239,7 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 					    cachedAns, hit := a.qaCache.SearchByEmbedding(emb, 0.92)
 					    if hit {
 					        log.Printf("[Cache] Hit (similarity=%.3f): %q", 0.92, cleanTranscript)
+					        wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
 
 					        // Stream cached answer via on_response_token
 					        words := strings.Split(cachedAns, " ")
@@ -256,6 +257,7 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 					    log.Printf("[Cache] Miss: %q", cleanTranscript)
 					}
 
+					wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
 					go func(q string) {
 						var answerBuilder strings.Builder
 						err := llm.StreamCompletion(q, func(token string) {
