@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"sync"
+	"wails-app/backend/stt"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -15,11 +17,27 @@ type App struct {
 
 	backendCmd *exec.Cmd
 	cmdMutex   sync.Mutex
+
+	sttManager *stt.STTManager
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{}
+	// Initialize default STT engine if model path is provided via env var or exists.
+	// For now we'll just try to load a default path or leave it nil if it fails.
+	var initialEngine stt.STTEngine
+	modelPath := os.Getenv("WHISPER_MODEL_PATH")
+	if modelPath == "" {
+		modelPath = "models/ggml-base.en.bin"
+	}
+	engine, err := stt.LoadWhisperEngine(modelPath)
+	if err == nil {
+		initialEngine = engine
+	}
+
+	return &App{
+		sttManager: stt.NewSTTManager(initialEngine),
+	}
 }
 
 // startup is called when the app starts. The context is saved
