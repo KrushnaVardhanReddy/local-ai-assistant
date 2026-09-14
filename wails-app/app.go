@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"sync"
 	"wails-app/backend/stt"
+	"wails-app/backend/system"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -44,6 +45,12 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// Start background download for STT models
+	go system.StartBackgroundDownload(ctx, func(progress float32) {
+		// Example: Emit progress event to frontend
+		wailsruntime.EventsEmit(ctx, "download_progress", progress)
+	})
 }
 
 // Greet returns a greeting for the given name
