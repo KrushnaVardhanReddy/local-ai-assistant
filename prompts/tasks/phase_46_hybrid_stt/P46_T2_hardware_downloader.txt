@@ -1,0 +1,34 @@
+TASK: P46-T2 — Hardware Profiler & DLL Downloader
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+We are migrating to a Hybrid STT architecture. If a user's machine supports it, we want to download the `sherpa-onnx` C++ Shared Libraries (DLL/SO) and the Parakeet ONNX model automatically in the background.
+
+Per user request, we will host the zip file of DLLs/Models on our own GitHub Releases.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. HARDWARE PROFILER (`wails-app/backend/system/profiler.go`)
+   - Create `IsParakeetSupported() bool`.
+   - Use Go's `golang.org/x/sys/cpu` to check for AVX2 support.
+   - Use `github.com/shirou/gopsutil/v3/mem` to check if system RAM is >= 8GB.
+   - Check if `runtime.GOARCH` is `amd64` or `arm64`.
+
+2. BACKGROUND DOWNLOADER (`wails-app/backend/system/downloader.go`)
+   - Run a goroutine on app startup.
+   - If `IsParakeetSupported()` is true, check if `~/.local/share/barnowl/models/parakeet` exists and has the DLLs/models.
+   - If missing, download a mock placeholder URL: `https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/sherpa-onnx-parakeet-bundle.zip`.
+   - Use a robust HTTP client with retries and a progress callback (that can later be hooked into the Wails frontend).
+   - Unzip the contents into `~/.local/share/barnowl/models/`.
+
+3. COMPREHENSIVE UNIT TESTS
+   - You MUST create `profiler_test.go` and `downloader_test.go` with 100% test coverage.
+   - Mock the HTTP download to prevent network calls during testing.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P46-T2 implement hardware profiler and model downloader"
+Target branch: feature/krushna_golang
