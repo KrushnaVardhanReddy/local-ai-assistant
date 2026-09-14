@@ -110,12 +110,25 @@ func Check(text string, embedding []float32) FilterResult {
 	}
 
 	// Stage 3: Embedding Similarity
-	once.Do(initNoiseCentroid)
-	if len(noiseCentroid) == 384 && len(embedding) == 384 {
-		similarity := cosineSimilarity(embedding, noiseCentroid)
-		if similarity > 0.82 {
-			log.Printf("[FILTER] Dropped (noise): %q", text)
-			return FilterResult{ShouldSend: false, Reason: "noise"}
+	// Bypass embedding noise-gate if the text is obviously a question
+	isQuestion := strings.HasSuffix(strings.TrimSpace(text), "?")
+	lowerText := strings.ToLower(strings.TrimSpace(text))
+	questionWords := []string{"what", "how", "why", "where", "who", "when", "can", "could", "should", "would"}
+	for _, word := range questionWords {
+		if strings.HasPrefix(lowerText, word+" ") {
+			isQuestion = true
+			break
+		}
+	}
+
+	if !isQuestion {
+		once.Do(initNoiseCentroid)
+		if len(noiseCentroid) == 384 && len(embedding) == 384 {
+			similarity := cosineSimilarity(embedding, noiseCentroid)
+			if similarity > 0.82 {
+				log.Printf("[FILTER] Dropped (noise): %q", text)
+				return FilterResult{ShouldSend: false, Reason: "noise"}
+			}
 		}
 	}
 

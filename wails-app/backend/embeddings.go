@@ -18,9 +18,10 @@ var (
 )
 
 func InitEmbeddings() {
-	if _, err := os.Stat("./libonnxruntime.so"); err == nil {
-		onnxruntime_go.SetSharedLibraryPath("./libonnxruntime.so")
-	}
+	initOnce.Do(func() {
+		if _, err := os.Stat("./libonnxruntime.so"); err == nil {
+			onnxruntime_go.SetSharedLibraryPath("./libonnxruntime.so")
+		}
 
 	if err := onnxruntime_go.InitializeEnvironment(); err != nil {
 		log.Printf("[Embeddings] ONNX unavailable (embedding noise-gate disabled): %v", err)
@@ -42,12 +43,13 @@ func InitEmbeddings() {
 		return
 	}
 
-	session = s
-	log.Println("[Embeddings] ✅ ONNX embedding model loaded")
+		session = s
+		log.Println("[Embeddings] ✅ ONNX embedding model loaded")
+	})
 }
 
 func GenerateEmbedding(text string) []float32 {
-    initOnce.Do(InitEmbeddings)
+    InitEmbeddings()
 
     if tk == nil || session == nil {
         return nil
