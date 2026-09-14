@@ -1,0 +1,22 @@
+TASK: P47-T3 — Update Remote Tunnel Script
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+The script `scripts/start_remote.sh` was written for the old Python FastAPI backend.
+It tries to start `uvicorn` and then launch a `cloudflared` tunnel on port 8000.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Modify `scripts/start_remote.sh`:
+- Remove all Python/venv/uvicorn references.
+- Since the Wails binary (`./build/bin/local-ai-assistant`) now internally starts the HTTP server on port 8000 automatically, the script should NOT try to launch the backend.
+- It should just run `cloudflared tunnel --url http://127.0.0.1:8000` directly.
+- Leave a helpful echo message telling the user to make sure the Wails app is running FIRST before they run this tunnel script.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P47-T3 update start_remote.sh for Wails architecture"
+Target branch: feature/krushna_golang

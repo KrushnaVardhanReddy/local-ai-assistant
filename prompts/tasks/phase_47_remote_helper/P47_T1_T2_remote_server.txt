@@ -1,0 +1,26 @@
+TASK: P47-T1 & P47-T2 — Remote Helper Mode Embedded Server
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+We are rebuilding our "Remote Helper Mode" (formerly P7-T5) for the new Wails architecture.
+We need the Go application to spin up an embedded HTTP server on port 8000 when the app launches.
+This server will host the compiled Wails frontend assets to any external browser, allowing a remote friend to view the UI.
+It also needs to expose a WebSocket route (`/ws`) that mirrors the Wails IPC events to the remote browser.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. EMBEDDED HTTP SERVER (wails-app/backend/remote.go)
+   - Create a `remote` package or simply add logic in `app.go` to spin up a standard Go HTTP server on `0.0.0.0:8000` as a goroutine when the Wails App starts (`startup` method).
+   - Ensure the server gracefully shuts down when Wails closes (`shutdown` method).
+
+2. WEBSOCKET MIRROR
+   - Expose a `/ws` endpoint on port 8000 using `gorilla/websocket` or the standard `x/net/websocket`.
+   - Implement a basic connection manager to accept incoming remote websocket clients.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P47-T1-T2 implement remote embedded HTTP/WS server"
+Target branch: feature/krushna_golang
