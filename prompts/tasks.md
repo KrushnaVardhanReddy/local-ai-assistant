@@ -56,7 +56,7 @@
 | P42-T3 | `wails-app/frontend/src/lib/` | **API Swap:** Replace Tauri frontend calls (e.g., `invoke('command')`, `WebviewWindow`) with Wails Go bindings (`@wailsio/runtime`). | ✅ | #143 |
 | P42-T4 | `wails-app/frontend/src/lib/api.ts` | **Cloud Worker Proxy (Wails Edition):** Ensure the Cloud Edition Svelte logic correctly points to the existing Cloudflare Worker URL. | ✅ | #141 |
 | P42-T5 | `wails-app/frontend/src/lib/` | **Cloud Auth UI:** Implement a Login and Registration modal in Svelte that uses Supabase Auth to register users for the Cloud Edition. | ✅ | #142 |
-| P42-T6 | `wails-app/tests/e2e/` | **E2E Wails UI Test:** Wails native E2E test verifying the Svelte app mounts and successfully routes API calls with zero mocking. | 🔄 | — |
+| P42-T6 | `wails-app/tests/e2e/` | **E2E Wails UI Test:** Wails native E2E test verifying the Svelte app mounts and successfully routes API calls with zero mocking. | ✅ | #146 |
 
 ---
 
@@ -70,7 +70,7 @@
 | P43-T2 | `wails-app/backend/embeddings.go` | **Embeddings & Intent:** Use `onnxruntime-go` to run all-MiniLM-L6-v2 ONNX models directly in the Go process for fast vector generation. | ✅ | #144 |
 | P43-T3 | `wails-app/backend/stt.go` | **Local STT:** Integrate `whisper.go` (CGO bindings for whisper.cpp) for offline Speech-to-Text inference, replacing `faster-whisper`. | ✅ | #139 |
 | P43-T4 | `wails-app/tests/e2e/` | **E2E Local ML Test:** Feed real audio through `whisper.go`, generate embeddings via `onnx`, and query `sqlite-vec` with zero mocking. | 🔄 | — |
-| P43-T5 | `wails-app/backend/stt_test.go` | **Go Backend Unit Tests:** Write comprehensive unit tests for the Speech-to-Text (`stt.go`) implementation and `app.go` bindings. | ⬜ | — |
+| P43-T5 | `wails-app/backend/stt_test.go` | **Go Backend Unit Tests:** Write comprehensive unit tests for the Speech-to-Text (`stt.go`) implementation and `app.go` bindings. | ✅ | #145 |
 
 ---
 
@@ -78,6 +78,6 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P44-T1 | `frontend/`, `backend/`, `src-tauri/` | **The Great Deletion:** Safely remove the legacy Tauri frontend, Rust backend, and Python sidecar directories. | 🔄 | — |
+| P44-T1 | `frontend/`, `backend/`, `src-tauri/` | **The Great Deletion:** Safely remove the legacy Tauri frontend, Rust backend, and Python sidecar directories. | ✅ | #147 |
 | P44-T2 | `Makefile`, `.github/workflows/` | **Update CI Pipelines:** Switch build scripts to use `wails build` instead of `cargo tauri build` and `PyInstaller`. | ⬜ | — |
 | P44-T3 | `wails-app/tests/e2e/` | **E2E Full System Test:** End-to-end Wails desktop test verifying the entire offline ML pipeline within the compiled single binary. | ⬜ | — |
