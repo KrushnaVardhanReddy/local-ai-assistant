@@ -105,6 +105,20 @@ export function connect(url?: string): void {
     return;
   }
 
+  const isCloud = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
+
+  // Bypass WebSocket connection entirely if running in Wails (Local Edition)
+  if (!isCloud) {
+    wsState.isConnected = true;
+    wsState.isListening = true;
+    
+    if (!listenersInitialized) {
+      initListeners();
+      listenersInitialized = true;
+    }
+    return;
+  }
+
 
   let defaultUrl = getWsUrl();
   let targetUrl = url ?? import.meta.env.VITE_WS_URL ?? defaultUrl;

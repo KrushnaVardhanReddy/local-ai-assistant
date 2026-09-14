@@ -14,11 +14,13 @@ OBJECTIVE
    - In `wails-app/backend/stt/`, upgrade the audio capture logic (using `github.com/gordonklaus/portaudio` or similar).
    - Implement support for capturing output devices (Windows WASAPI loopback).
    
-2. DEVICE SELECTOR BINDINGS
+2. DEVICE SELECTOR BINDINGS & EVENT EMISSION
    - Add Wails bound methods to `app.go`:
      - `GetAudioDevices() []AudioDevice`
      - `SetAudioDevice(id int, isLoopback bool) error`
-   - These bindings will allow the existing Svelte UI settings page to route the interviewer's system audio directly into the STT engine.
+   - **CRITICAL FIX FOR STUB:** When initializing `audioCapture` in `app.go`, DO NOT leave the callback as an empty stub!
+   - You MUST actively route the `samples []float32` into `a.sttManager.TranscribeStream(samples)`.
+   - `TranscribeStream` returns a `chan string`. You MUST start a background goroutine to range over this channel and emit the transcriptions to the frontend using `wailsruntime.EventsEmit(a.ctx, "on_transcript", transcript)`.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
