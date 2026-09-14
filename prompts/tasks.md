@@ -72,7 +72,7 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P49-T1 | `wails-app/backend/hotkeys.go` | **Global Hotkey Movement:** Use `golang.design/x/hotkey` to register global hotkeys (e.g. `Ctrl+Alt+Right`) that nudge the Wails window coordinates. | ⬜ | — |
+| P49-T1 | `wails-app/backend/hotkeys.go` | **Global Hotkey Movement:** Use `golang.design/x/hotkey` to register global hotkeys (e.g. `Ctrl+Alt+Right`) that nudge the Wails window coordinates. | ✅ | #156 |
 
 ---
 
