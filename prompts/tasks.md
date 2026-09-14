@@ -32,28 +32,6 @@
 | P38-T4 | `src-tauri/src/ml_routing.rs` | **Intent Router Migration:** Export the Scikit-learn `question_classifier.pkl` to ONNX and rewrite the tensor math pipeline in Rust. | ⬜ | — |
 
 
----
-
-## Phase 43 — Go Native AI Backend (Local ML) 🧠
-
-> Re-implementing the Python local AI server in pure Go.
-
-| Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
-| P43-T1 | `wails-app/backend/vector_db.go` | **Local Vector DB:** Replace ChromaDB with embedded SQLite + `sqlite-vec` extension in Go. | ✅ | #138 |
-| P43-T2 | `wails-app/backend/embeddings.go` | **Embeddings & Intent:** Use `onnxruntime-go` to run all-MiniLM-L6-v2 ONNX models directly in the Go process for fast vector generation. | ✅ | #144 |
-| P43-T3 | `wails-app/backend/stt.go` | **Local STT:** Integrate `whisper.go` (CGO bindings for whisper.cpp) for offline Speech-to-Text inference, replacing `faster-whisper`. | ✅ | #139 |
-| P43-T4 | `wails-app/tests/e2e/` | **E2E Local ML Test:** Feed real audio through `whisper.go`, generate embeddings via `onnx`, and query `sqlite-vec` with zero mocking. | ✅ | #152 |
-| P43-T5 | `wails-app/backend/stt_test.go` | **Go Backend Unit Tests:** Write comprehensive unit tests for the Speech-to-Text (`stt.go`) implementation and `app.go` bindings. | ✅ | #145 |
-
-
----
-
-## Phase 45 — Advanced UI Features ✨
-
-| Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
-| P45-T1 | `wails-app/main.go` | **Native Click-Through:** Implement CGO/OS-level hooks to allow mouse clicks to pass completely through the transparent Wails window. | ✅ | #153 |
 
 ---
 
