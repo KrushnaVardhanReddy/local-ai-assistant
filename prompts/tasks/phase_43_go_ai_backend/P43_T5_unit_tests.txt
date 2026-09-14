@@ -1,0 +1,26 @@
+TASK: P43-T5 — Go Backend Unit Tests
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+
+We currently have unit tests for the Vector DB (`vector_db_test.go`) and Embeddings (`embeddings_test.go`). To ensure the robustness of our new Go AI backend, we need to implement unit tests for the remaining Go logic, specifically focusing on the local Speech-to-Text (STT) implementation (`stt.go`).
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+
+1. IMPLEMENT STT UNIT TESTS
+   - Create `wails-app/backend/stt_test.go`.
+   - Write tests for the whisper.cpp bindings wrapper. Note that you may need to use a small dummy WAV file or mock the CGO bindings if a real whisper model isn't available in the test environment, but the parsing and logic surrounding the STT function should be covered.
+
+2. CLEANUP & TEST APP BINDINGS
+   - Inspect `wails-app/app.go`. Ensure any lingering legacy Python spawning logic (like `StartBackend()` running `python backend/app.py`) is either ignored in tests or marked for deletion, as we no longer use a Python sidecar.
+   - Implement basic sanity tests in `wails-app/app_test.go` to ensure the Wails bindings register correctly without panicking.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Commit message: "jules: P43-T5 add go unit tests for stt and app"
+Target branch: feature/krushna_golang

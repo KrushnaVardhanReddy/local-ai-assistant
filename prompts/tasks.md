@@ -70,6 +70,7 @@
 | P43-T2 | `wails-app/backend/embeddings.go` | **Embeddings & Intent:** Use `onnxruntime-go` to run all-MiniLM-L6-v2 ONNX models directly in the Go process for fast vector generation. | ✅ | #144 |
 | P43-T3 | `wails-app/backend/stt.go` | **Local STT:** Integrate `whisper.go` (CGO bindings for whisper.cpp) for offline Speech-to-Text inference, replacing `faster-whisper`. | ✅ | #139 |
 | P43-T4 | `wails-app/tests/e2e/` | **E2E Local ML Test:** Feed real audio through `whisper.go`, generate embeddings via `onnx`, and query `sqlite-vec` with zero mocking. | 🔄 | — |
+| P43-T5 | `wails-app/backend/stt_test.go` | **Go Backend Unit Tests:** Write comprehensive unit tests for the Speech-to-Text (`stt.go`) implementation and `app.go` bindings. | ⬜ | — |
 
 ---
 
