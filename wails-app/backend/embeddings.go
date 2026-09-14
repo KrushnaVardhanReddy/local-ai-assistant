@@ -45,6 +45,10 @@ func initEmbeddings() {
 func GenerateEmbedding(text string) []float32 {
     initOnce.Do(initEmbeddings)
 
+    if tk == nil || session == nil {
+        return nil
+    }
+
     // Tokenize
     en, err := tk.EncodeSingle(text)
     if err != nil {
