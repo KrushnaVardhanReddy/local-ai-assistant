@@ -34,7 +34,7 @@ END_PR=$2
 MERGED=0
 FAILED=0
 
-echo "🔀 Batch merging Jules PRs #$START_PR → #$END_PR into branch: main"
+echo "🔀 Batch merging Jules PRs #$START_PR → #$END_PR into their base branches"
 echo "──────────────────────────────────────────────────────"
 
 for pr in $(seq $START_PR $END_PR); do
@@ -56,4 +56,4 @@ done
 
 echo ""
 echo "🎉 Done! Merged: $MERGED | Failed/Skipped: $FAILED"
-echo "📥 Run: git pull origin main   to sync your local branch."
+echo "📥 Run: git pull origin <your-branch>   to sync your local branch."
