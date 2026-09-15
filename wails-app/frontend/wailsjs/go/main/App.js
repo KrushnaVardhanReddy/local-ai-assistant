@@ -26,6 +26,10 @@ export function DeleteToken() {
   return window['go']['main']['App']['DeleteToken']();
 }
 
+export function EndSession() {
+  return window['go']['main']['App']['EndSession']();
+}
+
 export function GetAudioDevices() {
   return window['go']['main']['App']['GetAudioDevices']();
 }

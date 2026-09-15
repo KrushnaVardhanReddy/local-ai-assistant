@@ -15,6 +15,8 @@ export function DeleteCacheItems(arg1:Array<string>):Promise<void>;
 
 export function DeleteToken():Promise<void>;
 
+export function EndSession():Promise<Record<string, any>>;
+
 export function GetAudioDevices():Promise<Array<audio.AudioDevice>>;
 
 export function GetCacheItems():Promise<Array<backend.CacheItem>>;
