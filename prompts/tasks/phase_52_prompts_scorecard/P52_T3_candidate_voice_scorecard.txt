@@ -1,0 +1,55 @@
+TASK: P52-T3 — Candidate Voice Evaluation & Topic-Based Interview Scorecard
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+Currently, post-interview scorecards in `wails-app/backend/llm/scorecard.go` evaluate the transcript based only on the interviewer's question and the AI assistant's suggested answer. To turn this into a true interview coaching report, the evaluation must analyze the candidate's actual spoken response (captured via mic), compare it with the AI guidance, and categorize feedback into topic domain buckets (e.g. System Design, Coding, Behavioral).
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. DUAL-CHANNEL / CANDIDATE VOICE TURN TRACKING (`wails-app/backend/session/session.go`):
+   - Update `Turn` struct to track both `CandidateResponse` (spoken by user via mic) and `InterviewerQuestion` (spoken by interviewer / loopback audio), plus optional `AISuggestion`.
+   - Update `SessionManager` methods (`StartTurn`, `SetCandidateResponse`, `SetAISuggestion`) to handle candidate voice inputs cleanly.
+
+2. ENHANCED TOPIC & CANDIDATE VOICE SCORECARD (`wails-app/backend/llm/scorecard.go`):
+   - Update `TurnEvaluation` struct to include:
+     - `TopicDomain string` (e.g., "System Design & Scalability", "Algorithms", "Behavioral / STAR", "Concurrency")
+     - `InterviewerQuestion string`
+     - `CandidateResponse string`
+     - `Score int` (1-5 scale)
+     - `Verdict string` ("Excellent", "Good", "Partial", "Incomplete", "Missed")
+     - `WhatWasGood string` (Strengths of candidate's spoken response)
+     - `WhatWasMissing string` (Key technical details candidate missed)
+     - `SuggestedImprovement string` (Concrete advice on how candidate should refine answer)
+   - Update `Scorecard` struct to include:
+     - `OverallScore int` (1-10 scale)
+     - `OverallSummary string`
+     - `TopicBreakdown map[string]int` (Topic -> Score mapping)
+     - `KeyStrengths []string`
+     - `CriticalGaps []string`
+     - `RecommendedTopicsToReview []string`
+     - `Turns []TurnEvaluation`
+
+3. PROMPT ENGINEERING FOR LLM SCORECARD GENERATOR:
+   - Construct a prompt for `GenerateScorecard` instructing the LLM:
+     "You are a senior principal technical interviewer and executive career coach. Analyze the following candidate interview transcript where Candidate Spoken Answers were captured during the live session.
+     
+     TRANSCRIPT:
+     {transcript}
+     
+     EVALUATION CRITERIA:
+     1. Assess candidate's technical correctness, communication clarity, depth, and edge-case handling.
+     2. Classify each turn into a Topic Domain.
+     3. Compare candidate's spoken answer against industry standards and AI reference suggestions.
+     4. Generate actionable, constructive coaching feedback.
+     
+     Return ONLY valid JSON with exact schema matching Scorecard."
+
+4. COMPREHENSIVE UNIT TESTS:
+   - Update `session_test.go` and `scorecard_test.go` to validate dual-channel turn tracking, topic domain parsing, and markdown code fence stripping.
+
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P52-T3 candidate voice evaluation and topic domain scorecard"
+Target branch: feature/krushna_golang
