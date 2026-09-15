@@ -1,0 +1,34 @@
+TASK: P53-T1 — Supabase Auth Entitlement & License Gate
+
+═══════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+Currently, the desktop application allows local BYOK usage without verifying if the user has an active 30-day/1-year prepaid pass or remaining SaaS sessions. We need to enforce authentication and validate user entitlements (active subscription pass or session tokens) before allowing assistant operations.
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. USER ENTITLEMENT & LICENSE GATE (`wails-app/frontend/src/lib/auth.svelte.ts` & `Settings.svelte`):
+   - Require users to log in / sign up via `AuthModal.svelte` (Supabase Auth).
+   - Fetch user entitlement profile on app launch and login:
+     - `byok_pass_active` (boolean, valid if `pass_expires_at > now()`)
+     - `remaining_sessions` (integer)
+     - `plan_type` ("30_day_byok" | "annual_byok" | "saas_managed")
+   - Store entitlement state in `authState`.
+
+2. GATE ASSISTANT & LOCK UNLICENSED USERS (`wails-app/frontend/src/App.svelte` & `Assistant.svelte`):
+   - If user is NOT logged in or has NO active pass (`byok_pass_active == false` AND `remaining_sessions <= 0`):
+     - Show a prominent "Pass Expired / License Required" lock banner with a button opening `AuthModal` / recharge link.
+     - Block AI streaming and hotkey actions until valid pass is active.
+
+3. SETTINGS UI UPDATE (`wails-app/frontend/src/lib/Settings.svelte`):
+   - Display current active pass status (e.g., "Active: 30-Day BYOK Pass — Expires in 22 days" or "SaaS Managed — 6 of 8 sessions remaining").
+   - Provide a "Recharge Pass" button linking to payment / checkout.
+
+4. COMPREHENSIVE UNIT TESTS:
+   - Add unit tests validating entitlement checks and gate blocking logic.
+
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P53-T1 implement supabase entitlement and license pass gate"
+Target branch: feature/krushna_golang
