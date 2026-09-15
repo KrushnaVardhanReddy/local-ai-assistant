@@ -11,6 +11,8 @@ import (
 	"github.com/yalue/onnxruntime_go"
 )
 
+const VectorDimension = 768
+
 var (
 	tk       *tokenizer.Tokenizer
 	session  *onnxruntime_go.DynamicAdvancedSession
@@ -19,8 +21,16 @@ var (
 
 func InitEmbeddings() {
 	initOnce.Do(func() {
-		if _, err := os.Stat("./libonnxruntime.so"); err == nil {
-			onnxruntime_go.SetSharedLibraryPath("./libonnxruntime.so")
+		candidates := []string{
+			"./libonnxruntime.so",
+			"../libonnxruntime.so",
+			"wails-app/libonnxruntime.so",
+		}
+		for _, path := range candidates {
+			if _, err := os.Stat(path); err == nil {
+				onnxruntime_go.SetSharedLibraryPath(path)
+				break
+			}
 		}
 
 	if err := onnxruntime_go.InitializeEnvironment(); err != nil {
@@ -28,14 +38,40 @@ func InitEmbeddings() {
 		return
 	}
 
+	tokPaths := []string{
+		"models/nomic-embed-text-v1.5/tokenizer.json",
+		"../models/nomic-embed-text-v1.5/tokenizer.json",
+		"wails-app/models/nomic-embed-text-v1.5/tokenizer.json",
+	}
+	var tokPath string
+	for _, p := range tokPaths {
+		if _, err := os.Stat(p); err == nil {
+			tokPath = p
+			break
+		}
+	}
+
+	modelPaths := []string{
+		"models/nomic-embed-text-v1.5/model.onnx",
+		"../models/nomic-embed-text-v1.5/model.onnx",
+		"wails-app/models/nomic-embed-text-v1.5/model.onnx",
+	}
+	var modelPath string
+	for _, p := range modelPaths {
+		if _, err := os.Stat(p); err == nil {
+			modelPath = p
+			break
+		}
+	}
+
 	var err error
-	tk, err = pretrained.FromFile("models/nomic-embed-text-v1.5/tokenizer.json")
+	tk, err = pretrained.FromFile(tokPath)
 	if err != nil {
 		log.Printf("[Embeddings] Tokenizer not found — run scripts/download_embeddings.sh to enable: %v", err)
 		return
 	}
 
-	s, err := onnxruntime_go.NewDynamicAdvancedSession("models/nomic-embed-text-v1.5/model.onnx",
+	s, err := onnxruntime_go.NewDynamicAdvancedSession(modelPath,
 		[]string{"input_ids", "attention_mask", "token_type_ids"},
 		[]string{"last_hidden_state"}, nil)
 	if err != nil {
@@ -84,8 +120,8 @@ func GenerateEmbedding(text string) []float32 {
     in3, _ := onnxruntime_go.NewTensor(shape, token_type_ids)
     defer in3.Destroy()
 
-    outShape := onnxruntime_go.NewShape(1, length, 768)
-    outData := make([]float32, 1 * length * 768)
+    outShape := onnxruntime_go.NewShape(1, length, int64(VectorDimension))
+    outData := make([]float32, 1 * length * int64(VectorDimension))
     out, _ := onnxruntime_go.NewTensor(outShape, outData)
     defer out.Destroy()
 
@@ -99,25 +135,25 @@ func GenerateEmbedding(text string) []float32 {
 	res := out.GetData()
 
 	// Mean pooling
-	pooled := make([]float32, 768)
+	pooled := make([]float32, VectorDimension)
 	for i := int64(0); i < length; i++ {
-	    for j := 0; j < 768; j++ {
-	        pooled[j] += res[i*768 + int64(j)]
+	    for j := 0; j < VectorDimension; j++ {
+	        pooled[j] += res[i*int64(VectorDimension) + int64(j)]
 	    }
 	}
 
-	for j := 0; j < 768; j++ {
+	for j := 0; j < VectorDimension; j++ {
         pooled[j] /= float32(length)
     }
 
     // Normalize
     var sumSq float32
-    for j := 0; j < 768; j++ {
+    for j := 0; j < VectorDimension; j++ {
         sumSq += pooled[j] * pooled[j]
     }
 
     norm := float32(math.Sqrt(float64(sumSq)))
-    for j := 0; j < 768; j++ {
+    for j := 0; j < VectorDimension; j++ {
         pooled[j] /= norm
     }
 

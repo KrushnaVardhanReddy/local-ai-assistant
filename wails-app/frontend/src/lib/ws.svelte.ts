@@ -22,7 +22,8 @@ export const wsState = $state({
   isMockMode: false,
   transcriptHistory: [] as string[],
   pollCount: 0,
-  pollError: "none"
+  pollError: "none",
+  cacheStats: { cached_pairs: 0, estimated_tokens_saved: 0 }
 });
 
 let ws: WebSocket | null = null;
@@ -53,6 +54,12 @@ if (!isCloud) {
         }
         if (typeof state.thinking === 'boolean') {
           wsState.isThinking = state.thinking;
+        }
+        if (typeof state.cached_pairs === 'number') {
+          wsState.cacheStats = {
+            cached_pairs: state.cached_pairs,
+            estimated_tokens_saved: state.estimated_tokens_saved ?? state.cached_pairs * 250
+          };
         }
       }
     } catch (err: any) {

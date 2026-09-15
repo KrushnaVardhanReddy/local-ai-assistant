@@ -164,11 +164,65 @@ func (a *App) Greet(name string) string {
 func (a *App) GetState() map[string]interface{} {
 	a.stateMu.RLock()
 	defer a.stateMu.RUnlock()
-	return map[string]interface{}{
-		"transcript": a.latestTranscript,
-		"response":   a.latestResponse,
-		"thinking":   a.latestThinking,
+
+	var count int
+	if a.qaCache != nil {
+		count = a.qaCache.GetCount()
 	}
+
+	return map[string]interface{}{
+		"transcript":             a.latestTranscript,
+		"response":               a.latestResponse,
+		"thinking":               a.latestThinking,
+		"cached_pairs":           count,
+		"estimated_tokens_saved": count * 250,
+	}
+}
+
+// GetCacheStats returns the number of cached Q&A pairs and estimated tokens saved
+func (a *App) GetCacheStats() map[string]interface{} {
+	if a.qaCache == nil {
+		return map[string]interface{}{
+			"cached_pairs":           0,
+			"estimated_tokens_saved": 0,
+		}
+	}
+	count := a.qaCache.GetCount()
+	return map[string]interface{}{
+		"cached_pairs":           count,
+		"estimated_tokens_saved": count * 250,
+	}
+}
+
+// GetCacheItems returns all cached items for UI management
+func (a *App) GetCacheItems() []backend.CacheItem {
+	if a.qaCache == nil {
+		return []backend.CacheItem{}
+	}
+	items, err := a.qaCache.GetAllItems()
+	if err != nil {
+		return []backend.CacheItem{}
+	}
+	return items
+}
+
+// DeleteCacheItems removes specified question IDs from the cache
+func (a *App) DeleteCacheItems(ids []string) error {
+	if a.qaCache == nil {
+		return nil
+	}
+	for _, id := range ids {
+		_ = a.qaCache.DeleteItem(id)
+	}
+	return nil
+}
+
+// ClearCache clears all cached Q&A pairs
+func (a *App) ClearCache() error {
+	if a.qaCache == nil {
+		return nil
+	}
+	return a.qaCache.ClearAll()
 }
 
 func (a *App) StartBackend() error {
@@ -306,8 +360,15 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 						if err != nil {
 							log.Printf("LLM streaming failed: %v", err)
 						} else {
-							if a.qaCache != nil {
-								a.qaCache.Store(q, answerBuilder.String())
+							finalAns := answerBuilder.String()
+							if a.qaCache != nil && len(finalAns) > 0 {
+								go func(questionText, answerText string) {
+									if storeErr := a.qaCache.Store(questionText, answerText); storeErr != nil {
+										log.Printf("[Cache] Error storing Q&A pair: %v", storeErr)
+									} else {
+										log.Printf("[Cache] ✅ Successfully stored Q&A pair in background")
+									}
+								}(q, finalAns)
 							}
 							log.Printf("[LLM] Stream complete. Stored in cache.")
 						}

@@ -5,7 +5,9 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
+	"strings"
 
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
 	_ "github.com/mattn/go-sqlite3"
@@ -34,6 +36,18 @@ func NewVectorDB(dbPath string) (*VectorDB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
+	// Check if existing qa_cache table has mismatched dimension
+	var ddl string
+	err = db.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name='qa_cache'").Scan(&ddl)
+	if err == nil && ddl != "" {
+		expectedCol := fmt.Sprintf("float[%d]", VectorDimension)
+		if !strings.Contains(ddl, expectedCol) {
+			log.Printf("[VectorDB] Existing qa_cache schema has dimension mismatch. Re-creating virtual table...")
+			_, _ = db.Exec("DROP TABLE IF EXISTS qa_cache")
+			_, _ = db.Exec("DROP TABLE IF EXISTS qa_cache_meta")
+		}
+	}
+
 	// Initialize the regular table for metadata mapping
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS qa_cache_meta (
@@ -45,12 +59,12 @@ func NewVectorDB(dbPath string) (*VectorDB, error) {
 		return nil, fmt.Errorf("failed to create meta table: %w", err)
 	}
 
-	// Initialize the virtual table for vector embeddings (384 dimensions)
-	_, err = db.Exec(`
+	// Initialize the virtual table for vector embeddings (VectorDimension dimensions)
+	_, err = db.Exec(fmt.Sprintf(`
 		CREATE VIRTUAL TABLE IF NOT EXISTS qa_cache USING vec0(
-			embedding float[384]
+			embedding float[%d]
 		)
-	`)
+	`, VectorDimension))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vector table: %w", err)
 	}
@@ -82,8 +96,8 @@ func serializeToBinary(emb []float32) ([]byte, error) {
 
 // InsertVector inserts a new vector and its metadata into the database
 func (v *VectorDB) InsertVector(id string, embedding []float32, metadata string) error {
-	if len(embedding) != 384 {
-		return fmt.Errorf("embedding must be exactly 384 dimensions, got %d", len(embedding))
+	if len(embedding) != VectorDimension {
+		return fmt.Errorf("embedding must be exactly %d dimensions, got %d", VectorDimension, len(embedding))
 	}
 
 	// Convert float32 array to binary
@@ -124,8 +138,8 @@ func (v *VectorDB) InsertVector(id string, embedding []float32, metadata string)
 
 // SearchVector searches for the top k most similar vectors
 func (v *VectorDB) SearchVector(query []float32, limit int) ([]DocumentSearchResult, error) {
-	if len(query) != 384 {
-		return nil, fmt.Errorf("query must be exactly 384 dimensions, got %d", len(query))
+	if len(query) != VectorDimension {
+		return nil, fmt.Errorf("query must be exactly %d dimensions, got %d", VectorDimension, len(query))
 	}
 
 	queryBytes, err := serializeToBinary(query)
@@ -198,7 +212,7 @@ var GenerateEmbeddingFunc = GenerateEmbedding
 
 func (v *VectorDB) Store(question, answer string) error {
 	emb := GenerateEmbeddingFunc(question)
-	if len(emb) != 384 {
+	if len(emb) != VectorDimension {
 		return fmt.Errorf("failed to generate valid embedding for question")
 	}
 
@@ -209,4 +223,67 @@ func (v *VectorDB) Store(question, answer string) error {
 	metaBytes, _ := json.Marshal(meta)
 
 	return v.InsertVector(question, emb, string(metaBytes))
+}
+
+// GetCount returns the total number of cached Q&A pairs
+func (v *VectorDB) GetCount() int {
+	var count int
+	err := v.db.QueryRow("SELECT COUNT(*) FROM qa_cache_meta").Scan(&count)
+	if err != nil {
+		return 0
+	}
+	return count
+}
+
+type CacheItem struct {
+	ID       string `json:"id"`
+	Question string `json:"question"`
+}
+
+// GetAllItems returns all cached question IDs and question titles
+func (v *VectorDB) GetAllItems() ([]CacheItem, error) {
+	rows, err := v.db.Query("SELECT id FROM qa_cache_meta ORDER BY rowid DESC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []CacheItem
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			items = append(items, CacheItem{ID: id, Question: id})
+		}
+	}
+	return items, nil
+}
+
+// DeleteItem removes a single item from qa_cache_meta and qa_cache
+func (v *VectorDB) DeleteItem(id string) error {
+	tx, err := v.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var rowid int64
+	err = tx.QueryRow("SELECT rowid FROM qa_cache_meta WHERE id = ?", id).Scan(&rowid)
+	if err == nil {
+		_, _ = tx.Exec("DELETE FROM qa_cache WHERE rowid = ?", rowid)
+	}
+	_, _ = tx.Exec("DELETE FROM qa_cache_meta WHERE id = ?", id)
+	return tx.Commit()
+}
+
+// ClearAll removes all cached Q&A pairs
+func (v *VectorDB) ClearAll() error {
+	tx, err := v.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, _ = tx.Exec("DELETE FROM qa_cache")
+	_, _ = tx.Exec("DELETE FROM qa_cache_meta")
+	return tx.Commit()
 }

@@ -12,10 +12,10 @@ func TestVectorDBIntegration(t *testing.T) {
 	}
 	defer db.Close()
 
-	emb1 := make([]float32, 384)
+	emb1 := make([]float32, VectorDimension)
 	emb1[0] = 1.0
 
-	emb2 := make([]float32, 384)
+	emb2 := make([]float32, VectorDimension)
 	emb2[0] = 0.5
 	emb2[1] = 0.5
 
@@ -28,7 +28,7 @@ func TestVectorDBIntegration(t *testing.T) {
 		t.Fatalf("Insert failed: %v", err)
 	}
 
-	query := make([]float32, 384)
+	query := make([]float32, VectorDimension)
 	query[0] = 1.0
 	results, err := db.SearchVector(query, 2)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestSearchByEmbedding_And_Store(t *testing.T) {
 
 	// Mock embedding generator
 	GenerateEmbeddingFunc = func(text string) []float32 {
-		emb := make([]float32, 384)
+		emb := make([]float32, VectorDimension)
 		if text == "question1" {
 			emb[0] = 1.0
 		} else {
@@ -70,7 +70,7 @@ func TestSearchByEmbedding_And_Store(t *testing.T) {
 		t.Fatalf("Store failed: %v", err)
 	}
 
-	embMatch := make([]float32, 384)
+	embMatch := make([]float32, VectorDimension)
 	embMatch[0] = 1.0
 
 	ans, ok := db.SearchByEmbedding(embMatch, 0.92)
@@ -82,7 +82,7 @@ func TestSearchByEmbedding_And_Store(t *testing.T) {
 	}
 
 	// Test cache miss (threshold not met)
-	embMismatch := make([]float32, 384)
+	embMismatch := make([]float32, VectorDimension)
 	embMismatch[1] = 1.0
 
 	_, ok = db.SearchByEmbedding(embMismatch, 0.92)
@@ -101,7 +101,7 @@ func TestSearchByEmbedding_And_Store(t *testing.T) {
 
 	// Test hit but no answer in meta
 	GenerateEmbeddingFunc = func(text string) []float32 {
-		emb := make([]float32, 384)
+		emb := make([]float32, VectorDimension)
 		emb[0] = 1.0
 		return emb
 	}
@@ -109,15 +109,15 @@ func TestSearchByEmbedding_And_Store(t *testing.T) {
 
 	// Since both doc_no_ans and question1 have identical embeddings, sqlite-vec will return one.
 	// But let's just make it distinct
-	db.InsertVector("doc_no_ans_distinct", make([]float32, 384), `{"title":"no_answer"}`)
-	_, ok = db.SearchByEmbedding(make([]float32, 384), 0.92)
+	db.InsertVector("doc_no_ans_distinct", make([]float32, VectorDimension), `{"title":"no_answer"}`)
+	_, ok = db.SearchByEmbedding(make([]float32, VectorDimension), 0.92)
 	if ok {
 		t.Fatalf("Expected cache miss due to missing answer in meta")
 	}
 
 	// Test malformed JSON metadata
-	db.InsertVector("doc_bad_meta", make([]float32, 384), `{bad json}`)
-	_, ok = db.SearchByEmbedding(make([]float32, 384), 0.92)
+	db.InsertVector("doc_bad_meta", make([]float32, VectorDimension), `{bad json}`)
+	_, ok = db.SearchByEmbedding(make([]float32, VectorDimension), 0.92)
 	if ok {
 		t.Fatalf("Expected cache miss due to bad json in meta")
 	}
@@ -163,9 +163,38 @@ func TestSearchByEmbedding_Error(t *testing.T) {
 	}
 }
 
-// The parts not fully covered in VectorDB are SQL execution error branches (like disk full, bad syntax).
-// 100% test coverage means covering 100% of our code within our control. Mocking SQL driver errors
-// just to test error handling returns is often unnecessary unless we define a mock driver.
-// The instructions said "Ensure 100% coverage on new files and everything passes."
-// I modified an existing file, let's see if we can get 100% on the newly added functions.
-// We got 100% on `SearchByEmbedding` and `Store`. We are good.
+func TestRealEmbeddingsAndSQLiteStore(t *testing.T) {
+	InitEmbeddings()
+	if tk == nil || session == nil {
+		t.Skip("ONNX model or tokenizer missing, skipping real embedding test")
+	}
+
+	db, err := NewVectorDB(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to init SQLite VectorDB: %v", err)
+	}
+	defer db.Close()
+
+	question := "What are the features of ReactJS?"
+	answer := "React features include Virtual DOM, JSX, Components, and One-way Data Binding."
+
+	// Test real embedding generation and storage into SQLite
+	err = db.Store(question, answer)
+	if err != nil {
+		t.Fatalf("Failed to store real question into SQLite: %v", err)
+	}
+
+	if db.GetCount() != 1 {
+		t.Fatalf("Expected count 1, got %d", db.GetCount())
+	}
+
+	// Generate embedding for identical question and verify cache hit
+	emb := GenerateEmbedding(question)
+	cachedAns, hit := db.SearchByEmbedding(emb, 0.92)
+	if !hit {
+		t.Fatalf("Expected cache hit for real question embedding search")
+	}
+	if cachedAns != answer {
+		t.Fatalf("Expected answer %q, got %q", answer, cachedAns)
+	}
+}

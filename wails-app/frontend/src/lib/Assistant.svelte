@@ -79,15 +79,19 @@
 
   async function fetchCacheStats() {
     try {
+      if ((window as any)?.go?.main?.App?.GetCacheStats) {
+        cacheStats = await (window as any).go.main.App.GetCacheStats();
+        return;
+      }
       const apiUrl = getApiUrl();
       const res = await apiFetch(`${apiUrl}/api/cache/stats`);
       if (res.ok) {
         cacheStats = await res.json();
       } else {
-        cacheStats = null;
+        cacheStats = { cached_pairs: 0, estimated_tokens_saved: 0 };
       }
     } catch {
-      cacheStats = null;
+      cacheStats = { cached_pairs: 0, estimated_tokens_saved: 0 };
     }
   }
 
@@ -131,6 +135,10 @@
   async function fetchCacheItems() {
     loadingCacheItems = true;
     try {
+      if ((window as any)?.go?.main?.App?.GetCacheItems) {
+        cacheItems = await (window as any).go.main.App.GetCacheItems();
+        return;
+      }
       const apiUrl = getApiUrl();
       const res = await apiFetch(`${apiUrl}/api/cache/items`);
       if (res.ok) {
@@ -145,7 +153,7 @@
 
   function toggleCacheManager() {
     showCacheManager = !showCacheManager;
-    if (showCacheManager && cacheItems.length === 0) {
+    if (showCacheManager) {
       fetchCacheItems();
     }
   }
@@ -168,12 +176,17 @@
     if (!confirmed) return;
     deletingSelected = true;
     try {
-      const apiUrl = getApiUrl();
-      await apiFetch(`${apiUrl}/api/cache/items`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: Array.from(selectedCacheItemIds) })
-      });
+      const idsToDelete = Array.from(selectedCacheItemIds);
+      if ((window as any)?.go?.main?.App?.DeleteCacheItems) {
+        await (window as any).go.main.App.DeleteCacheItems(idsToDelete);
+      } else {
+        const apiUrl = getApiUrl();
+        await apiFetch(`${apiUrl}/api/cache/items`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: idsToDelete })
+        });
+      }
       selectedCacheItemIds.clear();
       selectedCacheItemIds = new Set();
       await fetchCacheItems();
@@ -186,15 +199,19 @@
   }
 
   async function clearCache() {
-
     const confirmed = window.confirm(
       `Are you sure you want to clear all ${cacheStats?.cached_pairs ?? 0} cached Q&A pairs? This cannot be undone.`
     );
     if (!confirmed) return;
     clearingCache = true;
     try {
-      const apiUrl = getApiUrl();
-      await apiFetch(`${apiUrl}/api/cache`, { method: "DELETE" });
+      if ((window as any)?.go?.main?.App?.ClearCache) {
+        await (window as any).go.main.App.ClearCache();
+      } else {
+        const apiUrl = getApiUrl();
+        await apiFetch(`${apiUrl}/api/cache`, { method: "DELETE" });
+      }
+      await fetchCacheItems();
       await fetchCacheStats();
     } finally {
       clearingCache = false;
@@ -781,18 +798,14 @@
             <span class="material-symbols-outlined text-[16px]">database</span>
             Local Q&A Cache
           </h3>
-          {#if cacheStats}
-            <div class="cache-stats-row">
-              <span class="cache-stat">
-                <strong>{cacheStats.cached_pairs}</strong> answers cached
-              </span>
-              <span class="cache-stat muted">
-                ~{cacheStats.estimated_tokens_saved.toLocaleString()} tokens saved
-              </span>
-            </div>
-          {:else}
-            <p class="muted-text text-on-surface-variant/50 text-[12px] mb-3">Cache unavailable (SmolLM2 not enabled)</p>
-          {/if}
+          <div class="cache-stats-row">
+            <span class="cache-stat">
+              <strong>{wsState.cacheStats.cached_pairs}</strong> answers cached
+            </span>
+            <span class="cache-stat muted">
+              ~{wsState.cacheStats.estimated_tokens_saved.toLocaleString()} tokens saved
+            </span>
+          </div>
           <div class="flex flex-col gap-2 mt-3">
             <div class="flex gap-2">
               <button
@@ -804,14 +817,14 @@
               <button
                 class="px-3 py-1.5 rounded bg-secondary/20 text-secondary text-sm font-medium hover:bg-secondary/30 transition-colors"
                 onclick={toggleCacheManager}
-                disabled={!cacheStats || cacheStats.cached_pairs === 0}
+                disabled={wsState.cacheStats.cached_pairs === 0}
               >
                 {showCacheManager ? "Hide Manager" : "Manage Cache"}
               </button>
               <button
                 class="btn-danger ml-auto"
                 onclick={clearCache}
-                disabled={clearingCache || !cacheStats || cacheStats.cached_pairs === 0}
+                disabled={clearingCache || wsState.cacheStats.cached_pairs === 0}
               >
                 {clearingCache ? "Clearing All..." : "Clear All"}
               </button>

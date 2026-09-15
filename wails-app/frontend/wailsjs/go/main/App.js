@@ -6,12 +6,28 @@ export function CaptureScreen() {
   return window['go']['main']['App']['CaptureScreen']();
 }
 
+export function ClearCache() {
+  return window['go']['main']['App']['ClearCache']();
+}
+
+export function DeleteCacheItems(arg1) {
+  return window['go']['main']['App']['DeleteCacheItems'](arg1);
+}
+
 export function DeleteToken() {
   return window['go']['main']['App']['DeleteToken']();
 }
 
 export function GetAudioDevices() {
   return window['go']['main']['App']['GetAudioDevices']();
+}
+
+export function GetCacheItems() {
+  return window['go']['main']['App']['GetCacheItems']();
+}
+
+export function GetCacheStats() {
+  return window['go']['main']['App']['GetCacheStats']();
 }
 
 export function GetMachineId() {

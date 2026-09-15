@@ -21,3 +21,22 @@ export namespace audio {
 
 }
 
+export namespace backend {
+	
+	export class CacheItem {
+	    id: string;
+	    question: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CacheItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.question = source["question"];
+	    }
+	}
+
+}
+
