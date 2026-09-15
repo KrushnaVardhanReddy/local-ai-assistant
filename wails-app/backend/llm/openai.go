@@ -89,7 +89,7 @@ func StreamVisionCompletion(base64Image string, prompt string, onToken StreamCal
 	endpoint := baseURL + "chat/completions"
 
 	if prompt == "" {
-		prompt = "Analyze this screenshot. Provide a clear, concise technical answer, key insights, or code solution based on what is visible."
+		prompt = DefaultVisionPrompt
 	}
 
 	reqBody := VisionChatRequest{
@@ -187,7 +187,7 @@ func StreamVisionCompletion(base64Image string, prompt string, onToken StreamCal
 	return nil
 }
 
-func StreamCompletion(question string, onToken StreamCallback, onDone func()) error {
+func StreamCompletionWithContext(question string, category string, history []ChatMessage, onToken StreamCallback, onDone func()) error {
 	defer func() {
 		if onDone != nil {
 			onDone()
@@ -202,23 +202,19 @@ func StreamCompletion(question string, onToken StreamCallback, onDone func()) er
 	model := getEnvOrDefault("LLM_MODEL", "gpt-4o")
 
 	if !strings.HasSuffix(baseURL, "/") {
-	    baseURL += "/"
+		baseURL += "/"
 	}
 	endpoint := baseURL + "chat/completions"
 
+	messages := make([]ChatMessage, 0, len(history)+2)
+	messages = append(messages, ChatMessage{Role: "system", Content: BuildSystemPrompt(category)})
+	messages = append(messages, history...)
+	messages = append(messages, ChatMessage{Role: "user", Content: question})
+
 	reqBody := ChatRequest{
-		Model: model,
-		Messages: []ChatMessage{
-			{
-				Role:    "system",
-				Content: "You are an expert technical interview assistant. Answer the following interview question concisely, clearly, and with code examples where appropriate.",
-			},
-			{
-				Role:    "user",
-				Content: question,
-			},
-		},
-		Stream: true,
+		Model:    model,
+		Messages: messages,
+		Stream:   true,
 	}
 
 	bodyBytes, err := jsonMarshal(reqBody)
@@ -233,7 +229,7 @@ func StreamCompletion(question string, onToken StreamCallback, onDone func()) er
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
-    req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("anthropic-version", "2023-06-01")
 
 	client := &http.Client{}
 	resp, err := httpClientDo(client, req)
@@ -290,4 +286,8 @@ func StreamCompletion(question string, onToken StreamCallback, onDone func()) er
 	}
 
 	return nil
+}
+
+func StreamCompletion(question string, onToken StreamCallback, onDone func()) error {
+	return StreamCompletionWithContext(question, "", nil, onToken, onDone)
 }
