@@ -103,5 +103,5 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P52-T1 | `backend/llm/prompts.go`, `backend/llm/openai.go` | **Categorized Prompts & Multi-Turn Context:** Specialized prompt injections (STAR, coding, system design) and 2–3 turn context window injection. | ⬜ | — |
+| P52-T1 | `backend/llm/prompts.go`, `backend/llm/openai.go` | **Categorized Prompts & Multi-Turn Context:** Specialized prompt injections (STAR, coding, system design) and 2–3 turn context window injection. | ✅ | #165 |
 | P52-T2 | `backend/session/session.go`, `backend/llm/scorecard.go`, `backend/remote/server.go`, `app.go` | **Session Manager & Scorecard:** Thread-safe session tracking, post-interview JSON scorecard evaluation, and `/session/end` endpoint. | ⬜ | — |
