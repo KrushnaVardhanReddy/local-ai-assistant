@@ -46,7 +46,7 @@
         </div>
         <div class="flex items-center justify-between py-2 border-b border-white/5">
             <span class="font-bold">Toggle Click-through Mode</span>
-            <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Alt+F8</kbd>
+            <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Alt+M</kbd>
         </div>
         <div class="flex items-center justify-between py-2 border-b border-white/5">
             <span class="font-bold">Session Report</span>

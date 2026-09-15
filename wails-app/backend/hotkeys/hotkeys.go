@@ -3,15 +3,17 @@ package hotkeys
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"golang.design/x/hotkey"
 )
 
 // Wails functions mockable for tests
 var (
-	WindowGetPosition = func(ctx context.Context) (int, int) { return 0, 0 }
-	WindowSetPosition = func(ctx context.Context, x, y int) {}
-	EventsEmit        = func(ctx context.Context, eventName string, optionalData ...interface{}) {}
+	WindowGetPosition  = func(ctx context.Context) (int, int) { return 0, 0 }
+	WindowSetPosition  = func(ctx context.Context, x, y int) {}
+	EventsEmit         = func(ctx context.Context, eventName string, optionalData ...interface{}) {}
+	ToggleClickthrough = func(ctx context.Context) {}
 )
 
 // Mockable functions to abstract the third-party hardware listener
@@ -65,12 +67,23 @@ func Start(ctx context.Context) error {
 		return fmt.Errorf("failed to register Ctrl+Alt+1: %v", err)
 	}
 
-	// Ctrl+Alt+F8 (Toggle Stealth / Click-through Mode)
-	hkStealth := NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, ModAlt}, hotkey.KeyF8)
-	if err := hkStealth.Register(); err != nil {
-		// Log error but non-fatal if hotkey binding conflicts
-		fmt.Printf("Warning: failed to register Ctrl+Alt+F8: %v\n", err)
+	// Register Stealth Mode hotkey variants (Ctrl+Alt+M & Ctrl+Shift+M, including NumLock variants)
+	stealthVariants := []HotkeyInterface{
+		NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, ModAlt}, hotkey.KeyM),
+		NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, hotkey.ModShift}, hotkey.KeyM),
+		NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, ModAlt, hotkey.Mod2}, hotkey.KeyM),
+		NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, hotkey.ModShift, hotkey.Mod2}, hotkey.KeyM),
 	}
+
+	var activeStealthKeys []HotkeyInterface
+	for _, hk := range stealthVariants {
+		if err := hk.Register(); err == nil {
+			activeStealthKeys = append(activeStealthKeys, hk)
+		}
+	}
+	log.Printf("✅ Registered %d stealth hotkey variant(s) for Ctrl+Alt+M / Ctrl+Shift+M\n", len(activeStealthKeys))
+
+	stealthCh := mergedStealthChannel(activeStealthKeys)
 
 	go func() {
 		for {
@@ -79,8 +92,8 @@ func Start(ctx context.Context) error {
 				hkRight.Unregister()
 				hkLeft.Unregister()
 				hk1.Unregister()
-				if hkStealth != nil {
-					_ = hkStealth.Unregister()
+				for _, hk := range activeStealthKeys {
+					_ = hk.Unregister()
 				}
 				return
 			case <-hkRight.Keydown():
@@ -89,12 +102,29 @@ func Start(ctx context.Context) error {
 				handleMoveWindow(ctx, -100)
 			case <-hk1.Keydown():
 				handleIPC(ctx)
-			case <-hkStealth.Keydown():
+			case <-stealthCh:
+				log.Println("🔥 [HOTKEY] Stealth toggle keydown detected! Invoking ToggleClickthrough...")
+				ToggleClickthrough(ctx)
 				EventsEmit(ctx, "toggle-clickthrough")
 			}
 		}
 	}()
 	return nil
+}
+
+func mergedStealthChannel(keys []HotkeyInterface) <-chan hotkey.Event {
+	out := make(chan hotkey.Event, 5)
+	for _, k := range keys {
+		if k == nil {
+			continue
+		}
+		go func(hk HotkeyInterface) {
+			for ev := range hk.Keydown() {
+				out <- ev
+			}
+		}(k)
+	}
+	return out
 }
 
 func handleMoveWindow(ctx context.Context, deltaX int) {

@@ -50,6 +50,7 @@ type App struct {
 	latestThinking   bool
 
 	sessionManager *session.SessionManager
+	isClickthrough bool
 }
 
 // NewApp creates a new App application struct
@@ -132,6 +133,9 @@ func (a *App) startup(ctx context.Context) {
 	hotkeys.WindowGetPosition = wailsruntime.WindowGetPosition
 	hotkeys.WindowSetPosition = wailsruntime.WindowSetPosition
 	hotkeys.EventsEmit = wailsruntime.EventsEmit
+	hotkeys.ToggleClickthrough = func(ctx context.Context) {
+		a.ToggleClickthroughMode()
+	}
 
 	// Preload the ONNX embedding model during startup so it doesn't log on first microphone input
 	go backend.InitEmbeddings()
@@ -353,15 +357,40 @@ func (a *App) AnalyzeVision(base64Image string, prompt string) error {
 	return nil
 }
 
+func (a *App) ToggleClickthroughMode() bool {
+	a.cmdMutex.Lock()
+	a.isClickthrough = !a.isClickthrough
+	curr := a.isClickthrough
+	a.cmdMutex.Unlock()
+
+	log.Printf("🖱️ [Go] ToggleClickthroughMode -> enable = %v\n", curr)
+	wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
+	wailsruntime.WindowShow(a.ctx)
+	if err := window.SetIgnoreMouseEvents(a.ctx, curr); err != nil {
+		log.Printf("❌ SetIgnoreMouseEvents error: %v\n", err)
+	}
+	wailsruntime.EventsEmit(a.ctx, "toggle-clickthrough", curr)
+	return curr
+}
+
 func (a *App) SetClickthrough(opts map[string]interface{}) {
 	if enable, ok := opts["enable"].(bool); ok {
-		wailsruntime.WindowSetAlwaysOnTop(a.ctx, enable)
-		window.SetIgnoreMouseEvents(a.ctx, enable)
+		a.cmdMutex.Lock()
+		a.isClickthrough = enable
+		a.cmdMutex.Unlock()
+
+		log.Printf("🖱️ [Go] SetClickthrough -> enable = %v\n", enable)
+		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
+		wailsruntime.WindowShow(a.ctx)
+		if err := window.SetIgnoreMouseEvents(a.ctx, enable); err != nil {
+			log.Printf("❌ SetIgnoreMouseEvents error: %v\n", err)
+		}
+		wailsruntime.EventsEmit(a.ctx, "toggle-clickthrough", enable)
 	}
 }
 
 func (a *App) ToggleStealth(opts map[string]interface{}) {
-	// Not implemented
+	a.ToggleClickthroughMode()
 }
 
 func (a *App) EndSession() (map[string]interface{}, error) {

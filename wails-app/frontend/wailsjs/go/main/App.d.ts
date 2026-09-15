@@ -43,4 +43,6 @@ export function StartBackend():Promise<void>;
 
 export function StopBackend():Promise<void>;
 
+export function ToggleClickthroughMode():Promise<boolean>;
+
 export function ToggleStealth(arg1:Record<string, any>):Promise<void>;

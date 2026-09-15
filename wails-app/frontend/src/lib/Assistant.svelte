@@ -272,8 +272,10 @@
       }
     });
 
-    EventsOn("toggle-clickthrough", () => {
-      toggleClickthrough();
+    EventsOn("toggle-clickthrough", (newVal?: boolean) => {
+      if (typeof newVal === "boolean") {
+        clickthrough = newVal;
+      }
     });
 
     EventsOn("hotkey_transcript_1", () => {
@@ -351,7 +353,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && (e.altKey || e.shiftKey) && (e.key === 'F8' || e.key === 'f8')) {
+    if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'M' || e.key === 'm')) {
       e.preventDefault();
       toggleClickthrough();
     }
@@ -378,12 +380,13 @@
   }
 
   async function toggleClickthrough() {
-    clickthrough = !clickthrough;
+    const target = !clickthrough;
+    clickthrough = target;
     try {
-      await SetClickthrough({ enable: clickthrough });
+      await SetClickthrough({ enable: target });
     } catch (e) {
       console.error('set_clickthrough failed:', e);
-      clickthrough = !clickthrough; // revert on error
+      clickthrough = !target; // revert on error
     }
   }
 
@@ -469,7 +472,10 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark" id="dashboard-overlay">
+<div
+  class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark {clickthrough ? 'clickthrough-mode' : ''}"
+  id="dashboard-overlay"
+>
   <!-- Top Toolbar -->
   <header class="toolbar glass-pill {clickthrough ? 'clickthrough-mode' : ''} pointer-events-auto flex items-center justify-between px-6 h-toolbar-height rounded-full w-full max-w-7xl mx-auto shadow-2xl transition-all duration-300" style="--wails-draggable:drag">
     <!-- Brand / Primary Action -->
@@ -558,7 +564,7 @@
       <!-- Click-through toggle -->
       <button
         aria-label="Toggle Click-Through"
-        title="Toggle Stealth Mode (Ctrl+Alt+F8)"
+        title="Toggle Stealth Mode (Ctrl+Alt+M)"
         class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {clickthrough ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
         onclick={toggleClickthrough}
       >
@@ -1000,14 +1006,14 @@
       transition: background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
-  /* Click-through mode: ultra-transparent visual overlay */
+  /* Stealth / Click-through mode: sleek semi-transparent glass overlay */
   .glass-panel.clickthrough-mode,
   .glass-pill.clickthrough-mode {
-      background: rgba(0, 0, 0, 0.08) !important;
-      backdrop-filter: blur(3px) !important;
-      -webkit-backdrop-filter: blur(3px) !important;
-      border-color: rgba(255, 255, 255, 0.06) !important;
-      box-shadow: none !important;
+      background: rgba(10, 10, 14, 0.35) !important;
+      backdrop-filter: blur(6px) !important;
+      -webkit-backdrop-filter: blur(6px) !important;
+      border-color: rgba(255, 255, 255, 0.15) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
   }
   .glass-pill {
       background: rgba(18, 18, 18, 0.95);

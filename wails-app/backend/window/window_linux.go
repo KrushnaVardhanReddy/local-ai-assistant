@@ -37,6 +37,13 @@ gboolean do_set_clickthrough(gpointer data) {
     for (GList *iter = toplevels; iter != NULL; iter = iter->next) {
         GtkWindow *win = GTK_WINDOW(iter->data);
         if (win && GTK_IS_WINDOW(win)) {
+            if (enable) {
+                gtk_widget_set_opacity(GTK_WIDGET(win), 0.65);
+            } else {
+                gtk_widget_set_opacity(GTK_WIDGET(win), 1.0);
+            }
+            gtk_widget_queue_draw(GTK_WIDGET(win));
+
             GdkWindow *gdk_win = gtk_widget_get_window(GTK_WIDGET(win));
             if (gdk_win) {
                 if (enable) {

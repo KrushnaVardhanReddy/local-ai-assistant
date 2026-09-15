@@ -82,6 +82,10 @@ export function StopBackend() {
   return window['go']['main']['App']['StopBackend']();
 }
 
+export function ToggleClickthroughMode() {
+  return window['go']['main']['App']['ToggleClickthroughMode']();
+}
+
 export function ToggleStealth(arg1) {
   return window['go']['main']['App']['ToggleStealth'](arg1);
 }
