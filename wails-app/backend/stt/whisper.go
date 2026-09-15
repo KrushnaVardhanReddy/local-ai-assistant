@@ -18,7 +18,8 @@ import (
 )
 
 var (
-	WhisperModelURL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
+	WhisperModelURL         = "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/ggml-base.en.bin"
+	WhisperModelFallbackURL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
 )
 
 type WhisperEngine struct {
@@ -43,9 +44,12 @@ func EnsureWhisperModel(modelPath string) (string, error) {
 		return fallbackPath, nil
 	}
 
-	log.Printf("🧠 [Whisper] Model not found locally. Downloading from HuggingFace to %s...", fallbackPath)
+	log.Printf("🧠 [Whisper] Model not found locally. Downloading to %s...", fallbackPath)
 	if err := downloadFileAtomic(context.Background(), WhisperModelURL, fallbackPath); err != nil {
-		return "", fmt.Errorf("failed to download whisper model: %w", err)
+		log.Printf("🧠 [Whisper] Primary download failed (%v), trying fallback...", err)
+		if err := downloadFileAtomic(context.Background(), WhisperModelFallbackURL, fallbackPath); err != nil {
+			return "", fmt.Errorf("failed to download whisper model: %w", err)
+		}
 	}
 	log.Printf("🧠 [Whisper] Successfully downloaded model to %s", fallbackPath)
 

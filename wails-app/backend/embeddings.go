@@ -22,9 +22,11 @@ var (
 	session  *onnxruntime_go.DynamicAdvancedSession
 	initOnce sync.Once
 
-	// Expose for testing
-	NomicTokenizerURL = "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/tokenizer.json"
-	NomicModelURL     = "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/onnx/model_quantized.onnx"
+	// Default model URLs (GitHub Releases CDN primary, HuggingFace fallback)
+	NomicTokenizerURL         = "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/tokenizer.json"
+	NomicTokenizerFallbackURL = "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/tokenizer.json"
+	NomicModelURL             = "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/model_quantized.onnx"
+	NomicModelFallbackURL     = "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/onnx/model_quantized.onnx"
 )
 
 func downloadFileAtomic(ctx context.Context, url string, dest string) error {
@@ -39,14 +41,20 @@ func ensureNomicModelFiles() (string, string, error) {
 	if _, err := os.Stat(tokPath); os.IsNotExist(err) {
 		log.Printf("[Embeddings] Downloading tokenizer.json...")
 		if err := downloadFileAtomic(context.Background(), NomicTokenizerURL, tokPath); err != nil {
-			return "", "", fmt.Errorf("failed to download tokenizer: %w", err)
+			log.Printf("[Embeddings] Primary download failed (%v), trying fallback...", err)
+			if err := downloadFileAtomic(context.Background(), NomicTokenizerFallbackURL, tokPath); err != nil {
+				return "", "", fmt.Errorf("failed to download tokenizer: %w", err)
+			}
 		}
 	}
 
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
 		log.Printf("[Embeddings] Downloading model.onnx...")
 		if err := downloadFileAtomic(context.Background(), NomicModelURL, modelPath); err != nil {
-			return "", "", fmt.Errorf("failed to download model: %w", err)
+			log.Printf("[Embeddings] Primary download failed (%v), trying fallback...", err)
+			if err := downloadFileAtomic(context.Background(), NomicModelFallbackURL, modelPath); err != nil {
+				return "", "", fmt.Errorf("failed to download model: %w", err)
+			}
 		}
 	}
 
