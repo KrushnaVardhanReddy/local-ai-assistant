@@ -1,0 +1,27 @@
+TASK: P46-T4 — Auto-Download Required ONNX Embeddings & Whisper Models
+
+BACKGROUND & CONTEXT
+═══════════════════════════════════════════════════════════════
+When the user runs the backend without local model files (e.g. nomic-embed-text-v1.5 tokenizer/model or ggml-base.en.bin), the system fails with missing file errors. Models should be downloaded automatically upon initialization IF AND ONLY IF they are required and selected.
+
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+1. EMBEDDINGS AUTO-DOWNLOAD (`wails-app/backend/embeddings.go`):
+   - In `InitEmbeddings()`, check if `tokenizer.json` or `model.onnx` exist in `models/nomic-embed-text-v1.5/`.
+   - If missing, download `tokenizer.json` and `model.onnx` from HuggingFace (`https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/...`) automatically into `models/nomic-embed-text-v1.5/`.
+   - Proceed to load ONNX runtime after successful download.
+
+2. WHISPER STT AUTO-DOWNLOAD (`wails-app/backend/stt/` or `app.go`):
+   - When local Whisper engine is active/selected and `ggml-base.en.bin` (or specified model) is missing in `models/`, download it automatically from `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin`.
+
+3. PARAKEET STT AUTO-DOWNLOAD (`wails-app/backend/system/downloader.go` & `stt/parakeet.go`):
+   - When Parakeet engine is selected/active and hardware supports AVX2 + >=8GB RAM (`IsParakeetSupported()`), ensure `StartBackgroundDownload` is triggered if files in `~/.local/share/barnowl/models/parakeet` are missing.
+
+4. UNIT TESTS & RESILIENCE:
+   - Provide unit tests for downloading functions using HTTP test servers / mocks (`_test.go`).
+   - Use atomic file creation (download to temp file `.tmp`, then rename) so partial downloads don't corrupt runtime model loads.
+
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Commit message: "jules: P46-T4 implement conditional auto-download for embeddings and whisper models"
+Target branch: feature/krushna_golang
