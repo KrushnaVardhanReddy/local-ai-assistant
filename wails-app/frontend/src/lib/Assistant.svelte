@@ -4,14 +4,12 @@
   import { onMount } from "svelte";
   import { getApiUrl } from "$lib/api";
   import SessionReport from './SessionReport.svelte';
-  import ResumeBuilder from './ResumeBuilder.svelte';
   import { authState } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
   import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
   import { CaptureScreen, AnalyzeVision, ClearState, ClearCache, SetClickthrough } from "../../wailsjs/go/main/App";
 
   let showSessionReport = $state(false);
-  let currentView = $state<'interview' | 'resume'>('interview');
   let starPrimed = $state(false);
   let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -101,13 +99,7 @@
     prewarmingCache = true;
     try {
       const apiUrl = getApiUrl();
-
-      const resContext = await apiFetch(`${apiUrl}/api/resume/context`);
-      let baseResume = "";
-      if (resContext.ok) {
-        const contextData = await resContext.json();
-        baseResume = contextData.context || "";
-      }
+      const baseResume = "";
 
       const res = await apiFetch(`${apiUrl}/api/cache/prewarm`, {
         method: "POST",
@@ -468,6 +460,18 @@
       starPrimed = false;
     }, 3000);
   }
+
+  function goHome() {
+    if (wsState.isMockMode) {
+      toggleMockMode(false);
+    }
+    liveEarsCollapsed = false;
+    brainCollapsed = false;
+    showSessionReport = false;
+    showCacheManager = false;
+    showPrewarmModal = false;
+    uiState.hotkeysPanelOpen = false;
+  }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -504,6 +508,17 @@
 
     <!-- Trailing Actions -->
     <div class="flex items-center gap-1 overflow-x-auto hide-scrollbar min-w-0">
+      <!-- Home Button (First) -->
+      <button
+        aria-label="Home"
+        title="Go to Home Dashboard"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto"
+        onclick={goHome}
+      >
+        <span class="material-symbols-outlined text-[18px]">home</span>
+        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Home</span>
+      </button>
+
       <button
         id="mock-mode-btn"
         class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-white/10 text-on-surface-variant transition-colors pointer-events-auto {wsState.isMockMode ? 'text-green-400 animate-pulse bg-green-400/10' : 'hover:text-primary'}"
@@ -546,15 +561,6 @@
       >
         <span class="material-symbols-outlined text-[18px]">analytics</span>
         <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Report</span>
-      </button>
-
-      <button
-        aria-label="Toggle Resume Builder"
-        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {currentView === 'resume' ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
-        onclick={() => currentView = currentView === 'interview' ? 'resume' : 'interview'}
-      >
-        <span class="material-symbols-outlined text-[18px]">{currentView === 'resume' ? 'edit_document' : 'description'}</span>
-        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Resume</span>
       </button>
 
       <button aria-label="Clear Context" class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl hover:bg-white/10 text-on-surface-variant hover:text-primary transition-colors pointer-events-auto" onclick={clearHistory}>
@@ -635,9 +641,6 @@
 
   <!-- Main Content Grid -->
   <main class="flex-1 flex gap-container-padding w-full max-w-7xl mx-auto h-[calc(100vh-120px)] pb-6">
-    {#if currentView === 'resume'}
-      <ResumeBuilder />
-    {:else}
       {#if wsState.isMockMode}
     <section class="glass-panel pointer-events-auto rounded-[24px] flex flex-col justify-center items-center w-full shadow-2xl relative p-12 overflow-hidden border border-green-500/30">
       <div class="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent pointer-events-none"></div>
@@ -897,6 +900,7 @@
         </div>
       {/if}
     </section>
+    {/if}
 
     <!-- Expand Brain button (shown when collapsed) -->
     {#if brainCollapsed}
@@ -908,8 +912,6 @@
       >
         <span class="material-symbols-outlined text-[18px]">chevron_left</span>
       </button>
-    {/if}
-    {/if}
     {/if}
     <HotkeysPanel />
   </main>
