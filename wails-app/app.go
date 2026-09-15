@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"wails-app/backend/session"
 	"net/http"
 	"os"
 	"os/exec"
@@ -47,6 +48,8 @@ type App struct {
 	latestTranscript string
 	latestResponse   string
 	latestThinking   bool
+
+	sessionManager *session.SessionManager
 }
 
 // NewApp creates a new App application struct
@@ -104,11 +107,14 @@ func NewApp() *App {
 		log.Printf("Failed to init QA cache DB: %v", err)
 	}
 
+	sessMgr := session.NewSessionManager()
+
 	return &App{
-		remoteServer: remote.NewServer(http.FS(assets)),
+		remoteServer: remote.NewServer(http.FS(assets), sessMgr),
 		sttManager:   stt.NewSTTManager(initialEngine),
 		audioCapture: captureEngine,
 		qaCache:      db,
+		sessionManager: sessMgr,
 	}
 }
 
@@ -358,6 +364,31 @@ func (a *App) ToggleStealth(opts map[string]interface{}) {
 	// Not implemented
 }
 
+func (a *App) EndSession() (map[string]interface{}, error) {
+	if a.sessionManager == nil {
+		return nil, fmt.Errorf("session manager not configured")
+	}
+
+	sessionData := a.sessionManager.Export()
+	turnCount, _ := sessionData["turn_count"].(int)
+	if turnCount == 0 {
+		return map[string]interface{}{
+			"session": sessionData,
+			"scorecard": nil,
+		}, nil
+	}
+
+	scorecard, err := llm.GenerateScorecard(sessionData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate scorecard: %w", err)
+	}
+
+	return map[string]interface{}{
+		"session": sessionData,
+		"scorecard": scorecard,
+	}, nil
+}
+
 func (a *App) GetAudioDevices() []audio.AudioDevice {
 	devices, err := a.audioCapture.GetDevices()
 	if err != nil {
@@ -430,19 +461,41 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 					a.stateMu.Unlock()
 					wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
 
+					if a.sessionManager != nil {
+						a.sessionManager.StartTurn(cleanTranscript)
+					}
+
 					go func(q string) {
 						var answerBuilder strings.Builder
-						err := llm.StreamCompletion(q, func(token string) {
+
+						var history []llm.ChatMessage
+						if a.sessionManager != nil {
+							recentTurns := a.sessionManager.GetRecentTurns(3)
+							for _, t := range recentTurns {
+								history = append(history, llm.ChatMessage{Role: "user", Content: t.Transcript})
+								history = append(history, llm.ChatMessage{Role: "assistant", Content: t.Response})
+							}
+						}
+
+						err := llm.StreamCompletionWithContext(q, "", history, func(token string) {
 							answerBuilder.WriteString(token)
 							a.stateMu.Lock()
 							a.latestResponse = answerBuilder.String()
 							a.latestThinking = true
 							a.stateMu.Unlock()
+
+							if a.sessionManager != nil {
+								a.sessionManager.AppendToken(token)
+							}
 							wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
 						}, func() {
 							a.stateMu.Lock()
 							a.latestThinking = false
 							a.stateMu.Unlock()
+
+							if a.sessionManager != nil {
+								a.sessionManager.CompleteTurn()
+							}
 							wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
 						})
 						if err != nil {

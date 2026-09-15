@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewServer(t *testing.T) {
-	s := NewServer(nil)
+	s := NewServer(nil, nil)
 	if s == nil {
 		t.Fatal("Expected server instance, got nil")
 	}
@@ -22,7 +22,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestServer_StartStop(t *testing.T) {
-	s := NewServer(nil)
+	s := NewServer(nil, nil)
 	s.httpServer.Addr = "127.0.0.1:8001"
 
 	s.Start()
@@ -38,12 +38,12 @@ func TestServer_StartStop(t *testing.T) {
 }
 
 func TestServer_StartError(t *testing.T) {
-	s1 := NewServer(nil)
+	s1 := NewServer(nil, nil)
 	s1.httpServer.Addr = "127.0.0.1:8002"
 	s1.Start()
 	time.Sleep(50 * time.Millisecond)
 
-	s2 := NewServer(nil)
+	s2 := NewServer(nil, nil)
 	s2.httpServer.Addr = "127.0.0.1:8002"
 	s2.Start()
 	time.Sleep(50 * time.Millisecond)
@@ -55,7 +55,7 @@ func TestServer_StartError(t *testing.T) {
 }
 
 func TestServer_WebSocket(t *testing.T) {
-	s := NewServer(nil)
+	s := NewServer(nil, nil)
 
 	ts := httptest.NewServer(s.httpServer.Handler)
 	defer ts.Close()
@@ -111,7 +111,7 @@ func TestServer_WebSocket(t *testing.T) {
 }
 
 func TestServer_UpgradeError(t *testing.T) {
-	s := NewServer(nil)
+	s := NewServer(nil, nil)
 	ts := httptest.NewServer(s.httpServer.Handler)
 	defer ts.Close()
 
@@ -124,7 +124,7 @@ func TestServer_UpgradeError(t *testing.T) {
 }
 
 func TestServer_BroadcastError(t *testing.T) {
-	s := NewServer(nil)
+	s := NewServer(nil, nil)
 	ts := httptest.NewServer(s.httpServer.Handler)
 	defer ts.Close()
 
@@ -184,7 +184,7 @@ func TestServer_BroadcastError(t *testing.T) {
 }
 
 func TestServer_StopWithClients(t *testing.T) {
-	s := NewServer(nil)
+	s := NewServer(nil, nil)
 	ts := httptest.NewServer(s.httpServer.Handler)
 	defer ts.Close()
 
@@ -207,7 +207,7 @@ func TestServer_StopWithClients(t *testing.T) {
 
 func TestServer_FileSystem(t *testing.T) {
 	fs := http.Dir(".")
-	s := NewServer(fs)
+	s := NewServer(fs, nil)
 
 	ts := httptest.NewServer(s.httpServer.Handler)
 	defer ts.Close()
