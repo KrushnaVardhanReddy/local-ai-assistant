@@ -1,0 +1,142 @@
+TASK: P52-T2 — Session History Store & Post-Interview AI Scorecard
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+In the frontend, SessionReport.svelte makes a POST request to `/session/end` and
+a GET request to `/session/history` to show post-interview evaluation scores,
+summaries, and strengths/gaps. In the Python backend, this was powered by
+backend/session_manager.py, backend/history_store.py, and LLMClient.generate_scorecard.
+
+In the Go backend, none of these components exist yet.
+This task creates:
+1. An in-memory, thread-safe `SessionManager` that records interview turns and
+   supplies the last 2-3 turns to `StreamCompletionWithContext`.
+2. A lightweight JSON `HistoryStore` to persist scorecard summaries.
+3. An LLM `GenerateScorecard` function that evaluates the transcript and produces
+   valid JSON.
+4. HTTP endpoints `/session/end` and `/session/history` in the embedded server
+   so `SessionReport.svelte` receives the expected scorecard data.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/backend/session/session.go
+CREATE: wails-app/backend/session/session_test.go
+CREATE: wails-app/backend/llm/scorecard.go
+CREATE: wails-app/backend/llm/scorecard_test.go
+MODIFY: wails-app/backend/remote/server.go
+MODIFY: wails-app/app.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. CREATE: wails-app/backend/session/session.go
+   Package `session`:
+   - Struct `Turn`:
+     - TurnIndex int `json:"turn"`
+     - Transcript string `json:"transcript"`
+     - Response string `json:"response"`
+     - StartedAt time.Time `json:"started_at"`
+     - AnsweredAt time.Time `json:"answered_at"`
+     - LatencyMs int `json:"latency_ms"`
+   - Struct `SessionManager`:
+     - mu sync.RWMutex
+     - turns []Turn
+     - currentTranscript string
+     - currentResponseParts []string
+     - turnStartedAt time.Time
+     - sessionStartedAt time.Time
+   - Methods:
+     - NewSessionManager() *SessionManager
+     - StartTurn(transcript string)
+     - AppendToken(token string)
+     - CompleteTurn() *Turn
+     - GetRecentTurns(n int) []Turn: returns up to last N completed turns in chronological order
+     - Export() map[string]interface{}: returns "session_started_at", "turn_count", "turns"
+     - Clear()
+
+2. CREATE: wails-app/backend/llm/scorecard.go
+   Package `llm`:
+   - Struct `TurnEvaluation`:
+     - Turn int `json:"turn"`
+     - Score int `json:"score"`
+     - Verdict string `json:"verdict"`
+     - WhatWasGood string `json:"what_was_good"`
+     - WhatWasMissing string `json:"what_was_missing"`
+     - SuggestedAddition string `json:"suggested_addition"`
+   - Struct `Scorecard`:
+     - OverallScore int `json:"overall_score"`
+     - OverallSummary string `json:"overall_summary"`
+     - Strengths []string `json:"strengths"`
+     - Gaps []string `json:"gaps"`
+     - Turns []TurnEvaluation `json:"turns"`
+
+   - Function `GenerateScorecard(sessionData map[string]interface{}) (*Scorecard, error)`:
+     - Formats session turns into a readable transcript string:
+       "Turn 1:\nCandidate said: <transcript>\nAssistant answered: <response>\n..."
+     - Prompts OpenAI with:
+       "You are an expert technical interview evaluator. Analyze the following interview transcript and return a JSON scorecard.
+       TRANSCRIPT:
+       {transcript}
+       Return ONLY valid JSON with this exact structure (no markdown, no explanation):
+       {
+         \"overall_score\": <1-10 integer>,
+         \"overall_summary\": \"<2-3 sentence overall assessment>\",
+         \"strengths\": [\"<strength 1>\", \"<strength 2>\"],
+         \"gaps\": [\"<gap 1>\", \"<gap 2>\"],
+         \"turns\": [
+           {
+             \"turn\": 0,
+             \"score\": <1-5 integer>,
+             \"verdict\": \"<Good|Partial|Incomplete|Off-topic>\",
+             \"what_was_good\": \"<one sentence>\",
+             \"what_was_missing\": \"<one sentence or null>\",
+             \"suggested_addition\": \"<one concise sentence or null>\"
+           }
+         ]
+       }"
+     - Strips any accidental markdown backticks (```json ... ```) and unmarshals into *Scorecard.
+
+3. MODIFY: wails-app/backend/remote/server.go
+   - Inject or pass references to `SessionManager` and `GenerateScorecard`.
+   - Add HTTP handlers:
+     - `POST /session/end`:
+       - Call sessionManager.Export()
+       - If no turns recorded: return 400 or empty scorecard.
+       - Call llm.GenerateScorecard(sessionData).
+       - Persist summary to local `./data/session_history.json`.
+       - Return JSON: `{ "session": sessionData, "scorecard": scorecard }`
+     - `GET /session/history`:
+       - Read `./data/session_history.json` and return array of past summaries.
+     - `POST /session/clear`:
+       - sessionManager.Clear(). Return 200 `{ "status": "cleared" }`.
+
+4. MODIFY: wails-app/app.go
+   - Attach `SessionManager` to `App`.
+   - In `SetAudioDevice`:
+     - When transcript is accepted by filter:
+       - `a.sessionManager.StartTurn(cleanTranscript)`
+       - Pass recent turns from `a.sessionManager.GetRecentTurns(3)` as `[]llm.ChatMessage` to `StreamCompletionWithContext`.
+     - In token callback: `a.sessionManager.AppendToken(token)`
+     - In done callback: `a.sessionManager.CompleteTurn()`
+   - Expose Wails binding:
+     `func (a *App) EndSession() (map[string]interface{}, error)`: returns same payload as `/session/end`.
+
+═══════════════════════════════════════════════════════════════
+TESTS
+═══════════════════════════════════════════════════════════════
+- wails-app/backend/session/session_test.go:
+  - Test Turn lifecycle: StartTurn, AppendToken, CompleteTurn.
+  - Verify GetRecentTurns(3) preserves order and limits to last 3.
+  - Test Clear and Export.
+- wails-app/backend/llm/scorecard_test.go:
+  - Test JSON unmarshaling with and without markdown code block fences.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Thread-safe session mutations (using sync.RWMutex).
+- All new tests must pass with `go test -v ./...`.
+- Target Branch: feature/krushna_golang

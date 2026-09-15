@@ -93,3 +93,15 @@
 |---|---|---|---|---|
 | P51-T1 | `backend/filter/`, `backend/llm/`, `backend/audio/capture.go`, `backend/vector_db.go`, `app.go`, `frontend/ws.svelte.ts` | **Full STT Pipeline:** VAD silence buffer, smart filter (filler + Nomic embedding noise detection), sqlite-vec QA cache lookup, OpenAI streaming LLM with busy guard. | ⬜ | — |
 | P51-T2 | `backend/filter/classifier.go`, `backend/filter/filter.go` | **Native Go Intent Classifier:** Replace manual questionWords heuristic with an ML-based Nearest Centroid classifier in Go based on embeddings. | ⬜ | — |
+
+---
+
+## Phase 52 — Interview Intelligence (Prompts, Multi-Turn Context & Scorecard) 🧠📊
+
+> Porting the interview intelligence system from `feature/krushna`:
+> Categorized system prompts (STAR, coding, system design), multi-turn context (last 2-3 turns), thread-safe session manager, and end-of-session AI scorecard generator.
+
+| Task ID | File(s) | Description | Status | PR |
+|---|---|---|---|---|
+| P52-T1 | `backend/llm/prompts.go`, `backend/llm/openai.go` | **Categorized Prompts & Multi-Turn Context:** Specialized prompt injections (STAR, coding, system design) and 2–3 turn context window injection. | ⬜ | — |
+| P52-T2 | `backend/session/session.go`, `backend/llm/scorecard.go`, `backend/remote/server.go`, `app.go` | **Session Manager & Scorecard:** Thread-safe session tracking, post-interview JSON scorecard evaluation, and `/session/end` endpoint. | ⬜ | — |
