@@ -19,6 +19,7 @@ import (
 #include <X11/extensions/Xfixes.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 void set_window_clickthrough(Window wid, int enable) {
     Display *display = XOpenDisplay(NULL);
@@ -40,18 +41,65 @@ void set_window_clickthrough(Window wid, int enable) {
 
 gboolean do_set_skip_taskbar(gpointer data) {
     Window wid = (Window)(uintptr_t)data;
+    
+    // 1. Direct GTK toplevel enumeration (bypasses PID lookup issues in dev mode)
+    GList *toplevels = gtk_window_list_toplevels();
+    for (GList *iter = toplevels; iter != NULL; iter = iter->next) {
+        GtkWindow *win = GTK_WINDOW(iter->data);
+        if (win && GTK_IS_WINDOW(win)) {
+            gtk_window_set_skip_taskbar_hint(win, TRUE);
+            gtk_window_set_skip_pager_hint(win, TRUE);
+            gtk_window_set_type_hint(win, GDK_WINDOW_TYPE_HINT_UTILITY);
+        }
+    }
+    if (toplevels) g_list_free(toplevels);
+
+    // 2. Direct X11 window lookup fallback
     GdkDisplay *gdk_display = gdk_display_get_default();
-    if (gdk_display) {
+    if (gdk_display && wid != 0) {
         GdkWindow *gdk_window = gdk_x11_window_lookup_for_display(gdk_display, wid);
         if (gdk_window) {
             gpointer widget = NULL;
             gdk_window_get_user_data(gdk_window, &widget);
             if (widget && GTK_IS_WINDOW(widget)) {
-                gtk_window_set_skip_taskbar_hint(GTK_WINDOW(widget), TRUE);
-                gtk_window_set_skip_pager_hint(GTK_WINDOW(widget), TRUE);
+                GtkWindow *win = GTK_WINDOW(widget);
+                gtk_window_set_skip_taskbar_hint(win, TRUE);
+                gtk_window_set_skip_pager_hint(win, TRUE);
+                gtk_window_set_type_hint(win, GDK_WINDOW_TYPE_HINT_UTILITY);
             }
         }
     }
+
+    if (wid != 0) {
+        Display *display = XOpenDisplay(NULL);
+        if (display != NULL) {
+            Atom net_wm_state = XInternAtom(display, "_NET_WM_STATE", False);
+            Atom skip_taskbar = XInternAtom(display, "_NET_WM_STATE_SKIP_TASKBAR", False);
+            Atom skip_pager = XInternAtom(display, "_NET_WM_STATE_SKIP_PAGER", False);
+            Atom net_wm_type = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
+            Atom type_utility = XInternAtom(display, "_NET_WM_WINDOW_TYPE_UTILITY", False);
+
+            XEvent event;
+            memset(&event, 0, sizeof(event));
+            event.type = ClientMessage;
+            event.xclient.window = wid;
+            event.xclient.message_type = net_wm_state;
+            event.xclient.format = 32;
+            event.xclient.data.l[0] = 1;
+            event.xclient.data.l[1] = skip_taskbar;
+            event.xclient.data.l[2] = skip_pager;
+            event.xclient.data.l[3] = 1;
+
+            Window root = DefaultRootWindow(display);
+            XSendEvent(display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &event);
+            XChangeProperty(display, wid, net_wm_state, XA_ATOM, 32, PropModeReplace, (unsigned char *)&skip_taskbar, 1);
+            XChangeProperty(display, wid, net_wm_type, XA_ATOM, 32, PropModeReplace, (unsigned char *)&type_utility, 1);
+
+            XFlush(display);
+            XCloseDisplay(display);
+        }
+    }
+
     return G_SOURCE_REMOVE;
 }
 

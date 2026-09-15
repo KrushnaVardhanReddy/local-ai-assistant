@@ -12,12 +12,18 @@ import (
 #import <Cocoa/Cocoa.h>
 
 void set_window_ignores_mouse_events(int ignore) {
-    // Assuming the app has a single main window
     dispatch_async(dispatch_get_main_queue(), ^{
         NSApplication *app = [NSApplication sharedApplication];
         for (NSWindow *window in [app windows]) {
             [window setIgnoresMouseEvents:(BOOL)ignore];
         }
+    });
+}
+
+void mac_hide_from_dock() {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // NSApplicationActivationPolicyAccessory (1) hides the app from the macOS Dock and CMD+Tab app switcher
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
     });
 }
 */
@@ -39,6 +45,7 @@ func (d *darwinModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) 
 }
 
 func (d *darwinModifier) HideFromTaskbar(ctx context.Context) error {
-	// Not implemented for macOS yet
+	C.mac_hide_from_dock()
 	return nil
 }
+

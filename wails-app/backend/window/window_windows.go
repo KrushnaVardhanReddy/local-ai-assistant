@@ -40,7 +40,7 @@ func (w *windowsModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool)
 		return fmt.Errorf("could not find window by title")
 	}
 
-	exStyle, _, _ := getWindowLong.Call(hwnd, ^uintptr(0)-uintptr(19)) // -20 in 2's complement
+	exStyle, _, _ := getWindowLong.Call(hwnd, uintptr(GWL_EXSTYLE&0xFFFFFFFF))
 
 	if ignore {
 		exStyle |= WS_EX_TRANSPARENT | WS_EX_LAYERED
@@ -48,7 +48,7 @@ func (w *windowsModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool)
 		exStyle &^= WS_EX_TRANSPARENT
 	}
 
-	setWindowLong.Call(hwnd, ^uintptr(0)-uintptr(19), exStyle)
+	setWindowLong.Call(hwnd, uintptr(GWL_EXSTYLE&0xFFFFFFFF), exStyle)
 
 	return nil
 }
@@ -61,11 +61,11 @@ func (w *windowsModifier) HideFromTaskbar(ctx context.Context) error {
 		return fmt.Errorf("could not find window by title")
 	}
 
-	exStyle, _, _ := getWindowLong.Call(hwnd, ^uintptr(0)-uintptr(19))
+	exStyle, _, _ := getWindowLong.Call(hwnd, uintptr(GWL_EXSTYLE&0xFFFFFFFF))
 	
 	exStyle |= WS_EX_TOOLWINDOW
 	
-	setWindowLong.Call(hwnd, ^uintptr(0)-uintptr(19), exStyle)
+	setWindowLong.Call(hwnd, uintptr(GWL_EXSTYLE&0xFFFFFFFF), exStyle)
 
 	return nil
 }
