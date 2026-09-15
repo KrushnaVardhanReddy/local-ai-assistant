@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 	"bytes"
 	"encoding/base64"
 	"image/png"
@@ -289,6 +290,14 @@ func (a *App) CaptureScreen() string {
 	if err := png.Encode(&buf, img); err != nil {
 		log.Printf("❌ [Go] CaptureScreen PNG encode error: %v\n", err)
 		return ""
+	}
+
+	// Save screenshot to disk in ./data/screenshots
+	if err := os.MkdirAll("./data/screenshots", 0755); err == nil {
+		fileName := fmt.Sprintf("./data/screenshots/snip_%d.png", time.Now().UnixNano())
+		if err := os.WriteFile(fileName, buf.Bytes(), 0644); err == nil {
+			log.Printf("💾 [Go] Screenshot saved to disk: %s\n", fileName)
+		}
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
