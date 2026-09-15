@@ -24,7 +24,7 @@ var (
 
 	// Expose for testing
 	NomicTokenizerURL = "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/tokenizer.json"
-	NomicModelURL     = "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/model.onnx"
+	NomicModelURL     = "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5/resolve/main/onnx/model_quantized.onnx"
 )
 
 func downloadFileAtomic(ctx context.Context, url string, dest string) error {

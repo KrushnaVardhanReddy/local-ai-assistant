@@ -15,7 +15,15 @@ import (
 var (
 	// Mockable URL and HTTP client for testing
 	ModelBundleURL = "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/sherpa-onnx-parakeet-bundle.zip"
-	HTTPClient     = &http.Client{Timeout: 30 * time.Minute}
+	HTTPClient     = &http.Client{
+		Timeout: 30 * time.Minute,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("stopped after 10 redirects")
+			}
+			return nil
+		},
+	}
 )
 
 type progressWriter struct {
