@@ -65,6 +65,13 @@ func Start(ctx context.Context) error {
 		return fmt.Errorf("failed to register Ctrl+Alt+1: %v", err)
 	}
 
+	// Ctrl+Alt+M (Toggle Stealth / Click-through Mode)
+	hkM := NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, ModAlt}, hotkey.KeyM)
+	if err := hkM.Register(); err != nil {
+		// Log error but non-fatal if hotkey binding conflicts
+		fmt.Printf("Warning: failed to register Ctrl+Alt+M: %v\n", err)
+	}
+
 	go func() {
 		for {
 			select {
@@ -72,6 +79,9 @@ func Start(ctx context.Context) error {
 				hkRight.Unregister()
 				hkLeft.Unregister()
 				hk1.Unregister()
+				if hkM != nil {
+					_ = hkM.Unregister()
+				}
 				return
 			case <-hkRight.Keydown():
 				handleMoveWindow(ctx, 100)
@@ -79,6 +89,8 @@ func Start(ctx context.Context) error {
 				handleMoveWindow(ctx, -100)
 			case <-hk1.Keydown():
 				handleIPC(ctx)
+			case <-hkM.Keydown():
+				EventsEmit(ctx, "toggle-clickthrough")
 			}
 		}
 	}()

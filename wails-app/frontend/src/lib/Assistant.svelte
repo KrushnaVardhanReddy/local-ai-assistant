@@ -347,17 +347,25 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'M' || e.key === 'm')) {
+      e.preventDefault();
+      toggleClickthrough();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
       e.preventDefault();
       showSessionReport = !showSessionReport;
     }
-    if (e.ctrlKey && e.shiftKey && e.key === 'L') {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
       e.preventDefault();
       liveEarsCollapsed = !liveEarsCollapsed;
     }
-    if (e.ctrlKey && e.shiftKey && e.key === 'B') {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'B' || e.key === 'b')) {
       e.preventDefault();
       brainCollapsed = !brainCollapsed;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'X' || e.key === 'x')) {
+      e.preventDefault();
+      clearHistory();
     }
   }
 
@@ -996,7 +1004,7 @@
       transition: background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
-  /* Click-through mode: ultra-transparent so you can read/edit behind the overlay, while passing clicks to windows behind */
+  /* Click-through mode: ultra-transparent visual overlay */
   .glass-panel.clickthrough-mode,
   .glass-pill.clickthrough-mode {
       background: rgba(0, 0, 0, 0.08) !important;
@@ -1004,19 +1012,6 @@
       -webkit-backdrop-filter: blur(3px) !important;
       border-color: rgba(255, 255, 255, 0.06) !important;
       box-shadow: none !important;
-      pointer-events: none !important;
-  }
-  .glass-panel.clickthrough-mode *,
-  .glass-pill.clickthrough-mode * {
-      pointer-events: none !important;
-      user-select: text !important;
-      -webkit-user-select: text !important;
-  }
-  .glass-pill.clickthrough-mode button {
-      pointer-events: auto !important;
-  }
-  .glass-pill.clickthrough-mode button * {
-      pointer-events: auto !important;
   }
   .glass-pill {
       background: rgba(18, 18, 18, 0.95);
