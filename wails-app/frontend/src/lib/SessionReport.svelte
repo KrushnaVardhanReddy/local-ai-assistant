@@ -1,6 +1,7 @@
 <script lang="ts">
   import { apiFetch } from "./api";
   import { getApiUrl } from "$lib/api";
+  import { EndSession } from "../../wailsjs/go/main/App";
 
   let { onClose }: { onClose: () => void } = $props();
 
@@ -28,8 +29,14 @@
     if (historyEntries.length > 0) return; // already loaded
     isLoadingHistory = true;
     try {
-      const resp = await apiFetch(`${getApiUrl()}/session/history`);
-      if (resp.ok) {
+      let resp: Response | null = null;
+      try {
+        resp = await apiFetch(`${getApiUrl()}/session/history`);
+      } catch (_) {
+        // In local Wails mode, getApiUrl() throws; query local embedded port 8000
+        resp = await fetch("http://127.0.0.1:8000/session/history");
+      }
+      if (resp && resp.ok) {
         historyEntries = await resp.json();
       }
     } catch (_) {
@@ -67,17 +74,32 @@
     isLoading = true;
     error = null;
     try {
-      const resp = await apiFetch(`${getApiUrl()}/session/end`, { method: "POST" });
-      if (!resp.ok) {
-        const data = await resp.json();
+      // 1. Try native Wails IPC first
+      if (typeof (window as any).go?.main?.App?.EndSession === "function") {
+        const data = await EndSession();
+        session = data.session;
+        scorecard = data.scorecard;
+        return;
+      }
+
+      // 2. Fallback to HTTP for remote web browser mode
+      let resp: Response | null = null;
+      try {
+        resp = await apiFetch(`${getApiUrl()}/session/end`, { method: "POST" });
+      } catch (_) {
+        resp = await fetch("http://127.0.0.1:8000/session/end", { method: "POST" });
+      }
+
+      if (!resp || !resp.ok) {
+        const data = resp ? await resp.json() : {};
         error = data.error || "Failed to generate report";
         return;
       }
       const data = await resp.json();
       session = data.session;
       scorecard = data.scorecard;
-    } catch (e) {
-      error = "Could not connect to backend";
+    } catch (e: any) {
+      error = e?.message || "Could not connect to backend";
     } finally {
       isLoading = false;
     }
