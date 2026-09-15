@@ -21,22 +21,60 @@ import (
 #include <stdint.h>
 #include <string.h>
 
+struct ClickthroughData {
+    Window wid;
+    int enable;
+};
+
+gboolean do_set_clickthrough(gpointer data) {
+    struct ClickthroughData *cdata = (struct ClickthroughData *)data;
+    Window wid = cdata->wid;
+    int enable = cdata->enable;
+    free(cdata);
+
+    // 1. GTK level clickthrough setting (works natively for GTK on both Wayland and X11)
+    GList *toplevels = gtk_window_list_toplevels();
+    for (GList *iter = toplevels; iter != NULL; iter = iter->next) {
+        GtkWindow *win = GTK_WINDOW(iter->data);
+        if (win && GTK_IS_WINDOW(win)) {
+            GdkWindow *gdk_win = gtk_widget_get_window(GTK_WIDGET(win));
+            if (gdk_win) {
+                if (enable) {
+                    cairo_region_t *empty_region = cairo_region_create();
+                    gdk_window_input_shape_combine_region(gdk_win, empty_region, 0, 0);
+                    cairo_region_destroy(empty_region);
+                } else {
+                    gdk_window_input_shape_combine_region(gdk_win, NULL, 0, 0);
+                }
+            }
+        }
+    }
+    if (toplevels) g_list_free(toplevels);
+
+    // 2. X11 fallback
+    if (wid != 0) {
+        Display *display = XOpenDisplay(NULL);
+        if (display != NULL) {
+            if (enable) {
+                XserverRegion region = XFixesCreateRegion(display, NULL, 0);
+                XFixesSetWindowShapeRegion(display, wid, ShapeInput, 0, 0, region);
+                XFixesDestroyRegion(display, region);
+            } else {
+                XFixesSetWindowShapeRegion(display, wid, ShapeInput, 0, 0, 0);
+            }
+            XFlush(display);
+            XCloseDisplay(display);
+        }
+    }
+
+    return G_SOURCE_REMOVE;
+}
+
 void set_window_clickthrough(Window wid, int enable) {
-    Display *display = XOpenDisplay(NULL);
-    if (display == NULL) {
-        return;
-    }
-
-    if (enable) {
-        XserverRegion region = XFixesCreateRegion(display, NULL, 0);
-        XFixesSetWindowShapeRegion(display, wid, ShapeInput, 0, 0, region);
-        XFixesDestroyRegion(display, region);
-    } else {
-        XFixesSetWindowShapeRegion(display, wid, ShapeInput, 0, 0, 0);
-    }
-
-    XFlush(display);
-    XCloseDisplay(display);
+    struct ClickthroughData *cdata = (struct ClickthroughData *)malloc(sizeof(struct ClickthroughData));
+    cdata->wid = wid;
+    cdata->enable = enable;
+    g_idle_add(do_set_clickthrough, cdata);
 }
 
 gboolean do_set_skip_taskbar(gpointer data) {
@@ -160,15 +198,12 @@ func init() {
 
 func (l *linuxModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) error {
     var wid C.Window
-    for i := 0; i < 5; i++ {
+    for i := 0; i < 3; i++ {
         wid = C.get_window_by_pid(C.pid_t(os.Getpid()))
         if wid != 0 {
             break
         }
-        time.Sleep(200 * time.Millisecond)
-    }
-    if wid == 0 {
-        return fmt.Errorf("could not find window ID via X11")
+        time.Sleep(100 * time.Millisecond)
     }
 
     enable := 0

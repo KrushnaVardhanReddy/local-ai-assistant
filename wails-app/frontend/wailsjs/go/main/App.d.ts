@@ -7,6 +7,8 @@ export function CaptureScreen():Promise<string>;
 
 export function ClearCache():Promise<void>;
 
+export function ClearState():Promise<void>;
+
 export function DeleteCacheItems(arg1:Array<string>):Promise<void>;
 
 export function DeleteToken():Promise<void>;

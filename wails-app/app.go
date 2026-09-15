@@ -179,6 +179,15 @@ func (a *App) GetState() map[string]interface{} {
 	}
 }
 
+// ClearState resets the current transcript, AI response, and thinking flags.
+func (a *App) ClearState() {
+	a.stateMu.Lock()
+	defer a.stateMu.Unlock()
+	a.latestTranscript = ""
+	a.latestResponse = ""
+	a.latestThinking = false
+}
+
 // GetCacheStats returns the number of cached Q&A pairs and estimated tokens saved
 func (a *App) GetCacheStats() map[string]interface{} {
 	if a.qaCache == nil {

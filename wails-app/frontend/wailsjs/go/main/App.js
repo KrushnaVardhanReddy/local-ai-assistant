@@ -10,6 +10,10 @@ export function ClearCache() {
   return window['go']['main']['App']['ClearCache']();
 }
 
+export function ClearState() {
+  return window['go']['main']['App']['ClearState']();
+}
+
 export function DeleteCacheItems(arg1) {
   return window['go']['main']['App']['DeleteCacheItems'](arg1);
 }

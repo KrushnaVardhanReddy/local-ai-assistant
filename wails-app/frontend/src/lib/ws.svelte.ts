@@ -46,10 +46,10 @@ if (!isCloud) {
       }
       if (state) {
         wsState.pollError = "ok";
-        if (typeof state.transcript === 'string' && state.transcript !== "") {
+        if (typeof state.transcript === 'string') {
           wsState.transcript = state.transcript;
         }
-        if (typeof state.response === 'string' && state.response !== "") {
+        if (typeof state.response === 'string') {
           wsState.response = state.response;
         }
         if (typeof state.thinking === 'boolean') {

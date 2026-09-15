@@ -361,15 +361,15 @@
     }
   }
 
+  import { SetClickthrough } from "../../wailsjs/go/main/App";
+
   async function toggleClickthrough() {
     clickthrough = !clickthrough;
-    if (!isBrowser) {
-      try {
-        await (window as any).go.main.App.SetClickthrough({ enable: clickthrough });
-      } catch (e) {
-        console.error('set_clickthrough failed:', e);
-        clickthrough = !clickthrough; // revert on error
-      }
+    try {
+      await SetClickthrough({ enable: clickthrough });
+    } catch (e) {
+      console.error('set_clickthrough failed:', e);
+      clickthrough = !clickthrough; // revert on error
     }
   }
 
@@ -410,12 +410,20 @@
     }
   }
 
+  import { ClearState, ClearCache } from "../../wailsjs/go/main/App";
+
   function clearHistory() {
     wsState.transcript = "";
     wsState.response = "";
+    wsState.isThinking = false;
     wsState.ragSources = [];
     wsState.pendingTranscripts = [];
     wsState.transcriptHistory = [];
+    try {
+      ClearState();
+    } catch (e) {
+      console.error("ClearState failed:", e);
+    }
     const apiUrl = getApiUrl();
     apiFetch(`${apiUrl}/history/clear`, { method: 'POST' }).catch(console.error);
   }
@@ -988,7 +996,7 @@
       transition: background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
-  /* Click-through mode: ultra-transparent so you can read/edit behind the overlay */
+  /* Click-through mode: ultra-transparent so you can read/edit behind the overlay, while passing clicks to windows behind */
   .glass-panel.clickthrough-mode,
   .glass-pill.clickthrough-mode {
       background: rgba(0, 0, 0, 0.08) !important;
@@ -996,6 +1004,19 @@
       -webkit-backdrop-filter: blur(3px) !important;
       border-color: rgba(255, 255, 255, 0.06) !important;
       box-shadow: none !important;
+      pointer-events: none !important;
+  }
+  .glass-panel.clickthrough-mode *,
+  .glass-pill.clickthrough-mode * {
+      pointer-events: none !important;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+  }
+  .glass-pill.clickthrough-mode button {
+      pointer-events: auto !important;
+  }
+  .glass-pill.clickthrough-mode button * {
+      pointer-events: auto !important;
   }
   .glass-pill {
       background: rgba(18, 18, 18, 0.95);
