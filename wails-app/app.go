@@ -321,9 +321,9 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 					}
 
 					if a.qaCache != nil {
-						cachedAns, hit := a.qaCache.SearchByEmbedding(emb, 0.92)
+						cachedAns, hit := a.qaCache.SearchByEmbedding(emb, 0.88)
 						if hit {
-							log.Printf("[Cache] Hit (similarity=%.3f): %q", 0.92, cleanTranscript)
+							log.Printf("[Cache] Hit (similarity >= 0.88): %q", cleanTranscript)
 							a.stateMu.Lock()
 							a.latestResponse = cachedAns
 							a.latestThinking = false
