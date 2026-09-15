@@ -90,16 +90,12 @@ BarnOwl AI is designed to be operated entirely without a mouse while in stealth 
 
 ---
 
-## 💰 SaaS Billing Tiers
-
-BarnOwl AI supports a robust subscription model out of the box (managed via Stripe):
-
-| Tier | Price | Features |
-|---|---|---|
-| **Demo** | Free | 15 min session (Requires referral link) |
-| **Pay-as-you-go** | $5 | 90 min one-time session token |
-| **Monthly** | $19 / mo | Max 15 sessions/mo, unlocks Live Coaching |
-| **Lifetime (BYOK)** | $99 one-time | Bring Your Own Key, unlimited usage |
+| Tier | Price | Access Period | Key Model & Features |
+|---|---|---|---|
+| **Demo Trial** | Free | 15 Min Live Demo | Managed Key (Instant trial out of the box) |
+| **30-Day BYOK Pass** | $10 (Prepaid) | 30 Days | Bring Your Own Key, unlimited usage |
+| **Annual BYOK Pass** | $50 (Prepaid) | 365 Days | Bring Your Own Key, unlimited usage |
+| **SaaS Managed Pass** | $19 (Prepaid) | 8 Full Sessions | Fully Managed LLM + STT keys, zero API setup |
 
 ---
 

@@ -22,3 +22,10 @@ The launch post is optimized for:
 3. **Resume Customization**: Injects user's background directly into the LLM context.
 4. **Live Web Search**: Silently searches the internet for up-to-date knowledge during the interview.
 5. **Remote Helper Mode**: Allows a friend to control the app remotely via a secure link.
+
+## 💰 Optimized Pricing Strategy (Prepaid & BYOK)
+- **Free Demo Trial**: 15-Minute Live Trial with Managed Keys (instant test drive).
+- **30-Day BYOK Pass**: $10 (Prepaid for 30 consecutive days, Bring Your Own Key).
+- **Annual BYOK Pass**: $50 (Prepaid for 365 days, Bring Your Own Key).
+- **SaaS Managed Pass**: $19 (Prepaid for 8 full interview sessions, fully managed API keys).
+
