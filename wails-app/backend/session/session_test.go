@@ -16,8 +16,8 @@ func TestSessionManager_Lifecycle(t *testing.T) {
 
 	// Test Start and Append
 	sm.StartTurn("Hello")
-	sm.AppendToken("Hi ")
-	sm.AppendToken("there!")
+	sm.SetCandidateResponse("Hi there!")
+	sm.SetAISuggestion("Greetings")
 
 	turn = sm.CompleteTurn()
 	if turn == nil {
@@ -26,11 +26,14 @@ func TestSessionManager_Lifecycle(t *testing.T) {
 	if turn.TurnIndex != 1 {
 		t.Errorf("Expected TurnIndex 1, got %d", turn.TurnIndex)
 	}
-	if turn.Transcript != "Hello" {
-		t.Errorf("Expected Transcript 'Hello', got '%s'", turn.Transcript)
+	if turn.InterviewerQuestion != "Hello" {
+		t.Errorf("Expected InterviewerQuestion 'Hello', got '%s'", turn.InterviewerQuestion)
 	}
-	if turn.Response != "Hi there!" {
-		t.Errorf("Expected Response 'Hi there!', got '%s'", turn.Response)
+	if turn.CandidateResponse != "Hi there!" {
+		t.Errorf("Expected CandidateResponse 'Hi there!', got '%s'", turn.CandidateResponse)
+	}
+	if turn.AISuggestion != "Greetings" {
+		t.Errorf("Expected AISuggestion 'Greetings', got '%s'", turn.AISuggestion)
 	}
 	if turn.LatencyMs < 0 {
 		t.Errorf("Expected non-negative LatencyMs, got %d", turn.LatencyMs)
@@ -45,16 +48,16 @@ func TestSessionManager_GetRecentTurns(t *testing.T) {
 		t.Errorf("Expected 0 recent turns, got %d", len(turns))
 	}
 
-	sm.StartTurn("T1")
-	sm.AppendToken("R1")
+	sm.StartTurn("Q1")
+	sm.SetCandidateResponse("R1")
 	sm.CompleteTurn()
 
-	sm.StartTurn("T2")
-	sm.AppendToken("R2")
+	sm.StartTurn("Q2")
+	sm.SetCandidateResponse("R2")
 	sm.CompleteTurn()
 
-	sm.StartTurn("T3")
-	sm.AppendToken("R3")
+	sm.StartTurn("Q3")
+	sm.SetCandidateResponse("R3")
 	sm.CompleteTurn()
 
 	recent := sm.GetRecentTurns(2)
@@ -74,8 +77,8 @@ func TestSessionManager_GetRecentTurns(t *testing.T) {
 func TestSessionManager_ExportAndClear(t *testing.T) {
 	sm := NewSessionManager()
 
-	sm.StartTurn("T1")
-	sm.AppendToken("R1")
+	sm.StartTurn("Q1")
+	sm.SetCandidateResponse("R1")
 	sm.CompleteTurn()
 
 	export := sm.Export()
@@ -109,8 +112,8 @@ func TestSessionManager_Concurrency(t *testing.T) {
 	done := make(chan bool)
 	go func() {
 		for i := 0; i < 100; i++ {
-			sm.StartTurn("ConT")
-			sm.AppendToken("ConR")
+			sm.StartTurn("ConQ")
+			sm.SetCandidateResponse("ConR")
 			sm.CompleteTurn()
 		}
 		done <- true
