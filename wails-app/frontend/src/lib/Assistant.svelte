@@ -351,7 +351,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'M' || e.key === 'm')) {
+    if ((e.ctrlKey || e.metaKey) && (e.altKey || e.shiftKey) && (e.key === 'F8' || e.key === 'f8')) {
       e.preventDefault();
       toggleClickthrough();
     }
@@ -558,6 +558,7 @@
       <!-- Click-through toggle -->
       <button
         aria-label="Toggle Click-Through"
+        title="Toggle Stealth Mode (Ctrl+Alt+F8)"
         class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {clickthrough ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
         onclick={toggleClickthrough}
       >
