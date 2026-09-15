@@ -3,11 +3,11 @@ package main
 import (
 	"embed"
 
+	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
-	"github.com/joho/godotenv"
 )
 
 //go:embed all:frontend/dist
@@ -23,10 +23,10 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "BarnOwl AI",
-		Width:  1440,
-		Height: 768,
-		Frameless: true,
+		Title:       "BarnOwl AI",
+		Width:       1440,
+		Height:      768,
+		Frameless:   true,
 		AlwaysOnTop: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
@@ -35,8 +35,8 @@ func main() {
 		Linux: &linux.Options{
 			WindowIsTranslucent: true,
 		},
-		OnStartup:        app.startup,
-		OnShutdown:       app.shutdown,
+		OnStartup:  app.startup,
+		OnShutdown: app.shutdown,
 		Bind: []interface{}{
 			app,
 		},

@@ -14,8 +14,8 @@ import (
 
 // Opaque handles
 type (
-	sherpaOnnxOnlineRecognizer struct{}
-	sherpaOnnxOnlineStream     struct{}
+	sherpaOnnxOnlineRecognizer       struct{}
+	sherpaOnnxOnlineStream           struct{}
 	sherpaOnnxOnlineRecognizerResult struct{}
 )
 
@@ -95,28 +95,28 @@ type sherpaOnnxOnlineRecognizerConfig struct {
 }
 
 type sherpaOnnxOnlineRecognizerResultC struct {
-	Text        *byte
-	Tokens      *byte
-	TokensArr   **byte
-	Timestamps  *float32
-	Count       int32
+	Text       *byte
+	Tokens     *byte
+	TokensArr  **byte
+	Timestamps *float32
+	Count      int32
 }
 
 type ParakeetEngine struct {
-	mu           sync.Mutex
-	recognizer   *sherpaOnnxOnlineRecognizer
-	stream       *sherpaOnnxOnlineStream
+	mu            sync.Mutex
+	recognizer    *sherpaOnnxOnlineRecognizer
+	stream        *sherpaOnnxOnlineStream
 	libraryHandle uintptr
 
 	// C function pointers
-	fnCreateOnlineRecognizer      func(*sherpaOnnxOnlineRecognizerConfig) *sherpaOnnxOnlineRecognizer
-	fnDestroyOnlineRecognizer     func(*sherpaOnnxOnlineRecognizer)
-	fnCreateOnlineStream          func(*sherpaOnnxOnlineRecognizer) *sherpaOnnxOnlineStream
-	fnDestroyOnlineStream         func(*sherpaOnnxOnlineStream)
-	fnAcceptWaveform              func(*sherpaOnnxOnlineStream, int32, *float32, int32)
-	fnIsOnlineStreamReady         func(*sherpaOnnxOnlineRecognizer, *sherpaOnnxOnlineStream) int32
-	fnDecodeOnlineStream          func(*sherpaOnnxOnlineRecognizer, *sherpaOnnxOnlineStream)
-	fnGetOnlineStreamResult       func(*sherpaOnnxOnlineRecognizer, *sherpaOnnxOnlineStream) *sherpaOnnxOnlineRecognizerResultC
+	fnCreateOnlineRecognizer        func(*sherpaOnnxOnlineRecognizerConfig) *sherpaOnnxOnlineRecognizer
+	fnDestroyOnlineRecognizer       func(*sherpaOnnxOnlineRecognizer)
+	fnCreateOnlineStream            func(*sherpaOnnxOnlineRecognizer) *sherpaOnnxOnlineStream
+	fnDestroyOnlineStream           func(*sherpaOnnxOnlineStream)
+	fnAcceptWaveform                func(*sherpaOnnxOnlineStream, int32, *float32, int32)
+	fnIsOnlineStreamReady           func(*sherpaOnnxOnlineRecognizer, *sherpaOnnxOnlineStream) int32
+	fnDecodeOnlineStream            func(*sherpaOnnxOnlineRecognizer, *sherpaOnnxOnlineStream)
+	fnGetOnlineStreamResult         func(*sherpaOnnxOnlineRecognizer, *sherpaOnnxOnlineStream) *sherpaOnnxOnlineRecognizerResultC
 	fnDestroyOnlineRecognizerResult func(*sherpaOnnxOnlineRecognizerResultC)
 }
 

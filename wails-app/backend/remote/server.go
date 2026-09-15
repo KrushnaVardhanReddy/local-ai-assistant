@@ -68,7 +68,7 @@ func (s *Server) handleSessionEnd(w http.ResponseWriter, r *http.Request) {
 	if turnCount == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"session": sessionData,
+			"session":   sessionData,
 			"scorecard": nil,
 		})
 		return
@@ -99,7 +99,7 @@ func (s *Server) handleSessionEnd(w http.ResponseWriter, r *http.Request) {
 		}
 
 		histories = append(histories, map[string]interface{}{
-			"session": sessionData,
+			"session":   sessionData,
 			"scorecard": scorecard,
 		})
 
@@ -110,7 +110,7 @@ func (s *Server) handleSessionEnd(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"session": sessionData,
+		"session":   sessionData,
 		"scorecard": scorecard,
 	})
 }

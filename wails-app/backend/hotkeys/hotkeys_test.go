@@ -60,9 +60,9 @@ func TestHandleIPC(t *testing.T) {
 }
 
 type mockHotkey struct {
-	registerErr error
+	registerErr   error
 	unregisterErr error
-	keydownChan chan hotkey.Event
+	keydownChan   chan hotkey.Event
 }
 
 func (m *mockHotkey) Register() error {
@@ -90,8 +90,12 @@ func TestHotkeyGoRoutineCancellation(t *testing.T) {
 	var calls int
 	NewHotkey = func(mods []hotkey.Modifier, key hotkey.Key) HotkeyInterface {
 		ch := hkRightChan
-		if calls == 1 { ch = hkLeftChan }
-		if calls == 2 { ch = hk1Chan }
+		if calls == 1 {
+			ch = hkLeftChan
+		}
+		if calls == 2 {
+			ch = hk1Chan
+		}
 		calls++
 		return &mockHotkey{
 			keydownChan: ch,
@@ -127,8 +131,12 @@ func TestKeydownBranches(t *testing.T) {
 	var calls int
 	NewHotkey = func(mods []hotkey.Modifier, key hotkey.Key) HotkeyInterface {
 		ch := hkRightChan
-		if calls == 1 { ch = hkLeftChan }
-		if calls == 2 { ch = hk1Chan }
+		if calls == 1 {
+			ch = hkLeftChan
+		}
+		if calls == 2 {
+			ch = hk1Chan
+		}
 		calls++
 		return &mockHotkey{
 			keydownChan: ch,

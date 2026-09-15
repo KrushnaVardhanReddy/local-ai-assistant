@@ -97,17 +97,17 @@ func TestStartCapture_InvalidDevice(t *testing.T) {
 }
 
 func TestStopCapture_Initialized(t *testing.T) {
-    engine := NewCaptureEngine()
+	engine := NewCaptureEngine()
 	if err := engine.Initialize(); err != nil {
 		t.Skipf("Skipping test due to portaudio initialization failure: %v", err)
 	}
 	defer engine.Terminate()
 
-    // StopCapture when nothing is capturing should be fine
-    err := engine.StopCapture()
-    if err != nil {
-        t.Errorf("Expected no error calling StopCapture, got %v", err)
-    }
+	// StopCapture when nothing is capturing should be fine
+	err := engine.StopCapture()
+	if err != nil {
+		t.Errorf("Expected no error calling StopCapture, got %v", err)
+	}
 }
 
 func generateAudioChunk(rmsTarget float64, numSamples int) []byte {

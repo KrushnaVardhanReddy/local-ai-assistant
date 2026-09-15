@@ -8,7 +8,7 @@ import (
 
 var (
 	// Variables for mocking in tests
-	goarch    = runtime.GOARCH
+	goarch = runtime.GOARCH
 	// hasAVX2 is set in arch-specific files
 	getMemory = func() (uint64, error) {
 		v, err := mem.VirtualMemory()

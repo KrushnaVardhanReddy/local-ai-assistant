@@ -48,4 +48,3 @@ func (d *darwinModifier) HideFromTaskbar(ctx context.Context) error {
 	C.mac_hide_from_dock()
 	return nil
 }
-

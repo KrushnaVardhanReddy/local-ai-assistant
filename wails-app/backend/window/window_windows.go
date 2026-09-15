@@ -10,17 +10,17 @@ import (
 )
 
 var (
-	user32 = syscall.NewLazyDLL("user32.dll")
-	findWindowW = user32.NewProc("FindWindowW")
+	user32        = syscall.NewLazyDLL("user32.dll")
+	findWindowW   = user32.NewProc("FindWindowW")
 	setWindowLong = user32.NewProc("SetWindowLongW")
 	getWindowLong = user32.NewProc("GetWindowLongW")
 )
 
 const (
-	GWL_EXSTYLE = -20
+	GWL_EXSTYLE       = -20
 	WS_EX_TRANSPARENT = 0x00000020
-	WS_EX_LAYERED = 0x00080000
-	WS_EX_TOOLWINDOW = 0x00000080
+	WS_EX_LAYERED     = 0x00080000
+	WS_EX_TOOLWINDOW  = 0x00000080
 )
 
 type windowsModifier struct{}
@@ -62,9 +62,9 @@ func (w *windowsModifier) HideFromTaskbar(ctx context.Context) error {
 	}
 
 	exStyle, _, _ := getWindowLong.Call(hwnd, uintptr(GWL_EXSTYLE&0xFFFFFFFF))
-	
+
 	exStyle |= WS_EX_TOOLWINDOW
-	
+
 	setWindowLong.Call(hwnd, uintptr(GWL_EXSTYLE&0xFFFFFFFF), exStyle)
 
 	return nil

@@ -7,14 +7,49 @@ package stt
 import "C"
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"wails-app/backend/system"
 
 	"github.com/ggerganov/whisper.cpp/bindings/go/pkg/whisper"
 )
 
+var (
+	WhisperModelURL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
+)
+
 type WhisperEngine struct {
 	model whisper.Model
+}
+
+func downloadFileAtomic(ctx context.Context, url string, dest string) error {
+	return system.DownloadFileAtomic(ctx, url, dest, nil)
+}
+
+// EnsureWhisperModel checks if modelPath exists. If not, it attempts to download the model to models/ggml-base.en.bin.
+// It returns the valid model path to use.
+func EnsureWhisperModel(modelPath string) (string, error) {
+	if modelPath != "" {
+		if _, err := os.Stat(modelPath); err == nil {
+			return modelPath, nil
+		}
+	}
+
+	fallbackPath := "models/ggml-base.en.bin"
+	if _, err := os.Stat(fallbackPath); err == nil {
+		return fallbackPath, nil
+	}
+
+	log.Printf("🧠 [Whisper] Model not found locally. Downloading from HuggingFace to %s...", fallbackPath)
+	if err := downloadFileAtomic(context.Background(), WhisperModelURL, fallbackPath); err != nil {
+		return "", fmt.Errorf("failed to download whisper model: %w", err)
+	}
+	log.Printf("🧠 [Whisper] Successfully downloaded model to %s", fallbackPath)
+
+	return fallbackPath, nil
 }
 
 func LoadWhisperEngine(modelPath string) (*WhisperEngine, error) {

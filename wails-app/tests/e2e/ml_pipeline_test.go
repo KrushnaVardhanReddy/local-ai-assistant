@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-audio/wav"
 	"wails-app/backend"
 	"wails-app/backend/stt"
-	"github.com/go-audio/wav"
 )
 
 func readWavToFloat32(path string) ([]float32, error) {
@@ -48,13 +48,13 @@ func TestE2EMLPipeline(t *testing.T) {
 	if sttModelPath == "" {
 		sttModelPath = "../../../models/ggml-tiny.bin"
 	}
-	
+
 	manager := stt.NewSTTManager(nil)
 	engine, err := stt.LoadWhisperEngine(sttModelPath)
 	if err != nil {
 		t.Fatalf("Failed to load STT Model from %s: %v", sttModelPath, err)
 	}
-	
+
 	err = manager.SwapEngine(engine)
 	if err != nil {
 		t.Fatalf("Failed to set active engine: %v", err)

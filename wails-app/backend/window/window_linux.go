@@ -86,7 +86,7 @@ void set_window_clickthrough(Window wid, int enable) {
 
 gboolean do_set_skip_taskbar(gpointer data) {
     Window wid = (Window)(uintptr_t)data;
-    
+
     // 1. Direct GTK toplevel enumeration (bypasses PID lookup issues in dev mode)
     GList *toplevels = gtk_window_list_toplevels();
     for (GList *iter = toplevels; iter != NULL; iter = iter->next) {
@@ -204,42 +204,42 @@ func init() {
 }
 
 func (l *linuxModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) error {
-    var wid C.Window
-    for i := 0; i < 3; i++ {
-        wid = C.get_window_by_pid(C.pid_t(os.Getpid()))
-        if wid != 0 {
-            break
-        }
-        time.Sleep(100 * time.Millisecond)
-    }
+	var wid C.Window
+	for i := 0; i < 3; i++ {
+		wid = C.get_window_by_pid(C.pid_t(os.Getpid()))
+		if wid != 0 {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 
-    enable := 0
-    if ignore {
-        enable = 1
-    }
+	enable := 0
+	if ignore {
+		enable = 1
+	}
 
-    C.set_window_clickthrough(wid, C.int(enable))
-    return nil
+	C.set_window_clickthrough(wid, C.int(enable))
+	return nil
 }
 
 func (l *linuxModifier) HideFromTaskbar(ctx context.Context) error {
-    go func() {
-        // Try to get the window ID, retrying if necessary
-        var wid C.Window
-        for i := 0; i < 10; i++ {
-            wid = C.get_window_by_pid(C.pid_t(os.Getpid()))
-            if wid != 0 {
-                break
-            }
-            time.Sleep(200 * time.Millisecond)
-        }
-        
-        if wid != 0 {
-            C.set_window_skip_taskbar(wid)
-        } else {
-            fmt.Println("HideFromTaskbar: could not find window ID via X11")
-        }
-    }()
-    
-    return nil
+	go func() {
+		// Try to get the window ID, retrying if necessary
+		var wid C.Window
+		for i := 0; i < 10; i++ {
+			wid = C.get_window_by_pid(C.pid_t(os.Getpid()))
+			if wid != 0 {
+				break
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+
+		if wid != 0 {
+			C.set_window_skip_taskbar(wid)
+		} else {
+			fmt.Println("HideFromTaskbar: could not find window ID via X11")
+		}
+	}()
+
+	return nil
 }

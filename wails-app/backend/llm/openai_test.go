@@ -126,12 +126,12 @@ func TestStreamCompletion_ErrorCases(t *testing.T) {
 	os.Setenv("OPENAI_API_KEY", "test-key")
 	defer os.Unsetenv("OPENAI_API_KEY")
 
-    // Bad URL
-    os.Setenv("LLM_BASE_URL", "http://inv\x00alid-url")
-    err := StreamCompletion("Test", nil, nil)
-    if err == nil {
-        t.Error("Expected error for invalid URL")
-    }
+	// Bad URL
+	os.Setenv("LLM_BASE_URL", "http://inv\x00alid-url")
+	err := StreamCompletion("Test", nil, nil)
+	if err == nil {
+		t.Error("Expected error for invalid URL")
+	}
 
 	// Non-200 Response
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -224,12 +224,12 @@ func TestStreamCompletion_MockErrors(t *testing.T) {
 	}
 	httpClientDo = originalHttpClientDo
 
-    // scanner error - returning an error from Read
-    httpClientDo = func(c *http.Client, req *http.Request) (*http.Response, error) {
+	// scanner error - returning an error from Read
+	httpClientDo = func(c *http.Client, req *http.Request) (*http.Response, error) {
 		return &http.Response{
-            StatusCode: http.StatusOK,
-            Body: errReader{},
-        }, nil
+			StatusCode: http.StatusOK,
+			Body:       errReader{},
+		}, nil
 	}
 	err = StreamCompletion("Test", nil, nil)
 	if err == nil {

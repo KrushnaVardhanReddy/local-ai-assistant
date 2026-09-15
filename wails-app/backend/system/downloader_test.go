@@ -72,7 +72,7 @@ func TestStartBackgroundDownload(t *testing.T) {
 
 	// Mock HOME dir so we don't mess with real ~/.local
 	tempHome := t.TempDir()
-	t.Setenv("HOME", tempHome) // Linux/macOS
+	t.Setenv("HOME", tempHome)        // Linux/macOS
 	t.Setenv("USERPROFILE", tempHome) // Windows
 
 	// Override os.UserHomeDir function by hacking standard lib? No, t.Setenv works in Go 1.15+ for os.UserHomeDir().

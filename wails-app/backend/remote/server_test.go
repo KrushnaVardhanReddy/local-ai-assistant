@@ -2,11 +2,11 @@ package remote
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
-    "net/http"
 
 	"github.com/gorilla/websocket"
 )
@@ -116,11 +116,11 @@ func TestServer_UpgradeError(t *testing.T) {
 	defer ts.Close()
 
 	req, _ := http.NewRequest("GET", ts.URL+"/ws", nil)
-    resp, err := http.DefaultClient.Do(req)
-    if err != nil {
-        t.Fatalf("Failed to do request: %v", err)
-    }
-    defer resp.Body.Close()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to do request: %v", err)
+	}
+	defer resp.Body.Close()
 }
 
 func TestServer_BroadcastError(t *testing.T) {
@@ -180,7 +180,7 @@ func TestServer_BroadcastError(t *testing.T) {
 	if exists {
 		t.Errorf("Expected client to be removed after broadcast error")
 	}
-    ws.Close()
+	ws.Close()
 }
 
 func TestServer_StopWithClients(t *testing.T) {

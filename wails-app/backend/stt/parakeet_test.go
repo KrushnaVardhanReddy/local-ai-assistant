@@ -115,7 +115,7 @@ func TestNewParakeetEngine_ModelNotFound(t *testing.T) {
 	registerLibFunc = func(fptr interface{}, handle uintptr, name string) {}
 
 	_, err := NewParakeetEngine()
-	if err == nil || err.Error() != "model file not found: " + filepath.Join(modelsDir, "model.onnx") {
+	if err == nil || err.Error() != "model file not found: "+filepath.Join(modelsDir, "model.onnx") {
 		t.Errorf("expected model file not found error, got %v", err)
 	}
 }
@@ -159,7 +159,9 @@ func TestNewParakeetEngine_CreateFailures(t *testing.T) {
 		registerLibFunc = func(fptr interface{}, handle uintptr, name string) {
 			if name == "SherpaOnnxCreateOnlineRecognizer" {
 				fn := fptr.(*func(*sherpaOnnxOnlineRecognizerConfig) *sherpaOnnxOnlineRecognizer)
-				*fn = func(config *sherpaOnnxOnlineRecognizerConfig) *sherpaOnnxOnlineRecognizer { return &sherpaOnnxOnlineRecognizer{} }
+				*fn = func(config *sherpaOnnxOnlineRecognizerConfig) *sherpaOnnxOnlineRecognizer {
+					return &sherpaOnnxOnlineRecognizer{}
+				}
 			}
 			if name == "SherpaOnnxDestroyOnlineRecognizer" {
 				fn := fptr.(*func(*sherpaOnnxOnlineRecognizer))
@@ -180,7 +182,9 @@ func TestNewParakeetEngine_CreateFailures(t *testing.T) {
 		registerLibFunc = func(fptr interface{}, handle uintptr, name string) {
 			if name == "SherpaOnnxCreateOnlineRecognizer" {
 				fn := fptr.(*func(*sherpaOnnxOnlineRecognizerConfig) *sherpaOnnxOnlineRecognizer)
-				*fn = func(config *sherpaOnnxOnlineRecognizerConfig) *sherpaOnnxOnlineRecognizer { return &sherpaOnnxOnlineRecognizer{} }
+				*fn = func(config *sherpaOnnxOnlineRecognizerConfig) *sherpaOnnxOnlineRecognizer {
+					return &sherpaOnnxOnlineRecognizer{}
+				}
 			}
 			if name == "SherpaOnnxCreateOnlineStream" {
 				fn := fptr.(*func(*sherpaOnnxOnlineRecognizer) *sherpaOnnxOnlineStream)
@@ -239,12 +243,12 @@ func TestTranscribeStreamCoverage_Ready(t *testing.T) {
 
 	engine.fnAcceptWaveform = func(stream *sherpaOnnxOnlineStream, sampleRate int32, samples *float32, n int32) {}
 
-    calls := 0
+	calls := 0
 	engine.fnIsOnlineStreamReady = func(recognizer *sherpaOnnxOnlineRecognizer, stream *sherpaOnnxOnlineStream) int32 {
-        if calls == 0 {
-            calls++
-            return 1
-        }
+		if calls == 0 {
+			calls++
+			return 1
+		}
 		return 0
 	}
 	engine.fnDecodeOnlineStream = func(recognizer *sherpaOnnxOnlineRecognizer, stream *sherpaOnnxOnlineStream) {}
@@ -286,10 +290,10 @@ func TestCloseCoverage_WithMocks(t *testing.T) {
 		recognizer: &sherpaOnnxOnlineRecognizer{},
 		stream:     &sherpaOnnxOnlineStream{},
 	}
-    engine.fnDestroyOnlineStream = func(stream *sherpaOnnxOnlineStream) {}
-    engine.fnDestroyOnlineRecognizer = func(recognizer *sherpaOnnxOnlineRecognizer) {}
+	engine.fnDestroyOnlineStream = func(stream *sherpaOnnxOnlineStream) {}
+	engine.fnDestroyOnlineRecognizer = func(recognizer *sherpaOnnxOnlineRecognizer) {}
 
-    err := engine.Close()
+	err := engine.Close()
 	if err != nil {
 		t.Errorf("expected nil error, got %v", err)
 	}

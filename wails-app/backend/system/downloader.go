@@ -93,7 +93,7 @@ func downloadFileWithRetry(ctx context.Context, url string, dest string, progres
 	return fmt.Errorf("failed to download after %d retries: %v", maxRetries, lastErr)
 }
 
-func downloadFile(ctx context.Context, url string, dest string, progressCallback func(float32)) error {
+func DownloadFileAtomic(ctx context.Context, url string, dest string, progressCallback func(float32)) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return err
@@ -109,11 +109,15 @@ func downloadFile(ctx context.Context, url string, dest string, progressCallback
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	out, err := os.Create(dest)
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return err
+	}
+
+	tmpDest := dest + ".tmp"
+	out, err := os.Create(tmpDest)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
 
 	pw := &progressWriter{
 		total:    float64(resp.ContentLength),
@@ -121,11 +125,22 @@ func downloadFile(ctx context.Context, url string, dest string, progressCallback
 	}
 
 	_, err = io.Copy(out, io.TeeReader(resp.Body, pw))
+	out.Close()
 	if err != nil {
+		os.Remove(tmpDest)
+		return err
+	}
+
+	if err := os.Rename(tmpDest, dest); err != nil {
+		os.Remove(tmpDest)
 		return err
 	}
 
 	return nil
+}
+
+func downloadFile(ctx context.Context, url string, dest string, progressCallback func(float32)) error {
+	return DownloadFileAtomic(ctx, url, dest, progressCallback)
 }
 
 func extractZip(src string, dest string) error {

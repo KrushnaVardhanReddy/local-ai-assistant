@@ -2,8 +2,8 @@ package filter
 
 import (
 	"os"
-	"testing"
 	"sync"
+	"testing"
 )
 
 func TestCheck(t *testing.T) {

@@ -41,9 +41,9 @@ type ChatResponseChunk struct {
 
 // Variables for mocking in tests
 var (
-	jsonMarshal   = json.Marshal
+	jsonMarshal    = json.Marshal
 	httpNewRequest = http.NewRequest
-	httpClientDo  = func(c *http.Client, req *http.Request) (*http.Response, error) {
+	httpClientDo   = func(c *http.Client, req *http.Request) (*http.Response, error) {
 		return c.Do(req)
 	}
 )

@@ -1,25 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"image/png"
 	"log"
-	"wails-app/backend/session"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"time"
-	"bytes"
-	"encoding/base64"
-	"image/png"
 	"wails-app/backend"
 	"wails-app/backend/audio"
 	"wails-app/backend/filter"
 	"wails-app/backend/hotkeys"
 	"wails-app/backend/llm"
 	"wails-app/backend/remote"
+	"wails-app/backend/session"
 	"wails-app/backend/stt"
 	"wails-app/backend/system"
 	"wails-app/backend/window"
@@ -30,9 +30,8 @@ import (
 
 // App struct
 type App struct {
-
 	remoteServer *remote.Server
-	ctx context.Context
+	ctx          context.Context
 
 	backendCmd *exec.Cmd
 	cmdMutex   sync.Mutex
@@ -81,11 +80,12 @@ func NewApp() *App {
 		initialEngine = stt.NewGroqEngine(groqKey, groqModel)
 		log.Printf("☁️ Using Groq Cloud STT Engine (Model: %s)\n", groqModel)
 	} else {
-		if modelPath == "" {
-			log.Println("⚠️  No Whisper model found! Set WHISPER_MODEL_PATH env var. STT will be disabled.")
+		validPath, err := stt.EnsureWhisperModel(modelPath)
+		if err != nil {
+			log.Printf("⚠️  Could not ensure Whisper model: %v. STT will be disabled.", err)
 		} else {
-			log.Printf("🧠 Loading local Whisper model from: %s\n", modelPath)
-			whisperEngine, err := stt.LoadWhisperEngine(modelPath)
+			log.Printf("🧠 Loading local Whisper model from: %s\n", validPath)
+			whisperEngine, err := stt.LoadWhisperEngine(validPath)
 			if err == nil {
 				initialEngine = whisperEngine
 				log.Println("✅ Whisper model loaded successfully!")
@@ -111,10 +111,10 @@ func NewApp() *App {
 	sessMgr := session.NewSessionManager()
 
 	return &App{
-		remoteServer: remote.NewServer(http.FS(assets), sessMgr),
-		sttManager:   stt.NewSTTManager(initialEngine),
-		audioCapture: captureEngine,
-		qaCache:      db,
+		remoteServer:   remote.NewServer(http.FS(assets), sessMgr),
+		sttManager:     stt.NewSTTManager(initialEngine),
+		audioCapture:   captureEngine,
+		qaCache:        db,
 		sessionManager: sessMgr,
 	}
 }
@@ -149,10 +149,14 @@ func (a *App) startup(ctx context.Context) {
 	if a.remoteServer != nil {
 		a.remoteServer.Start()
 	}
-	go system.StartBackgroundDownload(ctx, func(progress float32) {
-		// Example: Emit progress event to frontend
-		wailsruntime.EventsEmit(ctx, "download_progress", progress)
-	})
+
+	sttProvider := os.Getenv("STT_PROVIDER")
+	if sttProvider == "parakeet" {
+		go system.StartBackgroundDownload(ctx, func(progress float32) {
+			// Example: Emit progress event to frontend
+			wailsruntime.EventsEmit(ctx, "download_progress", progress)
+		})
+	}
 
 	// Auto-start default microphone capture
 	go func() {
@@ -402,7 +406,7 @@ func (a *App) EndSession() (map[string]interface{}, error) {
 	turnCount, _ := sessionData["turn_count"].(int)
 	if turnCount == 0 {
 		return map[string]interface{}{
-			"session": sessionData,
+			"session":   sessionData,
 			"scorecard": nil,
 		}, nil
 	}
@@ -413,7 +417,7 @@ func (a *App) EndSession() (map[string]interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"session": sessionData,
+		"session":   sessionData,
 		"scorecard": scorecard,
 	}, nil
 }
