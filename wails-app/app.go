@@ -9,6 +9,9 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"bytes"
+	"encoding/base64"
+	"image/png"
 	"wails-app/backend"
 	"wails-app/backend/audio"
 	"wails-app/backend/filter"
@@ -19,6 +22,7 @@ import (
 	"wails-app/backend/system"
 	"wails-app/backend/window"
 
+	"github.com/kbinani/screenshot"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -265,7 +269,73 @@ func (a *App) QuitApp() {
 }
 
 func (a *App) CaptureScreen() string {
-	return ""
+	log.Println("📸 [Go] CaptureScreen requested...")
+	n := screenshot.NumActiveDisplays()
+	log.Printf("📸 [Go] Active displays count: %d\n", n)
+	if n <= 0 {
+		log.Println("❌ [Go] CaptureScreen: No active displays found")
+		return ""
+	}
+
+	bounds := screenshot.GetDisplayBounds(0)
+	log.Printf("📸 [Go] Display 0 bounds: %+v\n", bounds)
+	img, err := screenshot.CaptureRect(bounds)
+	if err != nil {
+		log.Printf("❌ [Go] CaptureScreen error: %v\n", err)
+		return ""
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		log.Printf("❌ [Go] CaptureScreen PNG encode error: %v\n", err)
+		return ""
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+	log.Printf("✅ [Go] Screen captured successfully! PNG size: %d bytes (base64 len: %d)\n", buf.Len(), len(encoded))
+	return "data:image/png;base64," + encoded
+}
+
+// AnalyzeVision receives a base64 screenshot data URI and streams the LLM vision response to the frontend UI
+func (a *App) AnalyzeVision(base64Image string, prompt string) error {
+	log.Println("🤖 [Go] AnalyzeVision starting LLM completion for screenshot...")
+
+	a.stateMu.Lock()
+	a.latestTranscript = "📸 [Screenshot Snip Captured]"
+	a.latestResponse = ""
+	a.latestThinking = true
+	a.stateMu.Unlock()
+
+	wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
+
+	go func() {
+		var answerBuilder strings.Builder
+		err := llm.StreamVisionCompletion(base64Image, prompt, func(token string) {
+			answerBuilder.WriteString(token)
+			a.stateMu.Lock()
+			a.latestResponse = answerBuilder.String()
+			a.latestThinking = true
+			a.stateMu.Unlock()
+			wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
+		}, func() {
+			a.stateMu.Lock()
+			a.latestThinking = false
+			a.stateMu.Unlock()
+			wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
+		})
+
+		if err != nil {
+			log.Printf("❌ [Go] AnalyzeVision failed: %v", err)
+			a.stateMu.Lock()
+			a.latestResponse = fmt.Sprintf("Vision analysis error: %v", err)
+			a.latestThinking = false
+			a.stateMu.Unlock()
+		} else {
+			log.Println("✅ [Go] AnalyzeVision stream complete!")
+		}
+	}()
+
+	return nil
 }
 
 func (a *App) SetClickthrough(opts map[string]interface{}) {

@@ -8,6 +8,7 @@
   import { authState } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
   import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
+  import { CaptureScreen, AnalyzeVision, ClearState, ClearCache, SetClickthrough } from "../../wailsjs/go/main/App";
 
   let showSessionReport = $state(false);
   let currentView = $state<'interview' | 'resume'>('interview');
@@ -228,7 +229,6 @@
       responseEl?.scrollBy({ top: -100, behavior: 'smooth' });
     });
 
-    // Check if we are running in a regular browser instead of Tauri
     isBrowser = typeof window !== 'undefined' && typeof (window as any).__TAURI_INTERNALS__ === 'undefined';
     const apiUrl = getApiUrl();
 
@@ -241,7 +241,11 @@
 
       wsState.isAnalyzingScreen = true;
       try {
-        const base64Image = await (window as any).go.main.App.CaptureScreen();
+        const base64Image = await CaptureScreen();
+        if (!base64Image) {
+          wsState.error = "Failed to capture screenshot";
+          return;
+        }
 
         const headers: Record<string, string> = {
           "Content-Type": "application/json"
@@ -363,13 +367,15 @@
       e.preventDefault();
       brainCollapsed = !brainCollapsed;
     }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+      e.preventDefault();
+      triggerVision();
+    }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'X' || e.key === 'x')) {
       e.preventDefault();
       clearHistory();
     }
   }
-
-  import { SetClickthrough } from "../../wailsjs/go/main/App";
 
   async function toggleClickthrough() {
     clickthrough = !clickthrough;
@@ -381,44 +387,34 @@
     }
   }
 
-  function triggerVision() {
-    if (!wsState.isAnalyzingScreen && !isBrowser) {
-      if (wsState.plan === "demo" || wsState.plan === "payg") {
-        wsState.error = "Vision features require a Monthly or Founding plan.";
-        return;
-      }
-
-      // Dispatch a synthetic event that the backend/Tauri bridge will pick up
-      // Or just invoke directly here if we are not relying on the global hotkey
-      (window as any).go.main.App.CaptureScreen().then(async (base64Image) => {
-        wsState.isAnalyzingScreen = true;
-        const apiUrl = getApiUrl();
-        try {
-          const headers: Record<string, string> = {
-            "Content-Type": "application/json"
-          };
-          if (authState.accessToken) {
-            headers["Authorization"] = `Bearer ${authState.accessToken}`;
-          }
-
-          const res = await apiFetch(`${apiUrl}/vision/analyze`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ image_base64: base64Image })
-          });
-
-          if (!res.ok) {
-            const json = await res.json().catch(() => ({}));
-            wsState.error = json.message || "Vision request failed";
-          }
-        } finally {
-          wsState.isAnalyzingScreen = false;
+  async function triggerVision() {
+    console.log("📸 [Svelte] triggerVision called! isAnalyzingScreen:", wsState.isAnalyzingScreen);
+    if (!wsState.isAnalyzingScreen) {
+      wsState.isAnalyzingScreen = true;
+      try {
+        console.log("📸 [Svelte] Calling CaptureScreen()...");
+        const base64Image = await CaptureScreen();
+        console.log("📸 [Svelte] CaptureScreen returned length:", base64Image ? base64Image.length : 0);
+        if (!base64Image) {
+          wsState.error = "Failed to capture screenshot";
+          return;
         }
-      }).catch(console.error);
+
+        console.log("📸 [Svelte] Invoking App.AnalyzeVision...");
+        wsState.transcript = "📸 [Screenshot Snip Captured]";
+        wsState.response = "";
+        wsState.isThinking = true;
+
+        await AnalyzeVision(base64Image, "");
+        console.log("📸 [Svelte] AnalyzeVision triggered successfully!");
+      } catch (e: any) {
+        console.error("❌ [Svelte] Failed to analyze screen:", e);
+        wsState.error = e?.message || "Failed to analyze screen";
+      } finally {
+        wsState.isAnalyzingScreen = false;
+      }
     }
   }
-
-  import { ClearState, ClearCache } from "../../wailsjs/go/main/App";
 
   function clearHistory() {
     wsState.transcript = "";
@@ -513,9 +509,8 @@
       </button>
       <button
         aria-label="Screenshot"
-        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {(wsState.plan === 'demo' || wsState.plan === 'payg') ? 'opacity-50 cursor-not-allowed text-on-surface-variant' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary ' + (wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : '')}"
+        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto hover:bg-white/10 text-on-surface-variant hover:text-primary {wsState.isAnalyzingScreen ? 'text-primary animate-pulse' : ''}"
         onclick={triggerVision}
-        disabled={wsState.plan === 'demo' || wsState.plan === 'payg'}
       >
         <span class="material-symbols-outlined text-[18px]" data-icon="screenshot_monitor">screenshot_monitor</span>
         <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Snip</span>

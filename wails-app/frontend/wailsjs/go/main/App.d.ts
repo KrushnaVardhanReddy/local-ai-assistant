@@ -3,6 +3,8 @@
 import {audio} from '../models';
 import {backend} from '../models';
 
+export function AnalyzeVision(arg1:string,arg2:string):Promise<void>;
+
 export function CaptureScreen():Promise<string>;
 
 export function ClearCache():Promise<void>;
