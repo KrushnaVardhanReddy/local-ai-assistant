@@ -13,6 +13,9 @@
   let scriptWords: string[] = [];
   let currentWordIndex = 0;
 
+  let isThinking = false;
+  let isCopilotOpen = false;
+
   let autoScrollPaused = false;
   let resumeScrollTimeout: ReturnType<typeof setTimeout>;
 
@@ -32,12 +35,16 @@
         if (state) {
           latestTranscript = state.transcript || '';
           latestResponse = state.response || '';
+          isThinking = state.thinking || false;
           const newScript = state.script || '';
           if (newScript !== script) {
             script = newScript;
             scriptWords = script.split(/\s+/).filter(w => w.length > 0);
             currentWordIndex = 0;
             updateScrollPosition();
+          }
+          if (isThinking || latestResponse) {
+             isCopilotOpen = true;
           }
         }
       }
@@ -157,11 +164,20 @@
     window.addEventListener('keydown', handleKeyDown);
 
     // Re-use existing on_response_token / on_response_end Wails events
+    EventsOn('on_response_start', () => {
+      isThinking = true;
+      isCopilotOpen = true;
+      latestResponse = '';
+    });
+
     EventsOn('on_response_token', (token: string) => {
       latestResponse += token;
+      isThinking = true;
+      isCopilotOpen = true;
     });
 
     EventsOn('on_response_end', () => {
+      isThinking = false;
       fetchState(); // sync state fully when response ends
     });
 
@@ -179,6 +195,7 @@
     window.removeEventListener('keydown', handleKeyDown);
     if (resumeScrollTimeout) clearTimeout(resumeScrollTimeout);
     if (pollInterval) clearInterval(pollInterval);
+    EventsOff('on_response_start');
     EventsOff('on_response_token');
     EventsOff('on_response_end');
     EventsOff('on_transcript');
@@ -227,10 +244,19 @@
           {/each}
         </div>
       {/if}
-      <div class="transcript">{latestTranscript}</div>
-      <div class="response">{latestResponse}</div>
     </div>
   </div>
+
+  {#if isCopilotOpen}
+    <div class="copilot-drawer {isThinking ? 'thinking' : ''}" style="--dynamic-font-size: {fontSize}rem; --dynamic-line-height: {lineHeight}; background-color: rgba(20, 20, 30, {opacity});">
+       <div class="copilot-header">
+          <span>Copilot Q&A</span>
+          <button class="close-copilot" on:click={() => { isCopilotOpen = false; latestResponse = ''; }}>✖</button>
+       </div>
+       <div class="transcript">Q: {latestTranscript}</div>
+       <div class="response">A: {latestResponse}</div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -395,6 +421,53 @@
     color: #4ade80; /* bright green for current position */
     font-weight: bold;
     text-shadow: 0 0 4px rgba(74, 222, 128, 0.4);
+  }
+
+  .copilot-drawer {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: calc(var(--hud-width) * 0.8);
+    border-radius: 8px;
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: auto;
+    z-index: 9999;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .copilot-drawer.thinking {
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+    border-color: rgba(74, 222, 128, 0.6);
+  }
+
+  .copilot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--hud-text-gray);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+
+  .close-copilot {
+    background: transparent;
+    border: none;
+    color: var(--hud-text-gray);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+  }
+
+  .close-copilot:hover {
+    color: var(--hud-text-white);
   }
 
   .status-badge {

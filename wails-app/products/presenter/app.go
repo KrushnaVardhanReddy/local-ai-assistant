@@ -3,6 +3,7 @@ package presenter
 import (
 	"context"
 	"os"
+	"strings"
 
 	cacheadapter "wails-app/adapters/cache"
 	eventsadapter "wails-app/adapters/events"
@@ -15,6 +16,59 @@ import (
 	"wails-app/core/ports/driven"
 	"wails-app/backend/parser"
 )
+
+// IsQuestion determines if a string is a question.
+func IsQuestion(text string) bool {
+	t := strings.TrimSpace(strings.ToLower(text))
+	if strings.HasSuffix(t, "?") {
+		return true
+	}
+	questionWords := []string{"who", "what", "where", "when", "why", "how"}
+	for _, word := range questionWords {
+		if strings.HasPrefix(t, word+" ") || t == word {
+			return true
+		}
+	}
+	return false
+}
+
+// CopilotLLM wraps driven.LLMPort to intercept questions and add the script as context.
+type CopilotLLM struct {
+	base   driven.LLMPort
+	getApp func() *PresenterApp
+}
+
+func (c *CopilotLLM) StreamCompletion(
+	question string,
+	systemPrompt string,
+	history []driven.ChatMessage,
+	onToken driven.StreamCallback,
+	onDone func(),
+) error {
+	app := c.getApp()
+	if !IsQuestion(question) {
+		// If it's not a question, do not stream any completion to avoid popping up the copilot drawer.
+		if onDone != nil {
+			onDone()
+		}
+		return nil
+	}
+
+	q := question
+	if app != nil && app.script != "" {
+		q = "Context Script:\n" + app.script + "\n\nAudience Question:\n" + question
+	}
+	return c.base.StreamCompletion(q, systemPrompt, history, onToken, onDone)
+}
+
+func (c *CopilotLLM) StreamVision(
+	base64Image string,
+	prompt string,
+	onToken driven.StreamCallback,
+	onDone func(),
+) error {
+	return c.base.StreamVision(base64Image, prompt, onToken, onDone)
+}
 
 // PresenterApp is the Wails App struct for the StealthPresenter product.
 // It is thin — it owns only Wails-facing concerns (context, window, audio).
@@ -30,7 +84,15 @@ type PresenterApp struct {
 func NewPresenterApp() *PresenterApp {
 	// Build adapters
 	db, _ := backend.NewVectorDB("./data/presenter_cache.db")
-	llmAdapter := llmadapter.NewOpenAIAdapter()
+
+	// Create base LLM adapter and wrap it in CopilotLLM
+	var app *PresenterApp
+	llmAdapter := &CopilotLLM{
+		base: llmadapter.NewOpenAIAdapter(),
+		getApp: func() *PresenterApp {
+			return app
+		},
+	}
 	cacheAdapter := cacheadapter.NewSQLiteVecAdapter(db)
 
 	// STT: prefer Groq if key set, else fall back to local Whisper
@@ -52,11 +114,12 @@ func NewPresenterApp() *PresenterApp {
 		&eventsadapter.NoopEventAdapter{}, // replaced in startup()
 	)
 
-	return &PresenterApp{
+	app = &PresenterApp{
 		engine:       eng,
 		audioCapture: audio.NewCaptureEngine(),
 		window:       windowadapter.NewWailsWindowAdapter(),
 	}
+	return app
 }
 
 // NewPresenterAppWithPorts provides a constructor for testing that accepts the port

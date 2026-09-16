@@ -12,6 +12,7 @@ import (
 	llmadapter "wails-app/adapters/llm"
 	"wails-app/backend/stt"
 	"wails-app/core/engine"
+	"wails-app/core/ports/driven"
 )
 
 // MockAudioCapture implements driven.AudioCapturePort for testing.
@@ -129,7 +130,7 @@ func TestPresenterAppStartup_Success(t *testing.T) {
 	mockWindow := &MockWindowPort{}
 	app := NewPresenterAppWithPorts(eng, mockAudio, mockWindow)
 
-	app.startup(context.Background())
+	app.Startup(context.Background())
 
 	// Give the goroutine time to run the callback
 	time.Sleep(10 * time.Millisecond)
@@ -156,7 +157,7 @@ func TestPresenterAppStartup_NilContext(t *testing.T) {
 	mockWindow := &MockWindowPort{}
 	app := NewPresenterAppWithPorts(eng, mockAudio, mockWindow)
 
-	app.startup(nil)
+	app.Startup(nil)
 }
 
 
@@ -178,5 +179,90 @@ func TestPresenterAppStartup_InitError(t *testing.T) {
 	app := NewPresenterAppWithPorts(eng, mockAudio, mockWindow)
 
 	// Should not panic or block
-	app.startup(context.Background())
+	app.Startup(context.Background())
+}
+
+func TestIsQuestion(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"What is this?", true},
+		{"how do you do it", true},
+		{"Who are you", true},
+		{"Where is the bathroom", true},
+		{"When is lunch", true},
+		{"Why is the sky blue", true},
+		{"this is a statement.", false},
+		{"i am not sure", false},
+		{"", false},
+		{"   ?", true},
+		{"What", true},
+	}
+
+	for _, tt := range tests {
+		result := IsQuestion(tt.input)
+		if result != tt.expected {
+			t.Errorf("IsQuestion(%q) = %v; want %v", tt.input, result, tt.expected)
+		}
+	}
+}
+
+type MockLLMPort struct {
+	lastQuestion string
+}
+
+func (m *MockLLMPort) StreamCompletion(
+	question string,
+	systemPrompt string,
+	history []driven.ChatMessage,
+	onToken driven.StreamCallback,
+	onDone func(),
+) error {
+	m.lastQuestion = question
+	return nil
+}
+
+func (m *MockLLMPort) StreamVision(
+	base64Image string,
+	prompt string,
+	onToken driven.StreamCallback,
+	onDone func(),
+) error {
+	return nil
+}
+
+func TestCopilotLLM(t *testing.T) {
+	app := &PresenterApp{script: "My great script content"}
+	mockBase := &MockLLMPort{}
+
+	copilot := &CopilotLLM{
+		base: mockBase,
+		getApp: func() *PresenterApp { return app },
+	}
+
+	// Test non-question
+	err := copilot.StreamCompletion("just some words", "", nil, nil, nil)
+	if err != nil {
+		t.Fatalf("StreamCompletion failed: %v", err)
+	}
+	if mockBase.lastQuestion != "" {
+		t.Errorf("Expected lastQuestion to be empty because base is not called, got %q", mockBase.lastQuestion)
+	}
+
+	// Test question
+	err = copilot.StreamCompletion("how do we fix it?", "", nil, nil, nil)
+	if err != nil {
+		t.Fatalf("StreamCompletion failed: %v", err)
+	}
+	expected := "Context Script:\n" + app.script + "\n\nAudience Question:\nhow do we fix it?"
+	if mockBase.lastQuestion != expected {
+		t.Errorf("Expected enhanced question %q, got %q", expected, mockBase.lastQuestion)
+	}
+
+	// Test StreamVision coverage
+	err = copilot.StreamVision("b64", "prompt", nil, nil)
+	if err != nil {
+		t.Fatalf("StreamVision failed: %v", err)
+	}
 }

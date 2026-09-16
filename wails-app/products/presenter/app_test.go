@@ -14,7 +14,7 @@ import (
 
 // Define dummy cache adapter so we don't import the one that needs CGO
 type DummyCache struct{}
-func (d *DummyCache) Search(embedding []float32, threshold float32) (string, bool) { return "", false }
+func (d *DummyCache) Search(embedding []float32, threshold float64) (string, bool) { return "", false }
 func (d *DummyCache) Store(question, answer string) error { return nil }
 func (d *DummyCache) Count() int { return 0 }
 func (d *DummyCache) Close() error { return nil }
