@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { EventsOn, EventsOff } from '../../../../wailsjs/runtime/runtime';
+  import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime';
 
   // Assuming we use standard Wails window runtime API in production or mock state in dev
   // Actually, we poll GetState from the Wails backend using `window.go.presenter.PresenterApp.GetState()`

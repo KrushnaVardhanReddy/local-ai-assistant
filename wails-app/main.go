@@ -8,6 +8,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"wails-app/products/presenter"
 )
 
 //go:embed all:frontend/dist
@@ -20,6 +21,9 @@ func main() {
 
 	// Create an instance of the app structure dynamically
 	app, onStartup, onShutdown := getAppInstance()
+
+	dummyInterviewApp := NewApp()
+	dummyPresenterApp := presenter.NewPresenterApp()
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -39,6 +43,8 @@ func main() {
 		OnShutdown: onShutdown,
 		Bind: []interface{}{
 			app,
+			dummyInterviewApp,
+			dummyPresenterApp,
 		},
 	})
 

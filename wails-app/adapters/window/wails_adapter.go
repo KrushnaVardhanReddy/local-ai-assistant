@@ -3,6 +3,7 @@ package windowadapter
 import (
 	"context"
 
+	"wails-app/backend/window"
 	"wails-app/core/ports/driven"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -23,7 +24,7 @@ func (w *WailsWindowAdapter) SetCaptureExcluded(ctx context.Context, excluded bo
 
 func (w *WailsWindowAdapter) HideFromTaskbar(ctx context.Context) error {
 	runtime.WindowSetAlwaysOnTop(ctx, true)
-	return nil
+	return window.HideFromTaskbar(ctx)
 }
 
 var _ driven.WindowPort = (*WailsWindowAdapter)(nil)
