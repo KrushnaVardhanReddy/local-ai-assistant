@@ -47,9 +47,19 @@ DETAILED SPECIFICATION
        - Teleprompter reading index resets cleanly to 0 with smooth scroll to top.
      - When multiple documents are open, all their contexts remain grounded in the engine's RAG cache, so the Copilot drawer can answer questions referencing ANY open document in the workspace.
 
-3. Stealth & Performance Polish:
-   - Ensure the sidebar drawer can be quickly toggled / collapsed so it does not distract the presenter.
-   - Retain hotkey navigation: e.g. `Ctrl+P` or clicking the folder button toggles the workspace sidebar.
+3. VS Code-Style Aesthetics & Layout:
+   - Left Activity Bar / Icon Bar:
+     - Sleek dark vertical strip with VS Code icons: File Explorer (`📁`), Copilot (`✨`), Settings (`⚙️`).
+   - Collapsible File Explorer Sidebar:
+     - Matches VS Code dark aesthetic (subtle borders `rgba(255,255,255,0.08)`, indented file trees with guide lines, folder expand chevrons `▶`/`▼`).
+     - "EXPLORER" header with action buttons (Open Folder, Open File, Refresh, Collapse All).
+   - Horizontal Tab Bar:
+     - Top tab strip just like VS Code tabs: active tab with top/bottom accent border, clear contrast, dirty/close `×` button on hover.
+   - Smooth Hotkeys & Keyboard Navigation:
+     - `Ctrl+B`: Toggle Explorer Sidebar visibility (standard VS Code shortcut).
+     - `Ctrl+P`: Quick open file / toggle folder.
+   - Preserves Stealth Mode:
+     - Semi-transparent glassmorphism background that respects opacity slider, avoiding opaque clutter while maintaining crisp readability.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
