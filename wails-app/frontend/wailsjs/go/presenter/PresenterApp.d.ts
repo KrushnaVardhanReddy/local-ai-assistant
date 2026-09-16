@@ -6,3 +6,5 @@ export function AskQuestion(arg1:string):Promise<void>;
 export function ClearState():Promise<void>;
 
 export function GetState():Promise<Record<string, any>>;
+
+export function LoadDocument(arg1:string):Promise<string>;

@@ -13,3 +13,7 @@ export function ClearState() {
 export function GetState() {
   return window['go']['presenter']['PresenterApp']['GetState']();
 }
+
+export function LoadDocument(arg1) {
+  return window['go']['presenter']['PresenterApp']['LoadDocument'](arg1);
+}

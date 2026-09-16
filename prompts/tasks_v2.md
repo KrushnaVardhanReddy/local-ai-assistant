@@ -90,5 +90,5 @@ BATCH 2 (Sequential)
 |---------|-------|--------|-----------|----|-------|
 | **P55-T1** | The Presenter Shell (Svelte) | ✅ Merged | Sequential | [PR 176] | UI layout, opacity, font size sliders |
 | **P55-T2** | Document Parser Backend | ✅ Merged | ⚡ Parallel | [PR 177] | Parses .txt, .md, .pdf, .pptx |
-| **P55-T3** | Voice-Scroller Engine | ⬜ Not started | Sequential | - | Maps STT events to Svelte auto-scroll |
+| **P55-T3** | Voice-Scroller Engine | ✅ Merged | Sequential | [PR 178] | Maps STT events to Svelte auto-scroll |
 | **P55-T4** | LLM Audience Copilot | ⬜ Not started | Sequential | - | Live Q&A side-panel in HUD |
