@@ -1,0 +1,92 @@
+TASK: P56-T5 — Universal IDE Shell Component & Product Adapter (Core UI Framework)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Package the entire VS Code-style IDE shell (Activity Bar, Collapsible Explorer, 
+Tab Bar, Status Bar, and Workspace State Management) into a single, universal, 
+reusable layout component (`IDEShell.svelte` in `wails-app/frontend/src/lib/components/workspace/`).
+
+This will serve as the canonical UI foundation for ALL upcoming products:
+1. StealthPresenter (Main prompter content slot)
+2. MentorGlass (Client profile / note prompter slot)
+3. ClinicHUD (EHR patient chart slot)
+4. CounselDesk (Case deposition exhibit slot)
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE & MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte
+CREATE: wails-app/frontend/src/lib/components/workspace/StatusBar.svelte
+CREATE: wails-app/frontend/src/lib/components/workspace/IDEShell.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/types.ts
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. VS Code Activity Bar (`ActivityBar.svelte`):
+   - Vertical strip (width: 48px) anchored to the far left.
+   - Distinct icons:
+     - Explorer: 📁 (toggles File Explorer sidebar)
+     - Copilot / AI: ✨ (toggles Audience Copilot drawer)
+     - Search: 🔍 (toggles full-text search across loaded documents)
+     - Settings: ⚙️ (bottom-anchored, opens opacity/font size/HUD controls)
+   - Active icon indicator: Left white accent bar (2px) and highlighted icon.
+   - Tooltips on hover.
+
+2. VS Code Status Bar (`StatusBar.svelte`):
+   - Slim bottom bar (height: 22px, background `rgba(0, 122, 204, 0.7)` or dark accent).
+   - Left side:
+     - Active branch / workspace name.
+     - STT Status (e.g. `🎙️ Groq Whisper (Online)` or `🎙️ Local Whisper`).
+     - Document word count / reading time.
+   - Right side:
+     - Voice-scroller status (Auto-Sync / Paused).
+     - RAG index status (`🧠 3 Docs Cached`).
+     - Window stealth indicator (`🛡️ Stealth: ON`).
+
+3. Master IDE Shell (`IDEShell.svelte`):
+   - Composes:
+     - `ActivityBar` on the left.
+     - `WorkspaceSidebar` (File Explorer) expandable to 240px–300px with resizable handle or clean toggle.
+     - Center Editor Pane:
+       - `WorkspaceTabs` at the top.
+       - `<slot />` or Svelte 5 snippets for the product's primary view (e.g. the voice-scroller reading area).
+     - Right Side Drawer (optional slot for AI Copilot / Notes).
+     - `StatusBar` at the bottom.
+   - Global Keyboard Shortcuts:
+     - `Ctrl+B`: Toggle Explorer Sidebar.
+     - `Ctrl+J`: Toggle bottom panel / status bar.
+     - `Ctrl+\`: Split view or toggle Copilot side-drawer.
+     - `Ctrl+P`: Quick file switch modal.
+
+4. Decoupled Product Adapter Pattern:
+   - Any product can wrap its core view with:
+     ```svelte
+     <IDEShell 
+       workspaceTree={tree} 
+       openTabs={tabs} 
+       activePath={activeDoc}
+       onFileOpen={handleOpen}
+       onTabSelect={handleSelect}
+       onTabClose={handleClose}
+     >
+       <!-- Product Specific Viewer placed here! -->
+       <PresenterScroller script={activeScript} />
+     </IDEShell>
+     ```
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- `npm run check` and `npm run build` in `wails-app/frontend` pass without errors.
+- Toggling sidebar with `Ctrl+B` works smoothly.
+- Slots allow different viewports to render cleanly inside the IDE shell.
+- Full glassmorphism and stealth contrast maintained.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Strictly reusable in `wails-app/frontend/src/lib/components/workspace/`.
+- No hardcoded product logic inside `IDEShell.svelte`.
