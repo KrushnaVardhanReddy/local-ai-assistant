@@ -49,7 +49,24 @@ Every domain below exploits **at least one** of these as the primary wedge.
 
 **Competition:** ShareSpeak, GhostDesk, FlowPrompter (all dumb scrollers, no local AI)
 **Your wedge:** The only one with local AI + voice-tracking + true OS stealth
-**Revenue:** $10–$29 one-time or $50/year
+**Revenue:** $10–$29 one-time (V1) → $49/month (V2 with premium features)
+
+#### 📌 V2 Premium Feature: StealthBrowser (Invisible Workspace Panel)
+
+> **Do not build in V1. Revisit in Phase 56.**
+
+Alongside the text HUD, a secondary embedded browser panel that is fully excluded from screen capture (via the same OS-level `SetCaptureExcluded` API). The user sees a live, interactive web app right on their screen; the audience on Zoom sees nothing.
+
+**Legitimate use cases (not cheating):**
+- **Sales:** CRM (Salesforce/HubSpot) open invisibly — AI auto-surfaces the account when the client's name is heard.
+- **Customer Support:** Zendesk ticket open invisibly — rep never has to say "let me look that up."
+- **Financial Advisor:** Portfolio dashboard open invisibly — advisor references live holdings during client calls.
+- **Real Estate Agent:** MLS portal open invisibly — AI auto-filters by heard preferences ("3 bedrooms, under $500k").
+- **Podcast/Journalist:** Research notes and Wikipedia open invisibly — host never breaks eye contact.
+
+**Why this justifies $49/month vs. $19/month:** It turns StealthPresenter from a teleprompter into a full "invisible workspace" — a category of one.
+
+**Technical note:** Requires launching an embedded Chromium WebView with OS-level window exclusion. Non-trivial but feasible since Wails already uses a WebView internally.
 
 ---
 
