@@ -51,7 +51,7 @@ BATCH 4 (Sequential, depends on T5)
 | **P54-T2** | LLM Port Adapter | ✅ Merged | ⚡ Parallel | [PR 171](https://jules.google.com/session/15853767921854849554) | Wraps backend/llm/ behind LLMPort |
 | **P54-T3** | Cache Port Adapter | ✅ Merged | ⚡ Parallel | [PR 172](https://jules.google.com/session/529672600929029618) | Wraps backend/vector_db.go behind CachePort |
 | **P54-T4** | Events Port Adapter | ✅ Merged | ⚡ Parallel | [PR 173](https://jules.google.com/session/9165291875719402956) | WailsEventAdapter + NoopEventAdapter |
-| **P54-T5** | StealthEngine Core Pipeline | 🔄 In Progress | Sequential | [11318015680178095278](https://jules.google.com/session/11318015680178095278) | Wires all adapters into engine.Start() |
+| **P54-T5** | StealthEngine Core Pipeline | ✅ Merged | Sequential | [PR 174](https://jules.google.com/session/11318015680178095278) | Wires all adapters into engine.Start() |
 | **P54-T6** | StealthPresenter Skin + HUD | ⬜ Queued | Sequential | — | PresenterHUD.svelte + presenter build tag |
 
 ---
