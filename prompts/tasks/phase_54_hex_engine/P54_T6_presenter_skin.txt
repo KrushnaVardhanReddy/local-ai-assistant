@@ -9,7 +9,7 @@ App shell, and a new Svelte UI. No engine code is changed.
 
 StealthPresenter is an invisible teleprompter HUD that:
   - Sits near the user's webcam, excluded from screen capture
-  - Loads a PDF/TXT script document
+  - Loads presentation materials (PDF, PPTX, DOCX, TXT, MD) as script/context
   - Auto-scrolls based on voice (using the existing Whisper STT)
   - Optionally uses the LLM to answer live audience questions
   - Is completely invisible in Zoom, Teams, Google Meet, OBS

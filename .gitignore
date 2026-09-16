@@ -78,4 +78,6 @@ backend/data/
 data/
 backend/models/*.gguf
 wails-app/models/
+wails-app/backend/models/
+*.onnx
 .wrangler/
