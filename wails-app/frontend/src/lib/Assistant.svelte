@@ -7,6 +7,10 @@
   import { authState } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
   import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
+  import AuthModal from "$lib/components/AuthModal.svelte";
+
+  const isGated = $derived(authState.authMode === 'saas' && (!authState.user || (!authState.byok_pass_active && authState.remaining_sessions <= 0)));
+  let isAuthModalOpen = $state(false);
   import { CaptureScreen, AnalyzeVision, ClearState, ClearCache, SetClickthrough } from "../../wailsjs/go/main/App";
 
   let showSessionReport = $state(false);
@@ -345,6 +349,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
+    if (isGated) return;
     if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'M' || e.key === 'm')) {
       e.preventDefault();
       toggleClickthrough();
@@ -475,6 +480,32 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
+
+{#if isGated}
+  <div class="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto">
+    <div class="bg-surface p-8 rounded-2xl border border-white/10 text-center max-w-md">
+      <span class="material-symbols-outlined text-[64px] text-error mb-4">lock</span>
+      <h2 class="text-2xl font-bold text-on-surface mb-2">Pass Expired / License Required</h2>
+      <p class="text-on-surface-variant mb-6">
+        {#if !authState.user}
+          Please sign in to continue using the assistant.
+        {:else}
+          Your pass has expired or you have no remaining sessions. Please recharge to continue.
+        {/if}
+      </p>
+      {#if !authState.user}
+        <button class="bg-primary text-on-primary px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors" onclick={() => isAuthModalOpen = true}>
+          Sign In
+        </button>
+      {:else}
+        <button class="bg-primary text-on-primary px-6 py-3 rounded-full font-bold hover:bg-primary/90 transition-colors" onclick={() => window.open(import.meta.env.VITE_BILLING_URL || '', '_blank')}>
+          Recharge Pass
+        </button>
+      {/if}
+    </div>
+  </div>
+  <AuthModal bind:isOpen={isAuthModalOpen} onClose={() => isAuthModalOpen = false} />
+{/if}
 
 <div
   class="fixed inset-0 w-full h-full pointer-events-none flex flex-col z-50 p-container-padding gap-container-padding text-on-background antialiased font-body-md text-body-md select-none dark {clickthrough ? 'clickthrough-mode' : ''}"
@@ -729,6 +760,7 @@
             placeholder="Type message to assistant (Press Enter to send)..."
             bind:value={chatText}
             onkeydown={handleChatKeydown}
+            disabled={isGated}
           ></textarea>
           <button class="absolute bottom-3 right-3 font-mono-data text-mono-data text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-xl text-[12px] font-bold tracking-widest pointer-events-auto transition-all" onclick={handleChatSubmit}>SEND</button>
         </div>
