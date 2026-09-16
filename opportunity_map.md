@@ -20,16 +20,19 @@ Every domain below exploits **at least one** of these as the primary wedge.
 
 ## Opportunity Scorecard
 
-| # | Product Name | Domain | Competition | Moat | Time to V1 | Revenue Potential |
-|---|---|---|---|---|---|---|
-| 1 | **StealthPresenter** | Creators / Presenters | 🟡 Medium | 🟢 Strong | 4–6 weeks | $$$ |
-| 2 | **ClinicHUD** | Telehealth / Doctors | 🟡 Medium (enterprise heavy) | 🟢 Very Strong | 6–8 weeks | $$$$ |
-| 3 | **CounselDesk** | Legal / Attorneys | 🟡 Medium | 🟢 Strong | 6–8 weeks | $$$$ |
-| 4 | **MentorGlass** | Coaching / Therapy | 🟢 **Low** | 🟢 Strong | 4–5 weeks | $$$ |
-| 5 | **DebateShield** | Students / Debate | 🟢 **Very Low** | 🟡 Moderate | 3–4 weeks | $$ |
-| 6 | **AgentPrompt** | Call Center Agents | 🔴 High (Balto, Level AI) | 🟡 Moderate | 8–10 weeks | $$$$$ |
-| 7 | **LangShadow** | Language Learners | 🟡 Medium | 🟢 Strong | 5–6 weeks | $$ |
-| 8 | **GovBrief** | Govt / PR Spokespeople | 🟢 **Very Low** | 🟢 Very Strong | 4–6 weeks | $$$$ |
+> Sorted by **planned build order** — not by revenue. Revenue is only one input; distribution speed, trust barriers, and daily active use all matter equally for a V1.
+
+| Wave | Build Order | Product Name | Domain | Competition | Moat | Time to V1 | Revenue Potential | Why This Wave |
+|------|-------------|--------------|--------|-------------|------|------------|-------------------|---------------|
+| 🟢 **Wave 1** | **1A 🎯 PRIMARY** | **StealthPresenter** | Creators / Presenters | 🟡 Medium | 🟢 Strong | 4–6 weeks | $$$ | Clean positioning, viral demo, individual buyer, fastest revenue signal |
+| 🟢 **Wave 1** | **1B ⏸️ Paused** | ~~BarnOwl AI (Interview)~~ | Job Seekers | 🔴 Crowded (Final Round, Sensei) | 🟡 Moderate | Already built | $$ | Ethical gray zone + crowded. Engine kept, launch paused indefinitely. |
+| 🟢 **Wave 1** | **2nd** | **MentorGlass** | Coaching / Therapy | 🟢 **Low** | 🟢 Strong | 4–5 weeks | $$$ | 1 prompt swap from StealthPresenter, zero competition, word-of-mouth |
+| 🟡 **Wave 2** | **3rd** | **DebateShield** | Students / Academic Debate | 🟢 **Very Low** | 🟡 Moderate | 3–4 weeks | $$ | No stealth needed, fast build, community-driven distribution |
+| 🟡 **Wave 2** | **4th** | **GovBrief** | Govt / PR Spokespeople | 🟢 **Very Low** | 🟢 Very Strong | 4–6 weeks | $$$$ | Zero software competitors, single enterprise deal = huge revenue |
+| 🔵 **Wave 3** | **5th** | **CounselDesk** | Legal / Attorneys | 🟡 Medium | 🟢 Strong | 6–8 weeks | $$$$ | High pay, but trust barrier — needs proven track record + testimonials first |
+| 🔵 **Wave 3** | **6th** | **ClinicHUD** | Telehealth / Doctors | 🟡 Medium (enterprise heavy) | 🟢 Very Strong | 6–8 weeks | $$$$ | Biggest moat (HIPAA), but needs EHR hooks + compliance story |
+| 🔵 **Wave 3** | **7th** | **LangShadow** | Language Learners | 🟡 Medium | 🟢 Strong | 5–6 weeks | $$ | Massive TAM, viral potential, but lower ARPU — best as growth lever |
+| 🔴 **Wave 4** | **8th** | **AgentPrompt** | Call Center Agents | 🔴 High (Balto, Level AI) | 🟡 Moderate | 8–10 weeks | $$$$$ | Highest revenue ceiling, but requires SOC2, telephony integration, 6–12mo sales cycle |
 
 ---
 
@@ -189,27 +192,78 @@ Every domain below exploits **at least one** of these as the primary wedge.
 
 ---
 
-## 🗺️ Recommended Build Order
+## 🗺️ Planned Build Order (Revised)
 
 ```
-PHASE 1 (Now) — Product Market Fit
-  └── StealthPresenter HUD (creators/salespeople/educators)
-      Lowest friction, fastest revenue, best viral hook
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WAVE 1 (Now → Month 3) — Prove the Engine, Get First Revenue
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1A. 🎯 PRIMARY — StealthPresenter HUD
+      → Clean ethical positioning, no gray area
+      → Individual buyer, viral LinkedIn/Twitter demo
+      → Instant revenue signal: validates people pay for stealth HUDs
+      → THIS is the flagship product going forward
 
-PHASE 2 (Month 3–4) — Same Engine, New Audience
-  ├── MentorGlass (coaches/therapists)
-  │   └── Change UI skin + load client profile format
-  └── DebateShield (students/debate)
-      └── Remove stealth, keep RAG search + hotkeys
+  1B. ⏸️ PAUSED (Unreleased) — BarnOwl AI (Interview Assist)
+      → Engine and code KEPT (reused by hex architecture)
+      → Launch is paused indefinitely.
+      → Reasons: You rightly noted we haven't even launched this yet! Before going to market, we realized the ethical gray zone + crowded market (Final Round AI, Interview Kickstart, Sensei) makes it a bad *first* launch.
+      → Decision: Pivot the marketing and launch to StealthPresenter (1A), using the engine we already built for BarnOwl.
 
-PHASE 3 (Month 6+) — Premium / Enterprise
-  ├── ClinicHUD (doctors) — add EHR API hook, HIPAA positioning
-  ├── CounselDesk (attorneys) — add case folder RAG, legal corpus
-  └── GovBrief (govt/PR) — add briefing doc input, enterprise pricing
+  2nd. MentorGlass (coaches/therapists)
+       → 1 prompt swap + skin change on top of StealthPresenter engine
+       → Zero competition, word-of-mouth in coaching communities
+       → Validates: multi-product skin approach works
 
-PHASE 4 (Year 2) — Big Market Play
-  └── AgentPrompt (call centers) — SOC2, telephony integration, enterprise sales
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WAVE 2 (Month 3–6) — Expand Reach, Fast Niches
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  3. DebateShield (students/debate teams)
+     → Fastest build, no stealth overlay needed
+     → Passionate niche, community viral loop
+
+  4. GovBrief (govt/PR spokespeople)
+     → Zero software competitors — literal blue ocean
+     → One enterprise contract ($5K–$20K/yr) pays for months of runway
+     → "White House press secretary" demo = viral press coverage
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WAVE 3 (Month 6–12) — High-Value Professionals
+  (Now you have testimonials + proven track record)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  5. CounselDesk (solo/small firm attorneys)
+     → $79/month, legal is high-ARPU market
+     → WHY NOT EARLIER: Attorneys are conservative buyers.
+       They need peer referrals + time to evaluate. Potential malpractice
+       liability anxiety around AI-surfaced case law citations.
+       You need 3–6 months of proven track record first.
+
+  6. ClinicHUD (telehealth doctors)
+     → $49–$99/month, HIPAA-by-design moat
+     → Needs EHR API hooks (Epic/Athena) and HIPAA positioning story
+     → Requires BAA template + local-only data guarantee
+
+  7. LangShadow (language learners)
+     → Massive TAM (500M+ worldwide), viral potential
+     → Lower ARPU ($9/month) — better as growth lever than revenue driver
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WAVE 4 (Year 2) — Big Market Play
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  8. AgentPrompt (call center agents)
+     → Highest revenue ceiling ($$$$$)
+     → Requires: SOC2 Type II, FINRA/TCPA compliance, telephony
+       SIP integration, 6–12 month enterprise sales cycles
+     → Not first because: Individual agents can't install on locked
+       corporate laptops. B2B procurement is slow and expensive.
 ```
+
+> **Why CounselDesk is Wave 3 and not Wave 1:**
+> The revenue is real, but attorneys are the most risk-averse professional
+> buyers in existence. A wrong AI citation = potential malpractice. They
+> will not adopt an unproven tool from an unknown company.
+> By Wave 3, you have StealthPresenter testimonials, MentorGlass reviews,
+> and a proven track record — *then* an attorney says yes.
 
 ---
 

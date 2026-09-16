@@ -45,14 +45,14 @@ BATCH 4 (Sequential, depends on T5)
 
 ---
 
-| Task ID | File(s) | Description | Parallel? | Status | PR |
-|---------|---------|-------------|-----------|--------|----|
-| P54-T1 | `core/ports/driving/`, `core/ports/driven/` | **Core Port Interfaces:** Define all driving + driven port interfaces. Pure Go, zero external dependencies. | ❌ Sequential (first) | ⬜ | — |
-| P54-T2 | `adapters/llm/openai_adapter.go` | **LLM Adapter:** Wrap existing `backend/llm/openai.go` behind `LLMPort` interface. | ⚡ Batch 2 | ⬜ | — |
-| P54-T3 | `adapters/cache/sqlitevec_adapter.go` | **Cache Adapter:** Wrap existing `backend/vector_db.go` behind `CachePort` interface. | ⚡ Batch 2 | ⬜ | — |
-| P54-T4 | `adapters/events/wails_adapter.go`, `adapters/events/noop_adapter.go` | **Events Adapter:** Create `WailsEventAdapter` wrapping `wailsruntime.EventsEmit` and a `NoopEventAdapter` for tests. | ⚡ Batch 2 | ⬜ | — |
-| P54-T5 | `core/engine/engine.go`, `core/engine/pipeline.go` | **StealthEngine Core:** Wire all adapters into a single `StealthEngine` struct. Extract pipeline logic from `app.go` into `core/engine/pipeline.go`. | ❌ Sequential (after Batch 2) | ⬜ | — |
-| P54-T6 | `products/presenter/`, `frontend/src/products/presenter/` | **StealthPresenter Product Skin:** First product using the engine — new system prompt + thin `PresenterApp` Wails shell + `PresenterHUD.svelte` scaffold. | ❌ Sequential (after T5) | ⬜ | — |
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P54-T1** | Core Port Interfaces | ✅ Merged | Sequential | [PR 170](https://jules.google.com/session/48906415451042314) | Foundation: ports/driving.go, ports/driven.go |
+| **P54-T2** | LLM Port Adapter | ⬜ Queued | ⚡ Parallel | — | Wraps backend/llm/ behind LLMPort |
+| **P54-T3** | Cache Port Adapter | ⬜ Queued | ⚡ Parallel | — | Wraps backend/vector_db.go behind CachePort |
+| **P54-T4** | Events Port Adapter | ⬜ Queued | ⚡ Parallel | — | WailsEventAdapter + NoopEventAdapter |
+| **P54-T5** | StealthEngine Core Pipeline | ⬜ Queued | Sequential | — | Wires all adapters into engine.Start() |
+| **P54-T6** | StealthPresenter Skin + HUD | ⬜ Queued | Sequential | — | PresenterHUD.svelte + presenter build tag |
 
 ---
 
