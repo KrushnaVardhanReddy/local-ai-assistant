@@ -116,4 +116,4 @@
 
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
-| P53-T1 | `frontend/src/lib/auth.svelte.ts`, `Settings.svelte`, `App.svelte` | **Entitlement & License Gate:** Require Supabase login, check active 30-day/1-year BYOK pass or remaining SaaS sessions, lock app if pass is expired. | ⬜ | — |
+| P53-T1 | `frontend/src/lib/auth.svelte.ts`, `Settings.svelte`, `App.svelte` | **Entitlement & License Gate:** Require Supabase login, check active 30-day/1-year BYOK pass or remaining SaaS sessions, lock app if pass is expired. | ✅ | #169 |
