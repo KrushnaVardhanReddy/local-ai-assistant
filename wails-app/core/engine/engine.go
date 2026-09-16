@@ -108,3 +108,11 @@ func (e *StealthEngine) UpdateState(transcript, response string, thinking bool) 
 	e.response = response
 	e.thinking = thinking
 }
+
+// AddContext adds parsed document text or other context to the engine's system prompt or session.
+func (e *StealthEngine) AddContext(contextText string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	// Append context to the system prompt so the LLM knows about it
+	e.cfg.SystemPrompt += "\n\nAdditional Context:\n" + contextText
+}
