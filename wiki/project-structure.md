@@ -13,8 +13,9 @@ Local_AI_Assistant/
 │   │   ├── cache/              # SQLiteVec cache adapters
 │   │   ├── events/             # Wails event emitters
 │   │   └── window/             # OS-level stealth window APIs
-│   ├── backend/                # Legacy/Utility packages (STT, embeddings)
-│   │   └── stt/                # Whisper.cpp integration
+│   ├── backend/                # Utility packages (STT, Parser, audio)
+│   │   ├── stt/                # Whisper.cpp integration
+│   │   └── parser/             # Document extraction (.pdf, .pptx, .md)
 │   ├── products/               # Product-specific wiring & prompts
 │   │   ├── presenter/          # StealthPresenter configuration
 │   │   └── interview/          # BarnOwl AI configuration (Paused)

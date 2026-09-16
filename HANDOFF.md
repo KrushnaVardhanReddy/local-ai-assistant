@@ -1,44 +1,40 @@
-# 🚀 BarnOwl AI — Project Handoff
+# 🚀 StealthPresenter — Project Handoff
 
-*This document summarizes the current state of BarnOwl. Read this to quickly resume development in a new AI session.*
+*This document summarizes the current state of the Local AI Assistant. Read this to quickly resume development in a new AI session.*
 
 ---
 
-## 🎯 Architecture Summary (The Great Pivot)
-We recently completed a massive architectural pivot (Phase 44) from Python/Rust/Tauri to a **Unified Go Single-Binary** using Wails v2.
+## 🎯 Architecture Summary
+We recently completed Phase 55, successfully building the full **StealthPresenter** product on top of our pure Go/Wails Hexagonal Engine.
 
 **Core Stack:**
-- **Backend:** Go 1.25+, Wails v2 (`github.com/wailsapp/wails/v2`).
-- **Frontend:** Svelte 5, Vite, TailwindCSS v3.
-- **Local AI / STT:** `whisper.cpp` (via Go CGO bindings) and `onnxruntime_go` for local embeddings.
-- **SaaS / Web:** SvelteKit + Supabase + Stripe.
-- **Distribution:** Compiles into a single ~20MB executable.
-
-**Key Architectural Notes:**
-- **Zero Python/Rust:** All legacy Python and Rust code was permanently deleted in `P44-T1`.
-- **Hybrid Auto-Detect STT (Upcoming):** We are building a hybrid STT engine that defaults to `whisper.cpp` but dynamically downloads and hot-swaps to Parakeet (`sherpa-onnx`) if the user's hardware supports it.
-- **Stealth Mode UI:** The Wails window is configured in `wails-app/main.go` to be transparent, frameless, and always-on-top.
+- **Backend:** Go 1.25+, Wails v2, `whisper.cpp` (STT), SQLiteVec (Cache).
+- **Frontend:** Svelte 5, Vite, TailwindCSS.
+- **Engine:** Pure Go `StealthEngine` (Hexagonal Architecture).
 
 ---
 
 ## 🚦 Current Status
 
 ### Recently Completed ✅
-- **Phase 44 (The Great Deletion):** Fully purged the old Tauri/Python codebase, re-wired the Makefile, and successfully passed full E2E Wails integration tests (PR #149 merged).
-- **Documentation:** Updated `README.md` and `wiki/` to reflect the new Go/Wails architecture.
+- **Phase 55 (StealthPresenter UX & Engine):**
+  - **T1:** Transparent Svelte Shell & `StealthTitleBar`.
+  - **T2:** Document Parser (`.pdf`, `.pptx`, `.md`, `.txt`).
+  - **T3:** Voice-Scroller Engine mapped to local Whisper.
+  - **T4:** LLM Audience Copilot (glowing side-drawer that uses RAG to answer audience questions live).
+  - Added native OS file picker (`📁` button) to the HUD.
 
-### In Progress (Delegated to Jules) ⏳
-- **P45-T1 (Native Click-Through):** Jules is implementing OS-level CGO hooks in `wails-app/main.go` (X11/Win32/Cocoa) to ignore mouse events, restoring the stealth click-through feature.
-- **Phase 46 (Hybrid STT Engine):** Tasks `P46-T1`, `P46-T2`, and `P46-T3` are fully scoped, planned, and queued up for Jules. They involve creating an STT interface, a hardware profiler/downloader, and dynamic `sherpa-onnx` hot-swapping.
-
-### Up Next ⏭️
-- Wait for Jules to submit PRs for `P45-T1` and `Phase 46`. 
-- You can bulk merge Jules' PRs by running `bash scripts/merge_prs.sh <start> <end>`.
-- Continue closing out any remaining UI/UX issues in the Svelte frontend.
+### Up Next (Bug Bash) ⏭️
+- The core functionality is completely built, but **many issues remain**. 
+- We will now tackle bugs, UI glitches, and stabilization issues **one by one**.
+- Known areas to investigate:
+  - VAD (Voice Activity Detection) tuning and error handling.
+  - Svelte CSS warnings (`.error-msg`, `.animate-shimmer_2s_infinite`).
+  - General polishing of the Copilot Drawer and Scroller sync.
 
 ---
 
 ## 🛠️ How to Resume Development
-1. **Run locally:** `make dev`
-2. **Task Tracker:** Check `prompts/tasks.md` for the roadmap.
-3. **Submit to Jules:** Use `python3 scripts/jules_submit.py --task <ID>`. The script automatically enforces 100% test coverage and idiomatic Go architecture.
+1. **Run locally:** `make dev-presenter`
+2. **Task Tracker:** Check `prompts/tasks_v2.md` for the roadmap.
+3. **Submit to Jules:** Use `python3 scripts/jules_submit.py --task <ID>`.

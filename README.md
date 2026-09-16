@@ -15,13 +15,16 @@ Unlike generic teleprompter apps, StealthPresenter operates as a completely invi
 
 ### 1. True OS-Level Stealth (Zero-Risk Screen Sharing)
 Other apps use basic window transparency. If you accidentally share your "Entire Screen" in Zoom, your audience sees your script. 
-StealthPresenter uses native OS APIs (like `SetCaptureExcluded` on Windows) to redact the window at the driver level. **It is completely invisible to screen capture tools.** 
+StealthPresenter uses native OS APIs to redact the window at the driver level. **It is completely invisible to screen capture tools.** 
 
-### 2. The Real-Time LLM "Panic Button"
-StealthPresenter doesn't just scroll text—it listens. If an audience member asks a complex question about a competitor, the local Whisper STT catches it. Hit a hotkey, and the LLM instantly RAG-searches your battlecards and pops the answer into your invisible HUD.
+### 2. Voice-Tracked Auto-Scroller & Native Parser
+Forget manual scrolling. StealthPresenter natively parses your `.pptx`, `.pdf`, or `.md` files without uploading them to a cloud server. The local Whisper STT engine listens to your voice and flawlessly auto-scrolls your script as you speak.
 
-### 3. 100% Offline Privacy
-Sales reps and founders cannot upload sensitive slide decks or confidential IP to a cloud teleprompter. Because StealthPresenter uses local Whisper (STT) and local LLMs (via Ollama/Llama.cpp), **no data ever hits a server**. 
+### 3. The Real-Time LLM Audience Copilot
+StealthPresenter doesn't just listen to you—it listens to your audience. If an interviewer asks a complex question, the Copilot instantly intercepts it, RAG-searches your loaded battlecards/script, and pops the perfect answer into your invisible HUD.
+
+### 4. 100% Offline Privacy
+Because StealthPresenter uses local Whisper (STT) and local LLMs (via Ollama/SmolLM), **no data ever hits a server**. Perfect for enterprise compliance and confidential IP.
 
 ---
 
