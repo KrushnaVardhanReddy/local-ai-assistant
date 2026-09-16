@@ -13,6 +13,7 @@ import (
 	"wails-app/backend/stt"
 	"wails-app/core/engine"
 	"wails-app/core/ports/driven"
+	"wails-app/backend/parser"
 )
 
 // PresenterApp is the Wails App struct for the StealthPresenter product.
@@ -96,4 +97,20 @@ func (p *PresenterApp) ClearState() {
 // AskQuestion delegates to the engine
 func (p *PresenterApp) AskQuestion(q string) error {
 	return p.engine.AskQuestion(q)
+}
+
+// LoadDocument parses a document and adds its text to the engine's context.
+func (p *PresenterApp) LoadDocument(filepath string) (string, error) {
+	text, err := parser.ParseDocument(filepath)
+	if err != nil {
+		return "", err
+	}
+
+	// Store in engine context
+	p.engine.AddContext(text)
+
+	// Optionally also update the state so the HUD can display it
+	p.engine.UpdateState("Document loaded", text, false)
+
+	return text, nil
 }

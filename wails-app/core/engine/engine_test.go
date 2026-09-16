@@ -353,3 +353,15 @@ func TestHandleTranscript_FilterDrop(t *testing.T) {
 	eng.ProcessAudio([]float32{0.1, 0.2})
 	time.Sleep(100 * time.Millisecond)
 }
+
+func TestStealthEngineAddContext(t *testing.T) {
+	eng := New(Config{SystemPrompt: "Initial prompt"}, nil, nil, nil, nil)
+	eng.AddContext("New context text")
+
+	eng.mu.RLock()
+	defer eng.mu.RUnlock()
+
+	if !strings.Contains(eng.cfg.SystemPrompt, "New context text") {
+		t.Errorf("expected SystemPrompt to contain 'New context text', got %q", eng.cfg.SystemPrompt)
+	}
+}
