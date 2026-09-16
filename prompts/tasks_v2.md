@@ -48,9 +48,9 @@ BATCH 4 (Sequential, depends on T5)
 | Task ID | Title | Status | Parallel? | PR | Notes |
 |---------|-------|--------|-----------|----|-------|
 | **P54-T1** | Core Port Interfaces | ✅ Merged | Sequential | [PR 170](https://jules.google.com/session/48906415451042314) | Foundation: ports/driving.go, ports/driven.go |
-| **P54-T2** | LLM Port Adapter | ⬜ Queued | ⚡ Parallel | — | Wraps backend/llm/ behind LLMPort |
-| **P54-T3** | Cache Port Adapter | ⬜ Queued | ⚡ Parallel | — | Wraps backend/vector_db.go behind CachePort |
-| **P54-T4** | Events Port Adapter | ⬜ Queued | ⚡ Parallel | — | WailsEventAdapter + NoopEventAdapter |
+| **P54-T2** | LLM Port Adapter | 🔄 In Progress | ⚡ Parallel | [15853767921854849554](https://jules.google.com/session/15853767921854849554) | Wraps backend/llm/ behind LLMPort |
+| **P54-T3** | Cache Port Adapter | 🔄 In Progress | ⚡ Parallel | [529672600929029618](https://jules.google.com/session/529672600929029618) | Wraps backend/vector_db.go behind CachePort |
+| **P54-T4** | Events Port Adapter | 🔄 In Progress | ⚡ Parallel | [9165291875719402956](https://jules.google.com/session/9165291875719402956) | WailsEventAdapter + NoopEventAdapter |
 | **P54-T5** | StealthEngine Core Pipeline | ⬜ Queued | Sequential | — | Wires all adapters into engine.Start() |
 | **P54-T6** | StealthPresenter Skin + HUD | ⬜ Queued | Sequential | — | PresenterHUD.svelte + presenter build tag |
 
