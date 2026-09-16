@@ -23,6 +23,7 @@ Prerequisite: P54-T5 must be merged.
 ═══════════════════════════════════════════════════════════════
 FILES TO CREATE
 ═══════════════════════════════════════════════════════════════
+CREATE: wails-app/core/ports/driven/audio.go
 CREATE: wails-app/products/presenter/app.go
 CREATE: wails-app/products/presenter/prompt.go
 CREATE: wails-app/products/presenter/presenter_test.go
@@ -36,7 +37,19 @@ DO NOT MODIFY: wails-app/frontend/src/lib/Assistant.svelte (interview UI intact)
 DETAILED SPECIFICATION
 ═══════════════════════════════════════════════════════════════
 
-1. CREATE: wails-app/products/presenter/prompt.go
+1. CREATE: wails-app/core/ports/driven/audio.go
+   Package: `driven`
+   Define an `AudioCapturePort` interface to allow dependency injection for the microphone:
+   ```go
+   type AudioCapturePort interface {
+       Initialize() error
+       StartCapture(deviceIndex int, includeLoopback bool, callback func([]float32)) error
+       Stop()
+   }
+   ```
+   *Make sure `backend/audio.CaptureEngine` implements this (modify it if needed).*
+
+2. CREATE: wails-app/products/presenter/prompt.go
    Package: `presenter`
 
    // SystemPrompt is the product-specific LLM instruction for StealthPresenter.
@@ -74,7 +87,7 @@ DETAILED SPECIFICATION
    type PresenterApp struct {
        ctx          context.Context
        engine       *engine.StealthEngine
-       audioCapture *audio.CaptureEngine
+       audioCapture driven.AudioCapturePort
    }
 
    func NewPresenterApp() *PresenterApp {
@@ -108,6 +121,11 @@ DETAILED SPECIFICATION
        }
    }
 
+   // Optional: Provide a constructor for testing that accepts the port
+   func NewPresenterAppWithPorts(eng *engine.StealthEngine, ac driven.AudioCapturePort) *PresenterApp {
+       return &PresenterApp{engine: eng, audioCapture: ac}
+   }
+
    // startup is called by Wails on app start.
    func (p *PresenterApp) startup(ctx context.Context) {
        p.ctx = ctx
@@ -133,8 +151,9 @@ DETAILED SPECIFICATION
    - Test that VisionPrompt contains "slide" and "talking points".
    - Test that NewPresenterApp() returns a non-nil PresenterApp.
    - Test that PresenterApp.GetState() returns a map with "transcript" key.
+   - **CRITICAL:** To achieve 100% coverage on `app.go`, create a `MockAudioCapture` that implements `AudioCapturePort`. Test the `startup()` method by injecting a mock that returns an error from `Initialize()`, and another mock that executes the `StartCapture` callback synchronously. This hits the async/error branches without CGO/hardware dependencies. Do NOT use `//go:build !test` to artificially inflate coverage.
 
-4. CREATE: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
+5. CREATE: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
    Scaffold only — minimal working UI:
    - A semi-transparent dark overlay (rgba(10,10,10,0.85)) pinned top-center.
    - Width: 640px. Height: auto. Always-on-top (set via Wails window flag).
@@ -144,7 +163,7 @@ DETAILED SPECIFICATION
    - Uses CSS variables for theming; no external CSS frameworks.
    - Reuses the existing on_response_token / on_response_end Wails events.
 
-5. CREATE: wails-app/frontend/src/products/presenter/PresenterSettings.svelte
+6. CREATE: wails-app/frontend/src/products/presenter/PresenterSettings.svelte
    Minimal settings panel:
    - STT Provider selector: "Local (Whisper)" | "Cloud (Groq)" radio buttons.
    - Groq API Key input (password field, saved to localStorage).

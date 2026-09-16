@@ -3,7 +3,7 @@
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>engine: Go Coverage Report</title>
+		<title>presenter: Go Coverage Report</title>
 		<style>
 			body {
 				background: black;
@@ -55,9 +55,7 @@
 			<div id="nav">
 				<select id="files">
 
-				<option value="file0">wails-app/core/engine/engine.go (100.0%)</option>
-
-				<option value="file1">wails-app/core/engine/pipeline.go (98.8%)</option>
+				<option value="file0">wails-app/products/presenter/app.go (95.7%)</option>
 
 				</select>
 			</div>
@@ -71,273 +69,107 @@
 		</div>
 		<div id="content">
 
-		<pre class="file" id="file0" style="display: none">package engine
+		<pre class="file" id="file0" style="display: none">package presenter
 
 import (
-        "sync"
-        "wails-app/backend/session"
-        "wails-app/backend/stt"
-        "wails-app/core/ports/driven"
-        "wails-app/core/ports/driving"
-)
+        "context"
+        "os"
 
-// Config holds product-specific configuration injected at startup.
-type Config struct {
-        // SystemPrompt is the product-specific LLM system instruction.
-        // e.g. "You are a stealth interview assistant..."
-        // e.g. "You are an invisible teleprompter assistant..."
-        SystemPrompt string
-}
-
-// StealthEngine is the core engine that wires all ports together.
-// It implements driving.PipelinePort.
-type StealthEngine struct {
-        cfg        Config
-        sttManager *stt.STTManager
-        llm        driven.LLMPort
-        cache      driven.CachePort
-        events     driven.EventPort
-
-        sessionMgr *session.SessionManager
-
-        // internal state (mutex-protected)
-        mu         sync.RWMutex
-        transcript string
-        response   string
-        thinking   bool
-        llmBusy    sync.Mutex
-}
-
-func New(
-        cfg Config,
-        sttMgr *stt.STTManager,
-        llm driven.LLMPort,
-        cache driven.CachePort,
-        events driven.EventPort,
-) *StealthEngine <span class="cov8" title="1">{
-        return &amp;StealthEngine{
-                cfg:        cfg,
-                sttManager: sttMgr,
-                llm:        llm,
-                cache:      cache,
-                events:     events,
-                sessionMgr: session.NewSessionManager(),
-        }
-}</span>
-
-// SetEventsAdapter sets the events port.
-// Used for decoupling initialization when the Wails context is only available later.
-func (e *StealthEngine) SetEventsAdapter(events driven.EventPort) <span class="cov8" title="1">{
-        e.events = events
-}</span>
-
-// GetState returns the current pipeline state for UI polling.
-func (e *StealthEngine) GetState() driving.PipelineState <span class="cov8" title="1">{
-        e.mu.RLock()
-        defer e.mu.RUnlock()
-        cachedPairs := 0
-        if e.cache != nil </span><span class="cov8" title="1">{
-                cachedPairs = e.cache.Count()
-        }</span>
-        <span class="cov8" title="1">return driving.PipelineState{
-                Transcript:  e.transcript,
-                Response:    e.response,
-                Thinking:    e.thinking,
-                CachedPairs: cachedPairs,
-        }</span>
-}
-
-// ClearState resets the pipeline state.
-func (e *StealthEngine) ClearState() <span class="cov8" title="1">{
-        e.mu.Lock()
-        defer e.mu.Unlock()
-        e.transcript = ""
-        e.response = ""
-        e.thinking = false
-}</span>
-
-// SetStealth is a no-op here — window management is handled by the
-// product-level App shell which has access to the Wails context.
-func (e *StealthEngine) SetStealth(_ bool) error <span class="cov8" title="1">{ return nil }</span>
-
-// Compile-time check.
-var _ driving.PipelinePort = (*StealthEngine)(nil)
-
-// GetSessionManager returns the session manager instance.
-func (e *StealthEngine) GetSessionManager() *session.SessionManager <span class="cov8" title="1">{
-        return e.sessionMgr
-}</span>
-
-// GetCache returns the cache port instance.
-func (e *StealthEngine) GetCache() driven.CachePort <span class="cov8" title="1">{
-        return e.cache
-}</span>
-
-// UpdateState allows modifying the pipeline state manually, e.g., for vision queries.
-func (e *StealthEngine) UpdateState(transcript, response string, thinking bool) <span class="cov8" title="1">{
-        e.mu.Lock()
-        defer e.mu.Unlock()
-        e.transcript = transcript
-        e.response = response
-        e.thinking = thinking
-}</span>
-</pre>
-
-		<pre class="file" id="file1" style="display: none">package engine
-
-import (
-        "fmt"
-        "log"
-        "strings"
+        cacheadapter "wails-app/adapters/cache"
+        eventsadapter "wails-app/adapters/events"
+        llmadapter "wails-app/adapters/llm"
         "wails-app/backend"
-        "wails-app/backend/filter"
+        "wails-app/backend/audio"
+        "wails-app/backend/stt"
+        "wails-app/core/engine"
         "wails-app/core/ports/driven"
+
+        "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// ProcessAudio runs a PCM audio chunk through the full pipeline:
-// audio → STT transcription → smart filter → (cache lookup) → LLM stream.
-// All results are delivered via the EventPort asynchronously.
-func (e *StealthEngine) ProcessAudio(samples []float32) error <span class="cov8" title="1">{
-        ch, err := e.sttManager.TranscribeStream(samples)
-        if err != nil </span><span class="cov8" title="1">{
-                return fmt.Errorf("STT error: %w", err)
-        }</span>
-        <span class="cov8" title="1">go func() </span><span class="cov8" title="1">{
-                for transcript := range ch </span><span class="cov8" title="1">{
-                        e.handleTranscript(transcript)
-                }</span>
-        }()
-        <span class="cov8" title="1">return nil</span>
+// PresenterApp is the Wails App struct for the StealthPresenter product.
+// It is thin — it owns only Wails-facing concerns (context, window, audio).
+// All pipeline logic is delegated to the embedded StealthEngine.
+type PresenterApp struct {
+        ctx          context.Context
+        engine       *engine.StealthEngine
+        audioCapture driven.AudioCapturePort
 }
 
-// AskQuestion bypasses audio and sends a typed question to the LLM pipeline.
-func (e *StealthEngine) AskQuestion(question string) error <span class="cov8" title="1">{
-        e.handleTranscript(question)
-        return nil
-}</span>
+func NewPresenterApp() *PresenterApp <span class="cov8" title="1">{
+        // Build adapters
+        db, _ := backend.NewVectorDB("./data/presenter_cache.db")
+        llmAdapter := llmadapter.NewOpenAIAdapter()
+        cacheAdapter := cacheadapter.NewSQLiteVecAdapter(db)
 
-// handleTranscript contains the core pipeline: filter → cache → LLM.
-// This is the logic extracted from app.go SetAudioDevice (lines 444–551).
-func (e *StealthEngine) handleTranscript(raw string) <span class="cov8" title="1">{
-        if raw == "" ||
-                raw == "[BLANK_AUDIO]" ||
-                raw == " [BLANK_AUDIO]" ||
-                strings.Contains(raw, "[MUSIC]") ||
-                strings.Contains(raw, "[INAUDIBLE]") </span><span class="cov8" title="1">{
-                return
-        }</span>
-
-        <span class="cov8" title="1">cleanTranscript := strings.TrimSpace(raw)
-        emb := backend.GenerateEmbedding(cleanTranscript)
-
-        filterRes := filter.Check(cleanTranscript, emb)
-        if !filterRes.ShouldSend </span><span class="cov0" title="0">{
-                return
-        }</span>
-
-        <span class="cov8" title="1">log.Printf("🎤 STT OUTPUT: %q\n", cleanTranscript)
-
-        // Update state for frontend polling
-        e.mu.Lock()
-        e.transcript = cleanTranscript
-        e.response = ""
-        e.thinking = false
-        e.mu.Unlock()
-
-        // Also emit via EventsEmit (belt-and-suspenders)
-        if e.events != nil </span><span class="cov8" title="1">{
-                e.events.Emit("on_transcript", map[string]interface{}{"text": cleanTranscript})
-        }</span>
-
-        <span class="cov8" title="1">if !e.llmBusy.TryLock() </span><span class="cov8" title="1">{
-                log.Printf("[BUSY] Discarded (LLM streaming): %q", cleanTranscript)
-                return
-        }</span>
-
-        <span class="cov8" title="1">if e.cache != nil </span><span class="cov8" title="1">{
-                cachedAns, hit := e.cache.Search(emb, 0.88)
-                if hit </span><span class="cov8" title="1">{
-                        log.Printf("[Cache] Hit (similarity &gt;= 0.88): %q", cleanTranscript)
-                        e.mu.Lock()
-                        e.response = cachedAns
-                        e.thinking = false
-                        e.mu.Unlock()
-                        if e.events != nil </span><span class="cov8" title="1">{
-                                e.events.Emit("on_response_start", nil)
-                                e.events.Emit("on_response_end", nil)
-                        }</span>
-                        <span class="cov8" title="1">e.llmBusy.Unlock()
-                        return</span>
-                }
-                <span class="cov8" title="1">log.Printf("[Cache] Miss: %q", cleanTranscript)</span>
+        // STT: prefer Groq if key set, else fall back to local Whisper
+        var sttEngine stt.STTEngine
+        if key := os.Getenv("GROQ_API_KEY"); key != "" </span><span class="cov8" title="1">{
+                sttEngine = stt.NewGroqEngine(key, "whisper-large-v3-turbo")
+        }</span> else<span class="cov8" title="1"> {
+                validPath, err := stt.EnsureWhisperModel("")
+                if err == nil </span><span class="cov8" title="1">{
+                        sttEngine, _ = stt.LoadWhisperEngine(validPath)
+                }</span>
         }
 
-        <span class="cov8" title="1">e.mu.Lock()
-        e.thinking = true
-        e.response = ""
-        e.mu.Unlock()
-        if e.events != nil </span><span class="cov8" title="1">{
-                e.events.Emit("on_response_start", nil)
+        <span class="cov8" title="1">eng := engine.New(
+                engine.Config{SystemPrompt: SystemPrompt},
+                stt.NewSTTManager(sttEngine),
+                llmAdapter,
+                cacheAdapter,
+                &amp;eventsadapter.NoopEventAdapter{}, // replaced in startup()
+        )
+
+        return &amp;PresenterApp{
+                engine:       eng,
+                audioCapture: audio.NewCaptureEngine(),
         }</span>
-
-        <span class="cov8" title="1">if e.sessionMgr != nil </span><span class="cov8" title="1">{
-                e.sessionMgr.StartTurn(cleanTranscript)
-        }</span>
-
-        <span class="cov8" title="1">go func(q string) </span><span class="cov8" title="1">{
-                defer e.llmBusy.Unlock()
-                var answerBuilder strings.Builder
-
-                var history []driven.ChatMessage
-                if e.sessionMgr != nil </span><span class="cov8" title="1">{
-                        recentTurns := e.sessionMgr.GetRecentTurns(3)
-                        for _, t := range recentTurns </span><span class="cov8" title="1">{
-                                history = append(history, driven.ChatMessage{Role: "user", Content: t.InterviewerQuestion})
-                                history = append(history, driven.ChatMessage{Role: "assistant", Content: t.AISuggestion})
-                        }</span>
-                }
-
-                <span class="cov8" title="1">err := e.llm.StreamCompletion(q, e.cfg.SystemPrompt, history, func(token string) </span><span class="cov8" title="1">{
-                        answerBuilder.WriteString(token)
-                        e.mu.Lock()
-                        e.response = answerBuilder.String()
-                        e.thinking = true
-                        e.mu.Unlock()
-
-                        if e.sessionMgr != nil </span><span class="cov8" title="1">{
-                                e.sessionMgr.SetAISuggestion(answerBuilder.String())
-                        }</span>
-                        <span class="cov8" title="1">if e.events != nil </span><span class="cov8" title="1">{
-                                e.events.Emit("on_response_token", map[string]interface{}{"text": token})
-                        }</span>
-                }, func() <span class="cov8" title="1">{
-                        e.mu.Lock()
-                        e.thinking = false
-                        e.mu.Unlock()
-
-                        if e.sessionMgr != nil </span><span class="cov8" title="1">{
-                                e.sessionMgr.CompleteTurn()
-                        }</span>
-                        <span class="cov8" title="1">if e.events != nil </span><span class="cov8" title="1">{
-                                e.events.Emit("on_response_end", nil)
-                        }</span>
-                })
-
-                <span class="cov8" title="1">if err != nil </span><span class="cov8" title="1">{
-                        log.Printf("LLM streaming failed: %v", err)
-                }</span> else<span class="cov8" title="1"> {
-                        finalAns := answerBuilder.String()
-                        if e.cache != nil &amp;&amp; len(finalAns) &gt; 0 </span><span class="cov8" title="1">{
-                                if storeErr := e.cache.Store(q, finalAns); storeErr != nil </span><span class="cov8" title="1">{
-                                        log.Printf("[Cache] Error storing Q&amp;A pair: %v", storeErr)
-                                }</span> else<span class="cov8" title="1"> {
-                                        log.Printf("[Cache] ✅ Successfully stored Q&amp;A pair in background")
-                                }</span>
-                        }
-                        <span class="cov8" title="1">log.Printf("[LLM] Stream complete. Stored in cache.")</span>
-                }
-        }(cleanTranscript)
 }
+
+// NewPresenterAppWithPorts provides a constructor for testing that accepts the port
+func NewPresenterAppWithPorts(eng *engine.StealthEngine, ac driven.AudioCapturePort) *PresenterApp <span class="cov8" title="1">{
+        return &amp;PresenterApp{engine: eng, audioCapture: ac}
+}</span>
+
+// startup is called by Wails on app start.
+func (p *PresenterApp) startup(ctx context.Context) <span class="cov8" title="1">{
+        p.ctx = ctx
+        p.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
+
+        // Hide from taskbar for stealth
+        // We use a safe wrapper or just avoid it if testing
+        if ctx != nil &amp;&amp; ctx.Value("test") == nil </span><span class="cov0" title="0">{
+                runtime.WindowSetAlwaysOnTop(ctx, true)
+        }</span>
+
+        // Auto-start microphone
+        <span class="cov8" title="1">_ = p.audioCapture.Initialize()
+        go p.audioCapture.StartCapture(-1, false, func(samples []float32) </span><span class="cov8" title="1">{
+                _ = p.engine.ProcessAudio(samples)
+        }</span>)
+}
+
+// GetState delegates to the engine
+func (p *PresenterApp) GetState() map[string]interface{} <span class="cov8" title="1">{
+        state := p.engine.GetState()
+        return map[string]interface{}{
+                "transcript":  state.Transcript,
+                "response":    state.Response,
+                "thinking":    state.Thinking,
+                "cachedPairs": state.CachedPairs,
+        }
+}</span>
+
+// ClearState delegates to the engine
+func (p *PresenterApp) ClearState() <span class="cov8" title="1">{
+        p.engine.ClearState()
+}</span>
+
+// AskQuestion delegates to the engine
+func (p *PresenterApp) AskQuestion(q string) error <span class="cov8" title="1">{
+        return p.engine.AskQuestion(q)
+}</span>
 </pre>
 
 		</div>
