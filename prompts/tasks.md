@@ -46,45 +46,6 @@
 
 ---
 
-## Phase 47 — Remote Helper Mode (Wails) 🌐
-
-> Rebuilding the Remote Helper Mode (originally P7-T5) for the new Wails architecture. Allows a friend to access the UI remotely via Cloudflare tunnel.
-
-| Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
-| P47-T1-T2 | `wails-app/backend/app.go` | **Embedded Server & WS Bridge:** Spin up an HTTP server on port 8000 alongside Wails and expose a `/ws` route to mirror Wails IPC events to the remote browser. | ✅ | #157 |
-| P47-T3 | `scripts/start_remote.sh` | **Update Tunnel Script:** Refactor the existing script to point the Cloudflare tunnel directly to the new embedded Go HTTP port (8000). | ✅ | #155 |
-
----
-
-## Phase 48 — Automated E2E Testing 🧪
-
-> Implement a "Split E2E" testing strategy to validate both the Svelte frontend and the Go local ML backend.
-
-| Task ID | File(s) | Description | Status | PR |
-| P48-T1 | `wails-app/frontend/playwright.config.ts`, `tests/` | **Split E2E UI Tests:** Setup Playwright in the frontend to test the Svelte UI flows while mocking the backend Go calls. | ✅ | #158 |
-
----
-
-## Phase 49 — Global Hotkeys & Window Management ⌨️
-
-> Implementing global OS-level hotkeys so the user can interact with and move the transparent Wails window without needing a mouse.
-
-| Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
-| P49-T1 | `wails-app/backend/hotkeys.go` | **Global Hotkey Movement:** Use `golang.design/x/hotkey` to register global hotkeys (e.g. `Ctrl+Alt+Right`) that nudge the Wails window coordinates. | ✅ | #156 |
-
----
-
-## Phase 50 — Go Native Audio Loopback 🎧
-
-> Re-implementing the driverless system audio loopback feature for the Go backend so users can capture the interviewer's voice natively (e.g. Windows WASAPI).
-
-| Task ID | File(s) | Description | Status | PR |
-| P50-T1 | `wails-app/backend/stt/`, `app.go` | **Native Audio Loopback:** Upgrade Go audio capture to support Windows WASAPI loopback and expose device selector bindings to Wails. | ✅ | #159 |
-
----
-
 ## Phase 51 — Go STT Pipeline (VAD + Smart Filter + Cache + LLM) 🎤🧠
 
 > Porting the complete Python audio intelligence pipeline into the Go backend:
@@ -94,26 +55,3 @@
 |---|---|---|---|---|
 | P51-T1 | `backend/filter/`, `backend/llm/`, `backend/audio/capture.go`, `backend/vector_db.go`, `app.go`, `frontend/ws.svelte.ts` | **Full STT Pipeline:** VAD silence buffer, smart filter (filler + Nomic embedding noise detection), sqlite-vec QA cache lookup, OpenAI streaming LLM with busy guard. | ⬜ | — |
 | P51-T2 | `backend/filter/classifier.go`, `backend/filter/filter.go` | **Native Go Intent Classifier:** Replace manual questionWords heuristic with an ML-based Nearest Centroid classifier in Go based on embeddings. | ⬜ | — |
-
----
-
-## Phase 52 — Interview Intelligence (Prompts, Multi-Turn Context & Scorecard) 🧠📊
-
-> Porting the interview intelligence system from `feature/krushna`:
-> Categorized system prompts (STAR, coding, system design), multi-turn context (last 2-3 turns), thread-safe session manager, and end-of-session AI scorecard generator.
-
-| Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
-| P52-T1 | `backend/llm/prompts.go`, `backend/llm/openai.go` | **Categorized Prompts & Multi-Turn Context:** Specialized prompt injections (STAR, coding, system design) and 2–3 turn context window injection. | ✅ | #165 |
-| P52-T2 | `backend/session/session.go`, `backend/llm/scorecard.go`, `backend/remote/server.go`, `app.go` | **Session Manager & Scorecard:** Thread-safe session tracking, post-interview JSON scorecard evaluation, and `/session/end` endpoint. | ✅ | #166 |
-| P52-T3 | `backend/session/session.go`, `backend/llm/scorecard.go` | **Candidate Voice & Topic Scorecard:** Dual-channel turn tracking, candidate voice evaluation, and topic domain breakdown. | ✅ | #168 |
-
----
-
-## Phase 53 — License Gate & Supabase Entitlements 🔐
-
-> Enforce user authentication and active software license passes (30-Day BYOK, 1-Year BYOK, or SaaS Managed Sessions) before unlocking desktop app operations.
-
-| Task ID | File(s) | Description | Status | PR |
-|---|---|---|---|---|
-| P53-T1 | `frontend/src/lib/auth.svelte.ts`, `Settings.svelte`, `App.svelte` | **Entitlement & License Gate:** Require Supabase login, check active 30-day/1-year BYOK pass or remaining SaaS sessions, lock app if pass is expired. | ✅ | #169 |
