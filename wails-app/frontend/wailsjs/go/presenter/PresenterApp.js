@@ -10,14 +10,38 @@ export function ClearState() {
   return window['go']['presenter']['PresenterApp']['ClearState']();
 }
 
+export function CloseFile(arg1) {
+  return window['go']['presenter']['PresenterApp']['CloseFile'](arg1);
+}
+
 export function GetState() {
   return window['go']['presenter']['PresenterApp']['GetState']();
+}
+
+export function GetWorkspaceTree() {
+  return window['go']['presenter']['PresenterApp']['GetWorkspaceTree']();
 }
 
 export function LoadDocument(arg1) {
   return window['go']['presenter']['PresenterApp']['LoadDocument'](arg1);
 }
 
+export function OpenFile(arg1) {
+  return window['go']['presenter']['PresenterApp']['OpenFile'](arg1);
+}
+
 export function PromptLoadDocument() {
   return window['go']['presenter']['PresenterApp']['PromptLoadDocument']();
+}
+
+export function PromptOpenDirectory() {
+  return window['go']['presenter']['PresenterApp']['PromptOpenDirectory']();
+}
+
+export function PromptOpenFile() {
+  return window['go']['presenter']['PresenterApp']['PromptOpenFile']();
+}
+
+export function SetActiveDocument(arg1) {
+  return window['go']['presenter']['PresenterApp']['SetActiveDocument'](arg1);
 }

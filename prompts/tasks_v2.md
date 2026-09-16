@@ -124,3 +124,4 @@ BATCH 3 (Sequential Product Integration)
 | **P56-T3** | Svelte IDE Tree & Tabs UI | ✅ Merged | ⚡ Parallel | [PR 181](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/181) | `lib/components/workspace/` (FileTree, Tabs, Sidebar) |
 | **P56-T4** | StealthPresenter Integration | ✅ Merged | Sequential | [PR 183](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/183) | `PresenterApp` bindings + `PresenterHUD` tabs/tree hookup |
 | **P56-T5** | Universal IDE Shell Framework | ✅ Merged | Sequential | [PR 184](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/184) | `IDEShell.svelte` (ActivityBar, Explorer, Tabs, StatusBar, Slots) |
+| **P56-T6** | CodeMirror 6 & VS Code Layout | ⬜ Not started | Sequential | - | CodeMirror 6 editor, docking sidebar, full VS Code HUD |
