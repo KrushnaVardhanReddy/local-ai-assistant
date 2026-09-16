@@ -123,3 +123,4 @@ BATCH 3 (Sequential Product Integration)
 | **P56-T2** | Engine Workspace & RAG Indexer | ✅ Merged | ⚡ Parallel | [PR 182](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/182) | `core/engine/workspace.go`, directory scanning & doc caching |
 | **P56-T3** | Svelte IDE Tree & Tabs UI | ✅ Merged | ⚡ Parallel | [PR 181](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/181) | `lib/components/workspace/` (FileTree, Tabs, Sidebar) |
 | **P56-T4** | StealthPresenter Integration | 🔄 Jules working | Sequential | [Session 7143702522306462654](https://jules.google.com/session/7143702522306462654) | `PresenterApp` bindings + `PresenterHUD` tabs/tree hookup |
+| **P56-T5** | Universal IDE Shell Framework | ⬜ Not started | Sequential | - | `IDEShell.svelte` (ActivityBar, Explorer, Tabs, StatusBar, Slots) |
