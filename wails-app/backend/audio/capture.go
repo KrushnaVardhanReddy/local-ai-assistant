@@ -194,6 +194,11 @@ func (c *CaptureEngine) StopCapture() error {
 	return c.stopCaptureInternal()
 }
 
+// Stop stops the current audio capture, implementing the AudioCapturePort interface.
+func (c *CaptureEngine) Stop() {
+	_ = c.StopCapture()
+}
+
 // stopCaptureInternal stops the stream without acquiring the lock.
 func (c *CaptureEngine) stopCaptureInternal() error {
 	if c.device != nil {
