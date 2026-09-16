@@ -13,9 +13,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+	cacheadapter "wails-app/adapters/cache"
+	eventsadapter "wails-app/adapters/events"
+	llmadapter "wails-app/adapters/llm"
 	"wails-app/backend"
 	"wails-app/backend/audio"
-	"wails-app/backend/filter"
 	"wails-app/backend/hotkeys"
 	"wails-app/backend/llm"
 	"wails-app/backend/remote"
@@ -23,6 +25,7 @@ import (
 	"wails-app/backend/stt"
 	"wails-app/backend/system"
 	"wails-app/backend/window"
+	"wails-app/core/engine"
 
 	"github.com/kbinani/screenshot"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -39,16 +42,8 @@ type App struct {
 	sttManager   *stt.STTManager
 	audioCapture *audio.CaptureEngine
 
-	qaCache *backend.VectorDB
-	llmBusy sync.Mutex
+	engine *engine.StealthEngine
 
-	// UI state — polled by frontend via GetState()
-	stateMu          sync.RWMutex
-	latestTranscript string
-	latestResponse   string
-	latestThinking   bool
-
-	sessionManager *session.SessionManager
 	isClickthrough bool
 }
 
@@ -110,12 +105,19 @@ func NewApp() *App {
 
 	sessMgr := session.NewSessionManager()
 
+	eng := engine.New(
+		engine.Config{SystemPrompt: llm.DefaultSystemPrompt},
+		stt.NewSTTManager(initialEngine),
+		llmadapter.NewOpenAIAdapter(),
+		cacheadapter.NewSQLiteVecAdapter(db),
+		nil,
+	)
+
 	return &App{
-		remoteServer:   remote.NewServer(http.FS(assets), sessMgr),
-		sttManager:     stt.NewSTTManager(initialEngine),
-		audioCapture:   captureEngine,
-		qaCache:        db,
-		sessionManager: sessMgr,
+		remoteServer: remote.NewServer(http.FS(assets), sessMgr),
+		sttManager:   stt.NewSTTManager(initialEngine),
+		audioCapture: captureEngine,
+		engine:       eng,
 	}
 }
 
@@ -123,6 +125,7 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
 
 	// Hide from taskbar for maximum stealth
 	if err := window.HideFromTaskbar(ctx); err != nil {
@@ -181,53 +184,39 @@ func (a *App) Greet(name string) string {
 
 // GetState is polled by the frontend every 200ms to get the latest transcript/response state.
 func (a *App) GetState() map[string]interface{} {
-	a.stateMu.RLock()
-	defer a.stateMu.RUnlock()
-
-	var count int
-	if a.qaCache != nil {
-		count = a.qaCache.GetCount()
-	}
-
+	s := a.engine.GetState()
 	return map[string]interface{}{
-		"transcript":             a.latestTranscript,
-		"response":               a.latestResponse,
-		"thinking":               a.latestThinking,
-		"cached_pairs":           count,
-		"estimated_tokens_saved": count * 250,
+		"transcript":             s.Transcript,
+		"response":               s.Response,
+		"thinking":               s.Thinking,
+		"cached_pairs":           s.CachedPairs,
+		"estimated_tokens_saved": s.CachedPairs * 250,
 	}
 }
 
 // ClearState resets the current transcript, AI response, and thinking flags.
 func (a *App) ClearState() {
-	a.stateMu.Lock()
-	defer a.stateMu.Unlock()
-	a.latestTranscript = ""
-	a.latestResponse = ""
-	a.latestThinking = false
+	a.engine.ClearState()
 }
 
 // GetCacheStats returns the number of cached Q&A pairs and estimated tokens saved
 func (a *App) GetCacheStats() map[string]interface{} {
-	if a.qaCache == nil {
-		return map[string]interface{}{
-			"cached_pairs":           0,
-			"estimated_tokens_saved": 0,
-		}
-	}
-	count := a.qaCache.GetCount()
+	s := a.engine.GetState()
 	return map[string]interface{}{
-		"cached_pairs":           count,
-		"estimated_tokens_saved": count * 250,
+		"cached_pairs":           s.CachedPairs,
+		"estimated_tokens_saved": s.CachedPairs * 250,
 	}
 }
 
 // GetCacheItems returns all cached items for UI management
 func (a *App) GetCacheItems() []backend.CacheItem {
-	if a.qaCache == nil {
+	cacheAdapter, ok := a.engine.GetCache().(interface {
+		GetAllItems() ([]backend.CacheItem, error)
+	})
+	if !ok {
 		return []backend.CacheItem{}
 	}
-	items, err := a.qaCache.GetAllItems()
+	items, err := cacheAdapter.GetAllItems()
 	if err != nil {
 		return []backend.CacheItem{}
 	}
@@ -236,21 +225,23 @@ func (a *App) GetCacheItems() []backend.CacheItem {
 
 // DeleteCacheItems removes specified question IDs from the cache
 func (a *App) DeleteCacheItems(ids []string) error {
-	if a.qaCache == nil {
+	cacheAdapter, ok := a.engine.GetCache().(interface{ DeleteItem(string) error })
+	if !ok {
 		return nil
 	}
 	for _, id := range ids {
-		_ = a.qaCache.DeleteItem(id)
+		_ = cacheAdapter.DeleteItem(id)
 	}
 	return nil
 }
 
 // ClearCache clears all cached Q&A pairs
 func (a *App) ClearCache() error {
-	if a.qaCache == nil {
+	cacheAdapter, ok := a.engine.GetCache().(interface{ ClearAll() error })
+	if !ok {
 		return nil
 	}
-	return a.qaCache.ClearAll()
+	return cacheAdapter.ClearAll()
 }
 
 func (a *App) StartBackend() error {
@@ -323,11 +314,7 @@ func (a *App) CaptureScreen() string {
 func (a *App) AnalyzeVision(base64Image string, prompt string) error {
 	log.Println("🤖 [Go] AnalyzeVision starting LLM completion for screenshot...")
 
-	a.stateMu.Lock()
-	a.latestTranscript = "📸 [Screenshot Snip Captured]"
-	a.latestResponse = ""
-	a.latestThinking = true
-	a.stateMu.Unlock()
+	a.engine.UpdateState("📸 [Screenshot Snip Captured]", "", true)
 
 	wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
 
@@ -335,24 +322,16 @@ func (a *App) AnalyzeVision(base64Image string, prompt string) error {
 		var answerBuilder strings.Builder
 		err := llm.StreamVisionCompletion(base64Image, prompt, func(token string) {
 			answerBuilder.WriteString(token)
-			a.stateMu.Lock()
-			a.latestResponse = answerBuilder.String()
-			a.latestThinking = true
-			a.stateMu.Unlock()
+			a.engine.UpdateState("📸 [Screenshot Snip Captured]", answerBuilder.String(), true)
 			wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
 		}, func() {
-			a.stateMu.Lock()
-			a.latestThinking = false
-			a.stateMu.Unlock()
+			a.engine.UpdateState("📸 [Screenshot Snip Captured]", answerBuilder.String(), false)
 			wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
 		})
 
 		if err != nil {
 			log.Printf("❌ [Go] AnalyzeVision failed: %v", err)
-			a.stateMu.Lock()
-			a.latestResponse = fmt.Sprintf("Vision analysis error: %v", err)
-			a.latestThinking = false
-			a.stateMu.Unlock()
+			a.engine.UpdateState("📸 [Screenshot Snip Captured]", fmt.Sprintf("Vision analysis error: %v", err), false)
 		} else {
 			log.Println("✅ [Go] AnalyzeVision stream complete!")
 		}
@@ -398,11 +377,11 @@ func (a *App) ToggleStealth(opts map[string]interface{}) {
 }
 
 func (a *App) EndSession() (map[string]interface{}, error) {
-	if a.sessionManager == nil {
+	if a.engine.GetSessionManager() == nil {
 		return nil, fmt.Errorf("session manager not configured")
 	}
 
-	sessionData := a.sessionManager.Export()
+	sessionData := a.engine.GetSessionManager().Export()
 	turnCount, _ := sessionData["turn_count"].(int)
 	if turnCount == 0 {
 		return map[string]interface{}{
@@ -433,124 +412,7 @@ func (a *App) GetAudioDevices() []audio.AudioDevice {
 
 func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 	err := a.audioCapture.StartCapture(id, isLoopback, func(samples []float32) {
-		ch, err := a.sttManager.TranscribeStream(samples)
-		if err != nil {
-			log.Printf("Failed to transcribe stream: %v\n", err)
-			return
-		}
-
-		go func() {
-			for transcript := range ch {
-				if transcript != "" &&
-					transcript != "[BLANK_AUDIO]" &&
-					transcript != " [BLANK_AUDIO]" &&
-					!strings.Contains(transcript, "[MUSIC]") &&
-					!strings.Contains(transcript, "[INAUDIBLE]") {
-
-					cleanTranscript := strings.TrimSpace(transcript)
-					emb := backend.GenerateEmbedding(cleanTranscript)
-
-					filterRes := filter.Check(cleanTranscript, emb)
-					if !filterRes.ShouldSend {
-						continue
-					}
-
-					log.Printf("🎤 STT OUTPUT: %q\n", transcript)
-
-					// Update state for frontend polling
-					a.stateMu.Lock()
-					a.latestTranscript = cleanTranscript
-					a.latestResponse = ""
-					a.latestThinking = false
-					a.stateMu.Unlock()
-
-					// Also emit via EventsEmit (belt-and-suspenders)
-					wailsruntime.EventsEmit(a.ctx, "on_transcript", map[string]interface{}{"text": cleanTranscript})
-
-					if !a.llmBusy.TryLock() {
-						log.Printf("[BUSY] Discarded (LLM streaming): %q", cleanTranscript)
-						continue
-					}
-
-					if a.qaCache != nil {
-						cachedAns, hit := a.qaCache.SearchByEmbedding(emb, 0.88)
-						if hit {
-							log.Printf("[Cache] Hit (similarity >= 0.88): %q", cleanTranscript)
-							a.stateMu.Lock()
-							a.latestResponse = cachedAns
-							a.latestThinking = false
-							a.stateMu.Unlock()
-							wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
-							wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
-							a.llmBusy.Unlock()
-							continue
-						}
-						log.Printf("[Cache] Miss: %q", cleanTranscript)
-					}
-
-					a.stateMu.Lock()
-					a.latestThinking = true
-					a.latestResponse = ""
-					a.stateMu.Unlock()
-					wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
-
-					if a.sessionManager != nil {
-						a.sessionManager.StartTurn(cleanTranscript)
-					}
-
-					go func(q string) {
-						var answerBuilder strings.Builder
-
-						var history []llm.ChatMessage
-						if a.sessionManager != nil {
-							recentTurns := a.sessionManager.GetRecentTurns(3)
-							for _, t := range recentTurns {
-								history = append(history, llm.ChatMessage{Role: "user", Content: t.Transcript})
-								history = append(history, llm.ChatMessage{Role: "assistant", Content: t.Response})
-							}
-						}
-
-						err := llm.StreamCompletionWithContext(q, "", history, func(token string) {
-							answerBuilder.WriteString(token)
-							a.stateMu.Lock()
-							a.latestResponse = answerBuilder.String()
-							a.latestThinking = true
-							a.stateMu.Unlock()
-
-							if a.sessionManager != nil {
-								a.sessionManager.AppendToken(token)
-							}
-							wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
-						}, func() {
-							a.stateMu.Lock()
-							a.latestThinking = false
-							a.stateMu.Unlock()
-
-							if a.sessionManager != nil {
-								a.sessionManager.CompleteTurn()
-							}
-							wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
-						})
-						if err != nil {
-							log.Printf("LLM streaming failed: %v", err)
-						} else {
-							finalAns := answerBuilder.String()
-							if a.qaCache != nil && len(finalAns) > 0 {
-								go func(questionText, answerText string) {
-									if storeErr := a.qaCache.Store(questionText, answerText); storeErr != nil {
-										log.Printf("[Cache] Error storing Q&A pair: %v", storeErr)
-									} else {
-										log.Printf("[Cache] ✅ Successfully stored Q&A pair in background")
-									}
-								}(q, finalAns)
-							}
-							log.Printf("[LLM] Stream complete. Stored in cache.")
-						}
-						a.llmBusy.Unlock()
-					}(cleanTranscript)
-				}
-			}
-		}()
+		_ = a.engine.ProcessAudio(samples)
 	})
 
 	if err != nil {

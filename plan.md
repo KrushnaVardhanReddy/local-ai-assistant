@@ -1,6 +1,20 @@
-1.  **Create Directory:** Create `wails-app/adapters/llm` if it does not exist.
-2.  **Create `openai_adapter.go`:** Create `wails-app/adapters/llm/openai_adapter.go` defining `OpenAIAdapter` which wraps the existing `wails-app/backend/llm` package functions behind the `driven.LLMPort` interface.
-3.  **Create `mock_adapter.go`:** Create `wails-app/adapters/llm/mock_adapter.go` defining `MockLLMAdapter` which is a test double that replays scripted responses and checks inputs.
-4.  **Create `openai_adapter_test.go`:** Create `wails-app/adapters/llm/openai_adapter_test.go` to test `OpenAIAdapter` and/or `MockLLMAdapter` (based on the instruction, the tests use `MockLLMAdapter` to verify things like `StreamCompletion` calls `onToken`, `onDone`, records calls, returns `Err`, and tests `ChatMessage` conversion for `OpenAIAdapter`). We'll make sure there is 100% coverage for the `adapters/llm` package.
-5.  **Pre-commit steps:** Run tests and format the code.
-6.  **Submit:** Commit and submit the code.
+1.  **Create `wails-app/core/engine/engine.go`**:
+    *   Define `Config`, `StealthEngine`.
+    *   Implement `New()`, `GetState()`, `ClearState()`, `SetStealth()`, `SetEventsAdapter()`.
+    *   Ensure compile-time check for `driving.PipelinePort`.
+2.  **Create `wails-app/core/engine/pipeline.go`**:
+    *   Implement `ProcessAudio()`, `AskQuestion()`, `handleTranscript()`.
+    *   Refactor the pipeline logic from `app.go` (`SetAudioDevice`) into `handleTranscript()`.
+3.  **Modify `wails-app/app.go`**:
+    *   Add `engine *engine.StealthEngine` to `App`.
+    *   Update `NewApp()` to instantiate `StealthEngine` and pass it to `App`.
+    *   Update `startup(ctx)` to set the `eventsadapter.NewWailsEventAdapter(ctx)` on the engine.
+    *   Refactor `SetAudioDevice()` to call `a.engine.ProcessAudio()`.
+    *   Refactor `GetState()` to delegate to `a.engine.GetState()`.
+    *   Remove redundant fields from `App` (`latestTranscript`, etc.).
+4.  **Create `wails-app/core/engine/engine_test.go`**:
+    *   Write 100% test coverage for `engine.go` and `pipeline.go` using mock adapters.
+5.  **Pre-commit steps**:
+    *   Run tests (`go test -v ./core/engine/...` and `go test -v ./...`).
+    *   Run `go build ./...`.
+    *   Ensure proper testing, verification, review, and reflection are done using `pre_commit_instructions`.
