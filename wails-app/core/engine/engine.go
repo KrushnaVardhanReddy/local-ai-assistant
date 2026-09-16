@@ -27,6 +27,12 @@ type StealthEngine struct {
 
 	sessionMgr *session.SessionManager
 
+	// workspace state
+	workspaceTree   []*driving.FileNode
+	openDocuments   map[string]*driving.WorkspaceDocument
+	activeDoc       *driving.WorkspaceDocument
+	workspaceMu     sync.RWMutex
+
 	// internal state (mutex-protected)
 	mu         sync.RWMutex
 	transcript string
@@ -43,12 +49,13 @@ func New(
 	events driven.EventPort,
 ) *StealthEngine {
 	return &StealthEngine{
-		cfg:        cfg,
-		sttManager: sttMgr,
-		llm:        llm,
-		cache:      cache,
-		events:     events,
-		sessionMgr: session.NewSessionManager(),
+		cfg:           cfg,
+		sttManager:    sttMgr,
+		llm:           llm,
+		cache:         cache,
+		events:        events,
+		sessionMgr:    session.NewSessionManager(),
+		openDocuments: make(map[string]*driving.WorkspaceDocument),
 	}
 }
 
