@@ -2,6 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime';
   import StealthTitleBar from '../../lib/components/StealthTitleBar.svelte';
+  import WorkspaceSidebar from '../../lib/components/workspace/WorkspaceSidebar.svelte';
+  import WorkspaceTabs from '../../lib/components/workspace/WorkspaceTabs.svelte';
+  import type { FileNode, WorkspaceTab } from '../../lib/components/workspace/types';
 
   // Assuming we use standard Wails window runtime API in production or mock state in dev
   // Actually, we poll GetState from the Wails backend using `window.go.presenter.PresenterApp.GetState()`
@@ -20,6 +23,12 @@
   let resumeScrollTimeout: ReturnType<typeof setTimeout>;
 
   let pollInterval: ReturnType<typeof setInterval>;
+
+  // Workspace State
+  let isSidebarOpen = false;
+  let workspaceTree: FileNode[] = [];
+  let openTabs: WorkspaceTab[] = [];
+  let activeDocumentPath = '';
 
   // Typography state controls
   let opacity = 0.85;
@@ -43,6 +52,25 @@
             currentWordIndex = 0;
             updateScrollPosition();
           }
+
+          // We need to map `isDir` from backend to `isDirectory` for Svelte components.
+          const mapTree = (nodes: any[]): FileNode[] => {
+            if (!nodes) return [];
+            return nodes.map((n: any) => ({
+              ...n,
+              isDirectory: n.isDir,
+              children: mapTree(n.children)
+            }));
+          };
+          workspaceTree = mapTree(state.workspaceTree);
+
+          const rawDocs = state.openDocuments || [];
+          openTabs = rawDocs.map((doc: any) => ({
+            name: doc.name,
+            path: doc.path
+          }));
+          activeDocumentPath = state.activeDocumentPath || '';
+
           if (isThinking || latestResponse) {
              isCopilotOpen = true;
           }
@@ -50,6 +78,72 @@
       }
     } catch (err) {
       console.error('Failed to fetch state:', err);
+    }
+  }
+
+  async function handleOpenFolder() {
+    try {
+      // @ts-ignore
+      if (window.go && window.go.presenter && window.go.presenter.PresenterApp) {
+        // @ts-ignore
+        await window.go.presenter.PresenterApp.PromptOpenDirectory();
+      }
+      await fetchState();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleOpenFile() {
+    try {
+      // @ts-ignore
+      if (window.go && window.go.presenter && window.go.presenter.PresenterApp) {
+        // @ts-ignore
+        await window.go.presenter.PresenterApp.PromptOpenFile();
+      }
+      await fetchState();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleSelectNode(node: FileNode) {
+    if (node.isDirectory) return; // Note: Node might have isDir or isDirectory depending on mapping
+    try {
+      // @ts-ignore
+      if (window.go && window.go.presenter && window.go.presenter.PresenterApp) {
+        // @ts-ignore
+        await window.go.presenter.PresenterApp.OpenFile(node.path);
+      }
+      await fetchState();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleTabSelect(path: string) {
+    try {
+      // @ts-ignore
+      if (window.go && window.go.presenter && window.go.presenter.PresenterApp) {
+        // @ts-ignore
+        await window.go.presenter.PresenterApp.SetActiveDocument(path);
+      }
+      await fetchState();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleTabClose(path: string) {
+    try {
+      // @ts-ignore
+      if (window.go && window.go.presenter && window.go.presenter.PresenterApp) {
+        // @ts-ignore
+        await window.go.presenter.PresenterApp.CloseFile(path);
+      }
+      await fetchState();
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -159,6 +253,16 @@
         scriptContainer.scrollTop += (e.code === 'ArrowDown' ? scrollAmount : -scrollAmount);
       }
     }
+
+    if (e.ctrlKey && e.code === 'KeyB') {
+      e.preventDefault();
+      isSidebarOpen = !isSidebarOpen;
+    }
+
+    if (e.ctrlKey && e.code === 'KeyP') {
+      e.preventDefault();
+      handleOpenFile();
+    }
   }
 
   function pauseAutoScrollTemporarily() {
@@ -218,6 +322,17 @@
 <div class="presenter-root">
   <div class="eyeline-indicator"></div>
 
+  <WorkspaceSidebar
+    nodes={workspaceTree}
+    activePath={activeDocumentPath}
+    totalDocs={openTabs.length}
+    isOpen={isSidebarOpen}
+    onToggle={(open) => isSidebarOpen = open}
+    onSelect={handleSelectNode}
+    onOpenFile={handleOpenFile}
+    onOpenFolder={handleOpenFolder}
+  />
+
   <div
     class="presenter-hud"
     style="background-color: rgba(10, 10, 10, {opacity}); --dynamic-font-size: {fontSize}rem; --dynamic-line-height: {lineHeight};"
@@ -247,6 +362,13 @@
         <button class="clear-btn" aria-label="Clear state" title="Clear State" on:click={handleClear}>⟳</button>
       </div>
     </div>
+
+    <WorkspaceTabs
+      tabs={openTabs}
+      activePath={activeDocumentPath}
+      onTabSelect={handleTabSelect}
+      onTabClose={handleTabClose}
+    />
 
     <div class="content">
       {#if scriptWords.length > 0}
