@@ -59,3 +59,80 @@ func TestPresenterAppLoadDocument(t *testing.T) {
 		t.Errorf("expected script to be empty after clear, got %v", stateAfterClear["script"])
 	}
 }
+
+func TestPresenterAppWorkspace(t *testing.T) {
+	sttManager := stt.NewSTTManager(nil)
+	llmAdapter := llmadapter.NewOpenAIAdapter()
+
+	eng := engine.New(
+		engine.Config{SystemPrompt: SystemPrompt},
+		sttManager,
+		llmAdapter,
+		&DummyCache{},
+		&eventsadapter.NoopEventAdapter{},
+	)
+
+	mockAudio := &MockAudioCapture{}
+	mockWindow := &MockWindowPort{}
+	app := NewPresenterAppWithPorts(eng, mockAudio, mockWindow)
+	app.ctx = context.Background() // For pure non-UI logic this is fine if dialogs are not mocked, but dialogs require runtime context which errors.
+
+	// Test non-dialog workspace methods
+	tempDir := t.TempDir()
+	txtPath := filepath.Join(tempDir, "workspace_doc.txt")
+	os.WriteFile(txtPath, []byte("Hello Workspace"), 0644)
+	mdPath := filepath.Join(tempDir, "workspace_doc.md")
+	os.WriteFile(mdPath, []byte("# Markdown"), 0644)
+
+	// OpenDirectory (via engine since PromptOpenDirectory needs runtime)
+	_, err := eng.OpenDirectory(tempDir)
+	if err != nil {
+		t.Fatalf("OpenDirectory failed: %v", err)
+	}
+
+	tree := app.GetWorkspaceTree()
+	if len(tree) == 0 {
+		t.Fatalf("expected non-empty workspace tree")
+	}
+
+	// OpenFile
+	doc, err := app.OpenFile(txtPath)
+	if err != nil {
+		t.Fatalf("OpenFile failed: %v", err)
+	}
+	if doc.Content != "Hello Workspace" {
+		t.Errorf("expected content Hello Workspace, got %v", doc.Content)
+	}
+
+	// SetActiveDocument
+	doc2, err := app.OpenFile(mdPath)
+	if err != nil {
+		t.Fatalf("OpenFile failed: %v", err)
+	}
+
+	activeDoc, err := app.SetActiveDocument(txtPath)
+	if err != nil {
+		t.Fatalf("SetActiveDocument failed: %v", err)
+	}
+	if activeDoc.Path != txtPath {
+		t.Errorf("expected active doc path %s, got %s", txtPath, activeDoc.Path)
+	}
+
+	// CloseFile
+	err = app.CloseFile(mdPath)
+	if err != nil {
+		t.Fatalf("CloseFile failed: %v", err)
+	}
+
+	// Prompt dialogs will panic or error without real Wails context in headless test,
+	// so we expect errors or skips.
+	_, err = app.PromptOpenDirectory()
+	if err == nil {
+		t.Errorf("expected error from PromptOpenDirectory without wails runtime, got nil")
+	}
+
+	_, err = app.PromptOpenFile()
+	if err == nil {
+		t.Errorf("expected error from PromptOpenFile without wails runtime, got nil")
+	}
+}

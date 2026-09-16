@@ -187,6 +187,24 @@ func (e *StealthEngine) GetActiveDocument() *driving.WorkspaceDocument {
 	return e.activeDoc
 }
 
+// GetOpenDocuments returns all currently open documents.
+func (e *StealthEngine) GetOpenDocuments() []*driving.WorkspaceDocument {
+	e.workspaceMu.RLock()
+	defer e.workspaceMu.RUnlock()
+
+	docs := make([]*driving.WorkspaceDocument, 0, len(e.openDocuments))
+	for _, doc := range e.openDocuments {
+		docs = append(docs, doc)
+	}
+
+	// Sort tabs alphabetically by Path to ensure deterministic UI rendering order
+	sort.Slice(docs, func(i, j int) bool {
+		return strings.Compare(strings.ToLower(docs[i].Path), strings.ToLower(docs[j].Path)) < 0
+	})
+
+	return docs
+}
+
 // SetActiveDocument sets the active document by ID/Path.
 func (e *StealthEngine) SetActiveDocument(path string) (*driving.WorkspaceDocument, error) {
 	e.workspaceMu.Lock()

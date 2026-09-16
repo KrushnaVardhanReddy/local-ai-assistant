@@ -147,12 +147,22 @@ func (p *PresenterApp) Startup(ctx context.Context) {
 // GetState delegates to the engine
 func (p *PresenterApp) GetState() map[string]interface{} {
 	state := p.engine.GetState()
+
+	activeDoc := p.engine.GetActiveDocument()
+	var activeDocPath string
+	if activeDoc != nil {
+		activeDocPath = activeDoc.Path
+	}
+
 	return map[string]interface{}{
-		"transcript":  state.Transcript,
-		"response":    state.Response,
-		"thinking":    state.Thinking,
-		"cachedPairs": state.CachedPairs,
-		"script":      p.script,
+		"transcript":         state.Transcript,
+		"response":           state.Response,
+		"thinking":           state.Thinking,
+		"cachedPairs":        state.CachedPairs,
+		"script":             p.script,
+		"workspaceTree":      p.engine.GetWorkspaceTree(),
+		"openDocuments":      p.engine.GetOpenDocuments(),
+		"activeDocumentPath": activeDocPath,
 	}
 }
 
@@ -160,6 +170,67 @@ func (p *PresenterApp) GetState() map[string]interface{} {
 func (p *PresenterApp) ClearState() {
 	p.engine.ClearState()
 	p.script = ""
+}
+
+// PromptOpenDirectory opens a native folder dialog and loads it as a workspace
+func (p *PresenterApp) PromptOpenDirectory() (*driving.FileNode, error) {
+	dirpath, err := runtime.OpenDirectoryDialog(p.ctx, runtime.OpenDialogOptions{
+		Title: "Select Workspace Folder",
+	})
+	if err != nil || dirpath == "" {
+		return nil, err
+	}
+	return p.engine.OpenDirectory(dirpath)
+}
+
+// PromptOpenFile opens a native file dialog and opens the file in the workspace
+func (p *PresenterApp) PromptOpenFile() (*driving.WorkspaceDocument, error) {
+	filepath, err := runtime.OpenFileDialog(p.ctx, runtime.OpenDialogOptions{
+		Title: "Select Script Document",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Documents", Pattern: "*.txt;*.md;*.pdf;*.pptx"},
+		},
+	})
+	if err != nil || filepath == "" {
+		return nil, err
+	}
+	return p.OpenFile(filepath)
+}
+
+// OpenFile opens a file in the workspace
+func (p *PresenterApp) OpenFile(path string) (*driving.WorkspaceDocument, error) {
+	doc, err := p.engine.OpenFile(path)
+	if err != nil {
+		return nil, err
+	}
+	p.script = doc.Content
+	return doc, nil
+}
+
+// SetActiveDocument sets the active document in the workspace
+func (p *PresenterApp) SetActiveDocument(path string) (*driving.WorkspaceDocument, error) {
+	doc, err := p.engine.SetActiveDocument(path)
+	if err != nil {
+		return nil, err
+	}
+	p.script = doc.Content
+	return doc, nil
+}
+
+// CloseFile closes a file in the workspace
+func (p *PresenterApp) CloseFile(path string) error {
+	err := p.engine.CloseFile(path)
+	if doc := p.engine.GetActiveDocument(); doc != nil {
+		p.script = doc.Content
+	} else {
+		p.script = ""
+	}
+	return err
+}
+
+// GetWorkspaceTree returns the current workspace tree
+func (p *PresenterApp) GetWorkspaceTree() []*driving.FileNode {
+	return p.engine.GetWorkspaceTree()
 }
 
 // AskQuestion delegates to the engine
