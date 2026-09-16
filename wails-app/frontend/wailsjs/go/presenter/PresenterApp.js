@@ -17,3 +17,7 @@ export function GetState() {
 export function LoadDocument(arg1) {
   return window['go']['presenter']['PresenterApp']['LoadDocument'](arg1);
 }
+
+export function PromptLoadDocument() {
+  return window['go']['presenter']['PresenterApp']['PromptLoadDocument']();
+}

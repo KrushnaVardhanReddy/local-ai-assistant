@@ -22,8 +22,20 @@ func main() {
 	// Create an instance of the app structure dynamically
 	app, onStartup, onShutdown := getAppInstance()
 
-	dummyInterviewApp := NewApp()
-	dummyPresenterApp := presenter.NewPresenterApp()
+	bindList := []interface{}{
+		app,
+	}
+
+	// Wails generates TS bindings based on the structs in Bind.
+	// We bind dummy apps to generate TS for both products, BUT we must not bind
+	// two instances of the same struct type, otherwise the dummy (with a nil ctx)
+	// will overwrite the real one in the frontend bindings.
+	if getAppTitle() != "StealthPresenter" {
+		bindList = append(bindList, presenter.NewPresenterApp())
+	}
+	if getAppTitle() != "Local AI Assistant" {
+		bindList = append(bindList, NewApp())
+	}
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -41,11 +53,7 @@ func main() {
 		},
 		OnStartup:  onStartup,
 		OnShutdown: onShutdown,
-		Bind: []interface{}{
-			app,
-			dummyInterviewApp,
-			dummyPresenterApp,
-		},
+		Bind:       bindList,
 	})
 
 	if err != nil {
