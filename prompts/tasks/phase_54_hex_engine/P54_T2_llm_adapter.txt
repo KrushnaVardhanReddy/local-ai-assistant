@@ -1,0 +1,146 @@
+TASK: P54-T2 — LLM Port Adapter (⚡ PARALLEL — Run after P54-T1 merges)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The current LLM logic lives in wails-app/backend/llm/openai.go as
+package-level functions (StreamCompletion, StreamCompletionWithContext,
+StreamVisionCompletion). These functions are called directly from app.go,
+making the LLM provider impossible to swap or test without a real OpenAI
+API key.
+
+This task wraps the existing llm package behind the `driven.LLMPort`
+interface defined in P54-T1, creating an adapter. The existing functions
+are NOT changed — just wrapped. This enables the StealthEngine (P54-T5)
+to accept any LLMPort implementation (OpenAI, Groq, local Ollama, mock).
+
+⚡ This task can run in parallel with P54-T3 and P54-T4.
+   Prerequisite: P54-T1 must be merged first.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/adapters/llm/openai_adapter.go
+CREATE: wails-app/adapters/llm/openai_adapter_test.go
+CREATE: wails-app/adapters/llm/mock_adapter.go
+
+DO NOT MODIFY: wails-app/backend/llm/openai.go (leave existing functions intact)
+DO NOT MODIFY: wails-app/app.go (not yet — that happens in P54-T5)
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. CREATE: wails-app/adapters/llm/openai_adapter.go
+   Package: `llmadapter`
+
+   import (
+       "wails-app/backend/llm"
+       "wails-app/core/ports/driven"
+   )
+
+   // OpenAIAdapter wraps the existing backend/llm package functions
+   // behind the driven.LLMPort interface.
+   type OpenAIAdapter struct{}
+
+   func NewOpenAIAdapter() *OpenAIAdapter {
+       return &OpenAIAdapter{}
+   }
+
+   // StreamCompletion delegates to llm.StreamCompletionWithContext.
+   // The systemPrompt is passed as the category parameter to BuildSystemPrompt.
+   // NOTE: history []driven.ChatMessage must be converted to []llm.ChatMessage.
+   func (a *OpenAIAdapter) StreamCompletion(
+       question string,
+       systemPrompt string,
+       history []driven.ChatMessage,
+       onToken driven.StreamCallback,
+       onDone func(),
+   ) error {
+       // Convert driven.ChatMessage slice to llm.ChatMessage slice.
+       msgs := make([]llm.ChatMessage, len(history))
+       for i, m := range history {
+           msgs[i] = llm.ChatMessage{Role: m.Role, Content: m.Content}
+       }
+       // Use raw system prompt as the "category" override.
+       // llm.BuildSystemPrompt returns DefaultSystemPrompt if category unknown.
+       return llm.StreamCompletionWithContext(question, systemPrompt, msgs, onToken, onDone)
+   }
+
+   // StreamVision delegates to llm.StreamVisionCompletion.
+   func (a *OpenAIAdapter) StreamVision(
+       base64Image string,
+       prompt string,
+       onToken driven.StreamCallback,
+       onDone func(),
+   ) error {
+       return llm.StreamVisionCompletion(base64Image, prompt, onToken, onDone)
+   }
+
+   // Compile-time interface check.
+   var _ driven.LLMPort = (*OpenAIAdapter)(nil)
+
+2. CREATE: wails-app/adapters/llm/mock_adapter.go
+   Package: `llmadapter`
+
+   // MockLLMAdapter is a test double that replays scripted responses.
+   // Use in unit tests to avoid real API calls.
+   type MockLLMAdapter struct {
+       // Tokens is the list of token strings to emit via onToken.
+       Tokens []string
+       // Err is returned from StreamCompletion if non-nil.
+       Err error
+       // Calls records each question passed to StreamCompletion for assertion.
+       Calls []string
+   }
+
+   func (m *MockLLMAdapter) StreamCompletion(
+       question, systemPrompt string,
+       history []driven.ChatMessage,
+       onToken driven.StreamCallback,
+       onDone func(),
+   ) error {
+       m.Calls = append(m.Calls, question)
+       if m.Err != nil {
+           return m.Err
+       }
+       for _, tok := range m.Tokens {
+           onToken(tok)
+       }
+       onDone()
+       return nil
+   }
+
+   func (m *MockLLMAdapter) StreamVision(base64Image, prompt string, onToken driven.StreamCallback, onDone func()) error {
+       return m.StreamCompletion(prompt, "", nil, onToken, onDone)
+   }
+
+   var _ driven.LLMPort = (*MockLLMAdapter)(nil)
+
+3. CREATE: wails-app/adapters/llm/openai_adapter_test.go
+   Package: `llmadapter`
+
+   Tests using MockLLMAdapter:
+   - Test that StreamCompletion calls onToken for each token in Tokens slice.
+   - Test that StreamCompletion calls onDone exactly once.
+   - Test that StreamCompletion records the question in Calls.
+   - Test that StreamCompletion returns Err when Err is set.
+   - Test ChatMessage conversion: driven.ChatMessage{Role:"user", Content:"q"}
+     results in correct llm.ChatMessage when adapter is created.
+
+═══════════════════════════════════════════════════════════════
+TESTS
+═══════════════════════════════════════════════════════════════
+- All tests use MockLLMAdapter — no real HTTP calls.
+- `cd wails-app && go test ./adapters/llm/...` must pass.
+- `go vet ./adapters/llm/...` must pass.
+- Compile-time `var _ driven.LLMPort = (*OpenAIAdapter)(nil)` must compile.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Do NOT modify wails-app/backend/llm/ files.
+- Do NOT modify wails-app/app.go.
+- No real API calls in tests.
+- Must compile: `cd wails-app && go build ./adapters/llm/...`
+- Target Branch: feature/krushna_golang-hex-engine

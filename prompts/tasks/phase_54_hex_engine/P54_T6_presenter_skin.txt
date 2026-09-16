@@ -1,0 +1,169 @@
+TASK: P54-T6 — StealthPresenter Product Skin (Sequential — After P54-T5 merges)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+With the StealthEngine in place (P54-T5), the first new product can be
+created as a thin "skin" — a different system prompt, a different Wails
+App shell, and a new Svelte UI. No engine code is changed.
+
+StealthPresenter is an invisible teleprompter HUD that:
+  - Sits near the user's webcam, excluded from screen capture
+  - Loads a PDF/TXT script document
+  - Auto-scrolls based on voice (using the existing Whisper STT)
+  - Optionally uses the LLM to answer live audience questions
+  - Is completely invisible in Zoom, Teams, Google Meet, OBS
+
+This task creates the product shell and a minimal Svelte UI scaffold.
+It does NOT implement full PDF rendering or voice-scroll (those are
+future tasks). It validates the full product wiring end-to-end.
+
+Prerequisite: P54-T5 must be merged.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/products/presenter/app.go
+CREATE: wails-app/products/presenter/prompt.go
+CREATE: wails-app/products/presenter/presenter_test.go
+CREATE: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
+CREATE: wails-app/frontend/src/products/presenter/PresenterSettings.svelte
+
+DO NOT MODIFY: wails-app/core/engine/ (engine is unchanged)
+DO NOT MODIFY: wails-app/frontend/src/lib/Assistant.svelte (interview UI intact)
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. CREATE: wails-app/products/presenter/prompt.go
+   Package: `presenter`
+
+   // SystemPrompt is the product-specific LLM instruction for StealthPresenter.
+   // The LLM acts as a private co-pilot for a live presenter.
+   const SystemPrompt = "You are an invisible presentation co-pilot. " +
+       "The user is giving a live video presentation or webinar. " +
+       "Your role is to help them in real time without their audience knowing. " +
+       "When the user asks a question or an audience member asks something, " +
+       "provide a concise, accurate, well-structured answer (3-5 bullet points max). " +
+       "If the input sounds like a script cue or a slide title, return a 2-sentence " +
+       "talking-point expansion the presenter can speak naturally. " +
+       "NEVER use conversational filler. NEVER repeat the question. " +
+       "Respond as if showing content on a private HUD panel, not in a chat."
+
+   // VisionPrompt is used when the presenter snips a slide for context.
+   const VisionPrompt = "Describe the key information on this slide in 3 bullet points. " +
+       "Then suggest 2 talking points the presenter can use to explain it naturally."
+
+2. CREATE: wails-app/products/presenter/app.go
+   Package: `presenter`
+
+   import (
+       "wails-app/adapters/cache"
+       "wails-app/adapters/events"
+       "wails-app/adapters/llm"
+       "wails-app/backend/audio"
+       "wails-app/backend/stt"
+       "wails-app/backend"
+       "wails-app/core/engine"
+   )
+
+   // PresenterApp is the Wails App struct for the StealthPresenter product.
+   // It is thin — it owns only Wails-facing concerns (context, window, audio).
+   // All pipeline logic is delegated to the embedded StealthEngine.
+   type PresenterApp struct {
+       ctx          context.Context
+       engine       *engine.StealthEngine
+       audioCapture *audio.CaptureEngine
+   }
+
+   func NewPresenterApp() *PresenterApp {
+       // Build adapters
+       db, _ := backend.NewVectorDB("./data/presenter_cache.db")
+       llmAdapter   := llmadapter.NewOpenAIAdapter()
+       cacheAdapter := cacheadapter.NewSQLiteVecAdapter(db)
+
+       // STT: prefer Groq if key set, else fall back to local Whisper
+       var sttEngine stt.STTEngine
+       if key := os.Getenv("GROQ_API_KEY"); key != "" {
+           sttEngine = stt.NewGroqEngine(key, "whisper-large-v3-turbo")
+       } else {
+           validPath, err := stt.EnsureWhisperModel("")
+           if err == nil {
+               sttEngine, _ = stt.LoadWhisperEngine(validPath)
+           }
+       }
+
+       eng := engine.New(
+           engine.Config{SystemPrompt: SystemPrompt},
+           stt.NewSTTManager(sttEngine),
+           llmAdapter,
+           cacheAdapter,
+           eventsadapter.NewNoopEventAdapter(), // replaced in startup()
+       )
+
+       return &PresenterApp{
+           engine:       eng,
+           audioCapture: audio.NewCaptureEngine(),
+       }
+   }
+
+   // startup is called by Wails on app start.
+   func (p *PresenterApp) startup(ctx context.Context) {
+       p.ctx = ctx
+       p.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
+       // Hide from taskbar for stealth
+       _ = window.HideFromTaskbar(ctx)
+       // Auto-start microphone
+       _ = p.audioCapture.Initialize()
+       go p.audioCapture.StartCapture(-1, false, func(samples []float32) {
+           _ = p.engine.ProcessAudio(samples)
+       })
+   }
+
+   // Wails-exposed methods (called from Svelte frontend):
+   func (p *PresenterApp) GetState() map[string]interface{} { ... } // delegate to engine
+   func (p *PresenterApp) ClearState()                      { p.engine.ClearState() }
+   func (p *PresenterApp) AskQuestion(q string) error       { return p.engine.AskQuestion(q) }
+
+3. CREATE: wails-app/products/presenter/presenter_test.go
+   Package: `presenter`
+
+   - Test that SystemPrompt contains "invisible" and "HUD".
+   - Test that VisionPrompt contains "slide" and "talking points".
+   - Test that NewPresenterApp() returns a non-nil PresenterApp.
+   - Test that PresenterApp.GetState() returns a map with "transcript" key.
+
+4. CREATE: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
+   Scaffold only — minimal working UI:
+   - A semi-transparent dark overlay (rgba(10,10,10,0.85)) pinned top-center.
+   - Width: 640px. Height: auto. Always-on-top (set via Wails window flag).
+   - Shows: latestTranscript (small, gray) above latestResponse (white, readable).
+   - A small ⟳ icon button top-right to call ClearState().
+   - Polls GetState() every 200ms (same pattern as current Assistant.svelte).
+   - Uses CSS variables for theming; no external CSS frameworks.
+   - Reuses the existing on_response_token / on_response_end Wails events.
+
+5. CREATE: wails-app/frontend/src/products/presenter/PresenterSettings.svelte
+   Minimal settings panel:
+   - STT Provider selector: "Local (Whisper)" | "Cloud (Groq)" radio buttons.
+   - Groq API Key input (password field, saved to localStorage).
+   - Opacity slider (0.5 → 1.0) controlling the HUD overlay opacity.
+   - "Clear Cache" button.
+
+═══════════════════════════════════════════════════════════════
+TESTS
+═══════════════════════════════════════════════════════════════
+- `cd wails-app && go test ./products/presenter/...` must pass.
+- `cd wails-app && go build -tags presenter ./...` must succeed.
+- `cd wails-app/frontend && npx svelte-check` must report 0 errors for
+  src/products/presenter/*.svelte files.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Do NOT modify wails-app/core/engine/.
+- Do NOT modify wails-app/frontend/src/lib/Assistant.svelte.
+- Do NOT modify wails-app/app.go (interview product remains functional).
+- The PresenterHUD must NOT use Tailwind. Vanilla CSS only.
+- Target Branch: feature/krushna_golang-hex-engine

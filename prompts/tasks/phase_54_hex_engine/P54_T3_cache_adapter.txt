@@ -1,0 +1,116 @@
+TASK: P54-T3 — Cache Port Adapter (⚡ PARALLEL — Run after P54-T1 merges)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The current QA semantic cache lives in wails-app/backend/vector_db.go as
+a VectorDB struct with methods SearchByEmbedding, Store, GetCount, etc.
+It is used directly in app.go (SetAudioDevice function, lines ~475-490).
+
+This task wraps VectorDB behind the `driven.CachePort` interface defined
+in P54-T1. The existing VectorDB struct and its methods are NOT changed.
+This enables the StealthEngine to swap cache backends in tests (noop mock)
+or in future (e.g. different DB implementations).
+
+⚡ This task can run in parallel with P54-T2 and P54-T4.
+   Prerequisite: P54-T1 must be merged first.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/adapters/cache/sqlitevec_adapter.go
+CREATE: wails-app/adapters/cache/sqlitevec_adapter_test.go
+CREATE: wails-app/adapters/cache/noop_adapter.go
+
+DO NOT MODIFY: wails-app/backend/vector_db.go
+DO NOT MODIFY: wails-app/app.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. CREATE: wails-app/adapters/cache/sqlitevec_adapter.go
+   Package: `cacheadapter`
+
+   import (
+       "wails-app/backend"
+       "wails-app/core/ports/driven"
+   )
+
+   // SQLiteVecAdapter wraps backend.VectorDB behind driven.CachePort.
+   type SQLiteVecAdapter struct {
+       db *backend.VectorDB
+   }
+
+   func NewSQLiteVecAdapter(db *backend.VectorDB) *SQLiteVecAdapter {
+       return &SQLiteVecAdapter{db: db}
+   }
+
+   // Search calls db.SearchByEmbedding with the given threshold.
+   // Returns the cached answer and true if similarity >= threshold.
+   func (a *SQLiteVecAdapter) Search(embedding []float32, threshold float64) (string, bool) {
+       if a.db == nil {
+           return "", false
+       }
+       return a.db.SearchByEmbedding(embedding, threshold)
+   }
+
+   // Store calls db.Store to save a question-answer pair.
+   func (a *SQLiteVecAdapter) Store(question, answer string) error {
+       if a.db == nil {
+           return nil
+       }
+       return a.db.Store(question, answer)
+   }
+
+   // Count returns the number of cached Q&A pairs via db.GetCount().
+   func (a *SQLiteVecAdapter) Count() int {
+       if a.db == nil {
+           return 0
+       }
+       return a.db.GetCount()
+   }
+
+   // Compile-time interface check.
+   var _ driven.CachePort = (*SQLiteVecAdapter)(nil)
+
+2. CREATE: wails-app/adapters/cache/noop_adapter.go
+   Package: `cacheadapter`
+
+   // NoopCacheAdapter is a no-op implementation for tests and offline mode.
+   // It never finds a cache hit and silently discards stores.
+   type NoopCacheAdapter struct{}
+
+   func (n *NoopCacheAdapter) Search(_ []float32, _ float64) (string, bool) { return "", false }
+   func (n *NoopCacheAdapter) Store(_, _ string) error                       { return nil }
+   func (n *NoopCacheAdapter) Count() int                                    { return 0 }
+
+   var _ driven.CachePort = (*NoopCacheAdapter)(nil)
+
+3. CREATE: wails-app/adapters/cache/sqlitevec_adapter_test.go
+   Package: `cacheadapter`
+
+   Tests using NoopCacheAdapter (no real DB in unit tests):
+   - Test that NoopCacheAdapter.Search always returns ("", false).
+   - Test that NoopCacheAdapter.Store returns nil.
+   - Test that NoopCacheAdapter.Count returns 0.
+   - Test that SQLiteVecAdapter.Search returns ("", false) when db is nil.
+   - Test that SQLiteVecAdapter.Store returns nil when db is nil.
+   - Test that SQLiteVecAdapter.Count returns 0 when db is nil.
+
+═══════════════════════════════════════════════════════════════
+TESTS
+═══════════════════════════════════════════════════════════════
+- `cd wails-app && go test ./adapters/cache/...` must pass.
+- `go vet ./adapters/cache/...` must pass.
+- Compile-time interface checks for both adapters must compile.
+- No real SQLite DB file created during tests.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Do NOT modify wails-app/backend/vector_db.go.
+- Do NOT modify wails-app/app.go.
+- No CGO build tags needed in this adapter (VectorDB handles its own CGO).
+- Must compile: `cd wails-app && go build ./adapters/cache/...`
+- Target Branch: feature/krushna_golang-hex-engine

@@ -1,0 +1,196 @@
+TASK: P54-T1 — Core Port Interfaces (Hexagonal Architecture Foundation)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The current `wails-app/app.go` is a 573-line God Object where the core
+pipeline logic (audio → STT → filter → LLM → cache → UI events) is tightly
+coupled to the Wails runtime (`wailsruntime.EventsEmit`), OS-specific window
+calls, and UI state mutations. This makes it impossible to add new product
+flavors (StealthPresenter, MentorGlass, ClinicHUD) without duplicating
+the entire App struct.
+
+This task creates the foundational Port interfaces for the Hexagonal
+(Ports & Adapters) architecture — pure Go interfaces with zero external
+dependencies. No logic changes. No existing code moved yet. Just the
+interface contracts that all subsequent tasks will implement.
+
+NOTE: The STT layer is already hexagonal (stt/engine.go, stt/manager.go).
+Do NOT touch any files in wails-app/backend/stt/.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/core/ports/driving/pipeline.go
+CREATE: wails-app/core/ports/driving/session.go
+CREATE: wails-app/core/ports/driven/llm.go
+CREATE: wails-app/core/ports/driven/cache.go
+CREATE: wails-app/core/ports/driven/events.go
+CREATE: wails-app/core/ports/driven/window.go
+CREATE: wails-app/core/ports/ports_test.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. CREATE: wails-app/core/ports/driving/pipeline.go
+   Package: `driving`
+
+   // PipelineState holds the current state of the audio→LLM pipeline.
+   type PipelineState struct {
+       Transcript  string
+       Response    string
+       Thinking    bool
+       CachedPairs int
+   }
+
+   // PipelinePort is the primary driving port — the UI calls these methods.
+   type PipelinePort interface {
+       // ProcessAudio takes a PCM float32 chunk and routes it through the pipeline.
+       // Results are delivered asynchronously via the EventPort.
+       ProcessAudio(samples []float32) error
+
+       // AskQuestion bypasses audio and sends a direct text question to the LLM.
+       AskQuestion(question string) error
+
+       // SetStealth enables or disables OS-level screen capture exclusion.
+       SetStealth(enable bool) error
+
+       // GetState returns a snapshot of the current pipeline state for UI polling.
+       GetState() PipelineState
+
+       // ClearState resets the transcript, response, and thinking flag.
+       ClearState()
+   }
+
+2. CREATE: wails-app/core/ports/driving/session.go
+   Package: `driving`
+
+   // SessionPort manages a live interaction session (e.g., interview, presentation).
+   type SessionPort interface {
+       // StartTurn marks the beginning of a new user input turn.
+       StartTurn(input string)
+
+       // CompleteTurn marks the end of a turn after LLM response is complete.
+       CompleteTurn()
+
+       // EndSession finalises the session and returns summary data.
+       // The returned map contains at minimum: "turn_count", "turns".
+       EndSession() (map[string]interface{}, error)
+   }
+
+3. CREATE: wails-app/core/ports/driven/llm.go
+   Package: `driven`
+
+   // ChatMessage represents a single message in a conversation history.
+   type ChatMessage struct {
+       Role    string // "system", "user", or "assistant"
+       Content string
+   }
+
+   // StreamCallback is called for each token streamed from the LLM.
+   type StreamCallback func(token string)
+
+   // LLMPort is the driven port for language model completions.
+   type LLMPort interface {
+       // StreamCompletion sends a question with optional history and streams the response.
+       // systemPrompt is the product-specific system instruction.
+       // onToken is called for each streamed token.
+       // onDone is called once streaming is complete.
+       StreamCompletion(
+           question string,
+           systemPrompt string,
+           history []ChatMessage,
+           onToken StreamCallback,
+           onDone func(),
+       ) error
+
+       // StreamVision sends a base64-encoded image with a prompt and streams the response.
+       StreamVision(
+           base64Image string,
+           prompt string,
+           onToken StreamCallback,
+           onDone func(),
+       ) error
+   }
+
+4. CREATE: wails-app/core/ports/driven/cache.go
+   Package: `driven`
+
+   // CachePort is the driven port for the semantic QA cache (vector DB).
+   type CachePort interface {
+       // Search finds a cached answer by semantic similarity of the embedding.
+       // threshold is the minimum cosine similarity (e.g. 0.88).
+       // Returns the cached answer and true if a hit is found.
+       Search(embedding []float32, threshold float64) (answer string, hit bool)
+
+       // Store saves a question-answer pair into the cache.
+       Store(question, answer string) error
+
+       // Count returns the number of cached pairs.
+       Count() int
+   }
+
+5. CREATE: wails-app/core/ports/driven/events.go
+   Package: `driven`
+
+   // EventPort is the driven port for emitting UI events.
+   // Decouples the core engine from the Wails runtime.
+   type EventPort interface {
+       // Emit sends an event with optional payload to the UI layer.
+       // event names follow the existing convention: "on_transcript",
+       // "on_response_start", "on_response_token", "on_response_end".
+       Emit(event string, payload any)
+   }
+
+6. CREATE: wails-app/core/ports/driven/window.go
+   Package: `driven`
+
+   // WindowPort is the driven port for OS-level window management.
+   type WindowPort interface {
+       // SetCaptureExcluded sets whether this window is excluded from
+       // OS screen capture (WDA_EXCLUDEFROMCAPTURE on Windows, XFixes on Linux).
+       SetCaptureExcluded(ctx context.Context, excluded bool) error
+
+       // HideFromTaskbar removes this window from the OS taskbar / dock.
+       HideFromTaskbar(ctx context.Context) error
+   }
+
+7. CREATE: wails-app/core/ports/ports_test.go
+   Package: `ports_test`
+
+   Compile-time interface compliance tests using blank identifier assignments.
+   These tests do NOT need mock implementations — they just verify the interface
+   signatures are syntactically correct Go. Example pattern:
+
+   // Ensure the driving interfaces are valid Go interfaces.
+   var _ driving.PipelinePort = (*mockPipeline)(nil)
+   var _ driving.SessionPort  = (*mockSession)(nil)
+
+   // Ensure the driven interfaces are valid Go interfaces.
+   var _ driven.LLMPort    = (*mockLLM)(nil)
+   var _ driven.CachePort  = (*mockCache)(nil)
+   var _ driven.EventPort  = (*mockEvent)(nil)
+   var _ driven.WindowPort = (*mockWindow)(nil)
+
+   // Provide minimal stub structs for each interface so the file compiles.
+   // Stub methods can just `return nil` or zero values.
+
+═══════════════════════════════════════════════════════════════
+TESTS
+═══════════════════════════════════════════════════════════════
+- wails-app/core/ports/ports_test.go:
+  - All compile-time interface compliance assertions pass.
+  - `go build ./wails-app/core/...` exits with code 0.
+  - `go vet ./wails-app/core/...` exits with code 0.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Pure Go interfaces ONLY. No implementations in this task.
+- NO imports from wails-app/backend/ in the core/ports/ packages.
+- NO imports from github.com/wailsapp/wails in the core/ports/ packages.
+- context.Context is allowed (from standard library).
+- Must compile: `cd wails-app && go build ./core/...`
+- Must pass: `cd wails-app && go test ./core/...`
+- Target Branch: feature/krushna_golang-hex-engine

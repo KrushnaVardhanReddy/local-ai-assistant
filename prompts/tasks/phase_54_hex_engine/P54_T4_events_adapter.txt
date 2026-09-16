@@ -1,0 +1,135 @@
+TASK: P54-T4 — Events Port Adapter (⚡ PARALLEL — Run after P54-T1 merges)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The current pipeline in app.go calls `wailsruntime.EventsEmit(a.ctx, ...)` 
+directly from inside business logic (e.g. SetAudioDevice, AnalyzeVision).
+This means the core pipeline is coupled to the Wails runtime — it cannot
+be unit-tested without a real Wails context, and it cannot be used in a
+non-Wails product (e.g. a CLI or web server).
+
+This task creates the EventPort adapters defined in P54-T1:
+  1. WailsEventAdapter — wraps wailsruntime.EventsEmit
+  2. NoopEventAdapter  — silent, for tests
+  3. CapturingEventAdapter — records events for test assertions
+
+⚡ This task can run in parallel with P54-T2 and P54-T3.
+   Prerequisite: P54-T1 must be merged first.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/adapters/events/wails_adapter.go
+CREATE: wails-app/adapters/events/noop_adapter.go
+CREATE: wails-app/adapters/events/capturing_adapter.go
+CREATE: wails-app/adapters/events/adapters_test.go
+
+DO NOT MODIFY: wails-app/app.go (not yet — that happens in P54-T5)
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. CREATE: wails-app/adapters/events/wails_adapter.go
+   Package: `eventsadapter`
+
+   import (
+       "context"
+       wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
+       "wails-app/core/ports/driven"
+   )
+
+   // WailsEventAdapter implements driven.EventPort using the Wails runtime.
+   type WailsEventAdapter struct {
+       ctx context.Context
+   }
+
+   func NewWailsEventAdapter(ctx context.Context) *WailsEventAdapter {
+       return &WailsEventAdapter{ctx: ctx}
+   }
+
+   // Emit calls wailsruntime.EventsEmit with the event name and payload.
+   func (w *WailsEventAdapter) Emit(event string, payload any) {
+       wailsruntime.EventsEmit(w.ctx, event, payload)
+   }
+
+   var _ driven.EventPort = (*WailsEventAdapter)(nil)
+
+2. CREATE: wails-app/adapters/events/noop_adapter.go
+   Package: `eventsadapter`
+
+   // NoopEventAdapter silently discards all emitted events.
+   // Use in tests where you don't need to assert on events.
+   type NoopEventAdapter struct{}
+
+   func (n *NoopEventAdapter) Emit(_ string, _ any) {}
+
+   var _ driven.EventPort = (*NoopEventAdapter)(nil)
+
+3. CREATE: wails-app/adapters/events/capturing_adapter.go
+   Package: `eventsadapter`
+
+   // EmittedEvent records a single event emission for test assertions.
+   type EmittedEvent struct {
+       Name    string
+       Payload any
+   }
+
+   // CapturingEventAdapter records all emitted events in order.
+   // Use in tests where you need to assert what events were fired and in what order.
+   type CapturingEventAdapter struct {
+       Events []EmittedEvent
+   }
+
+   func (c *CapturingEventAdapter) Emit(event string, payload any) {
+       c.Events = append(c.Events, EmittedEvent{Name: event, Payload: payload})
+   }
+
+   // HasEvent returns true if an event with the given name was emitted at least once.
+   func (c *CapturingEventAdapter) HasEvent(name string) bool {
+       for _, e := range c.Events {
+           if e.Name == name {
+               return true
+           }
+       }
+       return false
+   }
+
+   // Clear resets the captured event list.
+   func (c *CapturingEventAdapter) Clear() {
+       c.Events = nil
+   }
+
+   var _ driven.EventPort = (*CapturingEventAdapter)(nil)
+
+4. CREATE: wails-app/adapters/events/adapters_test.go
+   Package: `eventsadapter`
+
+   Tests using NoopEventAdapter and CapturingEventAdapter:
+   - Test NoopEventAdapter.Emit does not panic.
+   - Test CapturingEventAdapter.Emit records events in order.
+   - Test CapturingEventAdapter.HasEvent returns true for emitted events.
+   - Test CapturingEventAdapter.HasEvent returns false for non-emitted events.
+   - Test CapturingEventAdapter.Clear resets the events slice to nil.
+   - Test that payload is preserved correctly in EmittedEvent.Payload.
+
+   NOTE: WailsEventAdapter is NOT tested here (it requires a real Wails context).
+   It is tested via integration in P54-T5.
+
+═══════════════════════════════════════════════════════════════
+TESTS
+═══════════════════════════════════════════════════════════════
+- `cd wails-app && go test ./adapters/events/...` must pass.
+- `go vet ./adapters/events/...` must pass.
+- All three compile-time interface checks must compile.
+- WailsEventAdapter is excluded from unit tests (build tag or file separation).
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Do NOT modify wails-app/app.go.
+- WailsEventAdapter may import wailsruntime — that is expected and correct.
+- NoopEventAdapter and CapturingEventAdapter must NOT import wailsruntime.
+- Must compile: `cd wails-app && go build ./adapters/events/...`
+- Target Branch: feature/krushna_golang-hex-engine

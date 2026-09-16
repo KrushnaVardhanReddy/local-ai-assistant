@@ -1,0 +1,218 @@
+TASK: P54-T5 — StealthEngine Core (Sequential — After P54-T2, T3, T4 all merge)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The core audio→STT→filter→LLM→cache→events pipeline currently lives
+inside app.go in a single giant function `SetAudioDevice` (lines 434–563).
+This function:
+  - Calls wailsruntime.EventsEmit directly (Wails coupling)
+  - Mutates App.latestTranscript/Response/Thinking (UI state coupling)
+  - Has no unit tests (untestable without a full Wails context)
+
+This task extracts the pipeline into a standalone `StealthEngine` struct
+in `core/engine/`. The engine depends only on the Port interfaces defined
+in P54-T1, meaning it can be tested with the mock adapters from T2/T3/T4.
+
+app.go is updated to wire the engine with real adapters, but the App struct
+becomes thin — it just delegates to the engine.
+
+Prerequisites: P54-T1, P54-T2, P54-T3, P54-T4 must all be merged.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/core/engine/engine.go
+CREATE: wails-app/core/engine/pipeline.go
+CREATE: wails-app/core/engine/engine_test.go
+MODIFY: wails-app/app.go  (thin-out; delegate to StealthEngine)
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. CREATE: wails-app/core/engine/engine.go
+   Package: `engine`
+
+   import (
+       "wails-app/backend/filter"
+       "wails-app/backend"          // for GenerateEmbedding
+       "wails-app/backend/stt"
+       "wails-app/backend/session"
+       "wails-app/core/ports/driven"
+       "wails-app/core/ports/driving"
+   )
+
+   // Config holds product-specific configuration injected at startup.
+   type Config struct {
+       // SystemPrompt is the product-specific LLM system instruction.
+       // e.g. "You are a stealth interview assistant..."
+       // e.g. "You are an invisible teleprompter assistant..."
+       SystemPrompt string
+   }
+
+   // StealthEngine is the core engine that wires all ports together.
+   // It implements driving.PipelinePort.
+   type StealthEngine struct {
+       cfg        Config
+       sttManager *stt.STTManager
+       llm        driven.LLMPort
+       cache      driven.CachePort
+       events     driven.EventPort
+
+       sessionMgr *session.SessionManager
+
+       // internal state (mutex-protected)
+       mu         sync.RWMutex
+       transcript string
+       response   string
+       thinking   bool
+       llmBusy    sync.Mutex
+   }
+
+   func New(
+       cfg Config,
+       sttMgr *stt.STTManager,
+       llm driven.LLMPort,
+       cache driven.CachePort,
+       events driven.EventPort,
+   ) *StealthEngine {
+       return &StealthEngine{
+           cfg:        cfg,
+           sttManager: sttMgr,
+           llm:        llm,
+           cache:      cache,
+           events:     events,
+           sessionMgr: session.NewSessionManager(),
+       }
+   }
+
+   // GetState returns the current pipeline state for UI polling.
+   func (e *StealthEngine) GetState() driving.PipelineState {
+       e.mu.RLock()
+       defer e.mu.RUnlock()
+       return driving.PipelineState{
+           Transcript:  e.transcript,
+           Response:    e.response,
+           Thinking:    e.thinking,
+           CachedPairs: e.cache.Count(),
+       }
+   }
+
+   // ClearState resets the pipeline state.
+   func (e *StealthEngine) ClearState() {
+       e.mu.Lock()
+       defer e.mu.Unlock()
+       e.transcript = ""
+       e.response = ""
+       e.thinking = false
+   }
+
+   // SetStealth is a no-op here — window management is handled by the
+   // product-level App shell which has access to the Wails context.
+   func (e *StealthEngine) SetStealth(_ bool) error { return nil }
+
+   // Compile-time check.
+   var _ driving.PipelinePort = (*StealthEngine)(nil)
+
+2. CREATE: wails-app/core/engine/pipeline.go
+   Package: `engine`
+
+   // ProcessAudio runs a PCM audio chunk through the full pipeline:
+   // audio → STT transcription → smart filter → (cache lookup) → LLM stream.
+   // All results are delivered via the EventPort asynchronously.
+   func (e *StealthEngine) ProcessAudio(samples []float32) error {
+       ch, err := e.sttManager.TranscribeStream(samples)
+       if err != nil {
+           return fmt.Errorf("STT error: %w", err)
+       }
+       go func() {
+           for transcript := range ch {
+               e.handleTranscript(transcript)
+           }
+       }()
+       return nil
+   }
+
+   // AskQuestion bypasses audio and sends a typed question to the LLM pipeline.
+   func (e *StealthEngine) AskQuestion(question string) error {
+       e.handleTranscript(question)
+       return nil
+   }
+
+   // handleTranscript contains the core pipeline: filter → cache → LLM.
+   // This is the logic extracted from app.go SetAudioDevice (lines 444–551).
+   // Rules:
+   //   - Skip blank/noise transcripts ([BLANK_AUDIO], [MUSIC], [INAUDIBLE]).
+   //   - Run filter.Check; skip if !ShouldSend.
+   //   - Emit "on_transcript" event.
+   //   - Check cache (threshold 0.88); if hit, emit response events and return.
+   //   - If LLM busy, discard.
+   //   - Stream LLM completion using e.cfg.SystemPrompt.
+   //   - On completion, store to cache.
+   // All wailsruntime calls are replaced with e.events.Emit(...).
+   // All a.stateMu / a.latestX mutations are replaced with e.mu / e.transcript etc.
+   func (e *StealthEngine) handleTranscript(raw string) { ... }
+
+3. MODIFY: wails-app/app.go
+   - Add field: `engine *engine.StealthEngine`
+   - In NewApp(): after existing STT and cache setup, construct the engine:
+     ```go
+     eng := engine.New(
+         engine.Config{SystemPrompt: llm.DefaultSystemPrompt},
+         stt.NewSTTManager(initialEngine),
+         llmadapter.NewOpenAIAdapter(),
+         cacheadapter.NewSQLiteVecAdapter(db),
+         nil, // EventPort set in startup() when ctx is available
+     )
+     ```
+   - In startup(ctx): set the events adapter on the engine:
+     ```go
+     a.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
+     ```
+   - Thin out SetAudioDevice: replace the giant goroutine body with:
+     ```go
+     return a.audioCapture.StartCapture(id, isLoopback, func(samples []float32) {
+         _ = a.engine.ProcessAudio(samples)
+     })
+     ```
+   - Thin out GetState: delegate to engine:
+     ```go
+     s := a.engine.GetState()
+     return map[string]interface{}{
+         "transcript":             s.Transcript,
+         "response":               s.Response,
+         "thinking":               s.Thinking,
+         "cached_pairs":           s.CachedPairs,
+         "estimated_tokens_saved": s.CachedPairs * 250,
+     }
+     ```
+   - Keep all other App methods (CaptureScreen, ToggleClickthroughMode, etc.) unchanged.
+   - Remove the now-redundant fields: latestTranscript, latestResponse, latestThinking, stateMu, llmBusy, qaCache, sessionManager (they live inside StealthEngine now).
+
+4. CREATE: wails-app/core/engine/engine_test.go
+   Package: `engine`
+
+   Use mock adapters from T2/T3/T4:
+   - Test that ProcessAudio with a blank audio transcript fires no events.
+   - Test that ProcessAudio with a valid transcript emits "on_transcript".
+   - Test that a cache hit emits "on_response_end" without calling the LLM adapter.
+   - Test that a cache miss calls LLM adapter's StreamCompletion.
+   - Test that GetState.Thinking is true during LLM streaming.
+   - Test ClearState resets transcript, response, thinking to zero values.
+
+═══════════════════════════════════════════════════════════════
+TESTS
+═══════════════════════════════════════════════════════════════
+- `cd wails-app && go test ./core/engine/...` must pass.
+- `cd wails-app && go test ./...` (full suite) must pass.
+- `go build ./...` must succeed.
+- App still starts and functions identically from user perspective.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- core/engine/ must NOT import github.com/wailsapp/wails directly.
+- All Wails coupling lives only in adapters/ and app.go.
+- The filter package (backend/filter/) may be imported by core/engine/.
+- Target Branch: feature/krushna_golang-hex-engine
