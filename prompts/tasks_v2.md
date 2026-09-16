@@ -63,3 +63,32 @@ BATCH 4 (Sequential, depends on T5)
 - **No frontend changes in T1–T5** — UI scaffold only added in T6.
 - Each task **must compile and pass `go test ./...`** before submitting PR.
 - Prompt files for each task: `prompts/tasks/phase_54_hex_engine/P54_T{N}_*.txt`
+
+---
+
+## Phase 55 — StealthPresenter Core UX
+
+> **Goal:** Build the pristine, glassmorphic UI overlay, the document parser (PDF/MD/PPTX), the voice-tracked scroller, and the LLM copilot panel.
+>
+> **Branch:** `feature/krushna_golang-stealth-ux`
+
+### Dependency Order
+
+```
+BATCH 1 (Parallel execution)
+  P55-T1 ⚡ The Presenter Shell & Typography (Svelte)
+  P55-T2 ⚡ Document Parser Backend (Go)
+
+BATCH 2 (Sequential)
+  P55-T3: Voice-Scroller Engine (depends on T1)
+  P55-T4: LLM Audience Copilot (depends on T1 & T3)
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P55-T1** | The Presenter Shell (Svelte) | 🔄 In Progress | ⚡ Parallel | - | UI layout, opacity, font size sliders |
+| **P55-T2** | Document Parser Backend | 🔄 In Progress | ⚡ Parallel | - | Parses .txt, .md, .pdf, .pptx |
+| **P55-T3** | Voice-Scroller Engine | ⬜ Not started | Sequential | - | Maps STT events to Svelte auto-scroll |
+| **P55-T4** | LLM Audience Copilot | ⬜ Not started | Sequential | - | Live Q&A side-panel in HUD |
