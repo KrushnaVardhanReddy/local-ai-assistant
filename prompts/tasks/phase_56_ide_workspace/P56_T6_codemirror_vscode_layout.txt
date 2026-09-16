@@ -1,19 +1,14 @@
-TASK: P56-T6 — CodeMirror 6 Editor & Full VS Code Layout Refactor
+TASK: P56-T6 — CodeMirror 6 Editor & Clean Single-Window VS Code Layout
 
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
-Transform the frontend UI into an authentic VS Code IDE experience using CodeMirror 6
-and `IDEShell.svelte`. 
-1. Install CodeMirror 6 (`codemirror`, `@codemirror/lang-markdown`, `@codemirror/theme-one-dark`).
-2. Build a reusable `CodeEditor.svelte` component in `wails-app/frontend/src/lib/components/workspace/`.
-3. Refactor `PresenterHUD.svelte` to wrap cleanly inside `<IDEShell>`:
-   - Left Activity Bar (Explorer, Copilot, Settings).
-   - Docked left Explorer Sidebar (fixed width, expandable tree, NO floating overlap).
-   - Top Tab Bar for open documents.
-   - Center CodeMirror 6 Editor Pane displaying active script/notes with syntax highlighting, line numbers, and voice-scroll syncing.
-   - Bottom Status Bar (STT model status, word count, RAG count, stealth badge).
-   - Movable/toggleable Audience Copilot drawer (`Ctrl+\`).
+Transform the UI into a clean, unified, single-window VS Code IDE layout.
+Currently, the UI feels cluttered with 3 disjointed floating windows (the fixed 
+sidebar drawer, the centered prompter box, and the floating copilot drawer at the bottom). 
+
+We will unify everything into ONE cohesive, sleek window using `IDEShell.svelte` 
+and embed CodeMirror 6 for real line numbers, syntax highlighting, and smooth speech auto-scrolling.
 
 ═══════════════════════════════════════════════════════════════
 FILES TO CREATE & MODIFY
@@ -21,83 +16,127 @@ FILES TO CREATE & MODIFY
 MODIFY: wails-app/frontend/package.json
 CREATE: wails-app/frontend/src/lib/components/workspace/CodeEditor.svelte
 MODIFY: wails-app/frontend/src/lib/components/workspace/IDEShell.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/WorkspaceSidebar.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte
 MODIFY: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
+MODIFY: wails-app/frontend/tests/ui.spec.ts
 
 ═══════════════════════════════════════════════════════════════
 DETAILED SPECIFICATION
 ═══════════════════════════════════════════════════════════════
 
-1. CodeMirror 6 Dependencies (`package.json`):
-   - Add:
-     - `codemirror`: "^6.0.1"
-     - `@codemirror/lang-markdown`: "^6.3.2"
-     - `@codemirror/theme-one-dark`: "^6.1.2"
-     - `@codemirror/view`: "^6.36.0"
-     - `@codemirror/state`: "^6.5.0"
+1. Install CodeMirror 6 in `wails-app/frontend`:
+   - In `package.json`, add:
+     - "codemirror": "^6.0.1"
+     - "@codemirror/lang-markdown": "^6.3.2"
+     - "@codemirror/theme-one-dark": "^6.1.2"
+     - "@codemirror/view": "^6.36.0"
+     - "@codemirror/state": "^6.5.0"
    - Run `npm install` inside `wails-app/frontend`.
 
 2. Reusable `CodeEditor.svelte`:
-   - Lives in `wails-app/frontend/src/lib/components/workspace/CodeEditor.svelte`.
+   Create in `wails-app/frontend/src/lib/components/workspace/CodeEditor.svelte`:
    - Props:
-     - `content: string` (current document text)
-     - `readOnly?: boolean` (default false, allows editing or prompter mode)
-     - `fontSize?: number` (rem, dynamic scaling)
+     - `content: string` (document text)
+     - `readOnly?: boolean` (default true for presenter mode)
+     - `fontSize?: number` (rem)
      - `lineHeight?: number`
-     - `activeLine?: number` (for voice-scroll line centering)
-     - `onChange?: (newContent: string) => void`
-   - Setup:
-     - Initializes `EditorView` inside container div with `basicSetup`, `markdown()`, `oneDark` theme, and transparent background override for stealth mode.
-     - Automatically updates editor content when `content` prop changes.
-     - When `activeLine` updates (driven by speech tracking), smoothly scroll to that line:
-       `view.dispatch({ effects: EditorView.scrollIntoView(pos, { y: 'center' }) })` and add subtle line highlight decoration.
+     - `activeLine?: number` (line index driven by STT)
+     - `onChange?: (text: string) => void`
+   - Setup `EditorView` with:
+     - `basicSetup` (line numbers, fold gutter, history)
+     - `markdown()` language support
+     - `oneDark` theme with transparent background override (`.cm-editor { background: transparent !important; }`)
+   - Reactive Syncing:
+     - When `content` changes, dispatch a transaction to replace doc if different.
+     - When `activeLine` changes, smoothly scroll the line into center:
+       `view.dispatch({ effects: EditorView.scrollIntoView(pos, { y: 'center' }) })`
+       and add a subtle line highlight decoration (`.active-speech-line`).
 
-3. Fix IDEShell Layout & Docking (`IDEShell.svelte`):
-   - The Activity Bar, Workspace Sidebar, Main Editor Pane, and Status Bar must use a flex/grid layout that mimics VS Code:
-     - Leftmost: 48px Activity Bar.
-     - Next: Explorer Sidebar (width: 240px, collapsible with transition, border-right: 1px solid #333). Must push the editor pane rather than float over it.
-     - Center: Flex-grow editor pane containing `WorkspaceTabs` at top and the child `<slot />` / snippet.
-     - Bottom: 22px StatusBar fixed at the bottom.
-   - Clean dark VS Code color palette (`#181818`, `#1f1f1f`, `#252526`, `#007acc`).
+3. Docking Layout in `WorkspaceSidebar.svelte` & `IDEShell.svelte`:
+   - ELIMINATE `position: fixed` and floating overlay tabs!
+   - In `WorkspaceSidebar.svelte`:
+     - Change from `position: fixed` to a docked flex column that sits directly in the layout flow:
+       `width: 240px; height: 100%; border-right: 1px solid rgba(255,255,255,0.08); background: rgba(18, 18, 18, 0.95);`
+     - Remove the floating tab button sticking out (`.toggle-btn`); sidebar expansion is controlled via the ActivityBar Explorer icon or `Ctrl+B`.
+   - In `IDEShell.svelte`:
+     - Single unified window container:
+       ```
+       [ActivityBar (48px)] | [WorkspaceSidebar (240px)] | [Center Editor (flex-1)] | [Right Copilot Drawer (320px)]
+                                                           ^ Top: WorkspaceTabs
+                                                           ^ Center: <slot /> (CodeEditor)
+       -------------------------------------------------------------------------------------------------------
+       [Bottom StatusBar (24px)]
+       ```
+     - All 4 panels are physically docked inside the same flex layout.
+     - When `isExplorerOpen` is false, the sidebar collapses (`width: 0; overflow: hidden;`).
+     - When Copilot is open, it docks neatly on the right side (`width: 320px; border-left: 1px solid rgba(255,255,255,0.08)`). No floating windows!
 
 4. Refactor `PresenterHUD.svelte`:
-   - Replace the old ad-hoc toolbar and overlapping layout with `<IDEShell>`:
+   - Replace the detached, floating layout with `<IDEShell>`:
      ```svelte
-     <IDEShell
-       workspaceTree={workspaceTree}
-       openTabs={openTabs}
-       activePath={activeDocumentPath}
-       totalDocs={openTabs.length}
-       status={statusConfig}
-       onTabSelect={handleTabSelect}
-       onTabClose={handleTabClose}
-       onOpenFile={handleOpenFile}
-       onOpenFolder={handleOpenFolder}
-     >
-       <CodeEditor
-         content={script}
-         fontSize={fontSize}
-         lineHeight={lineHeight}
-         activeLine={activeLineNumber}
-         readOnly={true}
-       />
-     </IDEShell>
+     <div class="presenter-container" style="background-color: rgba(10, 10, 10, {opacity});">
+       <StealthTitleBar />
+       <IDEShell
+         workspaceTree={workspaceTree}
+         openTabs={openTabs}
+         activePath={activeDocumentPath}
+         totalDocs={openTabs.length}
+         status={ideStatus}
+         onTabSelect={handleTabSelect}
+         onTabClose={handleTabClose}
+         onOpenFile={handleOpenFile}
+         onOpenFolder={handleOpenFolder}
+       >
+         <CodeEditor
+           content={script}
+           fontSize={fontSize}
+           lineHeight={lineHeight}
+           activeLine={activeLineIndex}
+           readOnly={true}
+         />
+
+         {#snippet rightDrawer()}
+           <div class="copilot-panel">
+             <div class="copilot-header">
+               <span>Audience Copilot</span>
+               <button on:click={() => isCopilotOpen = false}>✖</button>
+             </div>
+             <div class="copilot-body">
+               {#if latestTranscript}
+                 <div class="q">Q: {latestTranscript}</div>
+               {/if}
+               {#if latestResponse}
+                 <div class="a">A: {latestResponse}</div>
+               {/if}
+             </div>
+           </div>
+         {/snippet}
+       </IDEShell>
+     </div>
      ```
-   - Move Opacity, Font Size, and Spacing controls into a sleek Settings popup/drawer (opened from the Activity Bar ⚙️ icon or title bar).
-   - Ensure the Voice-Scroller matches spoken words to lines in `CodeEditor` and advances `activeLineNumber`.
-   - Ensure `Ctrl+B` (toggle sidebar) and `Ctrl+P` (open file) work cleanly.
+   - Connect the speech tracking words to compute `activeLineIndex` and pass it to `CodeEditor`.
+   - Move Typography sliders (Opacity, Font Size, Spacing) into a neat Settings popup triggered by the Activity Bar ⚙️ button.
+
+5. Update Playwright Test in `tests/ui.spec.ts`:
+   - In `tests/ui.spec.ts`, the test looks for `button[aria-label="Settings"]`.
+   - Ensure the ActivityBar settings button has `aria-label="Settings"`.
+   - When clicked, dispatch a custom event or toggle that opens the settings modal matching `div.settings-panel, .fixed.inset-y-0.right-0`.
+   - Ensure `npm test` or `npx playwright test` passes 100%.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
-- `npm run check` and `npm run build` in `wails-app/frontend` compile with 0 errors.
+- `npm run check` and `npm run build` pass with 0 errors.
+- `npx playwright test` passes with 0 failures.
 - Run `make dev-presenter`:
-  - Verify UI looks like authentic VS Code (Activity Bar on left, Explorer sidebar docked, top tabs, CodeMirror center pane, status bar at bottom).
-  - Open a file/folder: content appears with syntax highlighting in CodeMirror.
-  - Press `Ctrl+B`: Sidebar collapses and expands cleanly without overlapping the editor.
-  - Spoken words auto-scroll the CodeMirror view smoothly.
+  - Verify that the app is ONE single unified, cohesive window.
+  - No detached floating boxes. The Activity Bar, Sidebar, Editor Pane, Copilot Panel, and Status Bar are all docked and seamlessly connected.
+  - `Ctrl+B` toggles the docked sidebar.
+  - Spoken words scroll the CodeMirror editor smoothly.
 
 ═══════════════════════════════════════════════════════════════
 CONSTRAINTS
 ═══════════════════════════════════════════════════════════════
-- Maintain stealth transparency support (background must support opacity setting).
-- Keep `CodeEditor.svelte` reusable for future products.
+- Strictly adhere to Svelte 5 and TypeScript rules.
+- Maintain glassmorphic transparency control (`--opacity`).
