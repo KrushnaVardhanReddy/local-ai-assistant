@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime';
+  import StealthTitleBar from '../../lib/components/StealthTitleBar.svelte';
 
   // Assuming we use standard Wails window runtime API in production or mock state in dev
   // Actually, we poll GetState from the Wails backend using `window.go.presenter.PresenterApp.GetState()`
@@ -72,6 +73,8 @@
     class="presenter-hud"
     style="background-color: rgba(10, 10, 10, {opacity}); --dynamic-font-size: {fontSize}rem; --dynamic-line-height: {lineHeight};"
   >
+    <StealthTitleBar />
+
     <div class="toolbar">
       <div class="control-group">
         <label for="opacity">Opacity</label>
