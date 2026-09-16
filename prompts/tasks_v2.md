@@ -119,8 +119,7 @@ BATCH 3 (Sequential Product Integration)
 
 | Task ID | Title | Status | Parallel? | PR | Notes |
 |---------|-------|--------|-----------|----|-------|
-| **P56-T1** | Core Workspace Port & Types | 🔄 Jules working | Sequential | [Session 4754781158255400848](https://jules.google.com/session/4754781158255400848) | `ports/driving/workspace.go`, `FileNode`, `WorkspacePort` |
-| **P56-T2** | Engine Workspace & RAG Indexer | ⬜ Not started | ⚡ Parallel | - | `core/engine/workspace.go`, directory scanning & doc caching |
-| **P56-T3** | Svelte IDE Tree & Tabs UI | ⬜ Not started | ⚡ Parallel | - | `lib/components/workspace/` (FileTree, Tabs, Sidebar) |
+| **P56-T1** | Core Workspace Port & Types | ✅ Merged | Sequential | [PR 180](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/180) | `ports/driving/workspace.go`, `FileNode`, `WorkspacePort` |
+| **P56-T2** | Engine Workspace & RAG Indexer | ✅ Merged | ⚡ Parallel | [PR 182](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/182) | `core/engine/workspace.go`, directory scanning & doc caching |
+| **P56-T3** | Svelte IDE Tree & Tabs UI | ✅ Merged | ⚡ Parallel | [PR 181](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/181) | `lib/components/workspace/` (FileTree, Tabs, Sidebar) |
 | **P56-T4** | StealthPresenter Integration | ⬜ Not started | Sequential | - | `PresenterApp` bindings + `PresenterHUD` tabs/tree hookup |
-
