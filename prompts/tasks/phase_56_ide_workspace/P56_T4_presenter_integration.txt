@@ -1,0 +1,68 @@
+TASK: P56-T4 — StealthPresenter Product Integration & Wails Bindings
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Integrate the core Workspace engine and the reusable IDE workspace components into 
+StealthPresenter (`PresenterApp` in Go and `PresenterHUD.svelte` in Svelte). 
+Allow users to select single files or entire folders, navigate files in the IDE tree, 
+switch between open tabs, and have the teleprompter voice-scroller seamlessly bind 
+to the currently active document.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/products/presenter/app.go
+MODIFY: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Wails PresenterApp Bindings (`app.go`):
+   - Add Wails-callable methods delegating to the underlying `engine`:
+     - `PromptOpenDirectory() (*driving.FileNode, error)`:
+       Uses `runtime.OpenDirectoryDialog(p.ctx, ...)` to prompt the user for a folder, then calls `p.engine.OpenDirectory(dir)`.
+     - `PromptOpenFile() (*driving.WorkspaceDocument, error)`:
+       Uses `runtime.OpenFileDialog` (supporting `*.txt;*.md;*.pdf;*.pptx`), calls `p.engine.OpenFile(filepath)`.
+     - `OpenFile(path string) (*driving.WorkspaceDocument, error)`:
+       Delegates to `p.engine.OpenFile(path)`.
+     - `SetActiveDocument(path string) (*driving.WorkspaceDocument, error)`:
+       Delegates to `p.engine.SetActiveDocument(path)` and updates `p.script` with the active document's content.
+     - `CloseFile(path string) error`:
+       Delegates to `p.engine.CloseFile(path)`.
+     - `GetWorkspaceTree() []*driving.FileNode`:
+       Delegates to `p.engine.GetWorkspaceTree()`.
+     - Update `GetState()` to return:
+       `workspaceTree`, `openDocuments`, `activeDocumentPath`, and active `script`.
+
+2. PresenterHUD Svelte Integration:
+   - In `PresenterHUD.svelte`:
+     - Import `WorkspaceSidebar` and `WorkspaceTabs` from `../../lib/components/workspace/`.
+     - Add `WorkspaceSidebar` on the left edge of the HUD with toggle button.
+     - Place `WorkspaceTabs` directly above the reading area.
+     - When user clicks a file in the tree or switches tabs:
+       - Invoke `window.go.presenter.PresenterApp.SetActiveDocument(path)`.
+       - The active document text becomes the new teleprompter script.
+       - Teleprompter reading index resets cleanly to 0 with smooth scroll to top.
+     - When multiple documents are open, all their contexts remain grounded in the engine's RAG cache, so the Copilot drawer can answer questions referencing ANY open document in the workspace.
+
+3. Stealth & Performance Polish:
+   - Ensure the sidebar drawer can be quickly toggled / collapsed so it does not distract the presenter.
+   - Retain hotkey navigation: e.g. `Ctrl+P` or clicking the folder button toggles the workspace sidebar.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Run `make dev-presenter`.
+- Open a directory containing multiple `.md` / `.pdf` files.
+- Verify tree displays folders and files with expand/collapse.
+- Click a file: verify tab opens and prompter displays that file.
+- Click a different file in tree: verify new tab opens, script switches.
+- Test closing tabs and verify teleprompter updates to the remaining active doc.
+- Ask a question referencing background files: verify Copilot can answer from RAG context.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Do not break existing Voice-Scroller or Copilot drawer functionality.

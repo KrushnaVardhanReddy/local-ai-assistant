@@ -1,0 +1,83 @@
+TASK: P56-T1 — Core Workspace Port & Document Node Hierarchy (Go)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create the core hexagonal port and domain data structures for an IDE-style 
+file/folder workspace system in the Go backend. This will allow any product 
+(StealthPresenter, MentorGlass, ClinicHUD, CounselDesk) to manage an open tree of 
+folders and documents, expand/collapse directories, and select an active file.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE & MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/core/ports/driving/workspace.go
+CREATE: wails-app/core/ports/driving/workspace_test.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Domain Data Structures:
+   In `wails-app/core/ports/driving/workspace.go`:
+   - Define `FileNode`:
+     ```go
+     type FileNode struct {
+         ID        string      `json:"id"`        // Unique clean path or UUID
+         Name      string      `json:"name"`      // Display name
+         Path      string      `json:"path"`      // Absolute path on disk
+         IsDir     bool        `json:"isDir"`     // True if folder
+         Extension string      `json:"extension"` // e.g. ".md", ".pdf", ".txt", ".pptx"
+         Size      int64       `json:"size"`      // File size in bytes
+         Children  []*FileNode `json:"children,omitempty"` // Child nodes if folder
+     }
+     ```
+   - Define `WorkspaceDocument`:
+     ```go
+     type WorkspaceDocument struct {
+         ID       string `json:"id"`
+         Path     string `json:"path"`
+         Name     string `json:"name"`
+         Content  string `json:"content"`
+         LoadedAt int64  `json:"loadedAt"`
+     }
+     ```
+
+2. Port Interface:
+   Define `WorkspacePort` driving interface:
+   ```go
+   type WorkspacePort interface {
+       // OpenDirectory reads a directory from disk and returns the hierarchical FileNode tree.
+       // Only supported document types (.txt, .md, .pdf, .pptx) and subfolders are indexed.
+       OpenDirectory(dirPath string) (*FileNode, error)
+
+       // OpenFile parses a specific file and returns a WorkspaceDocument.
+       OpenFile(filePath string) (*WorkspaceDocument, error)
+
+       // GetWorkspaceTree returns the current root file nodes.
+       GetWorkspaceTree() []*FileNode
+
+       // GetActiveDocument returns the currently active document.
+       GetActiveDocument() *WorkspaceDocument
+
+       // SetActiveDocument sets the active document by ID/Path.
+       SetActiveDocument(path string) (*WorkspaceDocument, error)
+
+       // CloseFile closes an open document.
+       CloseFile(path string) error
+   }
+   ```
+
+3. Verification Tests:
+   Write unit tests in `workspace_test.go` checking struct serialization, json tags, and interface compliance.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- `go test ./wails-app/core/ports/driving/...` passes with 100% coverage.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Pure Go interface and types. No GUI or Wails dependencies in ports.
+- Keep backwards-compatible with existing PipelinePort.

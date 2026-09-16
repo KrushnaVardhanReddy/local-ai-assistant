@@ -1,0 +1,70 @@
+TASK: P56-T2 — StealthEngine Workspace Implementation & RAG Multi-Doc Indexing (Go)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Implement the `WorkspacePort` on `StealthEngine` in `wails-app/core/engine/`. 
+The engine must scan directories recursively to build the file tree, parse documents 
+using `parser.ParseDocument`, cache document contents in the engine's memory/vector cache, 
+and manage the currently active document.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE & MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/core/engine/workspace.go
+CREATE: wails-app/core/engine/workspace_test.go
+MODIFY: wails-app/core/engine/engine.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Workspace State in StealthEngine:
+   - Add workspace state to `StealthEngine` struct:
+     ```go
+     workspaceTree   []*driving.FileNode
+     openDocuments   map[string]*driving.WorkspaceDocument
+     activeDoc       *driving.WorkspaceDocument
+     workspaceMu     sync.RWMutex
+     ```
+   - Initialize these fields in `engine.New(...)`.
+
+2. Directory Scanner (`workspace.go`):
+   - Implement `OpenDirectory(dirPath string) (*driving.FileNode, error)`.
+   - Recursively traverse `dirPath`:
+     - Filter only allowed extensions: `.txt`, `.md`, `.pdf`, `.pptx` (ignore hidden files/folders starting with `.`, `node_modules`, `.git`).
+     - Only include directories if they contain valid document files somewhere in their tree.
+     - Sort entries alphabetically (folders first, then files).
+     - Store the resulting tree in `e.workspaceTree`.
+     - Emit event `on_workspace_tree_updated` if `e.events != nil`.
+
+3. Document Opening & Active Selection:
+   - Implement `OpenFile(filePath string) (*driving.WorkspaceDocument, error)`.
+     - If already opened in `e.openDocuments`, return it.
+     - Otherwise, call `parser.ParseDocument(filePath)`.
+     - Create `WorkspaceDocument` with parsed text content.
+     - Store in `e.openDocuments[filePath]`.
+     - Set as `e.activeDoc`.
+     - Index document text into `e.cache` if cache is enabled (for audience Q&A RAG search across documents).
+     - Emit event `on_active_document_changed` with document payload.
+     - Return the document.
+   - Implement `SetActiveDocument(path string) (*driving.WorkspaceDocument, error)`.
+   - Implement `CloseFile(path string) error`.
+   - Implement `GetWorkspaceTree() []*driving.FileNode`.
+   - Implement `GetActiveDocument() *driving.WorkspaceDocument`.
+
+4. Unit Testing:
+   - In `workspace_test.go`, test scanning a temporary directory tree with `.txt`, `.md`, and subfolders.
+   - Verify non-supported files (e.g. `.png`, `.bin`) and `.git` are ignored.
+   - Verify `OpenFile` and `SetActiveDocument` update active doc and emit events.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- `go test -v ./wails-app/core/engine/...` passes with 100% coverage on new methods.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Strictly adhere to Hexagonal Architecture: use `driving.FileNode` and `driving.WorkspaceDocument`.
+- Do not add product-specific presenter UI logic inside the core engine.

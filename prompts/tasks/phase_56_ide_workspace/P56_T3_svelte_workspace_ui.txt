@@ -1,0 +1,73 @@
+TASK: P56-T3 — Reusable IDE File Tree & Workspace Svelte Components
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build a reusable, elegant IDE-style workspace component in Svelte (`FileTree.svelte`, 
+`WorkspaceTabs.svelte`, and `WorkspaceSidebar.svelte`). 
+This UI allows users to view folders/files in an expandable tree view, click any file 
+to open it in tabs, and switch active documents. It will be usable across all products.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/frontend/src/lib/components/workspace/FileTreeNode.svelte
+CREATE: wails-app/frontend/src/lib/components/workspace/FileTree.svelte
+CREATE: wails-app/frontend/src/lib/components/workspace/WorkspaceTabs.svelte
+CREATE: wails-app/frontend/src/lib/components/workspace/WorkspaceSidebar.svelte
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Component Specifications:
+   - `FileTreeNode.svelte`:
+     - Recursive node component.
+     - Props: `node: FileNode`, `activePath: string`, `onSelect: (node: FileNode) => void`.
+     - Displays chevron toggle `▶` / `▼` for folders with smooth expand/collapse state.
+     - Displays intuitive filetype icons based on extension:
+       - `.md` / `.txt`: 📝
+       - `.pdf`: 📄
+       - `.pptx`: 📊
+       - Folder: 📁 / 📂
+     - Highlight active item with subtle background glow (`rgba(255,255,255,0.1)`).
+
+   - `FileTree.svelte`:
+     - Renders the root list of `FileNode` items using `FileTreeNode`.
+     - Provides search/filter input at the top to quickly filter documents by name.
+
+   - `WorkspaceTabs.svelte`:
+     - Displays horizontal IDE tabs for all open documents.
+     - Each tab has:
+       - File icon + truncated filename.
+       - Active tab indicator (e.g., bottom border accent or distinct pill).
+       - Close button `×` on hover.
+     - Clicking tab fires `onTabSelect(path)`.
+     - Clicking close button fires `onTabClose(path)`.
+
+   - `WorkspaceSidebar.svelte`:
+     - Collapsible floating drawer on the left side.
+     - Toggle button `📁` with badge showing number of loaded docs.
+     - Buttons at top of drawer:
+       - "Open File" (`PromptOpenFile`)
+       - "Open Folder" (`PromptOpenDirectory`)
+     - Contains `FileTree` component.
+     - Glassmorphic dark styling matching Stealth UI aesthetic (pure CSS, no Tailwind dependency).
+
+2. Styling & UX Requirements:
+   - Must be fully functional in dark mode and semi-transparent stealth overlays.
+   - Smooth CSS transitions when opening/closing the sidebar and expanding folders.
+   - Keyboard accessible (Enter or Space to open file in tree).
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Components render properly without Svelte or TypeScript errors.
+- Tree expands and collapses folders correctly.
+- Tabs switch active document and close tabs without errors.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Component must be modular and placed in `wails-app/frontend/src/lib/components/workspace/` so other products (MentorGlass, ClinicHUD, CounselDesk) can import it directly.
+- No direct hardcoded bindings to PresenterApp inside these lib components; use event dispatchers or callback props.

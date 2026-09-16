@@ -92,3 +92,35 @@ BATCH 2 (Sequential)
 | **P55-T2** | Document Parser Backend | ✅ Merged | ⚡ Parallel | [PR 177] | Parses .txt, .md, .pdf, .pptx |
 | **P55-T3** | Voice-Scroller Engine | ✅ Merged | Sequential | [PR 178] | Maps STT events to Svelte auto-scroll |
 | **P55-T4** | LLM Audience Copilot | ✅ Merged | Sequential | [PR 179] | Live Q&A side-panel in HUD |
+
+---
+
+## Phase 56 — Multi-Document IDE Workspace (Hexagonal Core + Reusable Svelte)
+
+> **Goal:** Build an IDE-style workspace (file/folder browser, expandable tree, multi-file tabs) in the hexagonal core engine so multiple products can load folders/files and switch active documents.
+>
+> **Branch:** `feature/krushna_golang`
+
+### Dependency Order
+
+```
+BATCH 1 (Core Ports & Types)
+  P56-T1: Core Workspace Port & Document Node Hierarchy (Go)
+
+BATCH 2 (Parallel Execution)
+  P56-T2 ⚡ StealthEngine Workspace Implementation & RAG Multi-Doc Indexing (Go)
+  P56-T3 ⚡ Reusable IDE File Tree & Workspace Svelte Components (UI)
+
+BATCH 3 (Sequential Product Integration)
+  P56-T4: StealthPresenter Product Integration & Wails Bindings
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P56-T1** | Core Workspace Port & Types | 🔄 Jules working | Sequential | [Session 4754781158255400848](https://jules.google.com/session/4754781158255400848) | `ports/driving/workspace.go`, `FileNode`, `WorkspacePort` |
+| **P56-T2** | Engine Workspace & RAG Indexer | ⬜ Not started | ⚡ Parallel | - | `core/engine/workspace.go`, directory scanning & doc caching |
+| **P56-T3** | Svelte IDE Tree & Tabs UI | ⬜ Not started | ⚡ Parallel | - | `lib/components/workspace/` (FileTree, Tabs, Sidebar) |
+| **P56-T4** | StealthPresenter Integration | ⬜ Not started | Sequential | - | `PresenterApp` bindings + `PresenterHUD` tabs/tree hookup |
+
