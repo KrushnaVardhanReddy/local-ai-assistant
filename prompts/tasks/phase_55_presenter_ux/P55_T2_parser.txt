@@ -26,7 +26,7 @@ DETAILED SPECIFICATION
 2. Format Implementations:
    - **.txt / .md:** Standard text reading via `os.ReadFile`.
    - **.pdf:** Implement a PDF text extractor. (You may use a pure Go library like `github.com/dslipak/pdf` or `github.com/ledongthuc/pdf`).
-   - **.pptx:** Implement a PowerPoint text extractor. (Explore `unioffice`, `github.com/nguyenthenguyen/docx` alternatives, or directly parse the zipped XML `slide*.xml` files if no simple open-source library fits).
+   - **.pptx:** Implement a PowerPoint text extractor. (Explore `gopptx.OpenPresentation` from `github.com/Muprprpr/Go-pptx` or similar open-source libraries, or directly parse the zipped XML `slide*.xml` files if needed).
 
 3. Wails Binding:
    - Add a method to `PresenterApp` (in `wails-app/products/presenter/app.go`) called `LoadDocument(filepath string)`.
