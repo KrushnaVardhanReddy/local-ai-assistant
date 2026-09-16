@@ -1,46 +1,56 @@
 # System Architecture
 
-The Local AI Assistant operates on a **dual-process architecture** designed to completely isolate the heavy AI computation from the user interface.
+The Local AI Assistant operates on a **Hexagonal Architecture** (Ports and Adapters), designed to completely isolate the heavy AI orchestration from infrastructure concerns (like how events are emitted or how LLM APIs are called).
 
-## High-Level Flow
+## High-Level Flow (Hexagonal Model)
 
 ```
-┌────────────────────────────────┐       ┌────────────────────────────────┐
-│    Frontend (Svelte 5 + Wails) │ ◄───► │       Backend (Go)          │
-│    (Floating Desktop Overlay)  │  WS   │  (Audio Capture & AI Orchestr) │
-└────────────────────────────────┘       └───────────────┬────────────────┘
-                                                          │
-                           ┌──────────────────────────────┴──────────────────────────────┐
-                           ▼                                                              ▼
-               ┌─────────────────────────────┐                       ┌─────────────────────────────┐
-               │    Speech-to-Text (STT)     │                       │     Local Brain (Ollama)     │
-               │ (Faster-Whisper / Parakeet) │                       │    (Llama 3 / Mistral 7B)   │
-               └─────────────────────────────┘                       └─────────────────────────────┘
-                                                                            ▲
-                                                                            │
-               ┌─────────────────────────────┐                       ┌──────┴──────────────────────┐
-               │  Local Intelligence Layer   │ ◄───────────────────► │ Semantic Cache (ChromaDB)   │
-               │ (SmolLM2-135M Turn Gating)  │                       │ (Zero-latency Q&A lookups)  │
-               └─────────────────────────────┘                       └─────────────────────────────┘
+                            ┌────────────────────────────────────┐
+                            │      Driving Adapters (Inputs)     │
+                            │  (Audio Device, HTTP, UI Events)   │
+                            └─────────────────┬──────────────────┘
+                                              │
+                                   ┌──────────▼──────────┐
+                                   │    Driving Ports    │
+                                   │  (PipelinePort etc) │
+                                   └──────────┬──────────┘
+                                              │
+ ┌──────────────────────┐          ┌──────────▼──────────┐         ┌──────────────────────┐
+ │                      │          │                     │         │                      │
+ │    Driven Ports      │◄─────────┤   Stealth Engine    ├─────────►     Driven Ports     │
+ │  (LLMPort, Cache)    │          │  (Core/Domain Logic)│         │ (Events, WindowPort) │
+ │                      │          │                     │         │                      │
+ └─────────┬────────────┘          └─────────────────────┘         └─────────┬────────────┘
+           │                                                                 │
+           │                                                                 │
+           ▼                                                                 ▼
+ ┌──────────────────────┐                                          ┌──────────────────────┐
+ │  Driven Adapters     │                                          │  Driven Adapters     │
+ │  (OpenAI, SQLiteVec) │                                          │  (Wails, X11/Win32)  │
+ └──────────────────────┘                                          └──────────────────────┘
 ```
 
-## 1. The Backend (Go / FastAPI)
-The Go backend is the core engine of the assistant. It is responsible for:
-- **Audio Capture**: Listening to the system microphone.
-- **Speech-to-Text (STT)**: Converting voice to text instantly. It supports `faster-whisper` for standard hardware and NVIDIA's **Parakeet-TDT** for extreme low-latency inference on CUDA devices.
-- **Local Intelligence Layer**: Uses an on-device `SmolLM2` model to act as a gatekeeper. It checks if the user has finished their thought before allowing expensive cloud LLM calls, and handles vector embeddings for the semantic QA cache.
-- **Semantic Q&A Cache**: Stores past Q&A embeddings in `ChromaDB` locally. If a matching question is detected, it serves the answer instantly, saving cloud costs.
-- **LLM Orchestration**: Taking the transcribed text (if not cached) and routing it to the configured LLM provider (Ollama, LM Studio, or cloud APIs like OpenAI/Gemini/Groq).
-- **WebSocket Server**: Streaming the response tokens back to the frontend in real-time.
+## 1. The Core Domain (`wails-app/core/engine/`)
+The `StealthEngine` is the brain. It is responsible for:
+- Orchestrating the flow of audio to the STT.
+- Constructing prompts and routing them to the LLM.
+- Handling local semantic caching to save on API costs.
+- **Rule:** The engine cannot import *any* external libraries or Wails packages. It only communicates through interface definitions located in `core/ports/`.
 
-## 2. The Frontend (Svelte 5 / Wails)
+## 2. Infrastructure Adapters (`wails-app/adapters/`)
+Adapters plug into the core engine.
+- **LLM Adapter**: Implements `driven.LLMPort`. We currently support OpenAI/Groq API interfaces, but this allows seamless integration of local models (Llama.cpp) later.
+- **Cache Adapter**: Implements `driven.CachePort`. Uses `sqlite-vec` to store embeddings locally for instant semantic Q&A lookup.
+- **Events Adapter**: Implements `driven.EventsPort`. Usually powered by the Wails event bus, streaming updates to the frontend UI.
+- **Window Adapter**: Implements `driven.WindowPort`. Uses OS-specific syscalls (like `SetCaptureExcluded`) to make the UI completely invisible to screen sharing.
+
+## 3. The Frontend (Svelte 5 / Wails)
 The frontend serves purely as a dumb terminal/display layer for the backend's AI output.
 - **Svelte 5**: Provides a reactive, lightweight UI using the new runes reactivity system.
 - **Wails v2 (Desktop)**: Wraps the web app in a Go-based native shell, consuming around 10-30MB of RAM (compared to Electron's 150MB+ footprint).
-- **Capacitor (Mobile)**: Wraps the same Svelte app into native iOS and Android apps, leveraging native microphone APIs and background-audio tasks.
 
-## Hardware Targets
-The system is optimized for an 8GB VRAM footprint:
-- ~5GB for the LLM (e.g., Llama 3 8B quantized to 4-bit)
-- ~1-2GB for the STT model
-- ~1GB reserved for desktop OS overhead
+## Product Skins (`wails-app/products/`)
+Because the `StealthEngine` is completely generic, we can create multiple distinct applications that share the same backend. A product (like **StealthPresenter** or **MentorGlass**) simply defines:
+1. Which Svelte UI component to load.
+2. The specific system prompt to inject into the LLM adapter.
+3. The specific setup/teardown logic for that tool.

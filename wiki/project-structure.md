@@ -1,39 +1,45 @@
 # Project Structure
 
-The Local AI Assistant project is structured into several distinct components:
+The Local AI Assistant project is structured into several distinct components, built around a pure Go Hexagonal Architecture.
 
 ```text
 Local_AI_Assistant/
-├── wails-app/backend/          # Go Backend (AI & Audio Processing)
-│   ├── app.py                  # FastAPI server + WebSocket broadcaster
-│   ├── audio_listener.py       # Mic capture and live transcription
-│   └── requirements.txt        # Go dependencies
-├── frontend/                   # Svelte 5 + Wails Desktop App
-│   ├── src/
-│   │   ├── App.svelte          # Root component (floating overlay)
-│   │   ├── lib/
-│   │   │   ├── Assistant.svelte   # Main chat/response panel
-│   │   │   └── ws.ts              # WebSocket store (reactive)
-│   │   └── main.ts             # App entrypoint
-│   ├── wails-app/              # Wails Go shell config
-│   └── package.json
+├── wails-app/                  # Go Backend + Wails Shell
+│   ├── core/                   # The Hexagonal Domain
+│   │   ├── ports/              # Interfaces (driving & driven)
+│   │   └── engine/             # StealthEngine (business logic)
+│   ├── adapters/               # Infrastructure implementations
+│   │   ├── llm/                # OpenAI/Local LLM adapters
+│   │   ├── cache/              # SQLiteVec cache adapters
+│   │   ├── events/             # Wails event emitters
+│   │   └── window/             # OS-level stealth window APIs
+│   ├── backend/                # Legacy/Utility packages (STT, embeddings)
+│   │   └── stt/                # Whisper.cpp integration
+│   ├── products/               # Product-specific wiring & prompts
+│   │   ├── presenter/          # StealthPresenter configuration
+│   │   └── interview/          # BarnOwl AI configuration (Paused)
+│   └── frontend/               # Svelte 5 UI
+│       ├── src/
+│       │   ├── products/       # Product-specific Svelte components
+│       │   └── lib/            # Shared UI components
 ├── prompts/                    # Jules task prompts for async AI development
-│   ├── tasks.md                # Master task tracker
+│   ├── tasks_v2.md             # Master task tracker (Phase 54+)
 │   └── tasks/                  # One prompt file per Jules task
 ├── scripts/
-│   ├── jules_submit.py         # Submit tasks to Jules API → GitHub PRs
-│   ├── merge_prs.sh            # Batch merge Jules PRs
-│   └── build.sh                # Production build script
+│   └── jules_submit.py         # Submit tasks to Jules API → GitHub PRs
 └── README.md
 ```
 
 ## Key Directories
 
-### `backend/`
-Contains the Go-based AI orchestration layer. This layer interacts directly with hardware (microphone, CUDA GPUs) to perform Speech-to-Text (using faster-whisper or Parakeet) and interfaces with the LLM API (Ollama, LM Studio, etc.). It exposes a WebSocket connection for the frontend.
+### `wails-app/core/` (The Engine)
+This is the heart of the application. The `StealthEngine` resides here, orchestrating audio processing, STT transcription, and LLM querying. It relies entirely on interfaces defined in `core/ports/`, ensuring that it is completely decoupled from any specific UI framework or database.
 
-### `frontend/`
-Contains the user interface, built with Svelte 5 and bundled as a native desktop application using Wails v2. The UI is designed as a minimalist floating overlay (stealth mode) that connects to the backend over WebSocket to receive streaming LLM tokens.
+### `wails-app/adapters/` (The Infrastructure)
+Implementations of the ports. For example, `adapters/llm/openai_adapter.go` implements the `driven.LLMPort` interface. This allows us to easily swap out OpenAI for a local Llama model without changing a single line of code in the engine.
 
-### `prompts/`
-A critical directory for the AI-assisted development workflow. It contains the master roadmap (`tasks.md`) and individual task prompts sent to Jules (Google's async coding agent) for execution via `scripts/jules_submit.py`.
+### `wails-app/products/` (The Products)
+The engine is generic. The products define what the engine *does*. The `products/presenter/` directory contains the specific system prompts, UI configurations, and initializations required to turn the generic `StealthEngine` into **StealthPresenter**. This allows us to build multiple applications (MentorGlass, GovBrief) on the exact same backend.
+
+### `wails-app/frontend/`
+Contains the user interface, built with Svelte 5. It connects to the Go backend via Wails' IPC (Inter-Process Communication) event bus, acting purely as a dumb terminal to display data and capture UI events.
