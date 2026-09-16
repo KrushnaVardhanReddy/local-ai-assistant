@@ -33,6 +33,10 @@ Every domain below exploits **at least one** of these as the primary wedge.
 | 🔵 **Wave 3** | **6th** | **ClinicHUD** | Telehealth / Doctors | 🟡 Medium (enterprise heavy) | 🟢 Very Strong | 6–8 weeks | $$$$ | Biggest moat (HIPAA), but needs EHR hooks + compliance story |
 | 🔵 **Wave 3** | **7th** | **LangShadow** | Language Learners | 🟡 Medium | 🟢 Strong | 5–6 weeks | $$ | Massive TAM, viral potential, but lower ARPU — best as growth lever |
 | 🔴 **Wave 4** | **8th** | **AgentPrompt** | Call Center Agents | 🔴 High (Balto, Level AI) | 🟡 Moderate | 8–10 weeks | $$$$$ | Highest revenue ceiling, but requires SOC2, telephony integration, 6–12mo sales cycle |
+| 🟣 **Wave 5 🔭 Explorer** | **Future** | **StreamerHUD** | Twitch/YouTube Streamers | 🟢 Low | 🟢 Strong | 3–4 weeks | $$$ | Invisible overlay for streamers — chat/alerts invisible to OBS. Viral demo potential. 1-prompt swap from StealthPresenter. |
+| 🟣 **Wave 5 🔭 Explorer** | **Future** | **LyricsHUD** | Live Singers / Performers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $$ | Foot-pedal or timed auto-scroll for lyrics. No STT needed. Same invisible overlay moat. Niche but zero competition. |
+| 🟣 **Wave 5 🔭 Explorer** | **Future** | **TabletopDM** | D&D / TTRPG Dungeon Masters | 🟢 Very Low | 🟢 Strong | 4–5 weeks | $$ | LLM panic button for live NPC names, lore lookups, rule clarifications. Massive passionate community. |
+| 🟣 **Wave 5 🔭 Explorer** | **Future** | **RTS Co-Pilot** | Competitive RTS Gamers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $ | Time-based build order prompter. Very niche, price-sensitive. Low priority but near-zero build effort. |
 
 ---
 
