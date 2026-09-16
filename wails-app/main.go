@@ -18,12 +18,12 @@ func main() {
 	_ = godotenv.Load(".env.local")
 	_ = godotenv.Load("../.env.local")
 
-	// Create an instance of the app structure
-	app := NewApp()
+	// Create an instance of the app structure dynamically
+	app, onStartup, onShutdown := getAppInstance()
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:       "BarnOwl AI",
+		Title:       getAppTitle(),
 		Width:       1440,
 		Height:      768,
 		Frameless:   true,
@@ -35,8 +35,8 @@ func main() {
 		Linux: &linux.Options{
 			WindowIsTranslucent: true,
 		},
-		OnStartup:  app.startup,
-		OnShutdown: app.shutdown,
+		OnStartup:  onStartup,
+		OnShutdown: onShutdown,
 		Bind: []interface{}{
 			app,
 		},

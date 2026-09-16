@@ -5,12 +5,14 @@
   import KnowledgeBase from "$lib/KnowledgeBase.svelte";
   import Settings from "$lib/Settings.svelte";
   import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
+  import PresenterHUD from "$lib/products/presenter/PresenterHUD.svelte";
   import { restoreSession, authState } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
 
   import { WindowSetSize, WindowCenter } from "../wailsjs/runtime/runtime";
 
   let showKnowledgeBase = $state(false);
+  const product = import.meta.env.VITE_PRODUCT || "interview";
 
   onMount(async () => {
     // Dynamically size window based on screen width, clamped between 1024 and 1440
@@ -46,30 +48,34 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="app-shell pointer-events-none">
-  {#if showKnowledgeBase}
-    <div
-      class="modal-overlay pointer-events-auto"
-      role="button"
-      tabindex="0"
-      aria-label="Close knowledge base"
-      onclick={() => showKnowledgeBase = false}
-      onkeydown={(e) => e.key === 'Escape' && (showKnowledgeBase = false)}
-    >
-      <div class="modal-content" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
-        <button class="close-btn" onclick={() => showKnowledgeBase = false}>✖</button>
-        <KnowledgeBase />
+  {#if product === "presenter"}
+    <PresenterHUD />
+  {:else}
+    {#if showKnowledgeBase}
+      <div
+        class="modal-overlay pointer-events-auto"
+        role="button"
+        tabindex="0"
+        aria-label="Close knowledge base"
+        onclick={() => showKnowledgeBase = false}
+        onkeydown={(e) => e.key === 'Escape' && (showKnowledgeBase = false)}
+      >
+        <div class="modal-content" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+          <button class="close-btn" onclick={() => showKnowledgeBase = false}>✖</button>
+          <KnowledgeBase />
+        </div>
       </div>
+    {/if}
+
+    <Assistant />
+
+    <div class="fixed bottom-6 right-8 z-[100] pointer-events-auto flex gap-4">
+      <button class="text-on-surface-variant hover:text-primary transition-colors text-xl" onclick={() => showKnowledgeBase = !showKnowledgeBase} aria-label="Knowledge Base">
+        📚
+      </button>
+      <Settings />
     </div>
   {/if}
-
-  <Assistant />
-
-  <div class="fixed bottom-6 right-8 z-[100] pointer-events-auto flex gap-4">
-    <button class="text-on-surface-variant hover:text-primary transition-colors text-xl" onclick={() => showKnowledgeBase = !showKnowledgeBase} aria-label="Knowledge Base">
-      📚
-    </button>
-    <Settings />
-  </div>
 </div>
 
 <style>
