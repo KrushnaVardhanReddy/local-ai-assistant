@@ -24,6 +24,7 @@ type PresenterApp struct {
 	engine       *engine.StealthEngine
 	audioCapture driven.AudioCapturePort
 	window       driven.WindowPort
+	script       string
 }
 
 func NewPresenterApp() *PresenterApp {
@@ -86,12 +87,14 @@ func (p *PresenterApp) GetState() map[string]interface{} {
 		"response":    state.Response,
 		"thinking":    state.Thinking,
 		"cachedPairs": state.CachedPairs,
+		"script":      p.script,
 	}
 }
 
 // ClearState delegates to the engine
 func (p *PresenterApp) ClearState() {
 	p.engine.ClearState()
+	p.script = ""
 }
 
 // AskQuestion delegates to the engine
@@ -108,6 +111,9 @@ func (p *PresenterApp) LoadDocument(filepath string) (string, error) {
 
 	// Store in engine context
 	p.engine.AddContext(text)
+
+	// Save as the active script for the frontend to render
+	p.script = text
 
 	// Optionally also update the state so the HUD can display it
 	p.engine.UpdateState("Document loaded", text, false)

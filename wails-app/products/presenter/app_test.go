@@ -47,4 +47,15 @@ func TestPresenterAppLoadDocument(t *testing.T) {
 	if !strings.Contains(content, "stealth") {
 		t.Errorf("unexpected content: %q", content)
 	}
+
+	state := app.GetState()
+	if scriptStr, ok := state["script"].(string); !ok || scriptStr != content {
+		t.Errorf("expected state script to be %q, got %v", content, state["script"])
+	}
+
+	app.ClearState()
+	stateAfterClear := app.GetState()
+	if scriptStr, ok := stateAfterClear["script"].(string); !ok || scriptStr != "" {
+		t.Errorf("expected script to be empty after clear, got %v", stateAfterClear["script"])
+	}
 }

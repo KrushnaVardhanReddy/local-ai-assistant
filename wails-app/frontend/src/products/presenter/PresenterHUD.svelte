@@ -9,6 +9,13 @@
   // we use dynamic calling or simply any.
   let latestTranscript = '';
   let latestResponse = '';
+  let script = '';
+  let scriptWords: string[] = [];
+  let currentWordIndex = 0;
+
+  let autoScrollPaused = false;
+  let resumeScrollTimeout: ReturnType<typeof setTimeout>;
+
   let pollInterval: ReturnType<typeof setInterval>;
 
   // Typography state controls
@@ -25,6 +32,13 @@
         if (state) {
           latestTranscript = state.transcript || '';
           latestResponse = state.response || '';
+          const newScript = state.script || '';
+          if (newScript !== script) {
+            script = newScript;
+            scriptWords = script.split(/\s+/).filter(w => w.length > 0);
+            currentWordIndex = 0;
+            updateScrollPosition();
+          }
         }
       }
     } catch (err) {
@@ -41,12 +55,107 @@
       }
       latestTranscript = '';
       latestResponse = '';
+      script = '';
+      scriptWords = [];
+      currentWordIndex = 0;
     } catch (err) {
       console.error('Failed to clear state:', err);
     }
   }
 
+  let scriptContainer: HTMLElement;
+
+  function updateScrollPosition() {
+    if (!scriptContainer) return;
+
+    // Use querySelectorAll to find all words
+    const words = scriptContainer.querySelectorAll('.script-word');
+    if (words && words.length > currentWordIndex) {
+      const activeWord = words[currentWordIndex] as HTMLElement;
+      if (activeWord) {
+        // smooth scroll the container so the active word is roughly centered
+        if (!autoScrollPaused) {
+          activeWord.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+  }
+
+  function advanceReadingPosition(transcript: string) {
+    if (!transcript || scriptWords.length === 0 || autoScrollPaused) return;
+
+    // Simple heuristic: count words in the incoming transcript and advance the index
+    // In a real STT, you'd want something more robust matching words textually,
+    // but for now we'll match by counting how many words have been spoken.
+
+    // A slightly better heuristic: find the transcript words in the next N words of the script
+    const spokenWords = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    if (spokenWords.length === 0) return;
+
+    // Take the last 3-4 words of the transcript to find our place
+    const recentSpoken = spokenWords.slice(-4);
+
+    // Look ahead in the script to find a match
+    const lookaheadLimit = Math.min(currentWordIndex + 100, scriptWords.length);
+    let bestMatchIndex = currentWordIndex;
+
+    for (let i = currentWordIndex; i < lookaheadLimit; i++) {
+      const scriptWordLower = scriptWords[i].toLowerCase().replace(/[.,!?;:]/g, '');
+      const spokenWordLower = recentSpoken[recentSpoken.length - 1]?.replace(/[.,!?;:]/g, '');
+
+      if (scriptWordLower === spokenWordLower) {
+         bestMatchIndex = i;
+         break; // found the latest word
+      }
+    }
+
+    if (bestMatchIndex > currentWordIndex) {
+       currentWordIndex = bestMatchIndex;
+       updateScrollPosition();
+    }
+  }
+
+  function handleManualScroll(e: Event) {
+    // Determine if it was manual scroll (wheel) or keys
+    pauseAutoScrollTemporarily();
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    // Pause toggle on spacebar
+    if (e.code === 'Space') {
+      e.preventDefault(); // prevent page scroll
+      autoScrollPaused = !autoScrollPaused;
+      if (!autoScrollPaused) {
+        updateScrollPosition(); // snap back immediately
+      }
+      return;
+    }
+
+    // Up/Down arrows manually scroll
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      pauseAutoScrollTemporarily();
+      if (scriptContainer) {
+        const scrollAmount = 40; // px
+        scriptContainer.scrollTop += (e.code === 'ArrowDown' ? scrollAmount : -scrollAmount);
+      }
+    }
+  }
+
+  function pauseAutoScrollTemporarily() {
+    autoScrollPaused = true;
+    if (resumeScrollTimeout) clearTimeout(resumeScrollTimeout);
+
+    // Resume auto-scroll after 5 seconds of inactivity
+    resumeScrollTimeout = setTimeout(() => {
+      autoScrollPaused = false;
+      updateScrollPosition();
+    }, 5000);
+  }
+
   onMount(() => {
+    // Add manual scroll overrides
+    window.addEventListener('keydown', handleKeyDown);
+
     // Re-use existing on_response_token / on_response_end Wails events
     EventsOn('on_response_token', (token: string) => {
       latestResponse += token;
@@ -56,13 +165,23 @@
       fetchState(); // sync state fully when response ends
     });
 
+    EventsOn('on_transcript', (data: any) => {
+      latestTranscript = data.text || '';
+      if (latestTranscript) {
+        advanceReadingPosition(latestTranscript);
+      }
+    });
+
     pollInterval = setInterval(fetchState, 200);
   });
 
   onDestroy(() => {
+    window.removeEventListener('keydown', handleKeyDown);
+    if (resumeScrollTimeout) clearTimeout(resumeScrollTimeout);
     if (pollInterval) clearInterval(pollInterval);
     EventsOff('on_response_token');
     EventsOff('on_response_end');
+    EventsOff('on_transcript');
   });
 </script>
 
@@ -89,11 +208,25 @@
         <input id="line-height" type="range" min="1" max="2.5" step="0.1" bind:value={lineHeight} />
       </div>
       <div class="header">
+        {#if autoScrollPaused}
+          <div class="status-badge paused">PAUSED</div>
+        {:else}
+          <div class="status-badge listening">AUTO-SYNC</div>
+        {/if}
         <button class="clear-btn" aria-label="Clear state" on:click={handleClear}>⟳</button>
       </div>
     </div>
 
     <div class="content">
+      {#if scriptWords.length > 0}
+        <div class="script-display" bind:this={scriptContainer} on:wheel={handleManualScroll}>
+          {#each scriptWords as word, i}
+             <span class="script-word {i === currentWordIndex ? 'active' : ''} {i < currentWordIndex ? 'read' : ''}">
+                {word}{' '}
+             </span>
+          {/each}
+        </div>
+      {/if}
       <div class="transcript">{latestTranscript}</div>
       <div class="response">{latestResponse}</div>
     </div>
@@ -230,5 +363,58 @@
     color: var(--hud-text-white);
     min-height: 1.5em;
     transition: font-size 0.2s, line-height 0.2s;
+  }
+
+  .script-display {
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: var(--dynamic-font-size);
+    line-height: var(--dynamic-line-height);
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+
+    /* Hide scrollbar for stealth */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .script-display::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+
+  .script-word {
+    color: var(--hud-text-gray);
+    transition: color 0.2s;
+  }
+
+  .script-word.read {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .script-word.active {
+    color: #4ade80; /* bright green for current position */
+    font-weight: bold;
+    text-shadow: 0 0 4px rgba(74, 222, 128, 0.4);
+  }
+
+  .status-badge {
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 8px;
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.5px;
+  }
+
+  .status-badge.paused {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444; /* red */
+  }
+
+  .status-badge.listening {
+    background: rgba(74, 222, 128, 0.2);
+    color: #4ade80; /* green */
   }
 </style>
