@@ -62,8 +62,8 @@ func NewPresenterAppWithPorts(eng *engine.StealthEngine, ac driven.AudioCaptureP
 	return &PresenterApp{engine: eng, audioCapture: ac, window: wp}
 }
 
-// startup is called by Wails on app start.
-func (p *PresenterApp) startup(ctx context.Context) {
+// Startup is called by Wails on app start.
+func (p *PresenterApp) Startup(ctx context.Context) {
 	p.ctx = ctx
 	p.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
 

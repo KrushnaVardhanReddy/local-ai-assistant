@@ -5,7 +5,7 @@
   import KnowledgeBase from "$lib/KnowledgeBase.svelte";
   import Settings from "$lib/Settings.svelte";
   import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
-  import PresenterHUD from "$lib/products/presenter/PresenterHUD.svelte";
+  import PresenterHUD from "./products/presenter/PresenterHUD.svelte";
   import { restoreSession, authState } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
 
@@ -60,7 +60,7 @@
         onclick={() => showKnowledgeBase = false}
         onkeydown={(e) => e.key === 'Escape' && (showKnowledgeBase = false)}
       >
-        <div class="modal-content" role="dialog" aria-modal="true" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+        <div class="modal-content" role="dialog" aria-modal="true" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
           <button class="close-btn" onclick={() => showKnowledgeBase = false}>✖</button>
           <KnowledgeBase />
         </div>
