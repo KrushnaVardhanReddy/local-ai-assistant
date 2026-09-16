@@ -70,6 +70,19 @@
     }
   }
 
+  async function handleLoadDoc() {
+    try {
+      // @ts-ignore
+      if (window.go && window.go.presenter && window.go.presenter.PresenterApp) {
+        // @ts-ignore
+        await window.go.presenter.PresenterApp.PromptLoadDocument();
+        fetchState();
+      }
+    } catch (err) {
+      console.error('Failed to load document:', err);
+    }
+  }
+
   let scriptContainer: HTMLElement;
 
   function updateScrollPosition() {
@@ -230,7 +243,8 @@
         {:else}
           <div class="status-badge listening">AUTO-SYNC</div>
         {/if}
-        <button class="clear-btn" aria-label="Clear state" on:click={handleClear}>⟳</button>
+        <button class="clear-btn" aria-label="Load Document" title="Load Script" on:click={handleLoadDoc}>📁</button>
+        <button class="clear-btn" aria-label="Clear state" title="Clear State" on:click={handleClear}>⟳</button>
       </div>
     </div>
 

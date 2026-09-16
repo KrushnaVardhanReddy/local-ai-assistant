@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
 	cacheadapter "wails-app/adapters/cache"
 	eventsadapter "wails-app/adapters/events"
 	llmadapter "wails-app/adapters/llm"
@@ -182,4 +184,18 @@ func (p *PresenterApp) LoadDocument(filepath string) (string, error) {
 	p.engine.UpdateState("Document loaded", text, false)
 
 	return text, nil
+}
+
+// PromptLoadDocument opens a native file dialog for the user to select a script, then parses it.
+func (p *PresenterApp) PromptLoadDocument() (string, error) {
+	filepath, err := runtime.OpenFileDialog(p.ctx, runtime.OpenDialogOptions{
+		Title: "Select Script Document",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Documents", Pattern: "*.txt;*.md;*.pdf;*.pptx"},
+		},
+	})
+	if err != nil || filepath == "" {
+		return "", err
+	}
+	return p.LoadDocument(filepath)
 }
