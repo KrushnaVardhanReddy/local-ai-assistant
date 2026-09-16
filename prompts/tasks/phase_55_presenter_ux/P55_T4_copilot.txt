@@ -1,0 +1,44 @@
+TASK: P55-T4 — LLM Audience Copilot (Full Stack)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Integrate the Local LLM into the Svelte HUD to create a real-time audience 
+Q&A Copilot. When an audience member asks a question, the LLM answers it based
+on the loaded document context.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
+MODIFY: wails-app/products/presenter/app.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. LLM Trigger Logic (Go):
+   - The `StealthEngine` must determine if a detected utterance is a question directed at the presenter.
+   - If it is, construct a prompt containing the user's loaded script (as context) and the detected question.
+   - Send this prompt to the local LLM.
+
+2. Copilot Panel (Svelte):
+   - In `PresenterHUD.svelte`, add a collapsible side-panel (or a dynamic bottom drawer).
+   - Listen for LLM streaming events from the backend (e.g., `StealthEngine:LLM:Token`).
+   - Display the live-streaming answer in the panel.
+
+3. UX Polish:
+   - Add a subtle animation (like a glowing border) when the Copilot is "thinking" or "listening."
+   - Ensure the Copilot panel has a slightly different background color/opacity to differentiate it from the main script.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Ask a question into the microphone that relates to the loaded script.
+- Verify the Copilot panel opens and streams a correct, context-aware answer from the LLM.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Ensure streaming performance is smooth.
+- Copilot panel should not overlap the "Eyeline Indicator" area so the user can continue reading their script.

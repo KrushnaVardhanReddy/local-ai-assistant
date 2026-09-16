@@ -1,0 +1,46 @@
+TASK: P55-T2 — Document Parser Backend (Go)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build a robust Go backend service capable of parsing text from multiple 
+presentation formats (.txt, .md, .pdf, .pptx) to be loaded into the StealthEngine.
+This is a parallel task focusing purely on the Go backend.
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE & MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/backend/parser/parser.go
+CREATE: wails-app/backend/parser/parser_test.go
+MODIFY: wails-app/products/presenter/app.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Parser Interface & Registry:
+   - Create `wails-app/backend/parser/parser.go`.
+   - Define a `DocumentParser` interface with a `Parse(filepath string) (string, error)` method.
+   - Implement a factory/registry that selects the right parser based on file extension.
+
+2. Format Implementations:
+   - **.txt / .md:** Standard text reading via `os.ReadFile`.
+   - **.pdf:** Implement a PDF text extractor. (You may use a pure Go library like `github.com/dslipak/pdf` or `github.com/ledongthuc/pdf`).
+   - **.pptx:** Implement a PowerPoint text extractor. (Explore `unioffice`, `github.com/nguyenthenguyen/docx` alternatives, or directly parse the zipped XML `slide*.xml` files if no simple open-source library fits).
+
+3. Wails Binding:
+   - Add a method to `PresenterApp` (in `wails-app/products/presenter/app.go`) called `LoadDocument(filepath string)`.
+   - This method should use the parser to extract the text and then store it in the `StealthEngine` context.
+   - Return the extracted text to the frontend so it can be displayed in the Svelte HUD.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Run `go test ./wails-app/backend/parser/...` with provided sample files.
+- Ensure the `LoadDocument` method correctly returns parsed text.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Only use pure Go libraries (no CGO dependencies for the parsers if possible).
+- Do not modify frontend Svelte files.

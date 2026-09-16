@@ -1,0 +1,46 @@
+TASK: P55-T3 — Voice-Scroller Engine (Full Stack)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Map the existing `StealthEngine` STT (Speech-to-Text) events to the Svelte 
+frontend to create the voice-tracked auto-scrolling feature. This task bridges 
+the backend STT with the frontend UI shell built in T1.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
+MODIFY: wails-app/products/presenter/app.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Event Listening (Svelte):
+   - In `PresenterHUD.svelte`, subscribe to the `EventsAdapter` STT events (e.g., `StealthEngine:STT:Update`).
+   - Parse the incoming text payload to determine how many words were spoken.
+
+2. Scrolling Algorithm:
+   - Implement logic to match the spoken words against the currently displayed script.
+   - Automatically scroll the text container downwards as the user speaks.
+   - Smoothly animate the scrolling (avoid jumpy text).
+   - Ensure the current reading line stays near the "Eyeline Indicator" built in Task 1.
+
+3. Manual Override:
+   - Add keyboard event listeners.
+   - `Up/Down Arrows` or `Scroll Wheel`: Manually scroll the text.
+   - `Spacebar`: Toggle pause/resume of the auto-scrolling engine.
+   - If a manual scroll happens, temporarily pause auto-scroll to avoid fighting the user.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Speak into the microphone and verify the text scrolls automatically.
+- Verify that pressing Spacebar pauses the scrolling.
+- Verify arrow keys can manually scroll the text up and down.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- This task must be executed sequentially *after* T1 (Shell) is complete.

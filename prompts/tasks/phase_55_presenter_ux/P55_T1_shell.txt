@@ -1,0 +1,51 @@
+TASK: P55-T1 — The Presenter Shell & Typography (Svelte)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Create the primary Svelte UI layout for StealthPresenter, featuring a glassmorphic
+transparent overlay, typography controls, and an eyeline indicator. 
+This is a parallel task that only touches the Svelte frontend.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/frontend/src/products/presenter/PresenterHUD.svelte
+CREATE: (Optional) Component files in wails-app/frontend/src/products/presenter/components/
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. PresenterHUD Layout:
+   - Update `PresenterHUD.svelte`.
+   - The root container must have a transparent background to allow the OS to show windows behind it (Wails is already configured for this).
+   - Create a main reading area for the script text.
+
+2. Typography Controls:
+   - Add a fixed header or floating toolbar that appears on hover.
+   - Include an **Opacity Slider** (controls the background blur/opacity of the reading area).
+   - Include a **Font Size Slider** (dynamically scales the text in the reading area).
+   - Include a **Line Height** toggle/slider.
+
+3. Eyeline Indicator:
+   - Add a visual indicator (like a subtle horizontal gradient line, arrows on the side, or a highlighted reading zone) in the upper-middle of the screen.
+   - This guides the user to read text close to their webcam, maintaining eye contact.
+
+4. Styling Constraints:
+   - Use plain CSS (no Tailwind).
+   - Use CSS variables for easy theming (dark mode default).
+   - Ensure interactive elements are clear but unobtrusive.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Run `make dev-presenter`.
+- Verify the opacity and font size sliders work dynamically.
+- Verify the layout looks premium and clean.
+
+═══════════════════════════════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+- Only touch Svelte files in the `products/presenter` directory.
+- Do not modify Go code in this task.
