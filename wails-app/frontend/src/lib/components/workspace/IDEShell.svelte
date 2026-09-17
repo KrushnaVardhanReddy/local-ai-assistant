@@ -18,7 +18,8 @@
     onFileOpen,
     onOpenFolder,
     onTabSelect,
-    onTabClose
+    onTabClose,
+    onSelect
   } = $props<{
     workspaceTree?: FileNode[];
     openTabs?: WorkspaceTab[];
@@ -32,6 +33,7 @@
     onOpenFolder?: () => void;
     onTabSelect?: (path: string) => void;
     onTabClose?: (path: string) => void;
+    onSelect?: (node: FileNode) => void;
   }>();
 
   // State
@@ -60,8 +62,12 @@
   }
 
   function handleNodeSelect(node: FileNode) {
-    if (!node.isDirectory && onTabSelect) {
-      onTabSelect(node.path);
+    if (!node.isDirectory) {
+      if (onSelect) {
+        onSelect(node);
+      } else if (onTabSelect) {
+        onTabSelect(node.path);
+      }
     }
   }
 

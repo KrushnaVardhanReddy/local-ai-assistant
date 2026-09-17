@@ -58,11 +58,24 @@
           }
 
           // We need to map `isDir` from backend to `isDirectory` for Svelte components.
+          // We also preserve user expanded folder states across polling intervals.
+          const expandedMap = new Map<string, boolean>();
+          const recordExpanded = (nodes: FileNode[]) => {
+            for (const n of nodes) {
+              if (n.isDirectory && n.isExpanded !== undefined) {
+                expandedMap.set(n.path, n.isExpanded);
+              }
+              if (n.children) recordExpanded(n.children);
+            }
+          };
+          recordExpanded(workspaceTree);
+
           const mapTree = (nodes: any[]): FileNode[] => {
             if (!nodes) return [];
             return nodes.map((n: any) => ({
               ...n,
               isDirectory: n.isDir,
+              isExpanded: expandedMap.has(n.path) ? expandedMap.get(n.path) : (n.isExpanded ?? false),
               children: mapTree(n.children)
             }));
           };
@@ -173,8 +186,8 @@
       // @ts-ignore
       if (window.go && window.go.presenter && window.go.presenter.PresenterApp) {
         // @ts-ignore
-        await window.go.presenter.PresenterApp.PromptLoadDocument();
-        fetchState();
+        await window.go.presenter.PresenterApp.PromptOpenFile();
+        await fetchState();
       }
     } catch (err) {
       console.error('Failed to load document:', err);
@@ -313,6 +326,7 @@
     {openTabs}
     activePath={activeDocumentPath}
     totalDocs={openTabs.length}
+    onSelect={handleSelectNode}
     onTabSelect={handleTabSelect}
     onTabClose={handleTabClose}
     onFileOpen={handleOpenFile}

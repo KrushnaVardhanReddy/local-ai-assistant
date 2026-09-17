@@ -37,8 +37,7 @@
   function toggleExpand(e: MouseEvent | KeyboardEvent) {
     e.stopPropagation();
     isExpanded = !isExpanded;
-    // Optionally trigger onSelect for folders too, or just expand
-    // onSelect(node);
+    node.isExpanded = isExpanded;
   }
 
   function handleSelect(e: MouseEvent | KeyboardEvent) {
