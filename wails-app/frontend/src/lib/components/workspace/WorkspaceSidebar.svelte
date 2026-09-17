@@ -48,11 +48,13 @@
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     background: rgba(18, 18, 18, 0.95);
     border-right: none;
-    z-index: 1000;
+    flex-shrink: 0;
+    position: relative;
   }
 
   .workspace-sidebar-container.open {
     width: 240px;
+    min-width: 240px;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
   }
 
