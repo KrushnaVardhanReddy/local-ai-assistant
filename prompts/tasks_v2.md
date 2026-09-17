@@ -152,8 +152,7 @@ BATCH 2 (Sequential Integration)
 | **P57-T1** | BarnOwl Workspace Bindings | ✅ Merged | ⚡ Parallel | [PR 187](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/187) | Expose WorkspacePort methods & `GetIDEState` on `*App` in `wails-app/app.go` |
 | **P57-T2** | Interview IDE HUD Migration | ✅ Merged | ⚡ Parallel | [PR 186](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/186) | `InterviewHUD.svelte`, `LiveEarsDrawer`, `BrainDrawer`, migrate toolbar & buttons into `IDEShell` |
 | **P57-T3** | Active Context RAG Injection | ✅ Merged | Sequential | [PR 188](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/188) | Auto-inject open IDE file content into LLM context when answering interview questions |
-
-| **P57-T4** | Interview IDE Bug Fixes & Polish | 🔄 Working | Sequential | [Session 11860047633872731970](https://jules.google.com/session/11860047633872731970) | Fix SetClickthrough/AnalyzeVision signatures, SessionReport empty/NaNm fix, wire workspace tree & editor, fix Svelte 5 lints, 6+ E2E Playwright tests |
+| **P57-T4** | Interview IDE Bug Fixes & Polish | ✅ Merged | Sequential | [PR 190](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/190) | Fix SetClickthrough/AnalyzeVision signatures, SessionReport empty/NaNm fix, wire workspace tree & editor, fix Svelte 5 lints, 10/10 Playwright E2E tests (PR 189 closed) |
 
 
 
