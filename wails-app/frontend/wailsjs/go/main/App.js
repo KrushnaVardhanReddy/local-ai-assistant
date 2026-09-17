@@ -18,6 +18,10 @@ export function ClearState() {
   return window['go']['main']['App']['ClearState']();
 }
 
+export function CloseDocument(arg1) {
+  return window['go']['main']['App']['CloseDocument'](arg1);
+}
+
 export function DeleteCacheItems(arg1) {
   return window['go']['main']['App']['DeleteCacheItems'](arg1);
 }
@@ -28,6 +32,10 @@ export function DeleteToken() {
 
 export function EndSession() {
   return window['go']['main']['App']['EndSession']();
+}
+
+export function GetActiveDocument() {
+  return window['go']['main']['App']['GetActiveDocument']();
 }
 
 export function GetAudioDevices() {
@@ -42,12 +50,24 @@ export function GetCacheStats() {
   return window['go']['main']['App']['GetCacheStats']();
 }
 
+export function GetIDEState() {
+  return window['go']['main']['App']['GetIDEState']();
+}
+
 export function GetMachineId() {
   return window['go']['main']['App']['GetMachineId']();
 }
 
+export function GetOpenDocuments() {
+  return window['go']['main']['App']['GetOpenDocuments']();
+}
+
 export function GetState() {
   return window['go']['main']['App']['GetState']();
+}
+
+export function GetWorkspaceTree() {
+  return window['go']['main']['App']['GetWorkspaceTree']();
 }
 
 export function Greet(arg1) {
@@ -58,12 +78,32 @@ export function LoadToken() {
   return window['go']['main']['App']['LoadToken']();
 }
 
+export function OpenDirectory(arg1) {
+  return window['go']['main']['App']['OpenDirectory'](arg1);
+}
+
+export function OpenFile(arg1) {
+  return window['go']['main']['App']['OpenFile'](arg1);
+}
+
+export function PromptOpenDirectory() {
+  return window['go']['main']['App']['PromptOpenDirectory']();
+}
+
+export function PromptOpenFile() {
+  return window['go']['main']['App']['PromptOpenFile']();
+}
+
 export function QuitApp() {
   return window['go']['main']['App']['QuitApp']();
 }
 
 export function SaveToken(arg1) {
   return window['go']['main']['App']['SaveToken'](arg1);
+}
+
+export function SetActiveDocument(arg1) {
+  return window['go']['main']['App']['SetActiveDocument'](arg1);
 }
 
 export function SetAudioDevice(arg1, arg2) {
