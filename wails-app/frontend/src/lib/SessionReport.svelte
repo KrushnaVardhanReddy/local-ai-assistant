@@ -210,7 +210,7 @@
         <span class="material-symbols-outlined text-primary">analytics</span>
         <h2>Session Report</h2>
         {#if session}
-          <span class="session-meta">{session.turn_count} questions · {Math.round(session.session_duration_s / 60)}m</span>
+          <span class="session-meta">{session.turn_count} questions · {Math.round((session?.session_duration_s || 0) / 60)}m</span>
         {/if}
       </div>
       <div class="header-actions">
@@ -317,6 +317,15 @@
               {/if}
             </div>
           {/each}
+        </div>
+      {:else}
+        <div class="empty-state p-8 text-center text-white/50 flex flex-col items-center gap-3">
+          <span class="material-symbols-outlined text-4xl text-primary/60">pending_actions</span>
+          <p>No scorecard generated yet for this session.</p>
+          {#if session?.turn_count > 0}
+            <p class="text-xs text-white/40">Captured {session.turn_count} turn(s). Ask the assistant more questions to evaluate.</p>
+          {/if}
+          <button class="retry-btn mt-2" onclick={loadReport}>Generate Scorecard</button>
         </div>
 
         <!-- Email Draft Section -->

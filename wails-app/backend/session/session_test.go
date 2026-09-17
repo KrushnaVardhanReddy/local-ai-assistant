@@ -86,6 +86,9 @@ func TestSessionManager_ExportAndClear(t *testing.T) {
 	if _, ok := export["session_started_at"].(time.Time); !ok {
 		t.Errorf("Expected session_started_at to be time.Time")
 	}
+	if _, ok := export["session_duration_s"].(int); !ok {
+		t.Errorf("Expected session_duration_s to be int")
+	}
 	if export["turn_count"] != 1 {
 		t.Errorf("Expected turn_count 1, got %v", export["turn_count"])
 	}

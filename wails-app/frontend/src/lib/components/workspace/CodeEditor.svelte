@@ -25,7 +25,13 @@
 
   let editorContainer: HTMLDivElement;
   let view: EditorView | null = null;
-  let currentContent = content;
+  let currentContent = "";
+
+  $effect.pre(() => {
+    if (!view) {
+      currentContent = content;
+    }
+  });
 
   const customTheme = EditorView.theme({
     "&": {
@@ -107,10 +113,11 @@
   });
 
   $effect(() => {
-    if (view && content !== currentContent) {
-      currentContent = content;
+    const newContent = content;
+    if (view && newContent !== currentContent) {
+      currentContent = newContent;
       view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: content }
+        changes: { from: 0, to: view.state.doc.length, insert: newContent }
       });
     }
   });
