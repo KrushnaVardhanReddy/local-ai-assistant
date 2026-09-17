@@ -16,23 +16,14 @@
   import AuthModal from "$lib/components/AuthModal.svelte";
   import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
   import Settings from "$lib/Settings.svelte";
+  import type { FileNode } from "$lib/components/workspace/types";
 
   // Wails App methods
   let App: any;
   let statePollInterval: any;
   onMount(() => {
     App = (window as any).go?.main?.App;
-    statePollInterval = setInterval(async () => {
-      if (App?.GetIDEState) {
-        const state = await App.GetIDEState();
-        includeActiveDocContext = state.includeActiveDocContext;
-        activeDocumentName = state.activeDocumentName || '';
-        workspaceTree = state.workspaceTree || [];
-        openTabs = state.openDocuments || [];
-        activeDocumentPath = state.activeDocumentPath || '';
-        activeDocumentContent = state.activeDocumentContent || '';
-      }
-    }, 1000);
+    statePollInterval = setInterval(refreshIDEState, 1000);
   });
 
   onDestroy(() => {
@@ -48,40 +39,86 @@
 
   let includeActiveDocContext = $state(true);
   let activeDocumentName = $state('');
-  let workspaceTree = $state([]);
-  let openTabs = $state([]);
+  let workspaceTree = $state<FileNode[]>([]);
+  let openTabs = $state<any[]>([]);
   let activeDocumentPath = $state('');
   let activeDocumentContent = $state('');
+  let expandedMap = new Map<string, boolean>();
+
+  async function refreshIDEState() {
+    if (App?.GetIDEState) {
+      const state = await App.GetIDEState();
+      if (state) {
+        includeActiveDocContext = state.includeActiveDocContext;
+        activeDocumentName = state.activeDocumentName || '';
+
+        const recordExpanded = (nodes: FileNode[]) => {
+          for (const n of nodes) {
+            if (n.isDirectory && n.isExpanded !== undefined) {
+              expandedMap.set(n.path, n.isExpanded);
+            }
+            if (n.children) recordExpanded(n.children);
+          }
+        };
+        recordExpanded(workspaceTree);
+
+        const mapTree = (nodes: any[]): FileNode[] => {
+          if (!nodes) return [];
+          return nodes.map((n: any) => ({
+            ...n,
+            isDirectory: n.isDir,
+            isExpanded: expandedMap.has(n.path) ? expandedMap.get(n.path) : (n.isExpanded ?? false),
+            children: mapTree(n.children)
+          }));
+        };
+
+        workspaceTree = mapTree(state.workspaceTree);
+
+        const rawDocs = state.openDocuments || [];
+        openTabs = rawDocs.map((doc: any) => ({
+          name: doc.name,
+          path: doc.path
+        }));
+        activeDocumentPath = state.activeDocumentPath || '';
+        activeDocumentContent = state.activeDocumentContent || '';
+      }
+    }
+  }
 
   const isGated = $derived(authState.authMode === 'saas' && (!authState.user || (!authState.byok_pass_active && authState.remaining_sessions <= 0)));
 
   async function handleSelectNode(node: any) {
-    if (App?.OpenFile && node && node.path && !node.is_dir) {
+    if (App?.OpenFile && node && node.path && !node.isDirectory) {
       await App.OpenFile(node.path);
+      await refreshIDEState();
     }
   }
 
   async function handleTabSelect(path: string) {
     if (App?.SetActiveDocument) {
       await App.SetActiveDocument(path);
+      await refreshIDEState();
     }
   }
 
   async function handleTabClose(path: string) {
     if (App?.CloseDocument) {
       await App.CloseDocument(path);
+      await refreshIDEState();
     }
   }
 
   async function handleOpenFile() {
     if (App?.PromptOpenFile) {
       await App.PromptOpenFile();
+      await refreshIDEState();
     }
   }
 
   async function handleOpenFolder() {
     if (App?.PromptOpenDirectory) {
       await App.PromptOpenDirectory();
+      await refreshIDEState();
     }
   }
 
@@ -99,7 +136,9 @@
 
   // ActivityBar action handler
   function handleAction(action: string) {
-    if (action === 'ears') {
+    if (action === 'explorer') {
+      activeAction = activeAction === 'explorer' ? '' : 'explorer';
+    } else if (action === 'ears') {
       activeAction = 'ears';
       activeDrawer = 'ears';
     } else if (action === 'copilot') {
