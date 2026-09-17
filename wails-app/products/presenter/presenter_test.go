@@ -160,7 +160,6 @@ func TestPresenterAppStartup_NilContext(t *testing.T) {
 	app.Startup(nil)
 }
 
-
 func TestPresenterAppStartup_InitError(t *testing.T) {
 	sttManager := stt.NewSTTManager(nil)
 	llmAdapter := llmadapter.NewOpenAIAdapter()
@@ -212,7 +211,7 @@ type MockLLMPort struct {
 	lastQuestion string
 }
 
-func (m *MockLLMPort) StreamCompletion(
+func (m *MockLLMPort) StreamCompletion(ctx context.Context,
 	question string,
 	systemPrompt string,
 	history []driven.ChatMessage,
@@ -223,7 +222,7 @@ func (m *MockLLMPort) StreamCompletion(
 	return nil
 }
 
-func (m *MockLLMPort) StreamVision(
+func (m *MockLLMPort) StreamVision(ctx context.Context,
 	base64Image string,
 	prompt string,
 	onToken driven.StreamCallback,
@@ -237,12 +236,12 @@ func TestCopilotLLM(t *testing.T) {
 	mockBase := &MockLLMPort{}
 
 	copilot := &CopilotLLM{
-		base: mockBase,
+		base:   mockBase,
 		getApp: func() *PresenterApp { return app },
 	}
 
 	// Test non-question
-	err := copilot.StreamCompletion("just some words", "", nil, nil, nil)
+	err := copilot.StreamCompletion(context.Background(), "just some words", "", nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StreamCompletion failed: %v", err)
 	}
@@ -251,7 +250,7 @@ func TestCopilotLLM(t *testing.T) {
 	}
 
 	// Test question
-	err = copilot.StreamCompletion("how do we fix it?", "", nil, nil, nil)
+	err = copilot.StreamCompletion(context.Background(), "how do we fix it?", "", nil, nil, nil)
 	if err != nil {
 		t.Fatalf("StreamCompletion failed: %v", err)
 	}
@@ -261,7 +260,7 @@ func TestCopilotLLM(t *testing.T) {
 	}
 
 	// Test StreamVision coverage
-	err = copilot.StreamVision("b64", "prompt", nil, nil)
+	err = copilot.StreamVision(context.Background(), "b64", "prompt", nil, nil)
 	if err != nil {
 		t.Fatalf("StreamVision failed: %v", err)
 	}

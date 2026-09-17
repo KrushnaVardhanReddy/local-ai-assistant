@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,7 +41,7 @@ func TestStreamVisionCompletion(t *testing.T) {
 	var tokens []string
 	var doneCalled bool
 
-	err := StreamVisionCompletion("base64data", "Analyze this", func(token string) {
+	err := StreamVisionCompletion(context.Background(), "base64data", "Analyze this", func(token string) {
 		tokens = append(tokens, token)
 	}, func() {
 		doneCalled = true
@@ -90,7 +91,7 @@ func TestStreamVisionCompletion_EmptyPrompt(t *testing.T) {
 	os.Setenv("LLM_BASE_URL", ts.URL)
 	defer os.Unsetenv("LLM_BASE_URL")
 
-	err := StreamVisionCompletion("base64data", "", nil, nil)
+	err := StreamVisionCompletion(context.Background(), "base64data", "", nil, nil)
 
 	if err != nil {
 		t.Fatalf("StreamVisionCompletion failed: %v", err)
@@ -99,7 +100,7 @@ func TestStreamVisionCompletion_EmptyPrompt(t *testing.T) {
 
 func TestStreamVisionCompletion_NoKey(t *testing.T) {
 	os.Unsetenv("OPENAI_API_KEY")
-	err := StreamVisionCompletion("b64", "Test", nil, nil)
+	err := StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for missing API key")
 	}
@@ -111,7 +112,7 @@ func TestStreamVisionCompletion_ErrorCases(t *testing.T) {
 
 	// Bad URL
 	os.Setenv("LLM_BASE_URL", "http://inv\x00alid-url")
-	err := StreamVisionCompletion("b64", "Test", nil, nil)
+	err := StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for invalid URL")
 	}
@@ -121,7 +122,7 @@ func TestStreamVisionCompletion_ErrorCases(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	os.Setenv("LLM_BASE_URL", ts.URL)
-	err = StreamVisionCompletion("b64", "Test", nil, nil)
+	err = StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for non-200 status code")
 	}
@@ -148,7 +149,7 @@ func TestStreamVisionCompletion_JsonParseError(t *testing.T) {
 	defer os.Unsetenv("LLM_BASE_URL")
 
 	var tokens []string
-	err := StreamVisionCompletion("b64", "Test question", func(token string) {
+	err := StreamVisionCompletion(context.Background(), "b64", "Test question", func(token string) {
 		tokens = append(tokens, token)
 	}, nil)
 
@@ -170,29 +171,29 @@ func TestStreamVisionCompletion_MockErrors(t *testing.T) {
 	jsonMarshal = func(v interface{}) ([]byte, error) {
 		return nil, errors.New("mock marshal error")
 	}
-	err := StreamVisionCompletion("b64", "Test", nil, nil)
+	err := StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error from mock jsonMarshal")
 	}
 	jsonMarshal = originalJsonMarshal
 
-	// httpNewRequest error
-	originalHttpNewRequest := httpNewRequest
-	httpNewRequest = func(method, url string, body io.Reader) (*http.Request, error) {
+	// httpNewRequestWithContext error
+	originalHttpNewRequest := httpNewRequestWithContext
+	httpNewRequestWithContext = func(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
 		return nil, errors.New("mock request error")
 	}
-	err = StreamVisionCompletion("b64", "Test", nil, nil)
+	err = StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
-		t.Error("Expected error from mock httpNewRequest")
+		t.Error("Expected error from mock httpNewRequestWithContext")
 	}
-	httpNewRequest = originalHttpNewRequest
+	httpNewRequestWithContext = originalHttpNewRequest
 
 	// httpClientDo error
 	originalHttpClientDo := httpClientDo
 	httpClientDo = func(c *http.Client, req *http.Request) (*http.Response, error) {
 		return nil, errors.New("mock do error")
 	}
-	err = StreamVisionCompletion("b64", "Test", nil, nil)
+	err = StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error from mock httpClientDo")
 	}
@@ -205,7 +206,7 @@ func TestStreamVisionCompletion_MockErrors(t *testing.T) {
 			Body:       errReader{},
 		}, nil
 	}
-	err = StreamVisionCompletion("b64", "Test", nil, nil)
+	err = StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error from mock scanner read")
 	}

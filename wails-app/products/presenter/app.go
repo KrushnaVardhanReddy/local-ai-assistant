@@ -14,11 +14,11 @@ import (
 	windowadapter "wails-app/adapters/window"
 	"wails-app/backend"
 	"wails-app/backend/audio"
+	"wails-app/backend/parser"
 	"wails-app/backend/stt"
 	"wails-app/core/engine"
 	"wails-app/core/ports/driven"
 	"wails-app/core/ports/driving"
-	"wails-app/backend/parser"
 )
 
 // IsQuestion determines if a string is a question.
@@ -42,7 +42,7 @@ type CopilotLLM struct {
 	getApp func() *PresenterApp
 }
 
-func (c *CopilotLLM) StreamCompletion(
+func (c *CopilotLLM) StreamCompletion(ctx context.Context,
 	question string,
 	systemPrompt string,
 	history []driven.ChatMessage,
@@ -62,16 +62,16 @@ func (c *CopilotLLM) StreamCompletion(
 	if app != nil && app.script != "" {
 		q = "Context Script:\n" + app.script + "\n\nAudience Question:\n" + question
 	}
-	return c.base.StreamCompletion(q, systemPrompt, history, onToken, onDone)
+	return c.base.StreamCompletion(ctx, q, systemPrompt, history, onToken, onDone)
 }
 
-func (c *CopilotLLM) StreamVision(
+func (c *CopilotLLM) StreamVision(ctx context.Context,
 	base64Image string,
 	prompt string,
 	onToken driven.StreamCallback,
 	onDone func(),
 ) error {
-	return c.base.StreamVision(base64Image, prompt, onToken, onDone)
+	return c.base.StreamVision(ctx, base64Image, prompt, onToken, onDone)
 }
 
 // PresenterApp is the Wails App struct for the StealthPresenter product.

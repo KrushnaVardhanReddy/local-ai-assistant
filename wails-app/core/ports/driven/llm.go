@@ -1,5 +1,7 @@
 package driven
 
+import "context"
+
 // ChatMessage represents a single message in a conversation history.
 type ChatMessage struct {
 	Role    string // "system", "user", or "assistant"
@@ -16,6 +18,7 @@ type LLMPort interface {
 	// onToken is called for each streamed token.
 	// onDone is called once streaming is complete.
 	StreamCompletion(
+		ctx context.Context,
 		question string,
 		systemPrompt string,
 		history []ChatMessage,
@@ -25,6 +28,7 @@ type LLMPort interface {
 
 	// StreamVision sends a base64-encoded image with a prompt and streams the response.
 	StreamVision(
+		ctx context.Context,
 		base64Image string,
 		prompt string,
 		onToken StreamCallback,

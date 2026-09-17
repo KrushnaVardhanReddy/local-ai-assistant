@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"sync"
 	"wails-app/backend/session"
 	"wails-app/backend/stt"
@@ -28,20 +29,23 @@ type StealthEngine struct {
 	sessionMgr *session.SessionManager
 
 	// workspace state
-	workspaceTree   []*driving.FileNode
-	openDocuments   map[string]*driving.WorkspaceDocument
-	activeDoc       *driving.WorkspaceDocument
-	workspaceMu     sync.RWMutex
+	workspaceTree []*driving.FileNode
+	openDocuments map[string]*driving.WorkspaceDocument
+	activeDoc     *driving.WorkspaceDocument
+	workspaceMu   sync.RWMutex
 
 	includeActiveDocMu sync.RWMutex
 	includeActiveDoc   bool
 
 	// internal state (mutex-protected)
-	mu         sync.RWMutex
-	transcript string
-	response   string
-	thinking   bool
-	llmBusy    sync.Mutex
+	mu             sync.RWMutex
+	transcript     string
+	response       string
+	thinking       bool
+	llmBusy        sync.Mutex
+	inFlightMu     sync.Mutex
+	cancelInFlight context.CancelFunc
+	inFlightCtx    context.Context
 }
 
 func New(
@@ -52,11 +56,11 @@ func New(
 	events driven.EventPort,
 ) *StealthEngine {
 	return &StealthEngine{
-		cfg:           cfg,
-		sttManager:    sttMgr,
-		llm:           llm,
-		cache:         cache,
-		events:        events,
+		cfg:              cfg,
+		sttManager:       sttMgr,
+		llm:              llm,
+		cache:            cache,
+		events:           events,
 		sessionMgr:       session.NewSessionManager(),
 		openDocuments:    make(map[string]*driving.WorkspaceDocument),
 		includeActiveDoc: true,
@@ -87,6 +91,12 @@ func (e *StealthEngine) GetState() driving.PipelineState {
 
 // ClearState resets the pipeline state.
 func (e *StealthEngine) ClearState() {
+	e.inFlightMu.Lock()
+	if e.cancelInFlight != nil {
+		e.cancelInFlight()
+	}
+	e.inFlightMu.Unlock()
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.transcript = ""

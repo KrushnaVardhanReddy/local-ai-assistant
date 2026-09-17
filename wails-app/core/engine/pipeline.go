@@ -1,9 +1,11 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 	"wails-app/backend"
 	"wails-app/backend/filter"
 	"wails-app/core/ports/driven"
@@ -64,9 +66,22 @@ func (e *StealthEngine) handleTranscript(raw string) {
 		e.events.Emit("on_transcript", map[string]interface{}{"text": cleanTranscript})
 	}
 
-	if !e.llmBusy.TryLock() {
-		log.Printf("[BUSY] Discarded (LLM streaming): %q", cleanTranscript)
-		return
+	e.inFlightMu.Lock()
+	if e.cancelInFlight != nil {
+		log.Printf("[PREEMPT] Interrupting active LLM stream for new question: %q", cleanTranscript)
+		e.cancelInFlight()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	e.cancelInFlight = cancel
+	e.inFlightCtx = ctx
+	e.inFlightMu.Unlock()
+
+	// Always emit suggestion chip for accepted transcripts
+	if e.events != nil {
+		e.events.Emit("on_chip", map[string]interface{}{
+			"id":   fmt.Sprintf("%d", time.Now().UnixNano()),
+			"text": cleanTranscript,
+		})
 	}
 
 	if e.cache != nil {
@@ -81,7 +96,13 @@ func (e *StealthEngine) handleTranscript(raw string) {
 				e.events.Emit("on_response_start", nil)
 				e.events.Emit("on_response_end", nil)
 			}
-			e.llmBusy.Unlock()
+			e.inFlightMu.Lock()
+			if e.inFlightCtx == ctx {
+				e.cancelInFlight = nil
+				e.inFlightCtx = nil
+			}
+			e.inFlightMu.Unlock()
+			cancel()
 			return
 		}
 		log.Printf("[Cache] Miss: %q", cleanTranscript)
@@ -118,8 +139,25 @@ func (e *StealthEngine) handleTranscript(raw string) {
 		}
 	}
 
-	go func(q string) {
+	go func(q string, streamCtx context.Context, streamCancel context.CancelFunc) {
+		e.llmBusy.Lock()
 		defer e.llmBusy.Unlock()
+
+		defer func() {
+			e.inFlightMu.Lock()
+			if e.inFlightCtx == streamCtx {
+				e.cancelInFlight = nil
+				e.inFlightCtx = nil
+			}
+			e.inFlightMu.Unlock()
+			streamCancel()
+		}()
+
+		// If cancelled before lock acquired, abort early
+		if streamCtx.Err() != nil {
+			return
+		}
+
 		var answerBuilder strings.Builder
 
 		var history []driven.ChatMessage
@@ -136,7 +174,7 @@ func (e *StealthEngine) handleTranscript(raw string) {
 			sysPrompt += activeDocBlock
 		}
 
-		err := e.llm.StreamCompletion(q, sysPrompt, history, func(token string) {
+		err := e.llm.StreamCompletion(streamCtx, q, sysPrompt, history, func(token string) {
 			answerBuilder.WriteString(token)
 			e.mu.Lock()
 			e.response = answerBuilder.String()
@@ -162,6 +200,12 @@ func (e *StealthEngine) handleTranscript(raw string) {
 			}
 		})
 
+		// If cancelled during streaming, log and abort without saving to cache
+		if streamCtx.Err() != nil {
+			log.Printf("[PREEMPT] LLM streaming aborted for: %q", q)
+			return
+		}
+
 		if err != nil {
 			log.Printf("LLM streaming failed: %v", err)
 		} else {
@@ -175,5 +219,5 @@ func (e *StealthEngine) handleTranscript(raw string) {
 			}
 			log.Printf("[LLM] Stream complete. Stored in cache.")
 		}
-	}(cleanTranscript)
+	}(cleanTranscript, ctx, cancel)
 }
