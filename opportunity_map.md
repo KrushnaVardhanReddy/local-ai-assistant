@@ -141,9 +141,9 @@ Alongside the text HUD, a secondary embedded browser panel that is fully exclude
 - Track opponent's argument flow and find their prepared responses
 - Get AI-suggested rebuttals in real-time
 
-**Competition:** Almost none. Verbatim (an Emacs-based flow tool) is the only real option — and it's ancient.
+**Competition:** Almost none. [Verbatim Paperless Debate](https://paperlessdebate.com) (a legacy VBA macro suite for Microsoft Word, [GitHub](https://github.com/paperlessdebate/verbatim)) is the standard tool used across the circuit for the last 15 years, combined with Excel for manual "flowing". It has zero AI, zero voice tracking, and requires paid desktop Microsoft Word.
 
-**Your wedge:** The stealth window isn't needed here (it's in-person), but the **local AI + hotkey + fast RAG search** on their evidence document folder is the core value.
+**Your wedge:** The stealth window isn't needed here (tournaments are in-person), but the **local offline AI + fast speech-to-text auto-flowing + vector RAG search** across their evidence cards is a 10x leap over Word macros. Because tournaments ban internet, our 100% offline local models are tournament-legal!
 
 **Who pays:** Debate coaches + speech and debate teams at high schools and colleges. Parents pay for private debate coaching at $100–$200/hour.
 
