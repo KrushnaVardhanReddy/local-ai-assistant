@@ -58,7 +58,9 @@ export function SetActiveDocument(arg1:string):Promise<void>;
 
 export function SetAudioDevice(arg1:number,arg2:boolean):Promise<void>;
 
-export function SetClickthrough(arg1:Record<string, any>):Promise<void>;
+export function SetClickthrough(arg1:boolean):Promise<void>;
+
+export function SetIncludeActiveDocContext(arg1:boolean):Promise<void>;
 
 export function StartBackend():Promise<void>;
 

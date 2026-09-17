@@ -114,6 +114,10 @@ export function SetClickthrough(arg1) {
   return window['go']['main']['App']['SetClickthrough'](arg1);
 }
 
+export function SetIncludeActiveDocContext(arg1) {
+  return window['go']['main']['App']['SetIncludeActiveDocContext'](arg1);
+}
+
 export function StartBackend() {
   return window['go']['main']['App']['StartBackend']();
 }
