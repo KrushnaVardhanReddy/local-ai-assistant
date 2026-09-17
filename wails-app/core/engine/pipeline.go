@@ -99,6 +99,25 @@ func (e *StealthEngine) handleTranscript(raw string) {
 		e.sessionMgr.StartTurn(cleanTranscript)
 	}
 
+	activeDocBlock := ""
+	if e.GetIncludeActiveDocContext() {
+		e.workspaceMu.RLock()
+		doc := e.activeDoc
+		var docName, docContent string
+		if doc != nil {
+			docName = doc.Name
+			docContent = doc.Content
+		}
+		e.workspaceMu.RUnlock()
+
+		if docContent != "" {
+			if len(docContent) > 10000 {
+				docContent = docContent[:10000]
+			}
+			activeDocBlock = fmt.Sprintf("\n\n[ACTIVE WORKSPACE DOCUMENT: %s]\n%s\n[/ACTIVE WORKSPACE DOCUMENT]", docName, docContent)
+		}
+	}
+
 	go func(q string) {
 		defer e.llmBusy.Unlock()
 		var answerBuilder strings.Builder
@@ -112,7 +131,12 @@ func (e *StealthEngine) handleTranscript(raw string) {
 			}
 		}
 
-		err := e.llm.StreamCompletion(q, e.cfg.SystemPrompt, history, func(token string) {
+		sysPrompt := e.cfg.SystemPrompt
+		if activeDocBlock != "" {
+			sysPrompt += activeDocBlock
+		}
+
+		err := e.llm.StreamCompletion(q, sysPrompt, history, func(token string) {
 			answerBuilder.WriteString(token)
 			e.mu.Lock()
 			e.response = answerBuilder.String()

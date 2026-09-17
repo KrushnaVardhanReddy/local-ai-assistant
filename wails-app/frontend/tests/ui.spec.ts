@@ -13,6 +13,17 @@ test.describe('App UI Tests', () => {
         WindowShow: () => {},
         WindowSetTitle: () => {},
       } as any;
+      window.go = {
+        main: {
+          App: {
+            GetIDEState: async () => ({
+              includeActiveDocContext: true,
+              activeDocumentName: 'mock_notes.md',
+            }),
+            SetIncludeActiveDocContext: async () => {},
+          },
+        },
+      } as any;
     });
 
     await page.goto('/');
@@ -23,6 +34,12 @@ test.describe('App UI Tests', () => {
     // Verify body is visible
     const body = page.locator('body');
     await expect(body).toBeVisible();
+  });
+
+  test('Active document context chip is visible when document is active', async ({ page }) => {
+    // Wait for the context chip to appear based on our mock data
+    const contextChip = page.locator('text=📄 Context: mock_notes.md');
+    await expect(contextChip).toBeVisible();
   });
 
   test('Settings modal opens and closes', async ({ page }) => {

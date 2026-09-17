@@ -19,8 +19,20 @@
 
   // Wails App methods
   let App: any;
+  let statePollInterval: any;
   onMount(() => {
     App = (window as any).go?.main?.App;
+    statePollInterval = setInterval(async () => {
+      if (App?.GetIDEState) {
+        const state = await App.GetIDEState();
+        includeActiveDocContext = state.includeActiveDocContext;
+        activeDocumentName = state.activeDocumentName || '';
+      }
+    }, 1000);
+  });
+
+  onDestroy(() => {
+    if (statePollInterval) clearInterval(statePollInterval);
   });
 
   // State
@@ -29,6 +41,9 @@
   let showSessionReport = $state(false);
   let isAuthModalOpen = $state(false);
   let activeAction = $state('copilot');
+
+  let includeActiveDocContext = $state(true);
+  let activeDocumentName = $state('');
 
   const isGated = $derived(authState.authMode === 'saas' && (!authState.user || (!authState.byok_pass_active && authState.remaining_sessions <= 0)));
 
@@ -122,6 +137,11 @@
       {/if}
       {#if wsState.isPTTHeld}
         <div class="badge ptt-badge text-primary animate-pulse border-primary"><span class="material-symbols-outlined text-[12px] mr-1">mic</span>PTT</div>
+      {/if}
+      {#if activeDocumentName && includeActiveDocContext}
+        <div class="badge border-primary/30 text-primary/80" style="background: rgba(74, 222, 128, 0.05); text-transform: none;">
+          📄 Context: {activeDocumentName}
+        </div>
       {/if}
     </div>
 
