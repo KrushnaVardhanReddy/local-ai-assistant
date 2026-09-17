@@ -1,13 +1,16 @@
-# 🎯 StealthPresenter — The Ultimate B2B Presentation HUD
+# 🦉 BarnOwl AI — Invisible Interview Copilot & Stealth IDE Workstation
+*(Formerly StealthPresenter — teleprompter mode paused; BarnOwl AI in active development)*
 
 ![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat-square&logo=go&logoColor=white)
 ![Svelte](https://img.shields.io/badge/Svelte-5-FF3E00?style=flat-square&logo=svelte&logoColor=white)
 ![Wails](https://img.shields.io/badge/Wails-2.15-ED2737?style=flat-square&logo=wails&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
-**StealthPresenter** is an invisible, AI-powered teleprompter and co-pilot designed for high-stakes B2B sales pitches, webinars, and founder fundraising.
+**BarnOwl AI** is an undetectable, live AI interview co-pilot and developer workstation designed for high-stakes technical interviews, system design rounds, and live coding challenges.
 
-Unlike generic teleprompter apps, StealthPresenter operates as a completely invisible HUD (Heads-Up Display) that tracks your voice, manages your presentation notes, and acts as an instant "Panic Button" for live Q&A—all running 100% locally on your machine for maximum privacy.
+Running 100% locally or with fast cloud inference (BYOK/Groq/Ollama), BarnOwl AI listens to interviewer speech in real-time, displays question transcript chips, automatically searches active workspace notes & resumes, and generates succinct bullet answers, code solutions, and STAR-method responses directly on an invisible, screen-share-immune HUD.
+
+> ⏸️ **StealthPresenter (Teleprompter Mode):** Paused indefinitely. ShareSpeak and other generic teleprompters have commoditized script-scrolling with low-cost $14.99 lifetime licenses. The underlying auto-scrolling engine and presentation HUD remain preserved in the repository (`make dev-presenter`), but product focus has shifted to the high-value, live-intelligence AI Copilot.
 
 ---
 

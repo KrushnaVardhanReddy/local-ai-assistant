@@ -22,11 +22,9 @@ Every domain below exploits **at least one** of these as the primary wedge.
 
 > Sorted by **planned build order** — not by revenue. Revenue is only one input; distribution speed, trust barriers, and daily active use all matter equally for a V1.
 
-| Wave | Build Order | Product Name | Domain | Competition | Moat | Time to V1 | Revenue Potential | Why This Wave |
-|------|-------------|--------------|--------|-------------|------|------------|-------------------|---------------|
-| 🟢 **Wave 1** | **1A 🎯 PRIMARY** | **StealthPresenter** | Creators / Presenters | 🟡 Medium | 🟢 Strong | 4–6 weeks | $$$ | Clean positioning, viral demo, individual buyer, fastest revenue signal |
-| 🟢 **Wave 1** | **1B ⏸️ Paused** | ~~BarnOwl AI (Interview)~~ | Job Seekers | 🔴 Crowded (Final Round, Sensei) | 🟡 Moderate | Already built | $$ | Ethical gray zone + crowded. Engine kept, launch paused indefinitely. |
-| 🟢 **Wave 1** | **2nd** | **MentorGlass** | Coaching / Therapy | 🟢 **Low** | 🟢 Strong | 4–5 weeks | $$$ | 1 prompt swap from StealthPresenter, zero competition, word-of-mouth |
+| 🟢 **Wave 1** | **1A 🎯 PRIMARY** | **BarnOwl AI (Interview Copilot)** | Job Seekers / Tech Candidates | 🔴 Crowded | 🟢 Strong (100% Offline + IDE Workspace) | In Progress | $$$$ | **Active Primary Focus:** Live question interception, real-time code generation, full IDE notes/cheat-sheet workspace, stealth overlay. |
+| 🟢 **Wave 1** | **1B ⏸️ Paused** | ~~StealthPresenter~~ | Creators / Presenters | 🔴 Crowded / Low-cost | 🟡 Moderate | Paused | $ | **Paused indefinitely:** ShareSpeak already offers $14.99 one-time lifetime license; teleprompter market is a low-margin commodity race without high-value live AI copilot. MVP preserved in repo. |
+| 🟢 **Wave 1** | **2nd** | **MentorGlass** | Coaching / Consulting | 🟢 **Low** | 🟢 Strong | 4–5 weeks | $$$ | Next up: 1 prompt & UI skin swap from BarnOwl IDE, zero competition, B2B monthly SaaS model ($29–$39/mo). |
 | 🟡 **Wave 2** | **3rd** | **DebateShield** | Students / Academic Debate | 🟢 **Very Low** | 🟡 Moderate | 3–4 weeks | $$ | No stealth needed, fast build, community-driven distribution |
 | 🟡 **Wave 2** | **4th** | **GovBrief** | Govt / PR Spokespeople | 🟢 **Very Low** | 🟢 Very Strong | 4–6 weeks | $$$$ | Zero software competitors, single enterprise deal = huge revenue |
 | 🔵 **Wave 3** | **5th** | **CounselDesk** | Legal / Attorneys | 🟡 Medium | 🟢 Strong | 6–8 weeks | $$$$ | High pay, but trust barrier — needs proven track record + testimonials first |

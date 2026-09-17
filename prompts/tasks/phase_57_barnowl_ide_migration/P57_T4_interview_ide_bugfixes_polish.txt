@@ -3,7 +3,7 @@ TASK: P57-T4 — Interview IDE Bug Fixes, Wiring & Polish
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
-Fix runtime errors, argument mismatches, missing workspace wiring, SessionReport modal lockup,
+Fix runtime errors, argument mismatches, missing workspace wiring, SessionReport empty/stuck state,
 and Svelte compiler warnings discovered during live testing of BarnOwl AI in `InterviewHUD.svelte`
 and `wails-app/app.go`.
 
@@ -11,24 +11,52 @@ and `wails-app/app.go`.
 FILES TO MODIFY
 ═══════════════════════════════════════════════════════════════
 MODIFY: wails-app/app.go
+MODIFY: wails-app/backend/session/session.go
 MODIFY: wails-app/frontend/src/products/interview/InterviewHUD.svelte
 MODIFY: wails-app/frontend/src/lib/SessionReport.svelte
 MODIFY: wails-app/frontend/src/App.svelte
 MODIFY: wails-app/frontend/src/lib/components/workspace/CodeEditor.svelte
+MODIFY: wails-app/frontend/tests/ui.spec.ts
 
 ═══════════════════════════════════════════════════════════════
 DETAILED SPECIFICATION & FIXES
 ═══════════════════════════════════════════════════════════════
 
-1. Fix `SessionReport` Modal Lockup in `InterviewHUD.svelte` & `SessionReport.svelte`:
-   - Issue: When clicking "Report", the modal got stuck with double overlays and missing `onClose` handler:
-     - In `SessionReport.svelte`: `let { onClose }: { onClose: () => void } = $props();`
-     - In `InterviewHUD.svelte`: `<SessionReport />` was called without passing `onClose={() => showSessionReport = false}`!
-     - `SessionReport.svelte` ALSO had its own `.report-overlay` fixed overlay, while `InterviewHUD.svelte` wrapped it in another `fixed inset-0` modal overlay, causing double nesting and click-blocking!
-   - Fix:
-     - In `InterviewHUD.svelte`, pass `<SessionReport onClose={() => showSessionReport = false} />`.
-     - Remove the redundant outer wrapper div in `InterviewHUD.svelte` so `SessionReport` manages its own backdrop and close button cleanly.
-     - In `app.go`: ensure `EndSession()` returns gracefully even if there are zero questions recorded (already returns `scorecard: nil`), and doesn't hang.
+1. Fix `SessionReport` Empty/Stuck Box & NaN Duration:
+   - Root Cause 1: In `InterviewHUD.svelte`:
+     - `<SessionReport />` was invoked without `onClose={() => showSessionReport = false}`!
+     - `SessionReport.svelte` ALSO has its own fixed backdrop `.report-overlay`, while
+       `InterviewHUD.svelte` wrapped it in ANOTHER outer `fixed inset-0` modal wrapper,
+       causing double nesting and trapping pointer events!
+     - In `InterviewHUD.svelte`, remove the outer wrapper and pass `onClose`:
+       ```svelte
+       {#if showSessionReport}
+         <SessionReport onClose={() => showSessionReport = false} />
+       {/if}
+       ```
+   - Root Cause 2 (Empty body & NaNm):
+     - Notice the screenshot: `Session Report 2 questions · NaNm`.
+     - In `session.go`: `Export()` was missing `"session_duration_s"`. Add:
+       `"session_duration_s": int(time.Since(sm.sessionStartedAt).Seconds())`
+     - In `SessionReport.svelte`: When `scorecard` is nil or still generating (or if `session.turns`
+       has items but `scorecard` is null), `report-body` only had:
+       `{#if isLoading} ... {:else if error} ... {:else if scorecard} ... {/if}`
+       If `isLoading` becomes false and `scorecard` is null, the body is COMPLETELY BLANK!
+       Add an `{:else}` empty state in `SessionReport.svelte`:
+       ```svelte
+       {:else}
+         <div class="empty-state p-8 text-center text-white/50 flex flex-col items-center gap-3">
+           <span class="material-symbols-outlined text-4xl text-primary/60">pending_actions</span>
+           <p>No scorecard generated yet for this session.</p>
+           {#if session?.turn_count > 0}
+             <p class="text-xs text-white/40">Captured {session.turn_count} turn(s). Ask the assistant more questions to evaluate.</p>
+           {/if}
+           <button class="retry-btn mt-2" onclick={loadReport}>Generate Scorecard</button>
+         </div>
+       {/if}
+       ```
+     - In `SessionReport.svelte` header: Guard against undefined `session_duration_s`:
+       `{Math.round((session.session_duration_s || 0) / 60)}m` to prevent `NaNm`.
 
 2. Fix `SetClickthrough` runtime error in `wails-app/app.go`:
    - Runtime error logged:
@@ -74,7 +102,7 @@ DETAILED SPECIFICATION & FIXES
      - `SetClickthrough: async (enable) => true`
      - `CaptureScreen: async () => "data:image/png;base64,mock..."`
      - `AnalyzeVision: async (b64, prompt) => true`
-     - `EndSession: async () => ({ session: { turn_count: 2 }, scorecard: null })`
+     - `EndSession: async () => ({ session: { turn_count: 2, session_duration_s: 120 }, scorecard: null })`
      - `GetIDEState: async () => ({ workspaceTree: [], openTabs: [], activeDocumentPath: '', activeDocumentContent: '' })`
    - Test 1: "Stealth mode toggle": Click "Stealth" button -> assert `SetClickthrough` called with valid argument, icon updates.
    - Test 2: "Vision snip button": Click "Snip" -> assert `CaptureScreen` and `AnalyzeVision` called with valid prompt.
@@ -83,11 +111,9 @@ DETAILED SPECIFICATION & FIXES
    - Test 5: "Workspace explorer and tabs": Verify opening explorer, tabs render, and editor is displayed.
    - Test 6: "Copilot and Live Ears drawer toggling": Switch between Ears drawer and Brain drawer from ActivityBar.
 
-
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
 - `go test ./...` in `wails-app` must pass with zero errors.
 - `npm run check` in `wails-app/frontend` must report 0 errors and 0 warnings.
 - `npx playwright test` must run all 6+ E2E tests and pass with 100% success.
-
