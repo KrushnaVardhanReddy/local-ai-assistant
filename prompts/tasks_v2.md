@@ -156,7 +156,7 @@ BATCH 2 (Sequential Integration)
 | **P57-T5A** | Backend Engine Extensions & Tree Normalization | ✅ Merged | ⚡ Parallel | [PR 192](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/192) | Broaden allowedExtensions in Go engine, fix isDir vs isDirectory in FileTreeNode |
 | **P57-T5B** | Brain & Live Ears Drawers Action Wiring | ✅ Merged | ⚡ Parallel | [PR 191](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/191) | STAR method priming, Catch Me Up, Clear Cache, suggestion chips & chat submit |
 | **P57-T5C** | Interview HUD ActivityBar & Web E2E Suite | ✅ Merged | Sequential | [PR 193](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/193) | ActivityBar Folder toggle, immediate refresh, header toolbar & full Playwright suite |
-| **P57-T6** | LLM Stream Preemption & Interruption Pipeline | 🔄 In Progress | Sequential | [Session 6726218435641004367](https://jules.google.com/session/6726218435641004367) | Context-aware HTTP stream cancellation, preemptive interruption handling, on_chip suggestion fallback |
+| **P57-T6** | LLM Stream Preemption & Interruption Pipeline | 🔄 In Progress | Sequential | [Session 6726218435641004367](https://jules.google.com/session/6726218435641004367) / [Session 3673384098347243727](https://jules.google.com/session/3673384098347243727) | Context-aware HTTP stream cancellation, preemptive interruption handling, on_chip suggestion fallback |
 
 
 
