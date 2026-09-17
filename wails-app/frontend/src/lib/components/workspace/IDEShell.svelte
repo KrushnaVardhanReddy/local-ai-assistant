@@ -43,11 +43,12 @@
   // State
   let internalExplorerOpen = $state(false);
   let isBottomPanelOpen = $state(true);
-  let isCopilotOpen = $state(false);
+  let internalIsCopilotOpen = $state(false);
   let internalActiveAction = $state('');
 
   let currentActiveAction = $derived(onAction ? activeAction : internalActiveAction);
   let isExplorerOpen = $derived(currentActiveAction === 'explorer' || (currentActiveAction === '' && internalExplorerOpen));
+  let isCopilotOpen = $derived(onAction ? (activeAction === 'copilot' || activeAction === 'ears') : internalIsCopilotOpen);
 
   function handleAction(action: string) {
     if (onAction) {
@@ -58,9 +59,9 @@
     if (action === 'explorer') {
       internalExplorerOpen = !isExplorerOpen;
       internalActiveAction = internalExplorerOpen ? 'explorer' : '';
-    } else if (action === 'copilot') {
-      isCopilotOpen = !isCopilotOpen;
-      internalActiveAction = isCopilotOpen ? 'copilot' : '';
+    } else if (action === 'copilot' || action === 'ears') {
+      internalIsCopilotOpen = !internalIsCopilotOpen;
+      internalActiveAction = internalIsCopilotOpen ? action : '';
     } else {
       internalActiveAction = internalActiveAction === action ? '' : action;
     }

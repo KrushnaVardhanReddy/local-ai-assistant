@@ -56,6 +56,7 @@
     border-right: none;
     flex-shrink: 0;
     position: relative;
+    z-index: 10;
   }
 
   .workspace-sidebar-container.open {

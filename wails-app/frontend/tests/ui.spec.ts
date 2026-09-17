@@ -306,4 +306,27 @@ test.describe('App UI Tests', () => {
     });
     expect(wasChatSent).toBe(true);
   });
+
+  test('Test 13: ActivityBar "Keys" toggles HotkeysPanel', async ({ page }) => {
+    const keysBtn = page.locator('button[data-testid="activity-bar-keys"]');
+    await expect(keysBtn).toBeVisible();
+
+    await keysBtn.click();
+    const hotkeysHeading = page.locator('text=Hotkeys');
+    await expect(hotkeysHeading.first()).toBeVisible();
+
+    await keysBtn.click();
+  });
+
+  test('Test 14: ActivityBar "Settings" toggles settings panel', async ({ page }) => {
+    const settingsBtn = page.locator('button[data-testid="activity-bar-settings"]');
+    await expect(settingsBtn).toBeVisible();
+
+    await settingsBtn.click();
+    const settingsHeading = page.locator('.settings-panel h2:has-text("Settings")');
+    await expect(settingsHeading).toBeVisible();
+
+    // Close settings
+    await settingsBtn.click();
+  });
 });

@@ -139,11 +139,19 @@
     if (action === 'explorer') {
       activeAction = activeAction === 'explorer' ? '' : 'explorer';
     } else if (action === 'ears') {
-      activeAction = 'ears';
-      activeDrawer = 'ears';
+      if (activeAction === 'ears') {
+        activeAction = '';
+      } else {
+        activeAction = 'ears';
+        activeDrawer = 'ears';
+      }
     } else if (action === 'copilot') {
-      activeAction = 'copilot';
-      activeDrawer = 'copilot';
+      if (activeAction === 'copilot') {
+        activeAction = '';
+      } else {
+        activeAction = 'copilot';
+        activeDrawer = 'copilot';
+      }
     } else if (action === 'mock') {
       handleMockModeToggle();
     } else if (action === 'keys') {
@@ -263,7 +271,7 @@
            language="markdown"
            readonly={false}
          />
-         {#if !activeAction || activeAction === 'explorer'}
+         {#if (!activeAction || activeAction === 'explorer') && !activeDocumentContent}
            <!-- Empty state overlay to suggest opening files -->
            <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
              <div class="text-center opacity-30">
