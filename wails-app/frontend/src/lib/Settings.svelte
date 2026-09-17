@@ -24,6 +24,7 @@
   let interviewLanguage = $state(localStorage.getItem("interview_language") || "auto");
   let currentLLMProvider = $state("auto");
   let localSttEngine = $state(localStorage.getItem("local_stt_engine") || "faster-whisper");
+  let includeActiveDocContext = $state(true);
 
   // Audio state
   let audioDevices = $state<Array<{id: number, name: string, is_loopback_capable: boolean}>>([]);
@@ -122,6 +123,15 @@
       }
     } catch (e) {
       console.error("Failed to load language preference or STT engine", e);
+    }
+
+    try {
+      if ((window as any).go?.main?.App?.GetIDEState) {
+        const state = await (window as any).go.main.App.GetIDEState();
+        includeActiveDocContext = state.includeActiveDocContext;
+      }
+    } catch (e) {
+      console.error("Failed to get initial doc context state", e);
     }
   });
 
@@ -229,6 +239,14 @@
       await (window as any).go.main.App.ToggleStealth({ enable: !isDevModeChecked });
     } catch (err) {
       console.error("Failed to toggle stealth", err);
+    }
+
+    try {
+      if ((window as any).go?.main?.App?.SetIncludeActiveDocContext) {
+        await (window as any).go.main.App.SetIncludeActiveDocContext(includeActiveDocContext);
+      }
+    } catch (e) {
+      console.error("Failed to set doc context state", e);
     }
 
     try {
@@ -361,6 +379,13 @@
       <label>
         <input type="checkbox" bind:checked={isDevModeChecked} data-testid="dev-mode-toggle" />
         Dev Mode: Disable Stealth (E2E Visibility)
+      </label>
+    </div>
+
+    <div class="checkbox-group">
+      <label>
+        <input type="checkbox" bind:checked={includeActiveDocContext} />
+        Include Active File as Context
       </label>
     </div>
 

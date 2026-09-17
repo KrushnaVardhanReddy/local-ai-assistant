@@ -47,11 +47,13 @@ func (m *MockCache) Count() int {
 
 // MockLLM implements driven.LLMPort
 type MockLLM struct {
-	StreamCalled bool
+	StreamCalled     bool
+	LastSystemPrompt string
 }
 
 func (m *MockLLM) StreamCompletion(q string, sp string, hist []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
 	m.StreamCalled = true
+	m.LastSystemPrompt = sp
 	onToken("mock ")
 	onToken("answer")
 	onDone()
@@ -357,4 +359,43 @@ func TestHandleTranscript_FilterDrop(t *testing.T) {
 func TestStealthEngineAddContext(t *testing.T) {
 	eng := engine.New(engine.Config{SystemPrompt: "Initial prompt"}, nil, nil, nil, nil)
 	eng.AddContext("New context text")
+}
+
+func TestActiveDocumentContextInjection(t *testing.T) {
+	llm := &MockLLM{}
+	eng := engine.New(engine.Config{SystemPrompt: "SystemPromptBase"}, nil, llm, nil, nil)
+
+	// Open a mock document
+	docPath := "test_doc.md"
+	eng.OpenDirectory(".") // Mock workspace init
+
+	// Create a dummy document via parser is hard without actual file, so we manipulate internal map via an exposed/mock method if possible.
+	// We can write a temp file to open.
+	os.WriteFile(docPath, []byte("Hello World Doc"), 0644)
+	defer os.Remove(docPath)
+
+	_, err := eng.OpenFile(docPath)
+	if err != nil {
+		t.Fatalf("Failed to open temp file: %v", err)
+	}
+
+	// 1. With IncludeActiveDocContext = true (default)
+	eng.AskQuestion("test question")
+	time.Sleep(50 * time.Millisecond)
+
+	if !strings.Contains(llm.LastSystemPrompt, "[ACTIVE WORKSPACE DOCUMENT:") {
+		t.Errorf("Expected SystemPrompt to contain active document block, got: %s", llm.LastSystemPrompt)
+	}
+	if !strings.Contains(llm.LastSystemPrompt, "Hello World Doc") {
+		t.Errorf("Expected SystemPrompt to contain doc content, got: %s", llm.LastSystemPrompt)
+	}
+
+	// 2. With IncludeActiveDocContext = false
+	eng.SetIncludeActiveDocContext(false)
+	eng.AskQuestion("test question 2")
+	time.Sleep(50 * time.Millisecond)
+
+	if strings.Contains(llm.LastSystemPrompt, "[ACTIVE WORKSPACE DOCUMENT:") {
+		t.Errorf("Expected SystemPrompt to NOT contain active document block when disabled, got: %s", llm.LastSystemPrompt)
+	}
 }

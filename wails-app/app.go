@@ -519,14 +519,21 @@ func (a *App) GetActiveDocument() *driving.WorkspaceDocument {
 	return a.engine.GetActiveDocument()
 }
 
+// SetIncludeActiveDocContext sets whether the active document is included as LLM context
+func (a *App) SetIncludeActiveDocContext(enabled bool) {
+	a.engine.SetIncludeActiveDocContext(enabled)
+}
+
 // GetIDEState returns the current IDE state for the frontend
 func (a *App) GetIDEState() map[string]interface{} {
 	activeDoc := a.engine.GetActiveDocument()
 	activeDocPath := ""
 	activeDocContent := ""
+	activeDocName := ""
 	if activeDoc != nil {
 		activeDocPath = activeDoc.Path
 		activeDocContent = activeDoc.Content
+		activeDocName = activeDoc.Name
 	}
 
 	isListening := a.audioCapture != nil
@@ -538,12 +545,14 @@ func (a *App) GetIDEState() map[string]interface{} {
 	a.cmdMutex.Unlock()
 
 	return map[string]interface{}{
-		"workspaceTree":         a.engine.GetWorkspaceTree(),
-		"openDocuments":         a.engine.GetOpenDocuments(),
-		"activeDocumentPath":    activeDocPath,
-		"activeDocumentContent": activeDocContent,
-		"isListening":           isListening,
-		"isClickthrough":        clickthrough,
-		"cachedPairs":           s.CachedPairs,
+		"workspaceTree":           a.engine.GetWorkspaceTree(),
+		"openDocuments":           a.engine.GetOpenDocuments(),
+		"activeDocumentPath":      activeDocPath,
+		"activeDocumentContent":   activeDocContent,
+		"activeDocumentName":      activeDocName,
+		"isListening":             isListening,
+		"isClickthrough":          clickthrough,
+		"cachedPairs":             s.CachedPairs,
+		"includeActiveDocContext": a.engine.GetIncludeActiveDocContext(),
 	}
 }

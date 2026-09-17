@@ -33,6 +33,9 @@ type StealthEngine struct {
 	activeDoc       *driving.WorkspaceDocument
 	workspaceMu     sync.RWMutex
 
+	includeActiveDocMu sync.RWMutex
+	includeActiveDoc   bool
+
 	// internal state (mutex-protected)
 	mu         sync.RWMutex
 	transcript string
@@ -54,8 +57,9 @@ func New(
 		llm:           llm,
 		cache:         cache,
 		events:        events,
-		sessionMgr:    session.NewSessionManager(),
-		openDocuments: make(map[string]*driving.WorkspaceDocument),
+		sessionMgr:       session.NewSessionManager(),
+		openDocuments:    make(map[string]*driving.WorkspaceDocument),
+		includeActiveDoc: true,
 	}
 }
 
@@ -114,6 +118,18 @@ func (e *StealthEngine) UpdateState(transcript, response string, thinking bool) 
 	e.transcript = transcript
 	e.response = response
 	e.thinking = thinking
+}
+
+func (e *StealthEngine) SetIncludeActiveDocContext(enabled bool) {
+	e.includeActiveDocMu.Lock()
+	defer e.includeActiveDocMu.Unlock()
+	e.includeActiveDoc = enabled
+}
+
+func (e *StealthEngine) GetIncludeActiveDocContext() bool {
+	e.includeActiveDocMu.RLock()
+	defer e.includeActiveDocMu.RUnlock()
+	return e.includeActiveDoc
 }
 
 // AddContext adds parsed document text or other context to the engine's system prompt or session.
