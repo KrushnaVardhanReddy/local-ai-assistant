@@ -155,7 +155,7 @@ BATCH 2 (Sequential Integration)
 | **P57-T4** | Interview IDE Bug Fixes & Polish | ✅ Merged | Sequential | [PR 190](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/190) | Fix SetClickthrough/AnalyzeVision signatures, SessionReport empty/NaNm fix, wire workspace tree & editor, fix Svelte 5 lints, 10/10 Playwright E2E tests (PR 189 closed) |
 | **P57-T5A** | Backend Engine Extensions & Tree Normalization | ✅ Merged | ⚡ Parallel | [PR 192](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/192) | Broaden allowedExtensions in Go engine, fix isDir vs isDirectory in FileTreeNode |
 | **P57-T5B** | Brain & Live Ears Drawers Action Wiring | ✅ Merged | ⚡ Parallel | [PR 191](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/191) | STAR method priming, Catch Me Up, Clear Cache, suggestion chips & chat submit |
-| **P57-T5C** | Interview HUD ActivityBar & Web E2E Suite | ⏳ Queued | Sequential | Pending | ActivityBar Folder toggle, immediate refresh, header toolbar & full Playwright suite |
+| **P57-T5C** | Interview HUD ActivityBar & Web E2E Suite | 🔄 In Progress | Sequential | [Session 14078101812487254077](https://jules.google.com/session/14078101812487254077) | ActivityBar Folder toggle, immediate refresh, header toolbar & full Playwright suite |
 
 
 
