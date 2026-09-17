@@ -468,7 +468,8 @@ func (a *App) PromptOpenFile() (path string, err error) {
 	filepath, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
 		Title: "Open Document",
 		Filters: []wailsruntime.FileFilter{
-			{DisplayName: "Documents", Pattern: "*.txt;*.md;*.pdf;*.pptx"},
+			{DisplayName: "All Supported Files", Pattern: "*.txt;*.md;*.pdf;*.pptx;*.py;*.go;*.ts;*.js;*.jsx;*.tsx;*.svelte;*.json;*.rs;*.cpp;*.c;*.h;*.html;*.css;*.yaml;*.yml;*.sql;*.sh"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
 		},
 	})
 	if err != nil || filepath == "" {

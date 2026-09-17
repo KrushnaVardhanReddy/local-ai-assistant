@@ -16,18 +16,30 @@
 
   let isExpanded = $state(false);
 
+  const isDir = $derived(Boolean(node.isDirectory ?? (node as any).isDir));
+
   $effect(() => {
     isExpanded = node.isExpanded ?? false;
   });
 
   function getIcon(node: FileNode): string {
-    if (node.isDirectory) {
+    const isDirectory = Boolean(node.isDirectory ?? (node as any).isDir);
+    if (isDirectory) {
       return isExpanded ? '📂' : '📁';
     }
     const ext = node.name.split('.').pop()?.toLowerCase();
     switch (ext) {
       case 'md':
       case 'txt': return '📝';
+      case 'go':
+      case 'py':
+      case 'ts':
+      case 'js':
+      case 'rs':
+      case 'cpp': return '💻';
+      case 'json':
+      case 'yaml':
+      case 'yml': return '⚙️';
       case 'pdf': return '📄';
       case 'pptx': return '📊';
       default: return '📄';
@@ -41,7 +53,7 @@
   }
 
   function handleSelect(e: MouseEvent | KeyboardEvent) {
-    if (node.isDirectory) {
+    if (isDir) {
       toggleExpand(e);
     } else {
       onSelect(node);
@@ -52,12 +64,14 @@
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleSelect(e);
-    } else if (e.key === 'ArrowRight' && node.isDirectory && !isExpanded) {
+    } else if (e.key === 'ArrowRight' && isDir && !isExpanded) {
       e.preventDefault();
       isExpanded = true;
-    } else if (e.key === 'ArrowLeft' && node.isDirectory && isExpanded) {
+      node.isExpanded = isExpanded;
+    } else if (e.key === 'ArrowLeft' && isDir && isExpanded) {
       e.preventDefault();
       isExpanded = false;
+      node.isExpanded = isExpanded;
     }
   }
 </script>
@@ -68,14 +82,14 @@
     class="node-content"
     class:active={activePath === node.path}
     role="treeitem"
-    aria-expanded={node.isDirectory ? isExpanded : undefined}
+    aria-expanded={isDir ? isExpanded : undefined}
     aria-selected={activePath === node.path}
     tabindex="0"
     onclick={handleSelect}
     onkeydown={handleKeyDown}
   >
     <div class="indent-spacer"></div>
-    {#if node.isDirectory}
+    {#if isDir}
       <button
         type="button"
         class="expander"
@@ -92,7 +106,7 @@
     <span class="name">{node.name}</span>
   </div>
 
-  {#if node.isDirectory && isExpanded && node.children}
+  {#if isDir && isExpanded && node.children}
     <div class="children" role="group">
       {#each node.children as child (child.path)}
         <FileTreeNode
