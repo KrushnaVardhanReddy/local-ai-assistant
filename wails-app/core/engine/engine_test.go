@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"context"
 	"wails-app/backend/stt"
 	"wails-app/core/engine"
 	"wails-app/core/ports/driven"
@@ -53,7 +54,7 @@ type MockLLM struct {
 	LastSystemPrompt string
 }
 
-func (m *MockLLM) StreamCompletion(q string, sp string, hist []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
+func (m *MockLLM) StreamCompletion(ctx context.Context, q string, sp string, hist []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
 	m.StreamCalled = true
 	m.LastSystemPrompt = sp
 	onToken("mock ")
@@ -62,7 +63,7 @@ func (m *MockLLM) StreamCompletion(q string, sp string, hist []driven.ChatMessag
 	return nil
 }
 
-func (m *MockLLM) StreamVision(b64 string, prompt string, onToken driven.StreamCallback, onDone func()) error {
+func (m *MockLLM) StreamVision(ctx context.Context, b64 string, prompt string, onToken driven.StreamCallback, onDone func()) error {
 	return nil
 }
 
@@ -227,12 +228,12 @@ type MockLLMBlock struct {
 	BlockCh chan struct{}
 }
 
-func (m *MockLLMBlock) StreamCompletion(q string, sp string, hist []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
+func (m *MockLLMBlock) StreamCompletion(ctx context.Context, q string, sp string, hist []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
 	<-m.BlockCh
 	onDone()
 	return nil
 }
-func (m *MockLLMBlock) StreamVision(b64 string, prompt string, onToken driven.StreamCallback, onDone func()) error {
+func (m *MockLLMBlock) StreamVision(ctx context.Context, b64 string, prompt string, onToken driven.StreamCallback, onDone func()) error {
 	return nil
 }
 
@@ -287,10 +288,10 @@ func TestLLMError(t *testing.T) {
 type MockLLMError struct {
 }
 
-func (m *MockLLMError) StreamCompletion(q string, sp string, hist []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
+func (m *MockLLMError) StreamCompletion(ctx context.Context, q string, sp string, hist []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
 	return fmt.Errorf("mock llm stream error")
 }
-func (m *MockLLMError) StreamVision(b64 string, prompt string, onToken driven.StreamCallback, onDone func()) error {
+func (m *MockLLMError) StreamVision(ctx context.Context, b64 string, prompt string, onToken driven.StreamCallback, onDone func()) error {
 	return nil
 }
 

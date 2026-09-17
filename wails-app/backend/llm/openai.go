@@ -3,6 +3,7 @@ package llm
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -41,9 +42,9 @@ type ChatResponseChunk struct {
 
 // Variables for mocking in tests
 var (
-	jsonMarshal    = json.Marshal
-	httpNewRequest = http.NewRequest
-	httpClientDo   = func(c *http.Client, req *http.Request) (*http.Response, error) {
+	jsonMarshal               = json.Marshal
+	httpNewRequestWithContext = http.NewRequestWithContext
+	httpClientDo              = func(c *http.Client, req *http.Request) (*http.Response, error) {
 		return c.Do(req)
 	}
 )
@@ -69,7 +70,7 @@ type VisionChatRequest struct {
 	Stream   bool                `json:"stream"`
 }
 
-func StreamVisionCompletion(base64Image string, prompt string, onToken StreamCallback, onDone func()) error {
+func StreamVisionCompletion(ctx context.Context, base64Image string, prompt string, onToken StreamCallback, onDone func()) error {
 	defer func() {
 		if onDone != nil {
 			onDone()
@@ -123,7 +124,7 @@ func StreamVisionCompletion(base64Image string, prompt string, onToken StreamCal
 		return fmt.Errorf("failed to marshal vision request: %w", err)
 	}
 
-	req, err := httpNewRequest("POST", endpoint, bytes.NewBuffer(bodyBytes))
+	req, err := httpNewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return fmt.Errorf("failed to create vision request: %w", err)
 	}
@@ -187,7 +188,7 @@ func StreamVisionCompletion(base64Image string, prompt string, onToken StreamCal
 	return nil
 }
 
-func StreamCompletionWithContext(question string, category string, history []ChatMessage, onToken StreamCallback, onDone func()) error {
+func StreamCompletionWithContext(ctx context.Context, question string, category string, history []ChatMessage, onToken StreamCallback, onDone func()) error {
 	defer func() {
 		if onDone != nil {
 			onDone()
@@ -222,7 +223,7 @@ func StreamCompletionWithContext(question string, category string, history []Cha
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	req, err := httpNewRequest("POST", endpoint, bytes.NewBuffer(bodyBytes))
+	req, err := httpNewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -288,6 +289,6 @@ func StreamCompletionWithContext(question string, category string, history []Cha
 	return nil
 }
 
-func StreamCompletion(question string, onToken StreamCallback, onDone func()) error {
-	return StreamCompletionWithContext(question, "", nil, onToken, onDone)
+func StreamCompletion(ctx context.Context, question string, onToken StreamCallback, onDone func()) error {
+	return StreamCompletionWithContext(ctx, question, "", nil, onToken, onDone)
 }

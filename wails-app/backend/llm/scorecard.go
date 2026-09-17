@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -111,7 +112,7 @@ Return ONLY valid JSON with exact schema matching Scorecard (no markdown, no exp
 	}
 
 	var result string
-	err := StreamCompletionWithContext("", "scorecard", msgs, func(token string) {
+	err := StreamCompletionWithContext(context.Background(), "", "scorecard", msgs, func(token string) {
 		result += token
 	}, func() {})
 

@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -66,7 +67,7 @@ func TestStreamCompletionWithContext(t *testing.T) {
 		{Role: "assistant", Content: "Previous answer"},
 	}
 
-	err := StreamCompletionWithContext("Test question", "behavioral", history, func(token string) {
+	err := StreamCompletionWithContext(context.Background(), "Test question", "behavioral", history, func(token string) {
 		tokens = append(tokens, token)
 	}, func() {
 		doneCalled = true
@@ -108,7 +109,7 @@ func TestStreamCompletion(t *testing.T) {
 	os.Setenv("LLM_BASE_URL", ts.URL)
 	defer os.Unsetenv("LLM_BASE_URL")
 
-	err := StreamCompletion("Test question", nil, nil)
+	err := StreamCompletion(context.Background(), "Test question", nil, nil)
 	if err != nil {
 		t.Fatalf("StreamCompletion failed: %v", err)
 	}
@@ -116,7 +117,7 @@ func TestStreamCompletion(t *testing.T) {
 
 func TestStreamCompletion_NoKey(t *testing.T) {
 	os.Unsetenv("OPENAI_API_KEY")
-	err := StreamCompletion("Test", nil, nil)
+	err := StreamCompletion(context.Background(), "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for missing API key")
 	}
@@ -128,7 +129,7 @@ func TestStreamCompletion_ErrorCases(t *testing.T) {
 
 	// Bad URL
 	os.Setenv("LLM_BASE_URL", "http://inv\x00alid-url")
-	err := StreamCompletion("Test", nil, nil)
+	err := StreamCompletion(context.Background(), "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for invalid URL")
 	}
@@ -138,7 +139,7 @@ func TestStreamCompletion_ErrorCases(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	os.Setenv("LLM_BASE_URL", ts.URL)
-	err = StreamCompletion("Test", nil, nil)
+	err = StreamCompletion(context.Background(), "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for non-200 status code")
 	}
@@ -165,7 +166,7 @@ func TestStreamCompletion_JsonParseError(t *testing.T) {
 	defer os.Unsetenv("LLM_BASE_URL")
 
 	var tokens []string
-	err := StreamCompletion("Test question", func(token string) {
+	err := StreamCompletion(context.Background(), "Test question", func(token string) {
 		tokens = append(tokens, token)
 	}, nil)
 
@@ -196,29 +197,29 @@ func TestStreamCompletion_MockErrors(t *testing.T) {
 	jsonMarshal = func(v interface{}) ([]byte, error) {
 		return nil, errors.New("mock marshal error")
 	}
-	err := StreamCompletion("Test", nil, nil)
+	err := StreamCompletion(context.Background(), "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error from mock jsonMarshal")
 	}
 	jsonMarshal = originalJsonMarshal
 
-	// httpNewRequest error
-	originalHttpNewRequest := httpNewRequest
-	httpNewRequest = func(method, url string, body io.Reader) (*http.Request, error) {
+	// httpNewRequestWithContext error
+	originalHttpNewRequest := httpNewRequestWithContext
+	httpNewRequestWithContext = func(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
 		return nil, errors.New("mock request error")
 	}
-	err = StreamCompletion("Test", nil, nil)
+	err = StreamCompletion(context.Background(), "Test", nil, nil)
 	if err == nil {
-		t.Error("Expected error from mock httpNewRequest")
+		t.Error("Expected error from mock httpNewRequestWithContext")
 	}
-	httpNewRequest = originalHttpNewRequest
+	httpNewRequestWithContext = originalHttpNewRequest
 
 	// httpClientDo error
 	originalHttpClientDo := httpClientDo
 	httpClientDo = func(c *http.Client, req *http.Request) (*http.Response, error) {
 		return nil, errors.New("mock do error")
 	}
-	err = StreamCompletion("Test", nil, nil)
+	err = StreamCompletion(context.Background(), "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error from mock httpClientDo")
 	}
@@ -231,7 +232,7 @@ func TestStreamCompletion_MockErrors(t *testing.T) {
 			Body:       errReader{},
 		}, nil
 	}
-	err = StreamCompletion("Test", nil, nil)
+	err = StreamCompletion(context.Background(), "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error from mock scanner read")
 	}

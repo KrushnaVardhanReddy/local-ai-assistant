@@ -1,11 +1,12 @@
 package llmadapter
 
 import (
+	"context"
 	"errors"
+	"os"
 	"testing"
 	"wails-app/backend/llm"
 	"wails-app/core/ports/driven"
-	"os"
 )
 
 func TestMockLLMAdapter_StreamCompletion(t *testing.T) {
@@ -17,7 +18,7 @@ func TestMockLLMAdapter_StreamCompletion(t *testing.T) {
 		var emittedTokens []string
 		doneCalled := 0
 
-		err := adapter.StreamCompletion("Test question", "Test prompt", nil, func(token string) {
+		err := adapter.StreamCompletion(context.Background(), "Test question", "Test prompt", nil, func(token string) {
 			emittedTokens = append(emittedTokens, token)
 		}, func() {
 			doneCalled++
@@ -56,7 +57,7 @@ func TestMockLLMAdapter_StreamCompletion(t *testing.T) {
 		}
 
 		doneCalled := 0
-		err := adapter.StreamCompletion("Question", "", nil, func(token string) {}, func() {
+		err := adapter.StreamCompletion(context.Background(), "Question", "", nil, func(token string) {}, func() {
 			doneCalled++
 		})
 
@@ -79,7 +80,7 @@ func TestMockLLMAdapter_StreamVision(t *testing.T) {
 		var emittedTokens []string
 		doneCalled := 0
 
-		err := adapter.StreamVision("base64data", "Vision prompt", func(token string) {
+		err := adapter.StreamVision(context.Background(), "base64data", "Vision prompt", func(token string) {
 			emittedTokens = append(emittedTokens, token)
 		}, func() {
 			doneCalled++
@@ -156,7 +157,7 @@ func TestOpenAIAdapter_StreamCompletion(t *testing.T) {
 		{Role: "user", Content: "q"},
 	}
 
-	err := adapter.StreamCompletion("question", "system", history, func(t string) {}, func() {})
+	err := adapter.StreamCompletion(context.Background(), "question", "system", history, func(t string) {}, func() {})
 	if err == nil {
 		// It might fail or not depending on network/URL but we just want coverage
 		// we don't care if it errors as long as we covered the method
@@ -169,7 +170,7 @@ func TestOpenAIAdapter_StreamVision(t *testing.T) {
 
 	adapter := NewOpenAIAdapter()
 
-	err := adapter.StreamVision("base64", "prompt", func(t string) {}, func() {})
+	err := adapter.StreamVision(context.Background(), "base64", "prompt", func(t string) {}, func() {})
 	if err == nil {
 		// Just want coverage
 	}
