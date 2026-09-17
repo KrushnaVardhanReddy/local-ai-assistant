@@ -50,6 +50,7 @@
 
   function activateStarMethod() {
     sendChat("Format your next response using the STAR method (Situation, Task, Action, Result).");
+    wsState.isThinking = true;
     starPrimed = true;
     if (starPrimedTimer) clearTimeout(starPrimedTimer);
     starPrimedTimer = setTimeout(() => {
@@ -59,6 +60,7 @@
 
   function catchMeUp() {
     sendChat("Please catch me up on the current context of the interview or conversation.");
+    wsState.isThinking = true;
   }
 
   onMount(() => {
@@ -163,9 +165,13 @@
         class="hover:text-error transition-colors flex items-center gap-1"
         onclick={clearCache}
         disabled={clearingCache}
-        title="Clear Cache"
+        title="Clear cache"
       >
-        <span class="material-symbols-outlined text-[14px]">mop</span>
+        {#if clearingCache}
+          <span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+        {:else}
+          <span class="material-symbols-outlined text-[14px]">mop</span>
+        {/if}
       </button>
     </div>
   </div>

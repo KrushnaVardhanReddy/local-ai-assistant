@@ -8,6 +8,7 @@
   function handleChatSubmit() {
     if (chatText.trim()) {
       sendChat(chatText);
+      wsState.isThinking = true;
       chatText = "";
     }
   }
@@ -75,13 +76,14 @@
               class="text-xs text-on-surface/90 truncate max-w-[150px] text-left hover:text-primary transition-colors"
               onclick={() => sendChip(chip)}
               title={chip.text}
+              aria-label="Send suggestion: {chip.text}"
             >
               {chip.text}
             </button>
             <button
               class="ml-2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-error transition-colors"
               onclick={() => dismissChip(chip.id)}
-              aria-label="Dismiss"
+              aria-label="Dismiss suggestion: {chip.text}"
             >
               <span class="material-symbols-outlined text-[14px]">close</span>
             </button>
