@@ -153,6 +153,15 @@ STEP-BY-STEP IMPLEMENTATION INSTRUCTIONS
      - Test 9: Toolbar "Clear" calls `ClearState` and flushes state.
      - Test 10: Toolbar "Stealth" toggles clickthrough mode and `.text-primary`.
      - Test 11: Brain "STAR" method button primes STAR state.
+     - Test 12: Live Ears Voice & Speech Test:
+       - Emit a synthetic transcript event:
+         `await page.evaluate(() => { window.dispatchEvent(new CustomEvent('on_transcript', { detail: { text: "Explain binary search tree balancing.", speaker: "interviewer" } })); });`
+         or call registered event handler directly:
+         `window._testEmitTranscript?.({ text: "Explain binary search tree balancing.", speaker: "interviewer" });`
+       - Switch to Live Ears drawer (`button[data-testid="activity-bar-ears"]`).
+       - Assert that "Explain binary search tree balancing." is visible inside `.live-ears-drawer` with `.interviewer` speaker tag.
+       - Assert that a pending question suggestion chip with text "Explain binary search tree balancing." appears in the pending responses bar.
+       - Click the chip -> assert that the chip is dismissed and triggers `sendChat`.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION & TESTS
