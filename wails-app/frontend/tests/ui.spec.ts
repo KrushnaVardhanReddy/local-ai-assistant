@@ -312,10 +312,14 @@ test.describe('App UI Tests', () => {
     await expect(keysBtn).toBeVisible();
 
     await keysBtn.click();
-    const hotkeysHeading = page.locator('text=Hotkeys');
+    const hotkeysHeading = page.locator('h2:has-text("Hotkeys")');
     await expect(hotkeysHeading.first()).toBeVisible();
 
-    await keysBtn.click();
+    // Close the hotkeys modal using its close button in the header
+    const closeBtn = page.locator('button:has(.material-symbols-outlined:has-text("close"))').last();
+    await closeBtn.click();
+
+    await expect(hotkeysHeading).toBeHidden();
   });
 
   test('Test 14: ActivityBar "Settings" toggles settings panel', async ({ page }) => {
