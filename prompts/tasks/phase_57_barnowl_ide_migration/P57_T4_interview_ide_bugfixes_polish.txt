@@ -1,0 +1,76 @@
+TASK: P57-T4 — Interview IDE Bug Fixes, Wiring & Polish
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Fix runtime errors, argument mismatches, missing workspace wiring, SessionReport modal lockup,
+and Svelte compiler warnings discovered during live testing of BarnOwl AI in `InterviewHUD.svelte`
+and `wails-app/app.go`.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/app.go
+MODIFY: wails-app/frontend/src/products/interview/InterviewHUD.svelte
+MODIFY: wails-app/frontend/src/lib/SessionReport.svelte
+MODIFY: wails-app/frontend/src/App.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/CodeEditor.svelte
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION & FIXES
+═══════════════════════════════════════════════════════════════
+
+1. Fix `SessionReport` Modal Lockup in `InterviewHUD.svelte` & `SessionReport.svelte`:
+   - Issue: When clicking "Report", the modal got stuck with double overlays and missing `onClose` handler:
+     - In `SessionReport.svelte`: `let { onClose }: { onClose: () => void } = $props();`
+     - In `InterviewHUD.svelte`: `<SessionReport />` was called without passing `onClose={() => showSessionReport = false}`!
+     - `SessionReport.svelte` ALSO had its own `.report-overlay` fixed overlay, while `InterviewHUD.svelte` wrapped it in another `fixed inset-0` modal overlay, causing double nesting and click-blocking!
+   - Fix:
+     - In `InterviewHUD.svelte`, pass `<SessionReport onClose={() => showSessionReport = false} />`.
+     - Remove the redundant outer wrapper div in `InterviewHUD.svelte` so `SessionReport` manages its own backdrop and close button cleanly.
+     - In `app.go`: ensure `EndSession()` returns gracefully even if there are zero questions recorded (already returns `scorecard: nil`), and doesn't hang.
+
+2. Fix `SetClickthrough` runtime error in `wails-app/app.go`:
+   - Runtime error logged:
+     `json: cannot unmarshal bool into Go value of type map[string]interface {}`
+   - In `app.go`: update `SetClickthrough(enable bool)` to accept a bool directly, or support both.
+   - Also in `InterviewHUD.svelte`, ensure `toggleStealthMode` calls `App.SetClickthrough(clickthrough)`.
+
+3. Fix `AnalyzeVision` argument count mismatch:
+   - Runtime error logged:
+     `received 1 arguments to method 'main.App.AnalyzeVision', expected 2`
+   - In `InterviewHUD.svelte`:
+     When calling `App.AnalyzeVision(b64)`, provide the second argument `prompt`:
+     `await App.AnalyzeVision(b64, "Analyze this technical interview screen and provide key hints, solution or code concisely.")`
+
+4. Wire Workspace Tree, Tabs, and Document Content in `InterviewHUD.svelte`:
+   - Currently, `IDEShell` in `InterviewHUD.svelte` is NOT passed `workspaceTree`, `openTabs`,
+     `activePath`, `onSelect`, `onTabSelect`, `onTabClose`, `onFileOpen`, or `onOpenFolder`.
+   - In `InterviewHUD.svelte`:
+     - Add reactive state: `workspaceTree`, `openTabs`, `activeDocumentPath`, `activeDocumentContent`.
+     - Poll or fetch state from `window.go.main.App.GetIDEState()`.
+     - Pass all workspace props to `<IDEShell ... />`:
+       - `workspaceTree={workspaceTree}`
+       - `openTabs={openTabs}`
+       - `activePath={activeDocumentPath}`
+       - `totalDocs={openTabs.length}`
+       - `onSelect={handleSelectNode}`
+       - `onTabSelect={handleTabSelect}`
+       - `onTabClose={handleTabClose}`
+       - `onFileOpen={handleOpenFile}`
+       - `onOpenFolder={handleOpenFolder}`
+     - In the center slot, pass `content={activeDocumentContent}` to `<CodeEditor ... />`.
+     - When active document changes, display its code/notes in the editor with syntax highlighting!
+
+5. Clean up Svelte 5 Compiler Warnings & Accessibility:
+   - In `App.svelte`: remove unused CSS selectors `.modal-overlay`, `.modal-content`, `.close-btn`.
+   - In `InterviewHUD.svelte`: replace or add `role="button"` and `tabindex="0"` with `onkeydown`
+     for modal overlay containers.
+   - In `CodeEditor.svelte`: fix the closure/runes reference warning for `content`.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- `go test ./...` in `wails-app` must pass with zero errors.
+- `npm run check` in `wails-app/frontend` must report 0 errors and 0 warnings.
+- `npx playwright test` must pass.
