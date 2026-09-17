@@ -507,17 +507,6 @@
 </div>
 
 <style>
-  .report-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
   .report-panel {
     background: rgba(15, 15, 25, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);

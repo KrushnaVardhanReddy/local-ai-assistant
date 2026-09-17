@@ -357,20 +357,18 @@ func (a *App) ToggleClickthroughMode() bool {
 	return curr
 }
 
-func (a *App) SetClickthrough(opts map[string]interface{}) {
-	if enable, ok := opts["enable"].(bool); ok {
-		a.cmdMutex.Lock()
-		a.isClickthrough = enable
-		a.cmdMutex.Unlock()
+func (a *App) SetClickthrough(enable bool) {
+	a.cmdMutex.Lock()
+	a.isClickthrough = enable
+	a.cmdMutex.Unlock()
 
-		log.Printf("🖱️ [Go] SetClickthrough -> enable = %v\n", enable)
-		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
-		wailsruntime.WindowShow(a.ctx)
-		if err := window.SetIgnoreMouseEvents(a.ctx, enable); err != nil {
-			log.Printf("❌ SetIgnoreMouseEvents error: %v\n", err)
-		}
-		wailsruntime.EventsEmit(a.ctx, "toggle-clickthrough", enable)
+	log.Printf("🖱️ [Go] SetClickthrough -> enable = %v\n", enable)
+	wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
+	wailsruntime.WindowShow(a.ctx)
+	if err := window.SetIgnoreMouseEvents(a.ctx, enable); err != nil {
+		log.Printf("❌ SetIgnoreMouseEvents error: %v\n", err)
 	}
+	wailsruntime.EventsEmit(a.ctx, "toggle-clickthrough", enable)
 }
 
 func (a *App) ToggleStealth(opts map[string]interface{}) {
@@ -378,13 +376,16 @@ func (a *App) ToggleStealth(opts map[string]interface{}) {
 }
 
 func (a *App) EndSession() (map[string]interface{}, error) {
-	if a.engine.GetSessionManager() == nil {
-		return nil, fmt.Errorf("session manager not configured")
+	if a.engine == nil || a.engine.GetSessionManager() == nil {
+		return map[string]interface{}{
+			"session":   nil,
+			"scorecard": nil,
+		}, nil
 	}
 
 	sessionData := a.engine.GetSessionManager().Export()
-	turnCount, _ := sessionData["turn_count"].(int)
-	if turnCount == 0 {
+	turnCount, ok := sessionData["turn_count"].(int)
+	if !ok || turnCount == 0 {
 		return map[string]interface{}{
 			"session":   sessionData,
 			"scorecard": nil,
@@ -393,7 +394,12 @@ func (a *App) EndSession() (map[string]interface{}, error) {
 
 	scorecard, err := llm.GenerateScorecard(sessionData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate scorecard: %w", err)
+		// Log error but don't fail session end if scorecard generation fails
+		log.Printf("Warning: failed to generate scorecard: %v", err)
+		return map[string]interface{}{
+			"session":   sessionData,
+			"scorecard": nil,
+		}, nil
 	}
 
 	return map[string]interface{}{

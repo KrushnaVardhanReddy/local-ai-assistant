@@ -25,7 +25,12 @@
 
   let editorContainer: HTMLDivElement;
   let view: EditorView | null = null;
-  let currentContent = content;
+  let currentContent = $state(content);
+  $effect(() => {
+    if (content !== currentContent) {
+      currentContent = content;
+    }
+  });
 
   const customTheme = EditorView.theme({
     "&": {

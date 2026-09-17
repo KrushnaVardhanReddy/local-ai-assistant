@@ -122,3 +122,38 @@ func TestApp_PromptMethodsContext(t *testing.T) {
 		t.Error("Expected error when context is nil")
 	}
 }
+
+func TestApp_SetClickthrough(t *testing.T) {
+	app := NewApp()
+	app.SetClickthrough(true)
+	app.cmdMutex.Lock()
+	if !app.isClickthrough {
+		t.Error("Expected isClickthrough to be true")
+	}
+	app.cmdMutex.Unlock()
+}
+
+func TestApp_EndSession_ZeroTurns(t *testing.T) {
+	app := NewApp()
+	// Should gracefully return when not initialized
+	res, err := app.EndSession()
+	if err != nil {
+		t.Errorf("Expected no error when engine has no session manager, got %v", err)
+	}
+	if res == nil {
+	    t.Error("Expected non-nil result")
+	} else if res["session"] != nil {
+	    t.Error("Expected session to be nil")
+	}
+}
+
+func TestApp_EndSession_Uninitialized(t *testing.T) {
+    app := NewApp()
+    res, err := app.EndSession()
+    if err != nil {
+        t.Errorf("Expected no error when session manager is not configured, got %v", err)
+    }
+    if res == nil {
+	    t.Error("Expected non-nil result")
+	}
+}
