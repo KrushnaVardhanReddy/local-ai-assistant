@@ -26,6 +26,7 @@ import (
 	"wails-app/backend/system"
 	"wails-app/backend/window"
 	"wails-app/core/engine"
+	"wails-app/core/ports/driving"
 
 	"github.com/kbinani/screenshot"
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -430,5 +431,119 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	if a.remoteServer != nil {
 		_ = a.remoteServer.Stop(ctx)
+	}
+}
+
+// PromptOpenDirectory opens a native folder dialog and loads it as a workspace
+func (a *App) PromptOpenDirectory() (path string, err error) {
+	if a.ctx == nil {
+		return "", fmt.Errorf("no valid wails context")
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("runtime error: %v", r)
+		}
+	}()
+	dirpath, err := wailsruntime.OpenDirectoryDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title: "Open Workspace Folder",
+	})
+	if err != nil || dirpath == "" {
+		return "", err
+	}
+	_, err = a.engine.OpenDirectory(dirpath)
+	if err != nil {
+		return "", err
+	}
+	return dirpath, nil
+}
+
+// PromptOpenFile opens a native file dialog and opens the file in the workspace
+func (a *App) PromptOpenFile() (path string, err error) {
+	if a.ctx == nil {
+		return "", fmt.Errorf("no valid wails context")
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("runtime error: %v", r)
+		}
+	}()
+	filepath, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title: "Open Document",
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "Documents", Pattern: "*.txt;*.md;*.pdf;*.pptx"},
+		},
+	})
+	if err != nil || filepath == "" {
+		return "", err
+	}
+	_, err = a.engine.OpenFile(filepath)
+	if err != nil {
+		return "", err
+	}
+	return filepath, nil
+}
+
+// OpenDirectory calls engine.OpenDirectory
+func (a *App) OpenDirectory(path string) (*driving.FileNode, error) {
+	return a.engine.OpenDirectory(path)
+}
+
+// OpenFile calls engine.OpenFile
+func (a *App) OpenFile(path string) (*driving.WorkspaceDocument, error) {
+	return a.engine.OpenFile(path)
+}
+
+// CloseDocument calls engine.CloseFile
+func (a *App) CloseDocument(path string) error {
+	return a.engine.CloseFile(path)
+}
+
+// SetActiveDocument calls engine.SetActiveDocument
+func (a *App) SetActiveDocument(path string) error {
+	_, err := a.engine.SetActiveDocument(path)
+	return err
+}
+
+// GetWorkspaceTree calls engine.GetWorkspaceTree
+func (a *App) GetWorkspaceTree() []*driving.FileNode {
+	return a.engine.GetWorkspaceTree()
+}
+
+// GetOpenDocuments calls engine.GetOpenDocuments
+func (a *App) GetOpenDocuments() []*driving.WorkspaceDocument {
+	return a.engine.GetOpenDocuments()
+}
+
+// GetActiveDocument calls engine.GetActiveDocument
+func (a *App) GetActiveDocument() *driving.WorkspaceDocument {
+	return a.engine.GetActiveDocument()
+}
+
+// GetIDEState returns the current IDE state for the frontend
+func (a *App) GetIDEState() map[string]interface{} {
+	activeDoc := a.engine.GetActiveDocument()
+	activeDocPath := ""
+	activeDocContent := ""
+	if activeDoc != nil {
+		activeDocPath = activeDoc.Path
+		activeDocContent = activeDoc.Content
+	}
+
+	isListening := a.audioCapture != nil
+
+	s := a.engine.GetState()
+
+	a.cmdMutex.Lock()
+	clickthrough := a.isClickthrough
+	a.cmdMutex.Unlock()
+
+	return map[string]interface{}{
+		"workspaceTree":         a.engine.GetWorkspaceTree(),
+		"openDocuments":         a.engine.GetOpenDocuments(),
+		"activeDocumentPath":    activeDocPath,
+		"activeDocumentContent": activeDocContent,
+		"isListening":           isListening,
+		"isClickthrough":        clickthrough,
+		"cachedPairs":           s.CachedPairs,
 	}
 }
