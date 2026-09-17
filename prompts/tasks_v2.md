@@ -153,7 +153,7 @@ BATCH 2 (Sequential Integration)
 | **P57-T2** | Interview IDE HUD Migration | ✅ Merged | ⚡ Parallel | [PR 186](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/186) | `InterviewHUD.svelte`, `LiveEarsDrawer`, `BrainDrawer`, migrate toolbar & buttons into `IDEShell` |
 | **P57-T3** | Active Context RAG Injection | ✅ Merged | Sequential | [PR 188](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/188) | Auto-inject open IDE file content into LLM context when answering interview questions |
 | **P57-T4** | Interview IDE Bug Fixes & Polish | ✅ Merged | Sequential | [PR 190](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/190) | Fix SetClickthrough/AnalyzeVision signatures, SessionReport empty/NaNm fix, wire workspace tree & editor, fix Svelte 5 lints, 10/10 Playwright E2E tests (PR 189 closed) |
-| **P57-T5** | Fix Workspace File/Folder Bugs | 🔄 In Progress | Sequential | Pending | Fix ActivityBar Folder toggle, tree isDir mapping, allowedExtensions code files, immediate refresh |
+| **P57-T5** | All Buttons & Features Audit & Fixes | 🔄 In Progress | Sequential | Pending | Complete audit & wiring for all ActivityBar, Toolbar, Drawer, Tree, Tabs buttons & web E2E tests |
 
 
 
