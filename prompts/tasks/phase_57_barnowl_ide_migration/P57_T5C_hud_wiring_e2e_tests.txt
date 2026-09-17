@@ -1,0 +1,166 @@
+TASK: P57-T5C — Interview HUD ActivityBar Wiring, Toolbar Actions & Web E2E Test Suite
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Wire all primary navigation and toolbar action buttons in `InterviewHUD.svelte` and `IDEShell.svelte`,
+and build an exhaustive, realistic Playwright web E2E test suite in `wails-app/frontend/tests/ui.spec.ts`
+that clicks and verifies every button across the entire BarnOwl AI Workstation.
+
+This task owns ONLY:
+- `wails-app/frontend/src/products/interview/InterviewHUD.svelte`
+- `wails-app/frontend/src/lib/components/workspace/IDEShell.svelte`
+- `wails-app/frontend/tests/ui.spec.ts`
+- `prompts/tasks_v2.md`
+
+═══════════════════════════════════════════════════════════════
+BEHAVIOR & BUTTON EXPECTATIONS
+═══════════════════════════════════════════════════════════════
+
+───────────────────────────────────────────────────────────────
+GROUP 1: ACTIVITY BAR NAVIGATION (`InterviewHUD.svelte` & `IDEShell.svelte`)
+───────────────────────────────────────────────────────────────
+1. [Folder / Explorer] (`data-testid="activity-bar-explorer"`):
+   - Role: Toggles the WorkspaceSidebar drawer open (`width: 240px`) or closed (`width: 0px`).
+   - Bug: Currently `handleAction('explorer')` sets `activeAction = 'explorer'`, but does NOT
+     toggle `IDEShell.svelte`'s internal `isExplorerOpen` state. The drawer stays permanently 0px!
+   - Expected: Clicking toggles `isExplorerOpen`. The sidebar container receives `.open` class and
+     expands to 240px width. Clicking again collapses it back to 0px.
+
+2. [Live Ears] (`data-testid="activity-bar-ears"`):
+   - Role: Switches right drawer to `<LiveEarsDrawer />`.
+   - Expected: Sets `activeDrawer = 'ears'`, highlights Ears button.
+
+3. [The Brain] (`data-testid="activity-bar-copilot"`):
+   - Role: Switches right drawer to `<BrainDrawer />`.
+   - Expected: Sets `activeDrawer = 'copilot'`, highlights Brain button.
+
+4. [Mock Mode Toggle] (`data-testid="activity-bar-mock"`):
+   - Role: Toggles simulated practice interview mode.
+   - Expected: Toggles `wsState.isMockMode`. When turned off, opens `<SessionReport />`.
+
+5. [Hotkeys Panel] (`data-testid="activity-bar-keys"`):
+   - Role: Toggles keyboard shortcuts cheat sheet.
+   - Expected: Toggles `uiState.hotkeysPanelOpen`. Renders modal dialog.
+
+6. [Settings] (`data-testid="activity-bar-settings"`):
+   - Role: Opens settings panel. Clicking close returns to previous view.
+
+───────────────────────────────────────────────────────────────
+GROUP 2: HEADER TOOLBAR (`InterviewHUD.svelte`)
+───────────────────────────────────────────────────────────────
+7. [Snip] (`button[title="Vision Snip"]`):
+   - Role: Screen snip -> vision LLM.
+   - Expected: Calls `App.CaptureScreen()` + `App.AnalyzeVision(b64, prompt)`.
+
+8. [Report] (`button[title="Session Report"]`):
+   - Role: Opens session feedback report.
+   - Expected: Renders `<SessionReport onClose={() => showSessionReport = false} />`.
+     Clicking close hides the modal completely without UI lockup.
+
+9. [Clear Context] (`button[title="Clear Context"]`):
+   - Role: Clears conversational memory.
+   - Expected: Calls `App.ClearState()`, resets `wsState.transcript`, `wsState.response`,
+     `wsState.ragSources`, `wsState.pendingTranscripts`, `wsState.transcriptHistory`.
+
+10. [Stealth Mode] (`button[title="Stealth Mode (Clickthrough)"]`):
+    - Role: Toggles OS mouse clickthrough transparency.
+    - Expected: Calls `App.SetClickthrough(clickthrough)`, applies `.text-primary` class.
+
+───────────────────────────────────────────────────────────────
+GROUP 3: WORKSPACE ACTIONS IMMEDIATE REFRESH
+───────────────────────────────────────────────────────────────
+11. [Immediate State Refresh]:
+    - In `InterviewHUD.svelte`: Define `refreshIDEState()` that immediately queries
+      `App.GetIDEState()`, maps tree nodes (`isDir` -> `isDirectory`), and updates tabs/content
+      instantly after:
+      - `handleOpenFile()` (calls `App.PromptOpenFile()`)
+      - `handleOpenFolder()` (calls `App.PromptOpenDirectory()`)
+      - `handleTabSelect(path)` (calls `App.SetActiveDocument(path)`)
+      - `handleTabClose(path)` (calls `App.CloseDocument(path)`)
+      - `handleSelectNode(node)` (calls `App.OpenFile(node.path)`)
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/frontend/src/products/interview/InterviewHUD.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/IDEShell.svelte
+MODIFY: wails-app/frontend/tests/ui.spec.ts
+MODIFY: prompts/tasks_v2.md
+
+═══════════════════════════════════════════════════════════════
+STEP-BY-STEP IMPLEMENTATION INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
+
+1. In `IDEShell.svelte`:
+   - Synchronize `isExplorerOpen`:
+     - Allow `isExplorerOpen` to toggle when `activeAction === 'explorer'`.
+     - Ensure `handleSidebarToggle` and `handleAction` keep the drawer state responsive.
+
+2. In `InterviewHUD.svelte`:
+   - In `handleAction(action)`:
+     ```ts
+     function handleAction(action: string) {
+       if (action === 'explorer') {
+         activeAction = activeAction === 'explorer' ? '' : 'explorer';
+       } else if (action === 'ears') {
+         activeAction = 'ears';
+         activeDrawer = 'ears';
+       } else if (action === 'copilot') {
+         activeAction = 'copilot';
+         activeDrawer = 'copilot';
+       } else if (action === 'mock') {
+         handleMockModeToggle();
+       } else if (action === 'keys') {
+         uiState.hotkeysPanelOpen = !uiState.hotkeysPanelOpen;
+       } else if (action === 'settings') {
+         activeAction = activeAction === 'settings' ? activeDrawer : 'settings';
+       } else {
+         activeAction = action;
+       }
+     }
+     ```
+   - Add `refreshIDEState()`:
+     ```ts
+     async function refreshIDEState() {
+       if (App?.GetIDEState) {
+         const state = await App.GetIDEState();
+         if (state) {
+           includeActiveDocContext = state.includeActiveDocContext;
+           activeDocumentName = state.activeDocumentName || '';
+           recordExpanded(workspaceTree);
+           workspaceTree = mapTree(state.workspaceTree);
+           openTabs = state.openDocuments || [];
+           activeDocumentPath = state.activeDocumentPath || '';
+           activeDocumentContent = state.activeDocumentContent || '';
+         }
+       }
+     }
+     ```
+   - Call `await refreshIDEState()` after `PromptOpenFile()`, `PromptOpenDirectory()`,
+     `OpenFile()`, `SetActiveDocument()`, and `CloseDocument()`.
+
+3. In `wails-app/frontend/tests/ui.spec.ts`:
+   - Expand the Playwright suite to test EVERY button interactively:
+     - Test 1: ActivityBar "Folder" toggles `.workspace-sidebar-container.open` (width: 240px). Click again -> collapses.
+     - Test 2: Sidebar "FILE" button clicks and calls `PromptOpenFile`.
+     - Test 3: Sidebar "FOLDER" button clicks and calls `PromptOpenDirectory`.
+     - Test 4: Workspace file tree renders folders and files; clicking folder expands children; clicking file opens it.
+     - Test 5: Workspace tabs render; clicking a tab switches active tab; clicking close removes it.
+     - Test 6: ActivityBar "Ears" vs "Brain" switches between `LiveEarsDrawer` and `BrainDrawer`.
+     - Test 7: Toolbar "Snip" calls `CaptureScreen` and `AnalyzeVision`.
+     - Test 8: Toolbar "Report" opens `SessionReport` modal; close button cleanly hides it.
+     - Test 9: Toolbar "Clear" calls `ClearState` and flushes state.
+     - Test 10: Toolbar "Stealth" toggles clickthrough mode and `.text-primary`.
+     - Test 11: Brain "STAR" method button primes STAR state.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+1. Run Svelte checks:
+   `cd wails-app/frontend && npm run check`
+   Must report 0 errors.
+2. Run Playwright E2E tests:
+   `cd wails-app/frontend && npm run test:e2e`
+   Must pass all interactive tests with 100% success.
+3. Update `prompts/tasks_v2.md` to mark P57-T5C complete once merged.

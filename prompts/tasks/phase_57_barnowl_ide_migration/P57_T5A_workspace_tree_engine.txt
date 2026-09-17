@@ -1,0 +1,148 @@
+TASK: P57-T5A — Backend Engine File Extensions & Reusable Workspace Tree Normalization
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Fix backend file parsing and workspace tree node components so that directories containing
+code/notes can be opened and displayed with proper folder expanding/collapsing.
+
+This task owns ONLY the backend engine workspace logic and the reusable workspace tree
+components under `wails-app/frontend/src/lib/components/workspace/`. It has zero overlap
+with the drawers or HUD files.
+
+═══════════════════════════════════════════════════════════════
+BEHAVIOR & BUTTON EXPECTATIONS
+═══════════════════════════════════════════════════════════════
+
+1. [Supported File Extensions] (`wails-app/core/engine/workspace.go`):
+   - Role: Allows the user to load folders containing notes and code into the workspace.
+   - Current Bug: `allowedExtensions` is strictly limited to `.txt`, `.md`, `.pdf`, `.pptx`.
+     Opening any folder with code files (.go, .py, .ts, etc.) returns:
+     `"directory ... does not contain valid document files"`.
+   - Expected: Expand `allowedExtensions` to support standard notes and programming files.
+
+2. [Native Open File Dialog Filters] (`wails-app/app.go`):
+   - Role: Shows supported file extensions in the native file picker dialog.
+   - Current Bug: Restricts file dialog filter pattern to `*.txt;*.md;*.pdf;*.pptx`.
+   - Expected: Update `PromptOpenFile` filters to include code and document extensions as well as `*.*`.
+
+3. [Folder Expansion & Chevron Toggle] (`FileTreeNode.svelte`):
+   - Role: Displays folder chevron (▶ / ▼) and expands/collapses child directories.
+   - Current Bug: The Go backend (`driving.FileNode`) serializes `isDir: bool`, but Svelte
+     components check `node.isDirectory`. As a result, folders are treated as regular files,
+     preventing expansion and showing incorrect file icons.
+   - Expected: `FileTreeNode.svelte` defensively computes `isDir`:
+     `const isDir = Boolean(node.isDirectory ?? (node as any).isDir);`
+     and ensures clicking the folder toggles `isExpanded` and renders child nodes in `.children`.
+
+4. [File Tree Selection] (`FileTreeNode.svelte` & `FileTree.svelte`):
+   - Role: Clicking a file triggers `onSelect(node)` to open that file in the workspace.
+   - Expected: Clicking a non-directory node calls `onSelect(node)` with the node object.
+
+5. [Sidebar Action Buttons] (`WorkspaceSidebar.svelte`):
+   - Role: Header action buttons for "FILE" (`note_add`) and "FOLDER" (`create_new_folder`).
+   - Expected: Clicking "FILE" invokes `onOpenFile()`. Clicking "FOLDER" invokes `onOpenFolder()`.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/core/engine/workspace.go
+MODIFY: wails-app/app.go
+MODIFY: wails-app/frontend/src/lib/components/workspace/FileTreeNode.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/FileTree.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/WorkspaceSidebar.svelte
+MODIFY: prompts/tasks_v2.md
+
+═══════════════════════════════════════════════════════════════
+STEP-BY-STEP IMPLEMENTATION INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
+
+1. In `wails-app/core/engine/workspace.go`:
+   Expand `allowedExtensions` map to include code and config formats:
+   ```go
+   var allowedExtensions = map[string]bool{
+       ".txt":    true,
+       ".md":     true,
+       ".pdf":    true,
+       ".pptx":   true,
+       ".go":     true,
+       ".py":     true,
+       ".js":     true,
+       ".ts":     true,
+       ".jsx":    true,
+       ".tsx":    true,
+       ".svelte":  true,
+       ".json":   true,
+       ".rs":     true,
+       ".cpp":    true,
+       ".c":      true,
+       ".h":      true,
+       ".html":   true,
+       ".css":    true,
+       ".yaml":   true,
+       ".yml":    true,
+       ".sql":    true,
+       ".sh":     true,
+   }
+   ```
+
+2. In `wails-app/app.go`:
+   Update `PromptOpenFile` file filters:
+   ```go
+   Filters: []wailsruntime.FileFilter{
+       {DisplayName: "All Supported Files", Pattern: "*.txt;*.md;*.pdf;*.pptx;*.py;*.go;*.ts;*.js;*.jsx;*.tsx;*.svelte;*.json;*.rs;*.cpp;*.c;*.h;*.html;*.css;*.yaml;*.yml;*.sql;*.sh"},
+       {DisplayName: "All Files (*.*)", Pattern: "*.*"},
+   },
+   ```
+
+3. In `wails-app/frontend/src/lib/components/workspace/FileTreeNode.svelte`:
+   - Compute `isDir`:
+     ```ts
+     const isDir = $derived(Boolean(node.isDirectory ?? (node as any).isDir));
+     ```
+   - Update `getIcon`:
+     ```ts
+     function getIcon(node: FileNode): string {
+       const isDirectory = Boolean(node.isDirectory ?? (node as any).isDir);
+       if (isDirectory) {
+         return isExpanded ? '📂' : '📁';
+       }
+       const ext = node.name.split('.').pop()?.toLowerCase();
+       switch (ext) {
+         case 'md':
+         case 'txt': return '📝';
+         case 'go':
+         case 'py':
+         case 'ts':
+         case 'js':
+         case 'rs':
+         case 'cpp': return '💻';
+         case 'json':
+         case 'yaml':
+         case 'yml': return '⚙️';
+         case 'pdf': return '📄';
+         case 'pptx': return '📊';
+         default: return '📄';
+       }
+     }
+     ```
+   - Update `handleSelect`, `toggleExpand`, and template checks to use `isDir` rather than strictly `node.isDirectory`.
+   - Ensure the chevron button (`<button class="expander">`) toggles `isExpanded = !isExpanded; node.isExpanded = isExpanded;`.
+
+4. In `wails-app/frontend/src/lib/components/workspace/FileTree.svelte`:
+   - Update search filter logic:
+     ```ts
+     const isDir = Boolean(node.isDirectory ?? (node as any).isDir);
+     if (isDir && node.children) { ... }
+     ```
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+1. Run backend unit tests:
+   `cd wails-app && C_INCLUDE_PATH=$PWD/backend/lib LIBRARY_PATH=$PWD/backend/lib CGO_CFLAGS="-I$PWD/backend/lib" CGO_LDFLAGS="-L$PWD/backend/lib -lwhisper -lstdc++ -lm" go test -v ./...`
+   Must pass 100%.
+2. Run Svelte checks:
+   `cd wails-app/frontend && npm run check`
+   Must report 0 errors.
+3. Update `prompts/tasks_v2.md` to mark P57-T5A complete once merged.

@@ -1,0 +1,114 @@
+TASK: P57-T5B — Brain & Live Ears Drawers Action Wiring & Quick Buttons
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Audit and fully wire all user-facing action buttons, chips, and triggers inside the right-hand
+side drawers (`BrainDrawer.svelte` and `LiveEarsDrawer.svelte`).
+
+This task owns ONLY the two drawer components under `wails-app/frontend/src/products/interview/`:
+- `wails-app/frontend/src/products/interview/BrainDrawer.svelte`
+- `wails-app/frontend/src/products/interview/LiveEarsDrawer.svelte`
+
+It has zero overlap with the Go backend, workspace components, or `InterviewHUD.svelte`.
+
+═══════════════════════════════════════════════════════════════
+BEHAVIOR & BUTTON EXPECTATIONS
+═══════════════════════════════════════════════════════════════
+
+───────────────────────────────────────────────────────────────
+GROUP 1: THE BRAIN DRAWER (`BrainDrawer.svelte`)
+───────────────────────────────────────────────────────────────
+1. [STAR Method Action Button] (`button.action-btn:has-text("STAR")`):
+   - Role: Primes the AI assistant to format its next answer using Situation, Task, Action, Result.
+   - Expected:
+     - Sends prompt override: `sendChat("Format your next response using the STAR method (Situation, Task, Action, Result).")`.
+     - Sets `starPrimed = true`.
+     - Displays pulsing indicator: `STAR Method Primed`.
+     - Clears indicator after 15 seconds.
+     - Adds visual highlight class `.star-primed` on the button while active.
+
+2. [Catch Me Up Button] (`button[title="Catch me up"]`):
+   - Role: Requests an instant summary of recent conversational context.
+   - Expected:
+     - Sends prompt: `sendChat("Please catch me up on the current context of the interview or conversation.")`.
+     - Triggers AI response streaming into the response area.
+
+3. [Clear Cache Button] (`button[title="Clear cache"]`):
+   - Role: Flushes the embedded semantic Q&A vector cache.
+   - Expected:
+     - Calls `App.ClearCache()` or `POST /api/cache/clear`.
+     - Resets displayed cache items count to 0.
+     - Shows transient spinner/disabled state while clearing.
+
+4. [AI Response Markdown & Auto-Scroll]:
+   - Role: Displays formatted markdown AI hints, code snippets, and explanations.
+   - Expected: Renders markdown, code blocks with copy/syntax styles, and auto-scrolls to bottom
+     as tokens stream in.
+
+───────────────────────────────────────────────────────────────
+GROUP 2: LIVE EARS DRAWER (`LiveEarsDrawer.svelte`)
+───────────────────────────────────────────────────────────────
+5. [Custom Prompt Input & Submit] (`textarea` + Enter / Submit):
+   - Role: Allows the user to type and send an ad-hoc whisper/instruction to the AI.
+   - Expected:
+     - Pressing `Enter` (without Shift) calls `sendChat(chatText)`.
+     - Clears the textarea.
+     - Triggers thinking state in the assistant.
+
+6. [Pending Suggestion Chips Click] (`.chip button.text-xs`):
+   - Role: Candidate clicks an intercepted question chip to force instant answer generation.
+   - Expected:
+     - Calls `sendChip(chip)`.
+     - Removes that chip from `wsState.pendingTranscripts`.
+     - Sends the question text to the assistant.
+
+7. [Dismiss Chip Button] (`.chip button[aria-label="Dismiss"]`):
+   - Role: Discards an unwanted suggestion chip.
+   - Expected: Calls `dismissChip(chip.id)`, removing it from the pending list.
+
+8. [Clear All Chips Button] (`button:has-text("Clear All")`):
+   - Role: Flushes all pending suggestion chips at once.
+   - Expected: Calls `clearAllChips()`, clearing `wsState.pendingTranscripts`.
+
+9. [Transcript Auto-Scroll & Speaker Tags]:
+   - Role: Displays live interview speech.
+   - Expected: Auto-scrolls to newest line, distinguishes `Speaker` (interviewer) from `You` (candidate).
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/frontend/src/products/interview/BrainDrawer.svelte
+MODIFY: wails-app/frontend/src/products/interview/LiveEarsDrawer.svelte
+MODIFY: prompts/tasks_v2.md
+
+═══════════════════════════════════════════════════════════════
+STEP-BY-STEP IMPLEMENTATION INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
+
+1. In `BrainDrawer.svelte`:
+   - Verify `activateStarMethod()` properly primes the state and triggers `sendChat`.
+   - Add explicit button styling for `.star-primed` so the button clearly highlights green/primary
+     when active:
+     ```css
+     .action-btn.star-primed {
+       background: rgba(74, 222, 128, 0.2);
+       border-color: rgba(74, 222, 128, 0.5);
+       color: #4ade80;
+     }
+     ```
+   - Verify `clearCache()` checks `window.go?.main?.App?.ClearCache` as well as HTTP fallback.
+   - Verify `catchMeUp()` sends the catch-up prompt.
+
+2. In `LiveEarsDrawer.svelte`:
+   - Verify `handleKeydown` submits on `Enter` (without Shift).
+   - Ensure `sendChip(chip)`, `dismissChip(chip.id)`, and `clearAllChips()` are properly bound to click events.
+   - Ensure the chips container has clear clickable touch targets with unique `aria-label`s.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+1. Run Svelte checks:
+   `cd wails-app/frontend && npm run check`
+   Must report 0 errors and 0 warnings.
+2. Update `prompts/tasks_v2.md` to mark P57-T5B complete once merged.
