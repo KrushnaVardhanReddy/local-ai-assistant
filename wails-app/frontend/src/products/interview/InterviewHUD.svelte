@@ -27,6 +27,10 @@
         const state = await App.GetIDEState();
         includeActiveDocContext = state.includeActiveDocContext;
         activeDocumentName = state.activeDocumentName || '';
+        workspaceTree = state.workspaceTree || [];
+        openTabs = state.openDocuments || [];
+        activeDocumentPath = state.activeDocumentPath || '';
+        activeDocumentContent = state.activeDocumentContent || '';
       }
     }, 1000);
   });
@@ -44,8 +48,42 @@
 
   let includeActiveDocContext = $state(true);
   let activeDocumentName = $state('');
+  let workspaceTree = $state([]);
+  let openTabs = $state([]);
+  let activeDocumentPath = $state('');
+  let activeDocumentContent = $state('');
 
   const isGated = $derived(authState.authMode === 'saas' && (!authState.user || (!authState.byok_pass_active && authState.remaining_sessions <= 0)));
+
+  async function handleSelectNode(node: any) {
+    if (App?.OpenFile && node && node.path && !node.is_dir) {
+      await App.OpenFile(node.path);
+    }
+  }
+
+  async function handleTabSelect(path: string) {
+    if (App?.SetActiveDocument) {
+      await App.SetActiveDocument(path);
+    }
+  }
+
+  async function handleTabClose(path: string) {
+    if (App?.CloseDocument) {
+      await App.CloseDocument(path);
+    }
+  }
+
+  async function handleOpenFile() {
+    if (App?.PromptOpenFile) {
+      await App.PromptOpenFile();
+    }
+  }
+
+  async function handleOpenFolder() {
+    if (App?.PromptOpenDirectory) {
+      await App.PromptOpenDirectory();
+    }
+  }
 
   // Mock mode toggle wrapper
   function handleMockModeToggle() {
@@ -101,7 +139,7 @@
       const b64 = await App.CaptureScreen();
       if (b64) {
         if (App.AnalyzeVision) {
-          App.AnalyzeVision(b64);
+          App.AnalyzeVision(b64, "Analyze this technical interview screen and provide key hints, solution or code concisely.");
         } else {
           apiFetch(`${getApiUrl()}/api/vision/analyze`, {
             method: 'POST',
@@ -169,11 +207,20 @@
     <IDEShell
       {activeAction}
       onAction={handleAction}
+      workspaceTree={workspaceTree}
+      openTabs={openTabs}
+      activePath={activeDocumentPath}
+      totalDocs={openTabs.length}
+      onSelect={handleSelectNode}
+      onTabSelect={handleTabSelect}
+      onTabClose={handleTabClose}
+      onFileOpen={handleOpenFile}
+      onOpenFolder={handleOpenFolder}
     >
       <!-- Center Slot: Code Editor -->
       <div class="h-full w-full flex flex-col bg-surface/50 relative">
          <CodeEditor
-           content=""
+           content={activeDocumentContent}
            language="markdown"
            readonly={false}
          />
@@ -217,21 +264,12 @@
 
   <!-- Modals -->
   {#if showSessionReport}
-    <div class="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-8 pointer-events-auto">
-      <div class="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-surface/90 border border-white/10 rounded-2xl shadow-2xl relative hide-scrollbar">
-        <button class="absolute top-4 right-4 text-on-surface-variant hover:text-white" onclick={() => showSessionReport = false}>
-          <span class="material-symbols-outlined text-2xl">close</span>
-        </button>
-        <div class="p-6">
-          <SessionReport />
-        </div>
-      </div>
-    </div>
+    <SessionReport onClose={() => showSessionReport = false} />
   {/if}
 
   {#if uiState.hotkeysPanelOpen}
-    <div class="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-8 pointer-events-auto" onclick={() => uiState.hotkeysPanelOpen = false}>
-      <div class="w-full max-w-2xl bg-surface/95 border border-white/10 rounded-xl shadow-2xl" onclick={(e) => e.stopPropagation()}>
+    <div class="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-8 pointer-events-auto" onclick={() => uiState.hotkeysPanelOpen = false} role="button" tabindex="0" onkeydown={(e) => e.key === 'Escape' && (uiState.hotkeysPanelOpen = false)}>
+      <div class="w-full max-w-2xl bg-surface/95 border border-white/10 rounded-xl shadow-2xl" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" onkeydown={(e) => e.stopPropagation()}>
         <HotkeysPanel />
       </div>
     </div>

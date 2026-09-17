@@ -120,6 +120,7 @@ func (sm *SessionManager) Export() map[string]interface{} {
 
 	return map[string]interface{}{
 		"session_started_at": sm.sessionStartedAt,
+		"session_duration_s": int(time.Since(sm.sessionStartedAt).Seconds()),
 		"turn_count":         len(sm.turns),
 		"turns":              sm.turns,
 	}
