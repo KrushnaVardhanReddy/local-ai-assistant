@@ -153,8 +153,8 @@ BATCH 2 (Sequential Integration)
 | **P57-T2** | Interview IDE HUD Migration | ✅ Merged | ⚡ Parallel | [PR 186](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/186) | `InterviewHUD.svelte`, `LiveEarsDrawer`, `BrainDrawer`, migrate toolbar & buttons into `IDEShell` |
 | **P57-T3** | Active Context RAG Injection | ✅ Merged | Sequential | [PR 188](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/188) | Auto-inject open IDE file content into LLM context when answering interview questions |
 | **P57-T4** | Interview IDE Bug Fixes & Polish | ✅ Merged | Sequential | [PR 190](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/190) | Fix SetClickthrough/AnalyzeVision signatures, SessionReport empty/NaNm fix, wire workspace tree & editor, fix Svelte 5 lints, 10/10 Playwright E2E tests (PR 189 closed) |
-| **P57-T5A** | Backend Engine Extensions & Tree Normalization | ⏳ Queued | ⚡ Parallel | Pending | Broaden allowedExtensions in Go engine, fix isDir vs isDirectory in FileTreeNode |
-| **P57-T5B** | Brain & Live Ears Drawers Action Wiring | ⏳ Queued | ⚡ Parallel | Pending | STAR method priming, Catch Me Up, Clear Cache, suggestion chips & chat submit |
+| **P57-T5A** | Backend Engine Extensions & Tree Normalization | 🔄 In Progress | ⚡ Parallel | [Session 11225483305473353765](https://jules.google.com/session/11225483305473353765) | Broaden allowedExtensions in Go engine, fix isDir vs isDirectory in FileTreeNode |
+| **P57-T5B** | Brain & Live Ears Drawers Action Wiring | 🔄 In Progress | ⚡ Parallel | [Session 2950198922414286392](https://jules.google.com/session/2950198922414286392) | STAR method priming, Catch Me Up, Clear Cache, suggestion chips & chat submit |
 | **P57-T5C** | Interview HUD ActivityBar & Web E2E Suite | ⏳ Queued | Sequential | Pending | ActivityBar Folder toggle, immediate refresh, header toolbar & full Playwright suite |
 
 
