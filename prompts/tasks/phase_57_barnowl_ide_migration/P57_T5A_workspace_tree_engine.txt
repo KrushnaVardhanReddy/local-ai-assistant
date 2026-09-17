@@ -136,13 +136,24 @@ STEP-BY-STEP IMPLEMENTATION INSTRUCTIONS
      if (isDir && node.children) { ... }
      ```
 
+5. Unit Test Updates & Fixes:
+   - In `wails-app/core/engine/workspace_test.go`:
+     - Add tests verifying that code files (`main.go`, `script.py`, `app.ts`, `data.json`) are indexed by `OpenDirectory`.
+     - Verify `allowedExtensions` contains the new programming languages.
+   - In `wails-app/app_test.go`:
+     - Verify `PromptOpenFile` accepts and handles code files without error.
+   - In frontend tests:
+     - Run `npm run check` and ensure zero type or rune errors.
+
 ═══════════════════════════════════════════════════════════════
-VERIFICATION
+VERIFICATION & TESTS
 ═══════════════════════════════════════════════════════════════
-1. Run backend unit tests:
-   `cd wails-app && C_INCLUDE_PATH=$PWD/backend/lib LIBRARY_PATH=$PWD/backend/lib CGO_CFLAGS="-I$PWD/backend/lib" CGO_LDFLAGS="-L$PWD/backend/lib -lwhisper -lstdc++ -lm" go test -v ./...`
-   Must pass 100%.
-2. Run Svelte checks:
+1. Post-change backend test execution:
+   `cd wails-app && C_INCLUDE_PATH=$PWD/backend/lib LIBRARY_PATH=$PWD/backend/lib CGO_CFLAGS="-I$PWD/backend/lib" CGO_LDFLAGS="-L$PWD/backend/lib -lwhisper -lstdc++ -lm" go test -v -count=1 ./...`
+   Every test including `workspace_test.go` and `app_test.go` must pass 100%.
+
+2. Post-change frontend test & typecheck execution:
    `cd wails-app/frontend && npm run check`
-   Must report 0 errors.
+   Must report 0 errors and 0 warnings.
+
 3. Update `prompts/tasks_v2.md` to mark P57-T5A complete once merged.

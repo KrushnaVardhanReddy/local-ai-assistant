@@ -105,10 +105,19 @@ STEP-BY-STEP IMPLEMENTATION INSTRUCTIONS
    - Ensure `sendChip(chip)`, `dismissChip(chip.id)`, and `clearAllChips()` are properly bound to click events.
    - Ensure the chips container has clear clickable touch targets with unique `aria-label`s.
 
+3. Unit Test Updates & Checks:
+   - Ensure `BrainDrawer` and `LiveEarsDrawer` functions and reactivity compile cleanly.
+   - Run typecheck and linting to ensure zero warnings or errors.
+
 ═══════════════════════════════════════════════════════════════
-VERIFICATION
+VERIFICATION & TESTS
 ═══════════════════════════════════════════════════════════════
-1. Run Svelte checks:
+1. Post-change frontend test & typecheck execution:
    `cd wails-app/frontend && npm run check`
    Must report 0 errors and 0 warnings.
-2. Update `prompts/tasks_v2.md` to mark P57-T5B complete once merged.
+
+2. Run frontend build check:
+   `cd wails-app/frontend && npm run build`
+   Must compile bundle successfully with 0 errors.
+
+3. Update `prompts/tasks_v2.md` to mark P57-T5B complete once merged.

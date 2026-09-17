@@ -155,12 +155,18 @@ STEP-BY-STEP IMPLEMENTATION INSTRUCTIONS
      - Test 11: Brain "STAR" method button primes STAR state.
 
 ═══════════════════════════════════════════════════════════════
-VERIFICATION
+VERIFICATION & TESTS
 ═══════════════════════════════════════════════════════════════
-1. Run Svelte checks:
+1. Post-change backend test verification:
+   `cd wails-app && C_INCLUDE_PATH=$PWD/backend/lib LIBRARY_PATH=$PWD/backend/lib CGO_CFLAGS="-I$PWD/backend/lib" CGO_LDFLAGS="-L$PWD/backend/lib -lwhisper -lstdc++ -lm" go test -v -count=1 ./...`
+   Must pass 100% with 0 failures.
+
+2. Post-change frontend Svelte check:
    `cd wails-app/frontend && npm run check`
-   Must report 0 errors.
-2. Run Playwright E2E tests:
+   Must report 0 errors and 0 warnings.
+
+3. Post-change Playwright Web E2E test execution:
    `cd wails-app/frontend && npm run test:e2e`
-   Must pass all interactive tests with 100% success.
-3. Update `prompts/tasks_v2.md` to mark P57-T5C complete once merged.
+   All interactive button and workflow tests must pass 100%.
+
+4. Update `prompts/tasks_v2.md` to mark P57-T5C complete once merged.
