@@ -230,38 +230,21 @@
   }
 
   function handleManualScroll(e: Event) {
-    // Determine if it was manual scroll (wheel) or keys
     pauseAutoScrollTemporarily();
   }
 
   function handleKeyDown(e: KeyboardEvent) {
-    // Pause toggle on spacebar
-    if (e.code === 'Space') {
-      e.preventDefault(); // prevent page scroll
-      autoScrollPaused = !autoScrollPaused;
-      if (!autoScrollPaused) {
-        updateScrollPosition(); // snap back immediately
-      }
+    // Escape to un-pause auto scroll immediately
+    if (e.key === 'Escape') {
+      autoScrollPaused = false;
+      if (resumeScrollTimeout) clearTimeout(resumeScrollTimeout);
+      updateScrollPosition();
       return;
     }
 
     // Up/Down arrows manually scroll
-    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'PageUp' || e.code === 'PageDown') {
       pauseAutoScrollTemporarily();
-      if (scriptContainer) {
-        const scrollAmount = 40; // px
-        scriptContainer.scrollTop += (e.code === 'ArrowDown' ? scrollAmount : -scrollAmount);
-      }
-    }
-
-    if (e.ctrlKey && e.code === 'KeyB') {
-      e.preventDefault();
-      isSidebarOpen = !isSidebarOpen;
-    }
-
-    if (e.ctrlKey && e.code === 'KeyP') {
-      e.preventDefault();
-      handleOpenFile();
     }
   }
 
@@ -319,181 +302,151 @@
   });
 </script>
 
-<div class="presenter-root">
-  <div class="eyeline-indicator"></div>
-
-  <WorkspaceSidebar
-    nodes={workspaceTree}
+<div class="presenter-container" style="--hud-bg: rgba(10, 10, 10, {opacity});">
+  <StealthTitleBar />
+  <IDEShell
+    {workspaceTree}
+    {openTabs}
     activePath={activeDocumentPath}
     totalDocs={openTabs.length}
-    isOpen={isSidebarOpen}
-    onToggle={(open) => isSidebarOpen = open}
-    onSelect={handleSelectNode}
-    onOpenFile={handleOpenFile}
+    onTabSelect={handleTabSelect}
+    onTabClose={handleTabClose}
+    onFileOpen={handleOpenFile}
     onOpenFolder={handleOpenFolder}
-  />
-
-  <div
-    class="presenter-hud"
-    style="background-color: rgba(10, 10, 10, {opacity}); --dynamic-font-size: {fontSize}rem; --dynamic-line-height: {lineHeight};"
   >
-    <StealthTitleBar />
-
-    <div class="toolbar">
-      <div class="control-group">
-        <label for="opacity">Opacity</label>
-        <input id="opacity" type="range" min="0" max="1" step="0.05" bind:value={opacity} />
-      </div>
-      <div class="control-group">
-        <label for="font-size">Size</label>
-        <input id="font-size" type="range" min="0.5" max="3" step="0.1" bind:value={fontSize} />
-      </div>
-      <div class="control-group">
-        <label for="line-height">Spacing</label>
-        <input id="line-height" type="range" min="1" max="2.5" step="0.1" bind:value={lineHeight} />
-      </div>
-      <div class="header">
-        {#if autoScrollPaused}
-          <div class="status-badge paused">PAUSED</div>
-        {:else}
-          <div class="status-badge listening">AUTO-SYNC</div>
-        {/if}
-        <button class="clear-btn" aria-label="Load Document" title="Load Script" on:click={handleLoadDoc}>📁</button>
-        <button class="clear-btn" aria-label="Clear state" title="Clear State" on:click={handleClear}>⟳</button>
-      </div>
+    <div class="editor-header" style="padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: flex-end; gap: 8px; align-items: center; background: rgba(0,0,0,0.2);">
+      {#if autoScrollPaused}
+        <div class="status-badge paused" style="margin-right:auto;">PAUSED</div>
+      {:else}
+        <div class="status-badge listening" style="margin-right:auto;">AUTO-SYNC</div>
+      {/if}
+      <button class="clear-btn" aria-label="Load Document" title="Load Script" onclick={handleLoadDoc}>📁</button>
+      <button class="clear-btn" aria-label="Clear state" title="Clear State" onclick={handleClear}>⟳</button>
     </div>
 
-    <WorkspaceTabs
-      tabs={openTabs}
-      activePath={activeDocumentPath}
-      onTabSelect={handleTabSelect}
-      onTabClose={handleTabClose}
-    />
-
-    <div class="content">
-      {#if scriptWords.length > 0}
-        <div class="script-display" bind:this={scriptContainer} on:wheel={handleManualScroll}>
-          {#each scriptWords as word, i}
-             <span class="script-word {i === currentWordIndex ? 'active' : ''} {i < currentWordIndex ? 'read' : ''}">
-                {word}{' '}
-             </span>
-          {/each}
-        </div>
+    <div class="editor-area" onwheel={handleManualScroll}>
+      {#if script}
+        <CodeEditor
+          content={script}
+          {fontSize}
+          {lineHeight}
+          activeLine={activeLineIndex}
+          readOnly={true}
+        />
+      {:else}
+        <div class="empty-state">No script loaded. Open a Markdown file.</div>
       {/if}
     </div>
-  </div>
 
-  {#if isCopilotOpen}
-    <div class="copilot-drawer {isThinking ? 'thinking' : ''}" style="--dynamic-font-size: {fontSize}rem; --dynamic-line-height: {lineHeight}; background-color: rgba(20, 20, 30, {opacity});">
-       <div class="copilot-header">
-          <span>Copilot Q&A</span>
-          <button class="close-copilot" on:click={() => { isCopilotOpen = false; latestResponse = ''; }}>✖</button>
-       </div>
-       <div class="transcript">Q: {latestTranscript}</div>
-       <div class="response">A: {latestResponse}</div>
-    </div>
-  {/if}
+    {#snippet rightDrawer()}
+      <div class="copilot-panel {isThinking ? 'thinking' : ''}">
+        <div class="copilot-header">
+          <span>Audience Copilot</span>
+          <button class="close-copilot" onclick={() => { isCopilotOpen = false; latestResponse = ''; }}>✖</button>
+        </div>
+        <div class="copilot-body">
+          {#if latestTranscript}
+            <div class="transcript">Q: {latestTranscript}</div>
+          {/if}
+          {#if latestResponse}
+            <div class="response">A: {latestResponse}</div>
+          {/if}
+        </div>
+      </div>
+    {/snippet}
+
+    {#snippet settingsPanel()}
+      <div class="presenter-settings-wrapper">
+        <h3 style="margin-top:0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">Display Settings</h3>
+        <div class="control-group">
+          <label for="opacity">Opacity: {opacity.toFixed(2)}</label>
+          <input id="opacity" type="range" min="0" max="1" step="0.05" bind:value={opacity} />
+        </div>
+        <div class="control-group">
+          <label for="font-size">Font Size: {fontSize.toFixed(1)}rem</label>
+          <input id="font-size" type="range" min="0.5" max="3" step="0.1" bind:value={fontSize} />
+        </div>
+        <div class="control-group">
+          <label for="line-height">Spacing: {lineHeight.toFixed(1)}</label>
+          <input id="line-height" type="range" min="1" max="2.5" step="0.1" bind:value={lineHeight} />
+        </div>
+        <PresenterSettings />
+      </div>
+    {/snippet}
+  </IDEShell>
 </div>
 
 <style>
-  :root {
-    --hud-text-gray: #aaaaaa;
-    --hud-text-white: #ffffff;
-    --hud-width: 640px;
-    --hud-font-family: system-ui, -apple-system, sans-serif;
-    --accent-color: rgba(255, 255, 255, 0.2);
-  }
-
-  /* Full screen transparent root to allow for HUD positioning and eyeline */
-  .presenter-root {
+  .presenter-container {
     width: 100vw;
     height: 100vh;
-    background: transparent;
-    position: relative;
-    pointer-events: none; /* Let clicks pass through the root container */
-    font-family: var(--hud-font-family);
-  }
-
-  /* Eyeline indicator guide in the upper-middle of screen */
-  .eyeline-indicator {
-    position: absolute;
-    top: 15%; /* Roughly webcam level */
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 10%, rgba(255, 255, 255, 0.3) 50%, transparent 90%);
-    pointer-events: none;
-    z-index: 1000;
-  }
-
-  .presenter-hud {
-    width: var(--hud-width);
-    height: auto;
-    border-radius: 8px;
-    padding: 16px;
-    box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    pointer-events: auto; /* Enable clicks on HUD elements */
-
-    /* Position top-center pinned */
-    position: fixed;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-
-    /* Smooth transition when settings change */
-    transition: background-color 0.2s ease;
+    overflow: hidden;
   }
 
-  /* Floating toolbar */
-  .toolbar {
+  .editor-area {
+    flex-grow: 1;
+    overflow: hidden;
+    position: relative;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--accent-color);
-    margin-bottom: 8px;
+    flex-direction: column;
   }
 
-  /* Show toolbar on hover over the HUD */
-  .presenter-hud:hover .toolbar {
-    opacity: 1;
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: rgba(255,255,255,0.4);
+    font-size: 1.2rem;
+  }
+
+  .copilot-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+    transition: box-shadow 0.3s ease;
+  }
+
+  .copilot-panel.thinking {
+    box-shadow: inset 0 0 15px rgba(74, 222, 128, 0.4);
+  }
+
+  .copilot-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .presenter-settings-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   .control-group {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
-    font-size: 0.8rem;
-    color: var(--hud-text-gray);
-  }
-
-  .control-group label {
-    user-select: none;
+    color: var(--hud-text-gray, #ccc);
+    font-size: 0.9rem;
   }
 
   .control-group input[type="range"] {
-    cursor: pointer;
-    accent-color: var(--hud-text-white);
-    width: 80px;
-  }
-
-  .header {
-    display: flex;
-    justify-content: flex-end;
-    flex-grow: 1;
+    width: 100%;
+    accent-color: var(--hud-text-white, #fff);
   }
 
   .clear-btn {
     background: transparent;
     border: none;
-    color: var(--hud-text-gray);
+    color: var(--hud-text-gray, #ccc);
     font-size: 1.2rem;
     cursor: pointer;
     transition: color 0.2s;
@@ -502,108 +455,41 @@
   }
 
   .clear-btn:hover {
-    color: var(--hud-text-white);
-  }
-
-  .content {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .transcript {
-    font-size: calc(var(--dynamic-font-size) * 0.8);
-    line-height: var(--dynamic-line-height);
-    color: var(--hud-text-gray);
-    min-height: 1.2em;
-    transition: font-size 0.2s, line-height 0.2s;
-  }
-
-  .response {
-    font-size: var(--dynamic-font-size);
-    line-height: var(--dynamic-line-height);
-    color: var(--hud-text-white);
-    min-height: 1.5em;
-    transition: font-size 0.2s, line-height 0.2s;
-  }
-
-  .script-display {
-    max-height: 300px;
-    overflow-y: auto;
-    font-size: var(--dynamic-font-size);
-    line-height: var(--dynamic-line-height);
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
-
-    /* Hide scrollbar for stealth */
-    scrollbar-width: none; /* Firefox */
-  }
-
-  .script-display::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
-  }
-
-  .script-word {
-    color: var(--hud-text-gray);
-    transition: color 0.2s;
-  }
-
-  .script-word.read {
-    color: rgba(255, 255, 255, 0.3);
-  }
-
-  .script-word.active {
-    color: #4ade80; /* bright green for current position */
-    font-weight: bold;
-    text-shadow: 0 0 4px rgba(74, 222, 128, 0.4);
-  }
-
-  .copilot-drawer {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: calc(var(--hud-width) * 0.8);
-    border-radius: 8px;
-    padding: 16px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    pointer-events: auto;
-    z-index: 9999;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    transition: box-shadow 0.3s ease;
-  }
-
-  .copilot-drawer.thinking {
-    box-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
-    border-color: rgba(74, 222, 128, 0.6);
+    color: var(--hud-text-white, #fff);
   }
 
   .copilot-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.8rem;
-    color: var(--hud-text-gray);
+    font-size: 0.9rem;
+    color: var(--hud-text-gray, #ccc);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 4px;
-    margin-bottom: 4px;
+    padding-bottom: 8px;
   }
 
   .close-copilot {
     background: transparent;
     border: none;
-    color: var(--hud-text-gray);
+    color: var(--hud-text-gray, #ccc);
     cursor: pointer;
     font-size: 1rem;
     padding: 0;
   }
 
   .close-copilot:hover {
-    color: var(--hud-text-white);
+    color: var(--hud-text-white, #fff);
+  }
+
+  .transcript, .response {
+    color: #fff;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .transcript {
+    color: #aaa;
+    font-style: italic;
   }
 
   .status-badge {
@@ -611,7 +497,6 @@
     font-weight: bold;
     padding: 2px 6px;
     border-radius: 4px;
-    margin-right: 8px;
     display: flex;
     align-items: center;
     letter-spacing: 0.5px;
