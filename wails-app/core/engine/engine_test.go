@@ -1,10 +1,12 @@
 package engine_test
 
 import (
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"fmt"
 	"wails-app/backend/stt"
 	"wails-app/core/engine"
 	"wails-app/core/ports/driven"
@@ -380,8 +382,8 @@ func TestActiveDocumentContextInjection(t *testing.T) {
 	}
 
 	// 1. With IncludeActiveDocContext = true (default)
-	eng.AskQuestion("test question")
-	time.Sleep(50 * time.Millisecond)
+	eng.AskQuestion("How do you pass data between goroutines?")
+	time.Sleep(150 * time.Millisecond)
 
 	if !strings.Contains(llm.LastSystemPrompt, "[ACTIVE WORKSPACE DOCUMENT:") {
 		t.Errorf("Expected SystemPrompt to contain active document block, got: %s", llm.LastSystemPrompt)
@@ -392,8 +394,8 @@ func TestActiveDocumentContextInjection(t *testing.T) {
 
 	// 2. With IncludeActiveDocContext = false
 	eng.SetIncludeActiveDocContext(false)
-	eng.AskQuestion("test question 2")
-	time.Sleep(50 * time.Millisecond)
+	eng.AskQuestion("How do you design microservices in Go?")
+	time.Sleep(150 * time.Millisecond)
 
 	if strings.Contains(llm.LastSystemPrompt, "[ACTIVE WORKSPACE DOCUMENT:") {
 		t.Errorf("Expected SystemPrompt to NOT contain active document block when disabled, got: %s", llm.LastSystemPrompt)
