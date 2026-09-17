@@ -1,0 +1,79 @@
+TASK: P57-T6 — LLM Stream Preemption, Interruption Handling & Non-Blocking Utterance Pipeline
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Replace the strict, blocking mutex lock in `wails-app/core/engine/pipeline.go` (`e.llmBusy.TryLock()`)
+with an interruptible, non-blocking LLM execution pipeline using Go contexts (`context.WithCancel`).
+
+When an interviewer interrupts or asks a follow-up question while the LLM is still streaming tokens:
+1. The engine MUST cancel the previous in-flight HTTP request cleanly (`cancel()`).
+2. The engine immediately begins streaming the response for the new question.
+3. If an utterance is detected as a secondary phrase/topic, emit it as a suggestion chip to `on_chip` so it is never dropped into `/dev/null`.
+4. Add comprehensive Go unit tests verifying preemption, context cancellation, and zero deadlocks.
+
+This task owns:
+- `wails-app/core/engine/pipeline.go`
+- `wails-app/core/engine/engine.go`
+- `wails-app/core/engine/pipeline_test.go`
+- `prompts/tasks_v2.md`
+
+═══════════════════════════════════════════════════════════════
+CURRENT PROBLEM & ROOT CAUSE
+═══════════════════════════════════════════════════════════════
+In `wails-app/core/engine/pipeline.go`:
+```go
+if !e.llmBusy.TryLock() {
+    log.Printf("[BUSY] Discarded (LLM streaming): %q", cleanTranscript)
+    return
+}
+```
+If an interviewer starts asking a real question like:
+"How do you pass data between the go routines?"
+while an earlier stream is generating tokens, the question is completely DISCARDED.
+The user never gets an answer, and no HTTP call is made.
+
+═══════════════════════════════════════════════════════════════
+REQUIRED IMPLEMENTATION
+═══════════════════════════════════════════════════════════════
+1. Engine State in `wails-app/core/engine/engine.go`:
+   - Add `cancelInFlight context.CancelFunc` and a protecting mutex `inFlightMu sync.Mutex` on `StealthEngine`.
+   - In `ClearState()`, if `cancelInFlight != nil`, invoke `e.cancelInFlight()` to instantly terminate the active stream.
+
+2. Preemptive Pipeline Execution in `wails-app/core/engine/pipeline.go`:
+   - Instead of discarding when an LLM call is active:
+     a) Check if the new transcript is an interruption or new question.
+     b) Cancel the active context:
+        ```go
+        e.inFlightMu.Lock()
+        if e.cancelInFlight != nil {
+            log.Printf("[PREEMPT] Interrupting active LLM stream for new question: %q", cleanTranscript)
+            e.cancelInFlight()
+        }
+        ctx, cancel := context.WithCancel(context.Background())
+        e.cancelInFlight = cancel
+        e.inFlightMu.Unlock()
+        ```
+     c) When `e.llm.StreamCompletion` runs or returns, cleanly release and unset `cancelInFlight`.
+   - Update `ports/driven.go` / `LLMPort.StreamCompletion` or adapter to accept `ctx context.Context` if not already present, or use context-aware HTTP requests in `backend/llm/openai.go` (`http.NewRequestWithContext`).
+
+3. Suggestion Fallback:
+   - When a transcript is received while the user is actively speaking or if it represents an alternative query, emit:
+     `e.events.Emit("on_chip", map[string]interface{}{"id": ..., "text": cleanTranscript})`
+   - Never drop valid accepted transcript text silently.
+
+4. Go Unit Tests (`wails-app/core/engine/pipeline_test.go`):
+   - Test 1: `TestPipeline_PreemptionOnInterruption`: Verify that sending Question B while Question A is streaming cancels Question A and begins streaming Question B.
+   - Test 2: `TestPipeline_ClearStateCancelsInFlight`: Verify `ClearState()` aborts the active stream immediately.
+   - Test 3: `TestPipeline_CacheBypassWhenActive`: Ensure cache search and store work seamlessly with preemption.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+Run and ensure 100% pass:
+```bash
+cd wails-app
+go test -v -count=1 ./core/engine
+```
+All existing Go engine unit tests must continue to pass without regression.
+Update `prompts/tasks_v2.md` marking P57-T6 in progress or ready.
