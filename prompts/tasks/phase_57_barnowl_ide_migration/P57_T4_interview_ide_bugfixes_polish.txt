@@ -68,9 +68,26 @@ DETAILED SPECIFICATION & FIXES
      for modal overlay containers.
    - In `CodeEditor.svelte`: fix the closure/runes reference warning for `content`.
 
+6. Comprehensive Playwright E2E Test Suite (`wails-app/frontend/tests/ui.spec.ts`):
+   Expand `ui.spec.ts` with real interaction tests to catch and prevent regressions:
+   - Mock Wails runtime methods on `window.go.main.App` (NOTE: Use mock functions in `page.addInitScript` so NO real LLM API keys or cloud calls are needed!):
+     - `SetClickthrough: async (enable) => true`
+     - `CaptureScreen: async () => "data:image/png;base64,mock..."`
+     - `AnalyzeVision: async (b64, prompt) => true`
+     - `EndSession: async () => ({ session: { turn_count: 2 }, scorecard: null })`
+     - `GetIDEState: async () => ({ workspaceTree: [], openTabs: [], activeDocumentPath: '', activeDocumentContent: '' })`
+   - Test 1: "Stealth mode toggle": Click "Stealth" button -> assert `SetClickthrough` called with valid argument, icon updates.
+   - Test 2: "Vision snip button": Click "Snip" -> assert `CaptureScreen` and `AnalyzeVision` called with valid prompt.
+   - Test 3: "Session Report open and close": Click "Report" -> assert report modal is visible -> click close button -> assert modal disappears completely (no lockup!).
+   - Test 4: "STAR preset trigger": Click "STAR" button -> assert active primed visual state.
+   - Test 5: "Workspace explorer and tabs": Verify opening explorer, tabs render, and editor is displayed.
+   - Test 6: "Copilot and Live Ears drawer toggling": Switch between Ears drawer and Brain drawer from ActivityBar.
+
+
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
 - `go test ./...` in `wails-app` must pass with zero errors.
 - `npm run check` in `wails-app/frontend` must report 0 errors and 0 warnings.
-- `npx playwright test` must pass.
+- `npx playwright test` must run all 6+ E2E tests and pass with 100% success.
+
