@@ -15,10 +15,28 @@ import (
 
 // allowedExtensions for document indexing
 var allowedExtensions = map[string]bool{
-	".txt":  true,
-	".md":   true,
-	".pdf":  true,
-	".pptx": true,
+	".txt":    true,
+	".md":     true,
+	".pdf":    true,
+	".pptx":   true,
+	".go":     true,
+	".py":     true,
+	".js":     true,
+	".ts":     true,
+	".jsx":    true,
+	".tsx":    true,
+	".svelte": true,
+	".json":   true,
+	".rs":     true,
+	".cpp":    true,
+	".c":      true,
+	".h":      true,
+	".html":   true,
+	".css":    true,
+	".yaml":   true,
+	".yml":    true,
+	".sql":    true,
+	".sh":     true,
 }
 
 // isIgnored directory or file

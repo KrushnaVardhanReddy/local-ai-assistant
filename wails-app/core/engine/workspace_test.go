@@ -43,6 +43,8 @@ func TestStealthEngine_Workspace(t *testing.T) {
 	// Create valid files
 	os.WriteFile(filepath.Join(tempDir, "file1.txt"), []byte("content 1"), 0644)
 	os.WriteFile(filepath.Join(tempDir, "file2.md"), []byte("content 2"), 0644)
+	os.WriteFile(filepath.Join(tempDir, "main.go"), []byte("package main"), 0644)
+	os.WriteFile(filepath.Join(tempDir, "script.py"), []byte("print('hello')"), 0644)
 
 	// Create unsupported files
 	os.WriteFile(filepath.Join(tempDir, "image.png"), []byte("fake image"), 0644)
@@ -91,8 +93,8 @@ func TestStealthEngine_Workspace(t *testing.T) {
 		}
 
 		// Verify structure
-		if len(node.Children) != 3 { // docs folder, file1.txt, file2.md
-			t.Errorf("Expected 3 children, got %d", len(node.Children))
+		if len(node.Children) != 5 { // docs folder, file1.txt, file2.md, main.go, script.py
+			t.Errorf("Expected 5 children, got %d", len(node.Children))
 		}
 
 		// Check sorting: folders first, then alphabetically
@@ -104,6 +106,12 @@ func TestStealthEngine_Workspace(t *testing.T) {
 		}
 		if node.Children[2].Name != "file2.md" {
 			t.Errorf("Expected third child to be 'file2.md', got %s", node.Children[2].Name)
+		}
+		if node.Children[3].Name != "main.go" {
+			t.Errorf("Expected fourth child to be 'main.go', got %s", node.Children[3].Name)
+		}
+		if node.Children[4].Name != "script.py" {
+			t.Errorf("Expected fifth child to be 'script.py', got %s", node.Children[4].Name)
 		}
 
 		// Also check that a file is sorted after a directory
@@ -120,7 +128,7 @@ func TestStealthEngine_Workspace(t *testing.T) {
 		if node2.Children[0].Name != "docs" || node2.Children[1].Name != "z_dir" {
 			t.Errorf("Expected folders to be first: %s, %s", node2.Children[0].Name, node2.Children[1].Name)
 		}
-		if node2.Children[2].Name != "a.txt" || node2.Children[3].Name != "file1.txt" || node2.Children[4].Name != "file2.md" {
+		if node2.Children[2].Name != "a.txt" || node2.Children[3].Name != "file1.txt" || node2.Children[4].Name != "file2.md" || node2.Children[5].Name != "main.go" || node2.Children[6].Name != "script.py" {
 			t.Errorf("Expected files to be sorted alphabetically after folders")
 		}
 

@@ -19,7 +19,8 @@
     const lowerQuery = query.toLowerCase();
 
     return nodesToFilter.reduce<FileNode[]>((acc, node) => {
-      if (node.isDirectory && node.children) {
+      const isDir = Boolean(node.isDirectory ?? (node as any).isDir);
+      if (isDir && node.children) {
         const filteredChildren = filterNodes(node.children, query);
         if (filteredChildren.length > 0) {
           acc.push({ ...node, children: filteredChildren, isExpanded: true });

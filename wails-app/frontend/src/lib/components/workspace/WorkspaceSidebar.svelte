@@ -30,11 +30,11 @@
     <div class="drawer-header">
       <span class="title">Workspace</span>
       <div class="actions">
-        <button class="action-btn" onclick={onOpenFile} aria-label="Open File">
+        <button class="action-btn" onclick={() => onOpenFile()} aria-label="Open File">
           <span class="material-symbols-outlined icon">note_add</span>
           <span class="btn-label">FILE</span>
         </button>
-        <button class="action-btn" onclick={onOpenFolder} aria-label="Open Folder">
+        <button class="action-btn" onclick={() => onOpenFolder()} aria-label="Open Folder">
           <span class="material-symbols-outlined icon">create_new_folder</span>
           <span class="btn-label">FOLDER</span>
         </button>
