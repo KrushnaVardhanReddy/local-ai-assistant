@@ -1,58 +1,151 @@
-TASK: P57-T5 — Fix Real-World BarnOwl Workspace File/Folder Explorer & IDE Wiring
+TASK: P57-T5 — Comprehensive BarnOwl IDE Button & Feature Audit, Wiring & Real-World Fixes
 
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
-Fix critical real-world workspace file and folder bugs in BarnOwl AI (Interview Copilot)
-where clicking the ActivityBar "Folder" icon, "FILE", and "FOLDER" buttons fails to open
-folders or files, the folder tree does not expand, and code files are rejected by the engine.
+Perform a complete end-to-end audit, repair, and test suite expansion for EVERY button,
+drawer, mode toggle, and interaction across the BarnOwl AI Interview Workstation:
+1. ActivityBar buttons (Folder, Ears, Brain, Mock, Keys, Settings)
+2. Header Toolbar buttons (Snip, Report, Clear, Stealth Mode)
+3. Workspace Drawer buttons & Tree ("FILE", "FOLDER", folder toggle, file tab select/close)
+4. Brain Drawer buttons & actions ("STAR", "Catch Me Up", "Clear Cache", Markdown stream)
+5. Live Ears Drawer buttons (Chat prompt submit, Pending chip send/dismiss, Clear All chips)
+6. Backend Engine file parsing (broadening allowed extensions for code projects)
 
-All previous Playwright E2E tests passed only because they relied on a shallow mock that
-completely bypassed the actual UI event handlers and data models. This task fixes the
-underlying frontend and backend bugs and replaces shallow assertions with realistic web E2E tests.
+Previous Playwright tests passed with a shallow mock that bypassed real component event
+wiring, masking critical real-world bugs. This task specifies the exact expected behavior
+for EVERY button and feature, fixes all underlying issues, and backs them with exhaustive
+real-world Playwright web interaction tests.
 
 ═══════════════════════════════════════════════════════════════
-BEHAVIOR & BUTTON EXPECTATIONS
+EXHAUSTIVE BUTTON & FEATURE SPECIFICATION
 ═══════════════════════════════════════════════════════════════
 
-1. [Folder / Explorer Icon] (Left ActivityBar - `id: 'explorer'`):
-   - Expected: Clicking this icon toggles the WorkspaceSidebar drawer open (`width: 240px`)
-     and closed (`width: 0px`).
-   - Bug in current code: `InterviewHUD.svelte`'s `handleAction(action)` intercepts `'explorer'`
-     and only sets `activeAction = 'explorer'`, but does NOT update `IDEShell.svelte`'s internal
-     `isExplorerOpen` state. Thus, the sidebar drawer stays permanently closed (0px wide).
+───────────────────────────────────────────────────────────────
+GROUP A: ACTIVITY BAR (Leftmost 54px vertical bar)
+───────────────────────────────────────────────────────────────
+1. [Folder / Explorer] (`data-testid="activity-bar-explorer"`):
+   - Role: Toggles the WorkspaceSidebar drawer open (`width: 240px`) or closed (`width: 0px`).
+   - Bug: In `InterviewHUD.svelte`, `handleAction('explorer')` sets `activeAction = 'explorer'`,
+     but does not update `IDEShell.svelte`'s internal `let isExplorerOpen` state.
+   - Expected: Clicking toggles `isExplorerOpen`. Active state indicator lights up on button.
 
-2. [FILE Button] (Workspace Sidebar Header - `onOpenFile`):
-   - Expected: Clicking "FILE" opens the native file dialog (`App.PromptOpenFile()`), loads the
-     selected file into the engine, opens it in a new tab in `WorkspaceTabs.svelte`, selects it,
-     and immediately displays its content in `CodeEditor.svelte`.
-   - Bug in current code: After `PromptOpenFile()` resolves, the UI waits up to 1000ms for a
-     passive polling tick instead of immediately refreshing state with `GetIDEState()`.
+2. [Live Ears] (`data-testid="activity-bar-ears"`):
+   - Role: Opens the right side-drawer displaying the real-time audio transcript history,
+     live incoming speech chunk (`You`), and pending question suggestion chips.
+   - Expected: Switches `activeDrawer = 'ears'`, mounts `<LiveEarsDrawer />`, highlights Ears icon.
 
-3. [FOLDER Button] (Workspace Sidebar Header - `onOpenFolder`):
-   - Expected: Clicking "FOLDER" opens the native directory dialog (`App.PromptOpenDirectory()`),
-     indexes the folder's files and subdirectories, displays the hierarchical file tree in
-     `FileTree.svelte`, and immediately refreshes the UI.
-   - Bug in current code: Waits for passive polling, and fails to load directories containing code!
+3. [The Brain] (`data-testid="activity-bar-copilot"`):
+   - Role: Opens the right side-drawer displaying live AI interview hints, code generation,
+     and answer breakdowns.
+   - Expected: Switches `activeDrawer = 'copilot'`, mounts `<BrainDrawer />`, highlights Brain icon.
 
-4. [File & Folder Tree Nodes] (`FileTreeNode.svelte`):
-   - Expected: Folders can be expanded/collapsed by clicking them or pressing Enter/Space.
-     Clicking a file node opens that document in the editor and switches the active tab.
-   - Bug in current code:
-     a) Go backend (`driving.FileNode`) serializes `isDir: bool`, but Svelte components
-        (`types.ts`, `FileTreeNode.svelte`, `FileTree.svelte`) check `node.isDirectory`.
-        Because `InterviewHUD.svelte` does not normalize `isDir` -> `isDirectory`, every node is
-        treated as a file; folders have no chevron, cannot expand, and show broken file icons!
-     b) In `InterviewHUD.svelte`, `handleSelectNode(node)` checks `!node.is_dir`, but does not check
-        `!node.isDirectory`, causing click handling to fail depending on object keys.
+4. [Mock Mode Toggle] (`data-testid="activity-bar-mock"`):
+   - Role: Toggles simulated interview mode for practice.
+   - Expected: When activated: starts mock voice/PTT loop, displays pulsing red "Mock" badge in
+     top header. When deactivated: stops mock loop and automatically opens `<SessionReport />`.
 
-5. [Allowed File Extensions] (`wails-app/core/engine/workspace.go`):
-   - Expected: When a user opens a folder or project with interview notes, cheat sheets, or code
-     (e.g., Python scripts, Go files, TypeScript/JavaScript, markdown, json, etc.), the engine
-     indexes them.
-   - Bug in current code: `allowedExtensions` is strictly limited to `.txt`, `.md`, `.pdf`, `.pptx`.
-     Opening any folder containing code files logs:
-     "directory ... does not contain valid document files" and completely drops the folder!
+5. [Hotkeys Panel] (`data-testid="activity-bar-keys"`):
+   - Role: Toggles the keyboard shortcuts cheat-sheet panel.
+   - Expected: Toggles `uiState.hotkeysPanelOpen = !uiState.hotkeysPanelOpen`. Renders `<HotkeysPanel />`.
+
+6. [Settings] (`data-testid="activity-bar-settings"`):
+   - Role: Opens the slide-over settings panel for Audio Device, Model, Prompt & Auth config.
+   - Expected: Renders the settings drawer with `<Settings />`. Clicking close (x) returns to the
+     previous drawer without breaking layout.
+
+───────────────────────────────────────────────────────────────
+GROUP B: HEADER TOOLBAR (Top horizontal bar)
+───────────────────────────────────────────────────────────────
+7. [Snip] (`button[title="Vision Snip"]`):
+   - Role: Captures screenshot of technical interview problem/diagram and sends to vision LLM.
+   - Expected: Calls `App.CaptureScreen()`, then calls `App.AnalyzeVision(b64, prompt)`.
+     Switches drawer to Brain to stream the solution.
+
+8. [Report] (`button[title="Session Report"]`):
+   - Role: Displays session analytics, question turn count, elapsed time, and AI feedback scorecard.
+   - Expected: Opens `<SessionReport onClose={() => showSessionReport = false} />`.
+     Must not lock up the UI, must handle zero-turn/empty scorecard sessions gracefully,
+     and must format duration correctly without `NaNm`.
+
+9. [Clear] (`button[title="Clear Context"]`):
+   - Role: Flushes conversational memory, transcript history, and active LLM context for next question.
+   - Expected: Calls `App.ClearState()`, resets `wsState.transcript`, `wsState.response`,
+     `wsState.ragSources`, `wsState.pendingTranscripts`, and `wsState.transcriptHistory`.
+
+10. [Stealth Mode] (`button[title="Stealth Mode (Clickthrough)"]`):
+    - Role: Toggles OS-level mouse clickthrough transparency.
+    - Expected: Toggles `clickthrough = !clickthrough`, calls `App.SetClickthrough(clickthrough)`,
+      highlights button with `.text-primary`, changes icon to mouse pointer.
+
+───────────────────────────────────────────────────────────────
+GROUP C: WORKSPACE SIDEBAR & TABS (Notes & Code IDE)
+───────────────────────────────────────────────────────────────
+11. [FILE Button] (`WorkspaceSidebar.svelte` -> `button[aria-label="Open File"]`):
+    - Role: Prompts user to pick a local file (.md, .txt, .py, .go, .js, etc.).
+    - Expected: Calls `App.PromptOpenFile()`. Upon selection, immediately refreshes IDE state,
+      adds file to open tabs, activates it, and displays content in `<CodeEditor />`.
+
+12. [FOLDER Button] (`WorkspaceSidebar.svelte` -> `button[aria-label="Open Folder"]`):
+    - Role: Prompts user to select a workspace directory.
+    - Expected: Calls `App.PromptOpenDirectory()`. Upon selection, immediately indexes all supported
+      files, normalizes folder hierarchy, and renders tree in `FileTree.svelte`.
+
+13. [Folder Expansion Chevron] (`FileTreeNode.svelte` -> `button.expander`):
+    - Role: Expands or collapses a subfolder.
+    - Bug: Go backend sends `isDir: bool`, but Svelte expects `isDirectory: bool`. Without
+      normalization, folders fail to expand or show chevrons.
+    - Expected: Clicking toggles folder children visibility and changes chevron `▶` / `▼`.
+
+14. [File Tree Item Click] (`FileTreeNode.svelte` -> `.node-content`):
+    - Role: Opens clicked file in the editor.
+    - Expected: Calls `App.OpenFile(node.path)`, adds document to `openTabs`, switches active tab.
+
+15. [Tab Select & Close] (`WorkspaceTabs.svelte`):
+    - Role: Switch active open document (`onTabSelect`) or close document tab (`onTabClose`).
+    - Expected: Clicking tab switches active content in `CodeEditor`. Clicking `✕` closes tab and
+      selects adjacent tab or shows empty state if all tabs closed.
+
+───────────────────────────────────────────────────────────────
+GROUP D: THE BRAIN DRAWER (`BrainDrawer.svelte`)
+───────────────────────────────────────────────────────────────
+16. [STAR Method Quick Action] (`button.action-btn:has-text("STAR")`):
+    - Role: Primes the LLM to format the next answer using Situation, Task, Action, Result.
+    - Expected: Sends prompt override to assistant, sets `starPrimed = true`, shows pulsing
+      `STAR Method Primed` indicator for 15s.
+
+17. [Catch Me Up Action] (`button[title="Catch me up"]`):
+    - Role: Requests a quick summary of the interview state.
+    - Expected: Sends chat message "Please catch me up on the current context of the interview...".
+
+18. [Clear Cache] (`button[title="Clear cache"]`):
+    - Role: Flushes embedded semantic question/answer vector cache.
+    - Expected: Calls `App.ClearCache()`, resets items count to 0.
+
+───────────────────────────────────────────────────────────────
+GROUP E: LIVE EARS DRAWER (`LiveEarsDrawer.svelte`)
+───────────────────────────────────────────────────────────────
+19. [Send Custom Prompt] (`textarea` + `Enter`):
+    - Role: Submits an ad-hoc whisper/instruction to the AI without speaking.
+    - Expected: Calls `sendChat(chatText)`, clears input, switches view or streams answer.
+
+20. [Pending Suggestion Chip Click] (`.chip button.text-xs`):
+    - Role: Candidate clicks an intercepted question chip to force instant answer generation.
+    - Expected: Calls `sendChip(chip)`, dismisses chip, triggers LLM answer stream.
+
+21. [Dismiss Chip / Clear All] (`.chip button[aria-label="Dismiss"]` / `Clear All`):
+    - Role: Discards irrelevant suggestions.
+    - Expected: Removes individual chip or flushes entire pending queue.
+
+───────────────────────────────────────────────────────────────
+GROUP F: BACKEND ENGINE EXTENSIONS (`wails-app/core/engine/workspace.go`)
+───────────────────────────────────────────────────────────────
+22. [Broaden Supported File Types]:
+    - Role: Enable loading source code and interview cheat-sheets into workspace.
+    - Bug: Engine restricts allowed files to `.txt`, `.md`, `.pdf`, `.pptx`. Loading folders with
+      code files fails with "directory does not contain valid document files".
+    - Expected: Add `.go`, `.py`, `.js`, `.ts`, `.jsx`, `.tsx`, `.svelte`, `.json`, `.rs`, `.cpp`,
+      `.c`, `.h`, `.html`, `.css`, `.yaml`, `.yml`, `.sql`, `.sh` to `allowedExtensions`.
 
 ═══════════════════════════════════════════════════════════════
 FILES TO MODIFY
@@ -62,154 +155,62 @@ MODIFY: wails-app/app.go
 MODIFY: wails-app/frontend/src/products/interview/InterviewHUD.svelte
 MODIFY: wails-app/frontend/src/lib/components/workspace/IDEShell.svelte
 MODIFY: wails-app/frontend/src/lib/components/workspace/FileTreeNode.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/WorkspaceSidebar.svelte
+MODIFY: wails-app/frontend/src/products/interview/BrainDrawer.svelte
+MODIFY: wails-app/frontend/src/products/interview/LiveEarsDrawer.svelte
 MODIFY: wails-app/frontend/tests/ui.spec.ts
 MODIFY: prompts/tasks_v2.md
 
 ═══════════════════════════════════════════════════════════════
-DETAILED IMPLEMENTATION INSTRUCTIONS
+STEP-BY-STEP IMPLEMENTATION TASKS
 ═══════════════════════════════════════════════════════════════
 
-1. Expand Allowed File Extensions in `wails-app/core/engine/workspace.go`:
-   - Expand `allowedExtensions` to include standard interview notes and code file extensions:
-     ```go
-     var allowedExtensions = map[string]bool{
-         ".txt":    true,
-         ".md":     true,
-         ".pdf":    true,
-         ".pptx":   true,
-         ".go":     true,
-         ".py":     true,
-         ".js":     true,
-         ".ts":     true,
-         ".jsx":    true,
-         ".tsx":    true,
-         ".svelte":  true,
-         ".json":   true,
-         ".rs":     true,
-         ".cpp":    true,
-         ".c":      true,
-         ".h":      true,
-         ".html":   true,
-         ".css":    true,
-         ".yaml":   true,
-         ".yml":    true,
-         ".sql":    true,
-         ".sh":     true,
-     }
-     ```
-   - Also update file filters in `wails-app/app.go` for `PromptOpenFile`:
-     ```go
-     Filters: []wailsruntime.FileFilter{
-         {DisplayName: "All Supported Files (*.txt, *.md, *.pdf, *.py, *.go, *.ts, *.js, *.json)", Pattern: "*.txt;*.md;*.pdf;*.pptx;*.py;*.go;*.ts;*.js;*.jsx;*.tsx;*.svelte;*.json;*.rs;*.cpp;*.c;*.h;*.html;*.css;*.yaml;*.yml;*.sql;*.sh"},
-         {DisplayName: "All Files (*.*)", Pattern: "*.*"},
-     },
-     ```
+1. Core Engine Extensions:
+   - In `wails-app/core/engine/workspace.go`: expand `allowedExtensions` map with code/config extensions.
+   - In `wails-app/app.go`: update `PromptOpenFile` file filters to allow all supported files.
 
-2. Fix Tree Normalization & Expansion State in `InterviewHUD.svelte`:
-   - Implement tree mapping that normalizes `isDir` -> `isDirectory` and preserves expanded folders
-     across polling cycles:
-     ```ts
-     const expandedMap = new Map<string, boolean>();
-     function recordExpanded(nodes: any[]) {
-       for (const n of nodes) {
-         if ((n.isDirectory || n.isDir) && n.isExpanded !== undefined) {
-           expandedMap.set(n.path, n.isExpanded);
-         }
-         if (n.children) recordExpanded(n.children);
-       }
-     }
+2. State Synchronization & Normalization in `InterviewHUD.svelte`:
+   - Bind `isExplorerOpen` state properly so clicking ActivityBar Folder toggles the sidebar.
+   - Add `mapTree(nodes)` function:
+     - Map `isDir` (Go backend) to `isDirectory` (Svelte).
+     - Preserve user `isExpanded` folder state across polling refreshes.
+   - Implement `refreshIDEState()` and call it immediately after:
+     - `PromptOpenFile()`
+     - `PromptOpenDirectory()`
+     - `OpenFile()`
+     - `SetActiveDocument()`
+     - `CloseDocument()`
+   - Fix `handleSelectNode` to check both `!node.isDirectory` and `!node.isDir`.
 
-     function mapTree(nodes: any[]): any[] {
-       if (!nodes) return [];
-       return nodes.map((n: any) => {
-         const isDir = Boolean(n.isDirectory ?? n.isDir);
-         return {
-           ...n,
-           isDirectory: isDir,
-           isDir: isDir,
-           isExpanded: expandedMap.has(n.path) ? expandedMap.get(n.path) : (n.isExpanded ?? false),
-           children: mapTree(n.children)
-         };
-       });
-     }
-     ```
-   - In `refreshIDEState()` / `statePollInterval`:
-     ```ts
-     recordExpanded(workspaceTree);
-     workspaceTree = mapTree(state.workspaceTree);
-     ```
-
-3. Fix Sidebar Toggle & Control in `IDEShell.svelte` & `InterviewHUD.svelte`:
-   - Make `isExplorerOpen` controllable or reactive:
-     - In `IDEShell.svelte`, allow `isExplorerOpen` to be synced with `activeAction === 'explorer'`.
-     - When `activeAction` prop changes in `IDEShell.svelte`:
-       If `activeAction === 'explorer'`, ensure `isExplorerOpen = true`.
-       If `activeAction === ''`, ensure `isExplorerOpen = false`.
-     - In `InterviewHUD.svelte`, when `handleAction('explorer')` is triggered:
-       Toggle between `'explorer'` and `''`.
-   - Update `handleSelectNode(node: any)` in `InterviewHUD.svelte`:
-     ```ts
-     async function handleSelectNode(node: any) {
-       const isDirectory = Boolean(node.isDirectory ?? node.isDir);
-       if (App?.OpenFile && node && node.path && !isDirectory) {
-         await App.OpenFile(node.path);
-         await refreshIDEState();
-       }
-     }
-     ```
-
-4. Immediate State Refresh After Dialogs in `InterviewHUD.svelte`:
-   - Extract a helper `async function refreshIDEState()` and call it:
-     ```ts
-     async function handleOpenFile() {
-       if (App?.PromptOpenFile) {
-         await App.PromptOpenFile();
-         await refreshIDEState();
-       }
-     }
-
-     async function handleOpenFolder() {
-       if (App?.PromptOpenDirectory) {
-         await App.PromptOpenDirectory();
-         await refreshIDEState();
-       }
-     }
-
-     async function handleTabSelect(path: string) {
-       if (App?.SetActiveDocument) {
-         await App.SetActiveDocument(path);
-         await refreshIDEState();
-       }
-     }
-
-     async function handleTabClose(path: string) {
-       if (App?.CloseDocument) {
-         await App.CloseDocument(path);
-         await refreshIDEState();
-       }
-     }
-     ```
-
-5. Also update `FileTreeNode.svelte`:
-   - Ensure `isDir` fallback is supported:
+3. Defensive Attribute Access in `FileTreeNode.svelte`:
+   - In `FileTreeNode.svelte`, compute:
      `const isDir = Boolean(node.isDirectory ?? (node as any).isDir);`
-     so neither casing causes folders to be treated as files.
+     so folder vs file detection is 100% immune to casing/naming differences.
 
-6. Expand Playwright E2E Tests in `wails-app/frontend/tests/ui.spec.ts`:
-   - Test 1: Click `button[data-testid="activity-bar-explorer"]` -> verify `.workspace-sidebar-container` receives `.open` class and is visible with width 240px. Click again -> verify it closes.
-   - Test 2: In the open sidebar, click the "FILE" button -> verify mock `PromptOpenFile` was invoked.
-   - Test 3: Click the "FOLDER" button -> verify mock `PromptOpenDirectory` was invoked.
-   - Test 4: In `workspaceTree` with mock folder and child files, verify:
-     - The folder node renders with directory icon/chevron.
-     - Clicking the folder toggles its expanded state.
-     - Clicking a child file node calls `OpenFile(path)` and updates the active tab.
-   - Test 5: Verify all existing tests (Stealth mode, Vision snip, Session Report, Drawer switching) still pass 100%.
+4. Comprehensive Playwright Web E2E Suite (`wails-app/frontend/tests/ui.spec.ts`):
+   Provide comprehensive interactive tests verifying real DOM mutations:
+   - Test A: ActivityBar "Folder" toggles WorkspaceSidebar width between 0px and 240px (`.open` class).
+   - Test B: Clicking "FILE" calls `PromptOpenFile`, renders new document tab in `WorkspaceTabs`.
+   - Test C: Clicking "FOLDER" calls `PromptOpenDirectory`, renders file tree with folders and files.
+   - Test D: Clicking a folder expander toggles child nodes visibility and updates chevron orientation.
+   - Test E: Clicking a file in the tree opens it, switches active tab, and populates `CodeEditor`.
+   - Test F: ActivityBar "Ears" and "Brain" switch right drawer between Live Ears and The Brain.
+   - Test G: "STAR" quick action in Brain triggers `starPrimed` indicator.
+   - Test H: "Snip" button invokes `CaptureScreen` and `AnalyzeVision`.
+   - Test I: "Report" button opens SessionReport modal; close button cleanly hides it.
+   - Test J: "Clear" button resets context and clears transcript and response.
+   - Test K: "Stealth" button toggles clickthrough mode and applies `.text-primary`.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
-1. `cd wails-app && C_INCLUDE_PATH=$PWD/backend/lib LIBRARY_PATH=$PWD/backend/lib CGO_CFLAGS="-I$PWD/backend/lib" CGO_LDFLAGS="-L$PWD/backend/lib -lwhisper -lstdc++ -lm" go test -v ./...`
-   Must pass with 100% success.
-2. `cd wails-app/frontend && npm run test:e2e`
-   Must pass all Playwright tests with 100% success.
-3. Update `prompts/tasks_v2.md` to mark P57-T5 as complete once merged.
+1. Run backend tests:
+   `cd wails-app && C_INCLUDE_PATH=$PWD/backend/lib LIBRARY_PATH=$PWD/backend/lib CGO_CFLAGS="-I$PWD/backend/lib" CGO_LDFLAGS="-L$PWD/backend/lib -lwhisper -lstdc++ -lm" go test -v ./...`
+   Must pass 100%.
+2. Run Svelte checks:
+   `cd wails-app/frontend && npm run check`
+   Must report 0 errors.
+3. Run Playwright E2E tests:
+   `cd wails-app/frontend && npm run test:e2e`
+   All interactive test suites must pass 100%.
+4. Update `prompts/tasks_v2.md` with status and PR details.
