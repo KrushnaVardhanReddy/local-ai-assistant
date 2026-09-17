@@ -338,8 +338,14 @@
       {:else}
         <div class="status-badge listening" style="margin-right:auto;">AUTO-SYNC</div>
       {/if}
-      <button class="clear-btn" aria-label="Load Document" title="Load Script" onclick={handleLoadDoc}>📁</button>
-      <button class="clear-btn" aria-label="Clear state" title="Clear State" onclick={handleClear}>⟳</button>
+      <button class="header-action-btn" aria-label="Load Document" onclick={handleLoadDoc}>
+        <span class="material-symbols-outlined icon">folder_open</span>
+        <span class="btn-label">LOAD</span>
+      </button>
+      <button class="header-action-btn" aria-label="Clear state" onclick={handleClear}>
+        <span class="material-symbols-outlined icon">restart_alt</span>
+        <span class="btn-label">RESET</span>
+      </button>
     </div>
 
     <div class="editor-area" onwheel={handleManualScroll}>
@@ -463,19 +469,37 @@
     accent-color: var(--hud-text-white, #fff);
   }
 
-  .clear-btn {
+  .header-action-btn {
     background: transparent;
     border: none;
     color: var(--hud-text-gray, #ccc);
-    font-size: 1.2rem;
     cursor: pointer;
-    transition: color 0.2s;
-    padding: 4px;
+    transition: color 0.2s, background-color 0.2s;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header-action-btn:hover {
+    color: var(--hud-text-white, #fff);
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .header-action-btn .icon {
+    font-size: 17px;
     line-height: 1;
   }
 
-  .clear-btn:hover {
-    color: var(--hud-text-white, #fff);
+  .header-action-btn .btn-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-top: 2px;
+    line-height: 1;
   }
 
   .copilot-header {

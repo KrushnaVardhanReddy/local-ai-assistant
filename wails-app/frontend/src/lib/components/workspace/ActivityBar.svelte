@@ -8,13 +8,13 @@
   }>();
 
   const topActions = [
-    { id: 'explorer', icon: '📁', label: 'Explorer (Ctrl+B)' },
-    { id: 'search', icon: '🔍', label: 'Search' },
-    { id: 'copilot', icon: '✨', label: 'Audience Copilot' }
+    { id: 'explorer', icon: 'folder', label: 'Folder' },
+    { id: 'search', icon: 'search', label: 'Search' },
+    { id: 'copilot', icon: 'auto_awesome', label: 'Copilot' }
   ];
 
   const bottomActions = [
-    { id: 'settings', icon: '⚙️', label: 'Settings' }
+    { id: 'settings', icon: 'settings', label: 'Settings' }
   ];
 
   function handleAction(id: string) {
@@ -29,11 +29,11 @@
         class="action-btn"
         class:active={activeAction === action.id}
         onclick={() => handleAction(action.id)}
-        title={action.label}
         aria-label={action.label}
         data-testid="activity-bar-{action.id}"
       >
-        <span class="icon">{action.icon}</span>
+        <span class="material-symbols-outlined icon">{action.icon}</span>
+        <span class="btn-label">{action.label}</span>
       </button>
     {/each}
   </div>
@@ -44,10 +44,11 @@
         class="action-btn"
         class:active={activeAction === action.id}
         onclick={() => handleAction(action.id)}
-        title={action.label}
         aria-label={action.label}
+        data-testid="activity-bar-{action.id}"
       >
-        <span class="icon">{action.icon}</span>
+        <span class="material-symbols-outlined icon">{action.icon}</span>
+        <span class="btn-label">{action.label}</span>
       </button>
     {/each}
   </div>
@@ -55,7 +56,7 @@
 
 <style>
   .activity-bar {
-    width: 48px;
+    width: 54px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -73,41 +74,58 @@
     align-items: center;
     width: 100%;
     padding: 8px 0;
+    gap: 4px;
   }
 
   .action-btn {
     position: relative;
-    width: 48px;
-    height: 48px;
+    width: 46px;
+    height: 46px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color 0.2s, background-color 0.2s;
+    padding: 2px 0;
   }
 
   .action-btn:hover {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.08);
   }
 
   .action-btn.active {
-    color: #ffffff;
+    color: #4ade80;
+    background-color: rgba(74, 222, 128, 0.1);
   }
 
   .action-btn.active::before {
     content: '';
     position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #ffffff; /* Accent white */
+    left: -4px;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    border-radius: 2px;
+    background: #4ade80;
   }
 
   .icon {
-    font-size: 1.4rem;
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  .btn-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-top: 3px;
+    line-height: 1;
   }
 </style>

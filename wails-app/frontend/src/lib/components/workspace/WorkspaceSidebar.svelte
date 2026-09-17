@@ -30,8 +30,14 @@
     <div class="drawer-header">
       <span class="title">Workspace</span>
       <div class="actions">
-        <button class="action-btn" onclick={onOpenFile} title="Open File">📄+</button>
-        <button class="action-btn" onclick={onOpenFolder} title="Open Folder">📁+</button>
+        <button class="action-btn" onclick={onOpenFile} aria-label="Open File">
+          <span class="material-symbols-outlined icon">note_add</span>
+          <span class="btn-label">FILE</span>
+        </button>
+        <button class="action-btn" onclick={onOpenFolder} aria-label="Open Folder">
+          <span class="material-symbols-outlined icon">create_new_folder</span>
+          <span class="btn-label">FOLDER</span>
+        </button>
       </div>
     </div>
     <div class="drawer-content">
@@ -92,11 +98,11 @@
     border: none;
     color: var(--hud-text-gray, #cccccc);
     cursor: pointer;
-    font-size: 1.1rem;
-    padding: 4px;
-    border-radius: 4px;
+    padding: 3px 6px;
+    border-radius: 6px;
     transition: background-color 0.2s, color 0.2s;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
   }
@@ -104,6 +110,20 @@
   .action-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: var(--hud-text-white, #ffffff);
+  }
+
+  .action-btn .icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .action-btn .btn-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-top: 2px;
+    line-height: 1;
   }
 
   .drawer-content {

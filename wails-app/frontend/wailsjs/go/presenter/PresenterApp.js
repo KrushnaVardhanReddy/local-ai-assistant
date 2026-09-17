@@ -45,3 +45,7 @@ export function PromptOpenFile() {
 export function SetActiveDocument(arg1) {
   return window['go']['presenter']['PresenterApp']['SetActiveDocument'](arg1);
 }
+
+export function Startup(arg1) {
+  return window['go']['presenter']['PresenterApp']['Startup'](arg1);
+}
