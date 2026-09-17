@@ -780,14 +780,6 @@
     cursor: pointer;
   }
 
-  .error-msg {
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.1);
-    padding: 0.5rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-  }
-
   .resume-section {
     display: flex;
     flex-direction: column;

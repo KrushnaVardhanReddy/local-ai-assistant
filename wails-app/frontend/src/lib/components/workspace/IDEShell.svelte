@@ -101,7 +101,7 @@
 
 <div class="ide-shell">
   <div class="main-layout">
-    <ActivityBar {activeAction} {onAction: handleAction} />
+    <ActivityBar {activeAction} onAction={handleAction} />
 
     <WorkspaceSidebar
       nodes={workspaceTree}

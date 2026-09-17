@@ -47,7 +47,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="app-shell pointer-events-none">
+<div class="app-shell" class:pointer-events-none={product !== "presenter"} class:pointer-events-auto={product === "presenter"}>
   {#if product === "presenter"}
     <PresenterHUD />
   {:else}

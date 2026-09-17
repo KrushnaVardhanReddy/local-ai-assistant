@@ -707,7 +707,7 @@
       {#if wsState.isThinking}
         <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/5 z-20">
           <div class="h-full bg-green-400/40 w-1/3 rounded-r-full relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full shimmer-bar"></div>
           </div>
         </div>
       {/if}
@@ -927,7 +927,7 @@
       {#if wsState.isThinking}
         <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/5 z-20">
           <div class="h-full bg-primary/40 w-1/3 rounded-r-full relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full shimmer-bar"></div>
           </div>
         </div>
       {/if}
@@ -1079,7 +1079,7 @@
           transform: translateX(100%);
       }
   }
-  .animate-\\[shimmer_2s_infinite\\] {
+  .shimmer-bar {
       animation: shimmer 2s infinite;
   }
   .response-content {

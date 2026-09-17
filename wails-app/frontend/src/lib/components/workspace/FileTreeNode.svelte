@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { FileNode } from './types';
+  import FileTreeNode from './FileTreeNode.svelte';
 
   let {
     node,
@@ -13,7 +14,11 @@
     level?: number;
   }>();
 
-  let isExpanded = $state(node.isExpanded ?? false);
+  let isExpanded = $state(false);
+
+  $effect(() => {
+    isExpanded = node.isExpanded ?? false;
+  });
 
   function getIcon(node: FileNode): string {
     if (node.isDirectory) {
@@ -71,11 +76,19 @@
     onkeydown={handleKeyDown}
   >
     <div class="indent-spacer"></div>
-    <div class="expander" onclick={node.isDirectory ? toggleExpand : undefined} class:invisible={!node.isDirectory}>
-      {#if node.isDirectory}
+    {#if node.isDirectory}
+      <button
+        type="button"
+        class="expander"
+        onclick={toggleExpand}
+        tabindex="-1"
+        aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
+      >
         <span class="chevron" class:expanded={isExpanded}>▶</span>
-      {/if}
-    </div>
+      </button>
+    {:else}
+      <div class="expander invisible"></div>
+    {/if}
     <span class="icon">{getIcon(node)}</span>
     <span class="name">{node.name}</span>
   </div>
@@ -83,7 +96,7 @@
   {#if node.isDirectory && isExpanded && node.children}
     <div class="children" role="group">
       {#each node.children as child (child.path)}
-        <svelte:self
+        <FileTreeNode
           node={child}
           {activePath}
           {onSelect}
@@ -144,6 +157,10 @@
     flex-shrink: 0;
     margin-right: 4px;
     cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: inherit;
   }
 
   .expander.invisible {

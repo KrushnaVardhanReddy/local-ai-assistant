@@ -49,7 +49,7 @@
   <h2>Presenter Settings</h2>
 
   <div class="setting-group">
-    <label>STT Provider:</label>
+    <span class="setting-label">STT Provider:</span>
     <div class="radio-group">
       <label>
         <input type="radio" bind:group={provider} value="local" />

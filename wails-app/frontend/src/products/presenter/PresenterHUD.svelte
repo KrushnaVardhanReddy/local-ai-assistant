@@ -4,36 +4,40 @@
   import StealthTitleBar from '../../lib/components/StealthTitleBar.svelte';
   import WorkspaceSidebar from '../../lib/components/workspace/WorkspaceSidebar.svelte';
   import WorkspaceTabs from '../../lib/components/workspace/WorkspaceTabs.svelte';
+  import IDEShell from '../../lib/components/workspace/IDEShell.svelte';
+  import CodeEditor from '../../lib/components/workspace/CodeEditor.svelte';
+  import PresenterSettings from './PresenterSettings.svelte';
   import type { FileNode, WorkspaceTab } from '../../lib/components/workspace/types';
 
   // Assuming we use standard Wails window runtime API in production or mock state in dev
   // Actually, we poll GetState from the Wails backend using `window.go.presenter.PresenterApp.GetState()`
   // but to keep it simple and compile without generated TS errors initially (since we haven't generated wails bindings for presenter app),
   // we use dynamic calling or simply any.
-  let latestTranscript = '';
-  let latestResponse = '';
-  let script = '';
-  let scriptWords: string[] = [];
-  let currentWordIndex = 0;
+  let latestTranscript = $state('');
+  let latestResponse = $state('');
+  let script = $state('');
+  let scriptWords = $state<string[]>([]);
+  let currentWordIndex = $state(0);
+  let activeLineIndex = $state(0);
 
-  let isThinking = false;
-  let isCopilotOpen = false;
+  let isThinking = $state(false);
+  let isCopilotOpen = $state(false);
 
-  let autoScrollPaused = false;
+  let autoScrollPaused = $state(false);
   let resumeScrollTimeout: ReturnType<typeof setTimeout>;
 
   let pollInterval: ReturnType<typeof setInterval>;
 
   // Workspace State
-  let isSidebarOpen = false;
-  let workspaceTree: FileNode[] = [];
-  let openTabs: WorkspaceTab[] = [];
-  let activeDocumentPath = '';
+  let isSidebarOpen = $state(false);
+  let workspaceTree = $state<FileNode[]>([]);
+  let openTabs = $state<WorkspaceTab[]>([]);
+  let activeDocumentPath = $state('');
 
   // Typography state controls
-  let opacity = 0.85;
-  let fontSize = 1.1; // rem
-  let lineHeight = 1.5;
+  let opacity = $state(0.85);
+  let fontSize = $state(1.1); // rem
+  let lineHeight = $state(1.5);
 
   async function fetchState() {
     try {
@@ -383,6 +387,8 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    pointer-events: auto;
+    background-color: var(--hud-bg, rgba(18, 18, 18, 0.95));
   }
 
   .editor-area {
