@@ -1,0 +1,78 @@
+TASK: P57-T2 — Interview IDE HUD Component & ActivityBar Migration (Svelte)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build `wails-app/frontend/src/products/interview/InterviewHUD.svelte` that utilizes `IDEShell.svelte`
+to host the unified single-window layout for BarnOwl AI (Interview Copilot).
+
+Migrate all toolbar actions and side panels from the fragmented `Assistant.svelte` into the modern IDE:
+- Left ActivityBar: Explorer (Folder), Live Ears (Transcripts), The Brain / Copilot, Hotkeys, Settings.
+- Top Header: BarnOwl AI branding, Live / PTT / Mic badge, Snip (Vision), STAR method preset,
+  Mock Interview toggle, Session Report, Clear Context, Stealth Mode (Clickthrough), Minimize, Quit.
+- Center Editor: CodeMirror 6 (`CodeEditor.svelte`) for cheat sheets / code with syntax highlighting.
+- Right Drawer / Split Panel: The Brain (Real-time AI answers, STAR responses, RAG sources, cache stats).
+
+═══════════════════════════════════════════════════════════════
+FILES TO CREATE & MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: wails-app/frontend/src/products/interview/InterviewHUD.svelte
+CREATE: wails-app/frontend/src/products/interview/LiveEarsDrawer.svelte
+CREATE: wails-app/frontend/src/products/interview/BrainDrawer.svelte
+MODIFY: wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte
+MODIFY: wails-app/frontend/src/App.svelte
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. Update `ActivityBar.svelte`:
+   Support actions for:
+   - `explorer` (Folder): Workspace / Notes / Cheat sheets
+   - `ears` (Hearing / Mic icon): Live Ears & speech transcript chips
+   - `copilot` (Auto Awesome / Brain icon): The Brain AI assistant
+   - `mock` (Record Voice Over icon): Mock Interview practice mode
+   - `keys` (Keyboard icon): Hotkeys cheatsheet
+   - `settings` (Settings icon): App configuration modal
+
+2. Create `LiveEarsDrawer.svelte`:
+   - Live transcript stream with interviewer badge and candidate badge.
+   - Pending transcript chips bar (`wsState.pendingTranscripts`) with one-click send and dismiss.
+   - Quick chat input at the bottom to send custom prompts or instructions to the LLM.
+
+3. Create `BrainDrawer.svelte`:
+   - Live AI response streaming with markdown rendering (`renderMarkdown`).
+   - STAR Method action button & Visual Primed indicator.
+   - RAG sources indicator (`wsState.ragSources`).
+   - "Catch Me Up" button.
+   - Local QA cache stats & Clear cache button.
+
+4. Create `InterviewHUD.svelte`:
+   - Wraps `StealthTitleBar` and `IDEShell.svelte`.
+   - Top Header slot:
+     - "BarnOwl AI" title with live status indicator (Live / Mic Off / PTT Active).
+     - Toolbar buttons with icon on top and label below:
+       - Home (`home`)
+       - Mock (`record_voice_over`)
+       - Snip (`screenshot_monitor`)
+       - STAR (`star`)
+       - Keys (`keyboard`)
+       - Report (`analytics`)
+       - Clear (`mop`)
+       - Stealth (`mouse` / `back_hand`)
+   - Center slot:
+     - `CodeEditor.svelte` showing active document (or empty state inviting user to open notes/code).
+   - Right Drawer slot:
+     - Switches between `LiveEarsDrawer` and `BrainDrawer` depending on the active ActivityBar tab or toggle.
+   - Modal slots:
+     - `SessionReport.svelte`, `AuthModal.svelte`, `HotkeysPanel.svelte`, `Settings.svelte`.
+
+5. Update `App.svelte`:
+   - When `product === "interview"` (or default), render `<InterviewHUD />`.
+   - Maintain backwards-compatibility and clean window event handling.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass without TypeScript errors.
+- `npx playwright test` must pass all existing UI tests.

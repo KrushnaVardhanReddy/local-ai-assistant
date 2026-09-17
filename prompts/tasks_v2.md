@@ -125,3 +125,31 @@ BATCH 3 (Sequential Product Integration)
 | **P56-T4** | StealthPresenter Integration | ✅ Merged | Sequential | [PR 183](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/183) | `PresenterApp` bindings + `PresenterHUD` tabs/tree hookup |
 | **P56-T5** | Universal IDE Shell Framework | ✅ Merged | Sequential | [PR 184](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/184) | `IDEShell.svelte` (ActivityBar, Explorer, Tabs, StatusBar, Slots) |
 | **P56-T6** | CodeMirror 6 & VS Code Layout | ✅ Merged | Sequential | [PR 185](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/185) | CodeMirror 6 editor, docking sidebar, full VS Code HUD |
+
+---
+
+## Phase 57 — BarnOwl AI (Interview Copilot) IDE Migration
+
+> **Goal:** Migrate all BarnOwl AI interview features (Live Ears, The Brain, STAR preset, Snip, Mock interview, hotkeys, and QA cache) out of the legacy floating layout into the unified single-window IDE layout (`IDEShell.svelte`), and connect workspace notes as active context for live interview answering.
+>
+> **Branch:** `feature/krushna_golang`
+
+### Dependency Order
+
+```
+BATCH 1 (Parallel Execution)
+  P57-T1 ⚡ BarnOwl App Workspace & State Bindings (Go Backend in wails-app/app.go)
+  P57-T2 ⚡ Interview IDE HUD Component & ActivityBar Migration (Frontend Svelte)
+
+BATCH 2 (Sequential Integration)
+  P57-T3: Active Code/Notes Context Injection into Copilot RAG Pipeline (Go + Frontend)
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P57-T1** | BarnOwl Workspace Bindings | ⬜ Not started | ⚡ Parallel | — | Expose WorkspacePort methods & `GetIDEState` on `*App` in `wails-app/app.go` |
+| **P57-T2** | Interview IDE HUD Migration | ⬜ Not started | ⚡ Parallel | — | `InterviewHUD.svelte`, `LiveEarsDrawer`, `BrainDrawer`, migrate toolbar & buttons into `IDEShell` |
+| **P57-T3** | Active Context RAG Injection | ⬜ Not started | Sequential | — | Auto-inject open IDE file content into LLM context when answering interview questions |
+

@@ -1,0 +1,50 @@
+TASK: P57-T3 — Active Code/Notes Context Injection into Copilot RAG (Full Loop)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Inject the currently active document (notes, resume, or code snippet loaded in the IDE editor)
+directly into the LLM system prompt / context during BarnOwl AI interview sessions.
+
+When an interviewer asks a question, the candidate frequently has relevant notes, algorithms,
+or past project details open in their IDE editor. The backend LLM should automatically prioritize
+the content of the active IDE document as primary context before answering.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/core/engine/engine.go
+MODIFY: wails-app/core/engine/stt_handler.go (or relevant question processing loop)
+MODIFY: wails-app/core/engine/engine_test.go
+MODIFY: wails-app/frontend/tests/ui.spec.ts
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. In `wails-app/core/engine/engine.go`:
+   - When building the system prompt or RAG context for a user or interviewer question:
+     - Check if `e.activeDocument` is non-nil and has non-empty content.
+     - If present, append a high-priority context block to the prompt:
+       ```
+       [ACTIVE WORKSPACE DOCUMENT: <doc.Name>]
+       <doc.Content>
+       [/ACTIVE WORKSPACE DOCUMENT]
+       ```
+     - Ensure total context length is safely truncated to avoid exceeding model context limits.
+
+2. In frontend (`InterviewHUD.svelte`):
+   - Add a subtle status chip in the status bar or header showing:
+     "📄 Context: <active_file_name>" when a document is active.
+   - Allow user to toggle "Include Active File as Context" checkbox in settings or header.
+
+3. Testing:
+   - Add Go test in `engine_test.go` verifying that when an active document is set via
+     `e.SetActiveDocument(...)`, the generated prompt passed to the LLMPort contains the document content.
+   - Update Playwright e2e test to verify opening a document in IDE shows the context tag.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- `go test ./...` in `wails-app` must pass with zero failures.
+- `npx playwright test` passes.

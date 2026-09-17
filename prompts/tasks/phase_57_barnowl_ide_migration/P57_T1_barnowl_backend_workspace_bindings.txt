@@ -1,0 +1,74 @@
+TASK: P57-T1 — BarnOwl App Workspace & State Bindings (Go Backend)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Expose the Workspace driving port methods on BarnOwl's main `App` struct in `wails-app/app.go`
+so the frontend IDE Shell can load directories, open files, close tabs, and inspect workspace state,
+identical to `PresenterApp`.
+
+Currently, `StealthEngine` already implements `driving.WorkspacePort` (`OpenDirectory`, `OpenFile`,
+`CloseDocument`, `SetActiveDocument`, `GetWorkspaceTree`, `GetOpenDocuments`, `GetActiveDocument`).
+`PresenterApp` wraps them cleanly. Now `App` in `wails-app/app.go` must expose them for BarnOwl AI
+interview copilot mode.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY & CREATE
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/app.go
+MODIFY: wails-app/app_test.go (or CREATE if needed)
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. In `wails-app/app.go`, add Wails-bound workspace methods to `*App`:
+
+   - `PromptOpenDirectory() (string, error)`:
+     Uses `wailsruntime.OpenDirectoryDialog(a.ctx, wailsruntime.OpenDialogOptions{Title: "Open Workspace Folder"})`.
+     If a path is selected, calls `a.engine.OpenDirectory(selectedPath)` and returns the path.
+
+   - `PromptOpenFile() (string, error)`:
+     Uses `wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{Title: "Open Document", Filters: ...})`.
+     If a path is selected, calls `a.engine.OpenFile(selectedPath)` and returns the path.
+
+   - `OpenDirectory(path string) (*driving.FileNode, error)`:
+     Calls `a.engine.OpenDirectory(path)`.
+
+   - `OpenFile(path string) (*driving.Document, error)`:
+     Calls `a.engine.OpenFile(path)`.
+
+   - `CloseDocument(path string) error`:
+     Calls `a.engine.CloseDocument(path)`.
+
+   - `SetActiveDocument(path string) error`:
+     Calls `a.engine.SetActiveDocument(path)`.
+
+   - `GetWorkspaceTree() []*driving.FileNode`:
+     Calls `a.engine.GetWorkspaceTree()`.
+
+   - `GetOpenDocuments() []*driving.Document`:
+     Calls `a.engine.GetOpenDocuments()`.
+
+   - `GetActiveDocument() *driving.Document`:
+     Calls `a.engine.GetActiveDocument()`.
+
+2. Add a comprehensive `GetIDEState() map[string]interface{}` method to `*App`:
+   Returns:
+   - `workspaceTree`: `a.engine.GetWorkspaceTree()`
+   - `openDocuments`: `a.engine.GetOpenDocuments()`
+   - `activeDocumentPath`: path of active document if any
+   - `activeDocumentContent`: content of active document if any
+   - `isListening`: current audio listening state
+   - `isClickthrough`: `a.isClickthrough`
+   - `cachedPairs`: `a.engine.GetState().CachedPairs`
+
+3. Unit Tests:
+   Add unit tests in `wails-app/app_test.go` verifying that `OpenDirectory`, `OpenFile`, `CloseDocument`,
+   `SetActiveDocument`, and `GetIDEState` return valid data without panics or nil dereferences.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- `go test ./...` in `wails-app` must pass with zero failures.
+- `go build` in `wails-app` must succeed.
