@@ -12,6 +12,8 @@
     activePath = '',
     totalDocs = 0,
     status = { left: {}, right: {} },
+    activeAction = '',
+    onAction,
     children,
     rightDrawer,
     settingsPanel,
@@ -26,6 +28,8 @@
     activePath?: string;
     totalDocs?: number;
     status?: IDEStatus;
+    activeAction?: string;
+    onAction?: (action: string) => void;
     children?: import('svelte').Snippet;
     rightDrawer?: import('svelte').Snippet;
     settingsPanel?: import('svelte').Snippet;
@@ -37,28 +41,42 @@
   }>();
 
   // State
-  let isExplorerOpen = $state(false);
+  let internalExplorerOpen = $state(false);
   let isBottomPanelOpen = $state(true);
   let isCopilotOpen = $state(false);
-  let activeAction = $state('');
+  let internalActiveAction = $state('');
+
+  let currentActiveAction = $derived(onAction ? activeAction : internalActiveAction);
+  let isExplorerOpen = $derived(currentActiveAction === 'explorer' || (currentActiveAction === '' && internalExplorerOpen));
 
   function handleAction(action: string) {
+    if (onAction) {
+      onAction(action);
+      return;
+    }
+
     if (action === 'explorer') {
-      isExplorerOpen = !isExplorerOpen;
-      activeAction = isExplorerOpen ? 'explorer' : '';
+      internalExplorerOpen = !isExplorerOpen;
+      internalActiveAction = internalExplorerOpen ? 'explorer' : '';
     } else if (action === 'copilot') {
       isCopilotOpen = !isCopilotOpen;
-      activeAction = isCopilotOpen ? 'copilot' : '';
+      internalActiveAction = isCopilotOpen ? 'copilot' : '';
     } else {
-      // Handle other actions (search, settings) by setting active state
-      // or opening respective modals
-      activeAction = activeAction === action ? '' : action;
+      internalActiveAction = internalActiveAction === action ? '' : action;
     }
   }
 
   function handleSidebarToggle(isOpen: boolean) {
-    isExplorerOpen = isOpen;
-    activeAction = isOpen ? 'explorer' : (activeAction === 'explorer' ? '' : activeAction);
+    if (onAction) {
+      if (isOpen && currentActiveAction !== 'explorer') {
+        onAction('explorer');
+      } else if (!isOpen && currentActiveAction === 'explorer') {
+        onAction('explorer');
+      }
+    } else {
+      internalExplorerOpen = isOpen;
+      internalActiveAction = isOpen ? 'explorer' : (internalActiveAction === 'explorer' ? '' : internalActiveAction);
+    }
   }
 
   function handleNodeSelect(node: FileNode) {
@@ -107,7 +125,7 @@
 
 <div class="ide-shell">
   <div class="main-layout">
-    <ActivityBar {activeAction} onAction={handleAction} />
+    <ActivityBar activeAction={currentActiveAction} onAction={handleAction} />
 
     <WorkspaceSidebar
       nodes={workspaceTree}
