@@ -149,7 +149,8 @@ BATCH 2 (Sequential Integration)
 
 | Task ID | Title | Status | Parallel? | PR | Notes |
 |---------|-------|--------|-----------|----|-------|
-| **P57-T1** | BarnOwl Workspace Bindings | ⬜ Not started | ⚡ Parallel | — | Expose WorkspacePort methods & `GetIDEState` on `*App` in `wails-app/app.go` |
-| **P57-T2** | Interview IDE HUD Migration | ⬜ Not started | ⚡ Parallel | — | `InterviewHUD.svelte`, `LiveEarsDrawer`, `BrainDrawer`, migrate toolbar & buttons into `IDEShell` |
+| **P57-T1** | BarnOwl Workspace Bindings | 🔄 Working | ⚡ Parallel | [Session 1103960308270444315](https://jules.google.com/session/1103960308270444315) | Expose WorkspacePort methods & `GetIDEState` on `*App` in `wails-app/app.go` |
+| **P57-T2** | Interview IDE HUD Migration | 🔄 Working | ⚡ Parallel | [Session 9707306344933939982](https://jules.google.com/session/9707306344933939982) | `InterviewHUD.svelte`, `LiveEarsDrawer`, `BrainDrawer`, migrate toolbar & buttons into `IDEShell` |
 | **P57-T3** | Active Context RAG Injection | ⬜ Not started | Sequential | — | Auto-inject open IDE file content into LLM context when answering interview questions |
+
 
