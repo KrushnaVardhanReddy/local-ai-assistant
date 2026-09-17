@@ -31,6 +31,7 @@
         onclick={() => handleAction(action.id)}
         title={action.label}
         aria-label={action.label}
+        data-testid="activity-bar-{action.id}"
       >
         <span class="icon">{action.icon}</span>
       </button>

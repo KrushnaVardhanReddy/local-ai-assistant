@@ -14,6 +14,7 @@
     status = { left: {}, right: {} },
     children,
     rightDrawer,
+    settingsPanel,
     onFileOpen,
     onOpenFolder,
     onTabSelect,
@@ -26,6 +27,7 @@
     status?: IDEStatus;
     children?: import('svelte').Snippet;
     rightDrawer?: import('svelte').Snippet;
+    settingsPanel?: import('svelte').Snippet;
     onFileOpen?: () => void;
     onOpenFolder?: () => void;
     onTabSelect?: (path: string) => void;
@@ -112,7 +114,7 @@
       onOpenFolder={() => onOpenFolder?.()}
     />
 
-    <div class="center-editor-pane" class:shifted={isExplorerOpen}>
+    <div class="center-editor-pane">
       {#if openTabs.length > 0}
         <WorkspaceTabs
           tabs={openTabs}
@@ -137,6 +139,14 @@
           <div class="placeholder-drawer">
             <span>Copilot Drawer</span>
           </div>
+        {/if}
+      </div>
+    {/if}
+
+    {#if activeAction === 'settings'}
+      <div class="settings-panel fixed inset-y-0 right-0 z-50">
+        {#if settingsPanel}
+          {@render settingsPanel()}
         {/if}
       </div>
     {/if}
@@ -170,21 +180,7 @@
     flex-direction: column;
     flex-grow: 1;
     min-width: 0;
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  /* When sidebar is open, we can optionally shift content.
-     WorkspaceSidebar is fixed but we leave 48px for ActivityBar */
-  .center-editor-pane {
-     margin-left: 0;
-  }
-
-  /* To push content when drawer is fully open instead of overlaying:
-  .center-editor-pane.shifted {
-     margin-left: 280px;
-  }
-  (Current WorkspaceSidebar uses fixed positioning and overlays, we keep it as overlay based on its CSS)
-  */
 
   .editor-content {
     flex-grow: 1;
@@ -195,7 +191,7 @@
   }
 
   .right-drawer {
-    width: 300px;
+    width: 320px;
     background: rgba(15, 15, 15, 0.9);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(12px);
@@ -203,6 +199,19 @@
     display: flex;
     flex-direction: column;
     z-index: 50;
+  }
+
+  .settings-panel {
+    width: 400px;
+    background: rgba(15, 15, 15, 0.95);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: -4px 0 16px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    overflow-y: auto;
   }
 
   .placeholder-drawer {
