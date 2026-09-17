@@ -1,300 +1,308 @@
-# 🔭 Stealth Tech Opportunity Map — Novel Domains
+# 🔭 Stealth Tech Opportunity Map — Validated & Updated
+*Last updated: September 2026 — post competitive research*
 
-> The core tech: **OS-level invisible window + local Whisper STT + LLM + hotkeys**
-> This is a platform, not just one product. Here are 8 domains where it creates a strong wedge.
+> **Core tech:** OS-level invisible window + local Whisper STT + LLM + hotkeys
+> This is a platform, not just one product.
 
 ---
 
-## The Unfair Advantage (Restatement)
+## The Unfair Advantage
 
 Your tech does something **no browser extension or SaaS overlay can do:**
-- Window is **truly excluded from OS screen capture** (not just transparent)
-- **Runs fully offline** (Whisper STT + local LLM = no data leaves the machine)
-- **No cloud dependency** = usable in HIPAA, legal, banking, government environments
-- **Hotkeys + voice-activated** = hands-free during live scenarios
-- Cross-platform native app (Go/Wails)
 
-Every domain below exploits **at least one** of these as the primary wedge.
+| Capability | Why it matters |
+|---|---|
+| Window **truly excluded from OS screen capture** | Not just transparent — genuinely invisible to Zoom/Meet/OBS capture |
+| **Fully offline** (Whisper STT + local LLM) | No data leaves the machine — works in air-gapped / regulated environments |
+| **No cloud dependency** | Usable in HIPAA, legal, banking, government — no BAA required for local-only |
+| **Hotkeys + voice-activated** | Hands-free during live scenarios |
+| Cross-platform native app (Go/Wails) | Single codebase, ships as a real desktop app |
 
----
-
-## Opportunity Scorecard
-
-> Sorted by **planned build order** — not by revenue. Revenue is only one input; distribution speed, trust barriers, and daily active use all matter equally for a V1.
-
-| 🟢 **Wave 1** | **1A 🎯 PRIMARY** | **BarnOwl AI (Interview Copilot)** | Job Seekers / Tech Candidates | 🔴 Crowded | 🟢 Strong (100% Offline + IDE Workspace) | In Progress | $$$$ | **Active Primary Focus:** Live question interception, real-time code generation, full IDE notes/cheat-sheet workspace, stealth overlay. |
-| 🟢 **Wave 1** | **1B ⏸️ Paused** | ~~StealthPresenter~~ | Creators / Presenters | 🔴 Crowded / Low-cost | 🟡 Moderate | Paused | $ | **Paused indefinitely:** ShareSpeak already offers $14.99 one-time lifetime license; teleprompter market is a low-margin commodity race without high-value live AI copilot. MVP preserved in repo. |
-| 🟢 **Wave 1** | **2nd** | **MentorGlass** | Coaching / Consulting | 🟢 **Low** | 🟢 Strong | 4–5 weeks | $$$ | Next up: 1 prompt & UI skin swap from BarnOwl IDE, zero competition, B2B monthly SaaS model ($29–$39/mo). |
-| 🟡 **Wave 2** | **3rd** | **DebateShield** | Students / Academic Debate | 🟢 **Very Low** | 🟡 Moderate | 3–4 weeks | $$ | No stealth needed, fast build, community-driven distribution |
-| 🟡 **Wave 2** | **4th** | **GovBrief** | Govt / PR Spokespeople | 🟢 **Very Low** | 🟢 Very Strong | 4–6 weeks | $$$$ | Zero software competitors, single enterprise deal = huge revenue |
-| 🔵 **Wave 3** | **5th** | **CounselDesk** | Legal / Attorneys | 🟡 Medium | 🟢 Strong | 6–8 weeks | $$$$ | High pay, but trust barrier — needs proven track record + testimonials first |
-| 🔵 **Wave 3** | **6th** | **ClinicHUD** | Telehealth / Doctors | 🟡 Medium (enterprise heavy) | 🟢 Very Strong | 6–8 weeks | $$$$ | Biggest moat (HIPAA), but needs EHR hooks + compliance story |
-| 🔵 **Wave 3** | **7th** | **LangShadow** | Language Learners | 🟡 Medium | 🟢 Strong | 5–6 weeks | $$ | Massive TAM, viral potential, but lower ARPU — best as growth lever |
-| 🔴 **Wave 4** | **8th** | **AgentPrompt** | Call Center Agents | 🔴 High (Balto, Level AI) | 🟡 Moderate | 8–10 weeks | $$$$$ | Highest revenue ceiling, but requires SOC2, telephony integration, 6–12mo sales cycle |
-| 🟣 **Wave 5 🔭 Explorer** | **Future** | **StreamerHUD** | Twitch/YouTube Streamers | 🟢 Low | 🟢 Strong | 3–4 weeks | $$$ | Invisible overlay for streamers — chat/alerts invisible to OBS. Viral demo potential. 1-prompt swap from StealthPresenter. |
-| 🟣 **Wave 5 🔭 Explorer** | **Future** | **LyricsHUD** | Live Singers / Performers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $$ | Foot-pedal or timed auto-scroll for lyrics. No STT needed. Same invisible overlay moat. Niche but zero competition. |
-| 🟣 **Wave 5 🔭 Explorer** | **Future** | **TabletopDM** | D&D / TTRPG Dungeon Masters | 🟢 Very Low | 🟢 Strong | 4–5 weeks | $$ | LLM panic button for live NPC names, lore lookups, rule clarifications. Massive passionate community. |
-| 🟣 **Wave 5 🔭 Explorer** | **Future** | **RTS Co-Pilot** | Competitive RTS Gamers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $ | Time-based build order prompter. Very niche, price-sensitive. Low priority but near-zero build effort. |
+Every product below exploits **at least one** of these as its primary wedge.
 
 ---
 
-## 🔍 Deep Dives
+## ⚠️ Critical Correction: Scorecard vs Build Order Mismatch (Fixed)
+
+The previous version of this document had an internal contradiction: the scorecard table listed **BarnOwl AI (Interview Copilot)** as Wave 1 Primary while the build order text listed **StealthPresenter**. This has been corrected. The **current primary focus is BarnOwl AI**, with StealthPresenter paused. All table rows now match the build order.
 
 ---
 
-### 1. 🎤 StealthPresenter — Creators / Presenters
-*Already covered in product_analysis.md — this is your primary recommendation.*
+## Opportunity Scorecard (Corrected & Updated)
 
-**Competition:** ShareSpeak, GhostDesk, FlowPrompter (all dumb scrollers, no local AI)
-**Your wedge:** The only one with local AI + voice-tracking + true OS stealth
-**Revenue:** $10–$29 one-time (V1) → $49/month (V2 with premium features)
+> Sorted by planned build order. Revenue is one input — distribution speed, trust barriers, and daily active use matter equally.
 
-#### 📌 V2 Premium Feature: StealthBrowser (Invisible Workspace Panel)
-
-> **Do not build in V1. Revisit in Phase 56.**
-
-Alongside the text HUD, a secondary embedded browser panel that is fully excluded from screen capture (via the same OS-level `SetCaptureExcluded` API). The user sees a live, interactive web app right on their screen; the audience on Zoom sees nothing.
-
-**Legitimate use cases (not cheating):**
-- **Sales:** CRM (Salesforce/HubSpot) open invisibly — AI auto-surfaces the account when the client's name is heard.
-- **Customer Support:** Zendesk ticket open invisibly — rep never has to say "let me look that up."
-- **Financial Advisor:** Portfolio dashboard open invisibly — advisor references live holdings during client calls.
-- **Real Estate Agent:** MLS portal open invisibly — AI auto-filters by heard preferences ("3 bedrooms, under $500k").
-- **Podcast/Journalist:** Research notes and Wikipedia open invisibly — host never breaks eye contact.
-
-**Why this justifies $49/month vs. $19/month:** It turns StealthPresenter from a teleprompter into a full "invisible workspace" — a category of one.
-
-**Technical note:** Requires launching an embedded Chromium WebView with OS-level window exclusion. Non-trivial but feasible since Wails already uses a WebView internally.
+| Wave | Priority | Product | Target User | Competition Level | Tech Moat Fit | Est. Build | Revenue | Notes |
+|---|---|---|---|---|---|---|---|---|
+| 🟢 Wave 1 | **1A 🎯 PRIMARY** | **BarnOwl AI** (Interview Copilot) | Job seekers / tech candidates | 🔴 Crowded but moat exists | 🟢 Strong — only 100% offline + IDE workspace | In Progress | $$$$ | Real competitors: Final Round AI, Cluely, LockedIn AI, Parakeet, Sensei — all cloud-based. Our wedge: fully local, no data breach risk, works in enterprise firewalled environments |
+| 🟢 Wave 1 | **1B ⏸️ PAUSED** | ~~StealthPresenter~~ | Creators / presenters | 🔴 Crowded / low-margin | 🟡 Moderate | Paused | $ | ShareSpeak at $14.99 lifetime kills the price ceiling. Market doesn't care about offline privacy. MVP preserved. |
+| 🟢 Wave 1 | **2nd** | **MentorGlass** | Coaches / consultants | 🟢 Very Low (confirmed) | 🟢 Strong | 4–5 weeks | $$$ | 1 prompt + skin swap from BarnOwl. Zero real-time HUD competitors. B2B SaaS $29–$49/mo. |
+| 🟡 Wave 2 | **3rd** | **DebateShield** | Students / debate teams | 🟡 Low-Medium (new entrant: FlowMaster, DebateCardAI) | 🟡 Moderate — offline AI is the wedge, not stealth | 3–4 weeks | $$ | FlowMaster now exists as a full debate round app. Pivot pitch to offline tournament-legal AI flowing + RAG |
+| 🟡 Wave 2 | **4th** | **GovBrief** | Govt / PR spokespeople | 🟢 Very Low (confirmed) | 🟢 Very Strong | 4–6 weeks | $$$$ | GovBrief.us exists but is a federal contracting platform — completely different. Real-time spokesperson HUD is still blue ocean. |
+| 🔵 Wave 3 | **5th** | **CounselDesk** | Solo / small firm attorneys | 🟡 Medium (Verbit Legal Visor, Filevine, Prevail CheckMate) | 🟢 Strong — local-only = no SOC2 required for small firms | 6–8 weeks | $$$$ | Verbit Legal Visor is cloud + ISO 27001/SOC2/HIPAA. Small firms can't afford it. Our $79–$149/mo local-first tool is the gap. Raise target price from $29 to $99–$149/mo. |
+| 🔵 Wave 3 | **6th** | **ClinicHUD** | Telehealth doctors | 🟡 Medium (Nuance DAX, Abridge, Suki, DeepScribe — all cloud) | 🟢 Very Strong — HIPAA by design | 6–8 weeks | $$$$ | Ambient AI scribing confirmed as highest-ROI clinical AI feature in 2026. All competitors cloud-based $300+/mo/seat. Our local-only = zero BAA complexity for solo practices. |
+| 🔵 Wave 3 | **7th** | **LangShadow** | Language learners | 🔴 Crowded (Duolingo Max Video Call, Langua, JotMe, Praktika) | 🟡 Moderate — live-call invisible HUD is unique | 5–6 weeks | $$ | Market is saturated at the app level. Unique angle is invisible overlay during real business calls / iTalki sessions — no competitor does that. Reframe pitch accordingly. |
+| 🔴 Wave 4 | **8th** | **AgentPrompt** | Call center agents | 🔴 High (Balto, Level AI, Glia) | 🟡 Moderate | 8–10 weeks | $$$$$ | Year 2. Requires SOC2, FINRA/TCPA, SIP integration, enterprise sales. IT policy on locked corporate machines is the real blocker. |
+| 🟣 Wave 5 🔭 | **Future** | **StreamerHUD** | Twitch/YouTube streamers | 🟡 Medium (StreamElements, Streamlabs, OBS plugins — none are invisible-to-capture) | 🟢 Strong — invisible to OBS capture is genuinely novel | 3–4 weeks | $$$ | No competitor does OS-level capture exclusion for streamers. Viral demo potential. Pull forward if BarnOwl gets early traction. |
+| 🟣 Wave 5 🔭 | **Future** | **TabletopDM** | D&D / TTRPG DMs | 🟢 Very Low | 🟢 Strong | 4–5 weeks | $$ | Passionate community, zero software competition, LLM panic button angle is compelling |
+| 🟣 Wave 5 🔭 | **Future** | **LyricsHUD** | Live singers / performers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $$ | No STT needed. Foot-pedal scroll. Niche but zero competition. |
+| 🟣 Wave 5 🔭 | **Future** | **RTS Co-Pilot** | Competitive RTS gamers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $ | Very niche, price-sensitive. Low priority. |
 
 ---
 
-### 2. 🩺 ClinicHUD — Telehealth / Doctors ⭐ Hidden Gem
+## 🗑️ Products to Deprioritize or Drop
 
-**The pain:** Doctors doing telehealth video consults must constantly alt-tab between the patient video, the EHR (Epic/Athena), and their clinical notes. They lose eye contact constantly. Patients notice and feel uncared for.
+### ~~StealthPresenter~~ — **Indefinitely Paused**
+- **Why:** ShareSpeak exists at $14.99 lifetime. The presenter/creator market doesn't care about offline privacy — the primary wedge doesn't land with this audience. Building it first was also a distraction from higher-ARPU verticals.
+- **Decision:** Engine preserved. Only revisit if a specific StealthBrowser enterprise use case (sales CRM overlay) shows demand signal.
 
-**The solution:** A stealth overlay pinned near the webcam that shows:
-- Patient summary pulled from EHR (via local API hook)
-- Relevant drug interactions / dosage lookup
-- DSM-5 / ICD-10 code lookup triggered by speech keywords
-- SOAP note scaffold auto-generated from the conversation (local Whisper)
-
-**Why competition is weak here:**
-- Nuance DAX, Abridge, Suki — all **cloud-based, require BAA contracts**, $300+/month per seat
-- None are **visual overlays near the webcam** — they're background audio recorders
-- **Zero desktop native tools** exist that do this **completely locally** (HIPAA-friendly by design)
-
-**Why your tech wins:** "No data ever leaves your machine" = instant HIPAA compliance story. This is a massive moat for small/solo practices who can't afford enterprise contracts.
-
-**Revenue:** $49–$99/month per clinician. Even 100 doctors = $60K ARR.
+### LangShadow — **Demoted to Wave 3 Tail**
+- **Why:** As of 2026, Duolingo Max has Video Call + AI Roleplay. Langua, JotMe, Praktika, and italki all target conversational learning. The market is saturated at the *app* level.
+- **What survives:** The invisible overlay during a *real live business call* is unique. But this is a niche sub-feature, not a standalone product. Consider bundling as a feature of a future "professional calls" tier rather than a separate product.
 
 ---
 
-### 3. ⚖️ CounselDesk — Legal / Attorneys ⭐ Hidden Gem
-
-**The pain:** Attorneys in virtual depositions, hearings, or client calls need:
-- Instant access to case timeline, key exhibits, prior deposition transcripts
-- Real-time flagging when witness testimony contradicts prior statements
-- Quick statute/case law lookup when opposing counsel references something
-
-**What exists:** Depo Copilot (Filevine), Legal Visor — but they're **cloud-based case management platforms** requiring full CRM buy-in, $400+/month.
-
-**Your wedge:** A **lightweight desktop HUD** that:
-- Sits invisible on screen during Zoom/Teams depositions
-- Takes a case folder (PDFs, DOCX) on input
-- RAG-searches the local corpus in real time when keywords are spoken
-- Shows the relevant excerpt next to the camera
-
-**Why it works:** Solo attorneys and small firms (80% of US law market) **cannot afford Filevine**. A $29/month local-first tool that works immediately is an instant yes.
-
-**Revenue:** $29–$79/month. Legal is a high-paying market with low price sensitivity for tools that save billable hours.
+## 🔍 Updated Competitive Deep Dives
 
 ---
 
-### 4. 🧠 MentorGlass — Coaching / Therapy ⭐ Lowest Competition
+### 1A. 🎯 BarnOwl AI — Interview Copilot *(Primary Focus)*
 
-**The pain:** Life coaches, executive coaches, therapists doing video sessions need:
-- Client history visible without alt-tabbing
-- CBT/REBT framework prompts during tough moments
-- Session notes auto-drafted from conversation
-- Silence detection (know when to speak vs. hold space)
+**Confirmed competitors as of 2026:**
 
-**Competition:** Nearly ZERO. Therapy note tools (Upheal, Blueprint) exist but are **post-session**. No real-time HUD for coaches exists.
+| Competitor | Type | Price | Weakness |
+|---|---|---|---|
+| Final Round AI | Cloud desktop app | ~$48–$96/mo | Cloud-based, 800K+ users but data breach risk, requires internet |
+| Cluely | Cloud overlay | $20–$149.99/mo | $149.99/mo for true stealth tier, **2025 data breach (83K users)**, 5–10s real-world latency vs. advertised 300ms |
+| LockedIn AI | Cloud desktop | $29.99/mo | Cloud-based, interview-specific only |
+| Parakeet AI | Per-credit cloud | Variable | Credit model unpredictable for heavy users |
+| Sensei AI | Cloud | $24/mo annual | Cloud-only |
+| Beyz AI | Cloud desktop | $24.99–$49.99/mo | 230K users, cloud-dependent |
+| GhostPilot | Cloud overlay | Lower cost | Visible overlay risk in screen-monitored environments |
 
-**Your wedge:** A stealth overlay that shows:
-- Client profile + previous session summary
-- Active technique prompts (e.g., "Use Socratic questioning")
-- Auto-drafted SOAP note scaffold building live during session
+**Our wedge (sharpened):**
+- **100% offline** = zero data breach risk. Cluely's 83K-user breach is a live sales objection to use
+- **No subscription to the cloud** = works inside enterprise firewalls, VPN-restricted dev environments
+- **IDE workspace integration** = unique among all listed competitors; none offer a native coding workspace alongside the overlay
+- Latency advantage: local Whisper on-device has no network round-trip
 
-**Why this is the lowest risk market:**
-- No HIPAA complexity for coaches (not covered entities)
-- Massive market: 70,000+ life coaches in the US alone, almost none have a real-time AI tool
-- Word-of-mouth spreads in coaching communities extremely fast
-
-**Revenue:** $19/month. 500 coaches = $9,500 MRR from a simple V1.
-
----
-
-### 5. 🏛️ DebateShield — Students / Academic Debate
-
-**The pain:** Competitive debaters (Policy, Lincoln-Douglas, NPDA) need to:
-- Quickly reference evidence cards during live rounds
-- Track opponent's argument flow and find their prepared responses
-- Get AI-suggested rebuttals in real-time
-
-**Competition:** Almost none. [Verbatim Paperless Debate](https://paperlessdebate.com) (a legacy VBA macro suite for Microsoft Word, [GitHub](https://github.com/paperlessdebate/verbatim)) is the standard tool used across the circuit for the last 15 years, combined with Excel for manual "flowing". It has zero AI, zero voice tracking, and requires paid desktop Microsoft Word.
-
-**Your wedge:** The stealth window isn't needed here (tournaments are in-person), but the **local offline AI + fast speech-to-text auto-flowing + vector RAG search** across their evidence cards is a 10x leap over Word macros. Because tournaments ban internet, our 100% offline local models are tournament-legal!
-
-**Who pays:** Debate coaches + speech and debate teams at high schools and colleges. Parents pay for private debate coaching at $100–$200/hour.
-
-**Revenue:** Lower ($9/month student, $49/month coach) but zero competition and passionate niche.
+**Pricing anchor:** $29–$49/month is competitive. Consider a "career pack" one-time option ($199 for 90 days) to lower the barrier for job seekers.
 
 ---
 
-### 6. 📞 AgentPrompt — Call Center Agents (Compliance-Grade)
+### 1B. 🧠 MentorGlass — Coaching / Therapy
 
-**The pain:** Banking/insurance call center agents must:
-- Read mandatory disclosures at specific points in the call
-- Avoid saying prohibited phrases ("guaranteed returns", "no risk")
-- Instantly look up policy terms when a customer asks a question
+**Confirmed competition as of 2026:**
 
-**Competition:** Balto, Level AI, Glia — but they're **enterprise SaaS requiring telephony API integration**, $50–$150/seat/month.
+| Competitor | Type | What it does | Gap |
+|---|---|---|---|
+| BetterUp, CoachHub, Exec.com | Enterprise AI coaching platforms | Post-session AI feedback, workforce coaching | No real-time HUD during live sessions |
+| Upheal, Blueprint | Therapy note tools | Post-session SOAP notes | Post-session only, no live coaching |
+| Rocky.ai, Valence, Bunch.ai | AI-only habit/goal coaches | Async chat coaching | No video call overlay |
+| Lindy.ai | General AI coach tools | Async tools | No real-time live HUD |
 
-**Your wedge:** A local desktop app (no telephony API needed) that:
-- Listens via microphone to both sides of the call
-- Shows the compliance script at the right moment (keyword-triggered)
-- Flags prohibited phrases in real-time
+**Confirmed gap:** No product provides a **real-time stealth HUD during live coaching/therapy video sessions**. Every tool listed is either post-session, async, or enterprise workforce tools. This is the most uncontested vertical in the entire map.
 
-**Why enterprise wins here eventually:** This is a path to $10M+ ARR — but it requires TCPA/FINRA compliance certification, SOC2, and a longer sales cycle. **Not a V1 product** — more like Year 2.
+**Strongest wedge here:** No HIPAA complexity for life coaches. Word-of-mouth spreads fast in coaching communities (ICF, LinkedIn coaching groups, Reddit r/lifecoaching).
 
----
-
-### 7. 🌍 LangShadow — Language Learners (Live Calls)
-
-**The pain:** Language learners doing conversational practice on Preply/iTalki or real business calls in a foreign language need:
-- Vocabulary lookup without breaking the conversation
-- Grammar suggestions shown privately
-- Conjugation reminders for tricky tenses
-- Translation for words they don't understand in real time
-
-**What exists:** Krisp (audio processing), Google Translate (reactive) — but nothing that sits **invisibly near the webcam** and shows relevant vocabulary as you speak.
-
-**Your wedge:** The stealth HUD shows:
-- Words you've been mispronouncing (tracked by Whisper STT)
-- Contextual vocabulary suggestions based on what the other person just said
-- A "panic mode" hotkey that shows a phrase in your native language
-
-**Revenue:** $9/month — lower, but the TAM is massive (500M+ language learners worldwide). High viral potential in language learning communities (Reddit, YouTube).
+**Pricing:** $29–$49/month per coach. 500 coaches = $14.5K–$24.5K MRR.
 
 ---
 
-### 8. 🏛️ GovBrief — Government / PR Spokespeople ⭐ Hidden Gem
+### 2. 🏛️ DebateShield — Students / Debate Teams *(Revised)*
 
-**The pain:** Press secretaries, corporate communications officers, and political spokespeople doing live TV/video interviews need:
-- Instant fact recall on key statistics during media questions
-- Pre-approved talking point access without looking away from camera
-- Real-time flagging of "trap questions" based on pre-loaded opposition research
+**Confirmed competition as of 2026:**
 
-**Competition:** Literally zero software tools. This is done today with paper binders, earpieces ($5K+ broadcast gear), and physical teleprompter hardware.
+| Competitor | What it does | Gap |
+|---|---|---|
+| Verbatim (legacy VBA macro) | Word macros for flowing/formatting | No AI, requires paid MS Word |
+| FlowMaster | Full debate round app (prep, evidence, flowing, rebuttals, ballot) | **New entrant** — cloud-based, unclear offline support |
+| DebateCardAI | AI card cutting platform | Pre-round card research, not live round assistance |
+| DeepDebater (research) | Autonomous AI debate system | Academic research paper, not a product |
 
-**Your wedge:** A stealth HUD that:
-- Takes a briefing document (PDF) as input
-- Listens to reporter questions via Whisper STT
-- Surfaces the relevant talking point + key statistic in real time
-- Completely invisible in the video feed
+**Revised wedge:** FlowMaster is now a real competitor for round management. The updated pitch is:
+1. **100% offline** = tournament-legal (internet banned at NSDA nationals and most circuits)
+2. **Live STT-based auto-flowing** during the round — no competitor does this offline
+3. **RAG across your own evidence card corpus** in real time — not generic internet search
 
-**Why it's exciting:**
-- No competition in software
-- Zero ethical concerns (politicians use teleprompters openly — this is just digital briefing book)
-- High willingness to pay: a single enterprise contract (city government, PR firm) = $5K–$20K/year
-- The "White House press secretary" demo video writes itself as marketing
+**Distribution:** NSDA subreddit, college debate Facebook groups, debate coach forums. Parents pay $100–$200/hr for private coaching. Coaches are the right buyer ($49/month coach tier).
 
 ---
 
-## 🗺️ Planned Build Order (Revised)
+### 3. 🏛️ GovBrief — Government / PR Spokespeople
+
+**Confirmed competition as of 2026:**
+
+| Competitor | What it does | Gap |
+|---|---|---|
+| GovBrief.us | Federal contracting relationship platform | Completely different — B2G networking, not a live HUD |
+| UK Cabinet Office "Assist" | Internal AI drafting tool for gov communicators | Post-draft, internal workflow tool — not a live press conference HUD |
+| GovAI.com | Government staff AI assistant | Async document work, not live performance support |
+| Paper binders + $5K+ earpieces | Physical status quo | The actual competition |
+
+**Confirmed:** No software tool exists for live press conference / media interview support for spokespeople. The name "GovBrief" is taken by an unrelated platform — rename to **BriefingDesk** or **PressBrief** to avoid confusion.
+
+**Viral demo:** Record a fake "White House press briefing" where every answer is perfectly sourced. Upload to Twitter/X and LinkedIn. This writes itself.
+
+---
+
+### 4. ⚖️ CounselDesk — Legal / Attorneys *(Price Revised Upward)*
+
+**Confirmed competition as of 2026:**
+
+| Competitor | Type | Price | Weakness |
+|---|---|---|---|
+| Verbit Legal Visor | Cloud deposition intelligence | Enterprise (ISO 27001, SOC2, HIPAA) | Cloud-only, enterprise pricing, BAA required |
+| Filevine Depositions | Full case management platform | $400+/month | CRM buy-in required, overkill for solo firms |
+| Prevail CheckMate | Cloud deposition platform | Enterprise | Real-time transcription but cloud-dependent |
+| Everlaw | Discovery + AI deposition | Usage-based (base free) | Large firm tool, complex onboarding |
+| Clio | Case management + AI prep | ~$99/mo | AI is pre-deposition prep only, not live overlay |
+
+**Our wedge:** Every listed competitor is cloud-based and requires trust in a third-party with sensitive case materials. A **local-first desktop tool** that never touches a server is the only option that passes firm IT and malpractice insurance scrutiny at small/solo firms.
+
+**Pricing correction:** Previous doc said $29/month — this is too low. Attorneys bill $300–$500/hour. One saved hour pays for 3 months of subscription. Correct pricing: **$99–$149/month**. This is still a fraction of Filevine and well below Verbit.
+
+---
+
+### 5. 🩺 ClinicHUD — Telehealth / Doctors
+
+**Confirmed competition as of 2026:**
+
+| Competitor | Type | Price | Weakness |
+|---|---|---|---|
+| Nuance DAX Copilot | Cloud ambient scribe | $300+/mo/seat | Cloud-based, requires BAA, enterprise procurement |
+| Abridge | Cloud ambient scribe | Enterprise | Hospital/health system focus, not solo practices |
+| Suki | Cloud ambient scribe | ~$300/mo | Cloud, requires EHR integration contract |
+| DeepScribe | Cloud ambient scribe | Enterprise | Large practice focus |
+| S10.ai | Cloud clinical documentation | Enterprise | Cloud-dependent |
+
+**Market signal confirmed:** Ambient AI scribing is the **#1 proven ROI AI feature in clinical care as of 2026**, saving 1–2 hours of charting per day per clinician. All competitors are cloud-based, $300+/month, require BAA contracts.
+
+**Our wedge:** 100% local = HIPAA compliance by default for solo practices. No BAA contract needed (no PHI leaves the machine). A solo practice doc saves 1 hour/day, billed at $250–$500/hr. Our $49–$99/month is essentially free money.
+
+**Key requirement:** Frame as an "ambient documentation + visual HUD" tool. The SOAP note auto-generation is the hook; the stealth overlay near webcam is the differentiator.
+
+---
+
+### 6. 🌍 LangShadow — Language Learners *(Repositioned)*
+
+**Market reality as of 2026:** Duolingo Max (Video Call + AI Roleplay), Langua ($19.99/mo, 23 languages), JotMe, Praktika ($8/mo), and italki all compete for language learners. The app market is genuinely crowded.
+
+**Surviving wedge:** None of these tools work *during a real live business call*. If a non-native English speaker is on a Zoom call with a client, no tool currently sits invisibly near their webcam and whispers vocabulary or translates what the other person just said in real time.
+
+**Repositioned pitch:** "LangShadow is not a learning app. It's a real-time business call assistant for non-native professionals." Target: immigrant professionals, ESL business users, international remote workers. Not Duolingo's audience at all.
+
+**New pricing:** $14–$19/month. Don't compete on the learner price tier — compete on professional productivity.
+
+---
+
+## 🗺️ Planned Build Order (Revised & Validated)
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WAVE 1 (Now → Month 3) — Prove the Engine, Get First Revenue
+WAVE 1 (Now → Month 3) — Ship BarnOwl, Validate Engine
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  1A. 🎯 PRIMARY — StealthPresenter HUD
-      → Clean ethical positioning, no gray area
-      → Individual buyer, viral LinkedIn/Twitter demo
-      → Instant revenue signal: validates people pay for stealth HUDs
-      → THIS is the flagship product going forward
 
-  1B. ⏸️ PAUSED (Unreleased) — BarnOwl AI (Interview Assist)
-      → Engine and code KEPT (reused by hex architecture)
-      → Launch is paused indefinitely.
-      → Reasons: You rightly noted we haven't even launched this yet! Before going to market, we realized the ethical gray zone + crowded market (Final Round AI, Interview Kickstart, Sensei) makes it a bad *first* launch.
-      → Decision: Pivot the marketing and launch to StealthPresenter (1A), using the engine we already built for BarnOwl.
+  1A. 🎯 PRIMARY — BarnOwl AI (Interview Copilot)
+      Wedge: 100% offline, Cluely data breach story, IDE workspace
+      Distribution: r/cscareerquestions, r/leetcode, dev Twitter, LinkedIn
+      Revenue model: $29–$49/mo subscription or $199 career pack (90 days)
+      Kill condition: If can't get 50 paid users in 60 days post-launch → repivot
 
-  2nd. MentorGlass (coaches/therapists)
-       → 1 prompt swap + skin change on top of StealthPresenter engine
-       → Zero competition, word-of-mouth in coaching communities
-       → Validates: multi-product skin approach works
+  2nd. MentorGlass (coaches / therapists)
+       → 1 prompt swap + skin on BarnOwl engine
+       → Uncontested category — no real-time HUD competitor exists
+       → Distribution: ICF community, r/lifecoaching, LinkedIn coach groups
+       → Revenue: $29–$49/mo
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WAVE 2 (Month 3–6) — Expand Reach, Fast Niches
+WAVE 2 (Month 3–6) — Fast Niches, Build Credibility
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  3. DebateShield (students/debate teams)
-     → Fastest build, no stealth overlay needed
-     → Passionate niche, community viral loop
 
-  4. GovBrief (govt/PR spokespeople)
-     → Zero software competitors — literal blue ocean
-     → One enterprise contract ($5K–$20K/yr) pays for months of runway
-     → "White House press secretary" demo = viral press coverage
+  3. DebateShield (students / debate teams)
+     → Tournament-legal offline AI flowing is the pitch
+     → New competitor FlowMaster exists but is cloud-based — use that
+     → Distribution: NSDA subreddit, college debate coaches Facebook groups
+     → Revenue: $9/mo student, $49/mo coach tier
+
+  4. GovBrief → rename to PressBrief or BriefingDesk
+     → GovBrief.us is a live domain (federal contracting platform)
+     → Zero real software competitors in live spokesperson support
+     → "White House press secretary" demo video = viral marketing hook
+     → Revenue: $5K–$20K/yr enterprise contract per PR firm / agency
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 WAVE 3 (Month 6–12) — High-Value Professionals
-  (Now you have testimonials + proven track record)
+  (Requires: testimonials, proven track record, 6+ months live)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  5. CounselDesk (solo/small firm attorneys)
-     → $79/month, legal is high-ARPU market
-     → WHY NOT EARLIER: Attorneys are conservative buyers.
-       They need peer referrals + time to evaluate. Potential malpractice
-       liability anxiety around AI-surfaced case law citations.
-       You need 3–6 months of proven track record first.
+
+  5. CounselDesk (solo / small firm attorneys)
+     → Wedge: local-only, no cloud risk, no SOC2 overhead
+     → Correct pricing: $99–$149/month (not $29)
+     → Wait for testimonials — attorney trust requires peer referrals
+     → Competitors Verbit Legal Visor / Filevine are enterprise-grade;
+       our moat is the SMB / solo firm gap
 
   6. ClinicHUD (telehealth doctors)
-     → $49–$99/month, HIPAA-by-design moat
-     → Needs EHR API hooks (Epic/Athena) and HIPAA positioning story
-     → Requires BAA template + local-only data guarantee
+     → Ambient scribing confirmed as #1 ROI clinical AI feature
+     → All cloud competitors $300+/mo; our local-only is $49–$99/mo
+     → HIPAA moat by design — no BAA required for local-only tools
+     → Requires: basic EHR context loading (FHIR export support), SOAP note output
 
-  7. LangShadow (language learners)
-     → Massive TAM (500M+ worldwide), viral potential
-     → Lower ARPU ($9/month) — better as growth lever than revenue driver
+  7. LangShadow (repositioned — non-native business professionals)
+     → NOT a learning app — a real-time business call assistant
+     → No competitor sits invisibly on a live Zoom call for non-native speakers
+     → Revenue: $14–$19/mo, viral in immigrant professional communities
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WAVE 4 (Year 2) — Big Market Play
+WAVE 4 (Year 2) — Enterprise Play
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  8. AgentPrompt (call center agents)
-     → Highest revenue ceiling ($$$$$)
-     → Requires: SOC2 Type II, FINRA/TCPA compliance, telephony
-       SIP integration, 6–12 month enterprise sales cycles
-     → Not first because: Individual agents can't install on locked
-       corporate laptops. B2B procurement is slow and expensive.
+
+  8. AgentPrompt (call center — banking / insurance)
+     → Highest revenue ceiling ($10M+ ARR potential)
+     → Real blocker: locked corporate laptops, IT policy, not telephony API
+     → Requires: SOC2 Type II, FINRA/TCPA certification, channel partner
+     → Not before: proven enterprise track record from CounselDesk/ClinicHUD
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WAVE 5 (Explorers — Pull Forward if Early Traction)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  StreamerHUD — Consider pulling to Wave 2 for brand/viral reach
+  TabletopDM  — Passionate community, near-zero build effort
+  LyricsHUD   — Niche, but genuinely zero competition
+  RTS Co-Pilot — Lowest priority
 ```
-
-> **Why CounselDesk is Wave 3 and not Wave 1:**
-> The revenue is real, but attorneys are the most risk-averse professional
-> buyers in existence. A wrong AI citation = potential malpractice. They
-> will not adopt an unproven tool from an unknown company.
-> By Wave 3, you have StealthPresenter testimonials, MentorGlass reviews,
-> and a proven track record — *then* an attorney says yes.
 
 ---
 
-## The Key Insight
+## Platform Architecture Reminder
 
-> **You're not building multiple products. You're building one engine with different UX skins and domain-specific prompts.**
+> **You're not building 10 products. You're building one engine with different prompts and skins.**
 
-The core loop is identical across every product:
-1. Load a document corpus (PDF/DOCX/TXT)
-2. Listen to speech via Whisper STT
-3. RAG-search the corpus based on what's being said
-4. Surface relevant results in a stealth overlay near the webcam
-5. Gate with Supabase auth + BYOK pass
+```
+Core Loop (identical across all products):
+  1. Load document corpus  (PDF / DOCX / TXT / case folder)
+  2. Listen via Whisper STT (local, offline)
+  3. RAG-search the corpus on live speech
+  4. Surface result in stealth overlay near webcam
+  5. Gate access via Supabase auth + BYOK passkey
 
-The only thing that changes per product: **the domain-specific prompt template + the UI skin**.
+Per-product variables:
+  → Domain-specific system prompt
+  → UI skin / color scheme / branding
+  → Corpus type (evidence cards / case files / briefing docs / client notes)
+  → Optional: output format (SOAP notes / rebuttal flows / talking points)
+```
+
+---
+
+## 🚩 Open Action Items
+
+- [ ] **Rename GovBrief** → PressBrief or BriefingDesk (GovBrief.us is taken)
+- [ ] **Revise CounselDesk pricing** from $29/mo → $99–$149/mo in all docs and pitches
+- [ ] **Update BarnOwl pitch** to explicitly reference Cluely data breach as a trust differentiator
+- [ ] **Evaluate StreamerHUD** — pull forward to Wave 2 as a viral brand play?
+- [ ] **Reframe LangShadow** from "learner app" to "non-native professional call assistant" in all copy
+- [ ] **Add platform story** — single pricing page showing all skins under one "Stealth HUD Platform" umbrella for future bundling
+- [ ] **Clarify platform priority** — confirm Windows-first given enterprise buyer profile (legal, medical, gov buyers are predominantly Windows)
