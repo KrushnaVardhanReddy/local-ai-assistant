@@ -1,0 +1,55 @@
+TASK: P57-T10 — Microphone Mute Toggle
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a toggle to mute/stop the microphone in the UI and backend. Currently, the microphone starts automatically on app launch and stays on. We need a way to properly toggle it off (mute) and on (unmute).
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/backend/audio/capture.go` [NEW STATE & METHOD]
+- `wails-app/app.go` [NEW WAILS API]
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte` [UI TOGGLE]
+- `prompts/tasks_v2.md` [UPDATE — mark T10 done with PR number]
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: Backend Audio Capture State
+═══════════════════════════════════════════════════════════════
+Update `wails-app/backend/audio/capture.go` to expose the capturing state.
+1. Add a method `IsCapturing() bool` to `CaptureEngine`.
+2. This method should return true if the engine is actively capturing audio (e.g. `c.device != nil` or track via a boolean flag inside the engine).
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: App API (app.go)
+═══════════════════════════════════════════════════════════════
+Update `wails-app/app.go` to expose the toggle logic.
+1. Update `GetState()` so that `"isListening"` reflects whether the microphone is actually capturing (using `a.audioCapture.IsCapturing()`) instead of checking if `a.audioCapture != nil`.
+2. Expose a new method `ToggleMic() bool` on the `App` struct.
+   - If `a.audioCapture.IsCapturing()` is true, call `StopCapture()` and return false.
+   - If false, call `a.SetAudioDevice(-1, false)` to restart the default mic and return true.
+
+═══════════════════════════════════════════════════════════════
+SECTION 3: ConvPanel.svelte UI
+═══════════════════════════════════════════════════════════════
+Update `wails-app/frontend/src/products/interview/ConvPanel.svelte` to make the status badge act as a toggle button.
+1. Find the Live/Mic-Off status badges in the header:
+```svelte
+      {#if isListening && !isMockMode}
+        <button class="status-badge status-live pulse clickable" onclick={() => (window as any).go.main.App.ToggleMic()}>
+          <span class="material-symbols-outlined text-[12px]">mic</span> Live
+        </button>
+      {:else if !isListening && !isMockMode}
+        <button class="status-badge status-mic-off clickable" onclick={() => (window as any).go.main.App.ToggleMic()}>
+          <span class="material-symbols-outlined text-[12px]">mic_off</span> Mic Off
+        </button>
+```
+2. Make sure the button uses `onclick` and passes the toggle event to the backend. You may need to add CSS cursor changes for the `.status-badge.clickable`.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- Clicking the "Live" / "Mic Off" button correctly toggles the `isListening` state.
+- Audio is successfully stopped and resumed on the backend without errors.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): add microphone mute toggle (#P57-T10)`
