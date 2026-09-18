@@ -155,6 +155,7 @@ func (m *mockCacheAdapter) Search(query string, limit int) ([]backend.CacheItem,
 func (m *mockCacheAdapter) DeleteItem(id string) error { return nil }
 func (m *mockCacheAdapter) ClearAll() error { return nil }
 func (m *mockCacheAdapter) EnsureIndex() error { return nil }
+func (m *mockCacheAdapter) Count() (int, error) { return len(m.items), nil }
 
 func TestApp_ExportSession(t *testing.T) {
 	app := NewApp()
