@@ -1,0 +1,233 @@
+TASK: P57-T9 — Cache History UI & Vertical Transcripts
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+PREREQUISITE: This task depends on P57-T8D being merged first.
+Confirm that PR is merged before starting this task.
+
+Update the split-view layout to improve the user experience based on recent feedback:
+1. ConvPanel: Change the pending transcripts (suggestion chips) from a horizontal row into a vertical stack of clickable cards.
+2. AnswerPanel: Add a "History" toggle button in the header and a Cache History View to browse previous Q&A pairs stored in the backend.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte` [CSS UPDATE]
+- `wails-app/frontend/src/products/interview/AnswerPanel.svelte` [NEW STATE & UI]
+- `prompts/tasks_v2.md` [UPDATE — mark T9 done with PR number]
+
+DO NOT touch any Go code. The backend already supports everything needed via `GetCacheItems()`.
+
+═══════════════════════════════════════════════════════════════
+CURRENT CODEBASE REFERENCE — READ THESE FILES IN FULL BEFORE CODING
+═══════════════════════════════════════════════════════════════
+1. `wails-app/frontend/src/products/interview/ConvPanel.svelte`
+   - Review `.chips-row` and `.chip` CSS classes.
+   - Review how `pendingTranscripts` is rendered above the chat input box.
+
+2. `wails-app/frontend/src/products/interview/AnswerPanel.svelte`
+   - Review the header section where `cacheCount` is displayed alongside the Clear button.
+   - Review how the `response` markdown is rendered in the main body.
+
+3. `wails-app/frontend/wailsjs/go/main/App.js`
+   - Check the exported function `GetCacheItems`.
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: ConvPanel.svelte — Vertical Chips CSS
+═══════════════════════════════════════════════════════════════
+UPDATE the suggestion chips to stack vertically instead of horizontally.
+
+1. Find the `.chips-row` class and update it:
+```css
+.chips-row {
+  padding: 6px 10px;
+  border-top: 1px solid var(--conv-border);
+  display: flex;
+  flex-direction: column; /* Changed from horizontal */
+  align-items: stretch;   /* Full width */
+  gap: 8px;
+  max-height: 150px;      /* Prevent it from taking over the screen */
+  overflow-y: auto;       /* Vertical scrolling */
+}
+```
+
+2. Update the `.chip` class to look like a message card:
+```css
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;     /* Less rounded */
+  padding: 8px 10px;      /* Taller padding */
+  font-size: 12px;        /* Slightly larger font */
+  color: rgba(255, 255, 255, 0.85);
+}
+```
+
+3. Update `.chip-text` so it truncates but supports multi-line if needed (or keep single line with ellipsis), and ensures text is left-aligned.
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: AnswerPanel.svelte — Cache History State
+═══════════════════════════════════════════════════════════════
+ADD state variables for the History View:
+```typescript
+let showHistory = $state(false);
+let cacheItems = $state<any[]>([]); // To store the fetched cache history
+```
+
+ADD a function to fetch the cache history:
+```typescript
+// You may need to import GetCacheItems from wailsjs/go/main/App
+async function toggleHistory() {
+  if (!showHistory) {
+    try {
+      // Fetch the items from the backend
+      const items = await window.go.main.App.GetCacheItems();
+      cacheItems = items || [];
+    } catch (e) {
+      console.error('Failed to fetch cache items:', e);
+    }
+  }
+  showHistory = !showHistory;
+}
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 3: AnswerPanel.svelte — Cache History UI
+═══════════════════════════════════════════════════════════════
+1. In the header, add a new "History" icon button next to the Clear cache button:
+```svelte
+<button class="icon-btn" title="View History" onclick={toggleHistory} class:active={showHistory}>
+  <span class="material-symbols-outlined">history</span>
+</button>
+```
+
+2. In the main body (where the markdown response is rendered), add an `#if showHistory` block:
+```svelte
+<div class="content-scroll hide-scrollbar">
+  {#if showHistory}
+    <div class="history-view">
+      <h3 class="history-title">Cached Q&A History</h3>
+      {#if cacheItems.length === 0}
+        <p class="history-empty">No cached items found.</p>
+      {:else}
+        <div class="history-list">
+          {#each cacheItems as item}
+            <button class="history-item" onclick={() => {
+              // When an old question is clicked, we just show its cached answer
+              // and close the history view. We can temporarily override the main response,
+              // or dispatch an event to InterviewHUD to update the response.
+              // Note: For now, if we can't easily override wsState, we might need a local override
+              // in AnswerPanel, e.g. `let localOverride = $state('');`
+              // If `localOverride` is set, AnswerPanel shows it instead of `response`.
+              // For simplicity, let's just do a local override here:
+              localOverride = item.Answer; 
+              showHistory = false;
+            }}>
+              <div class="history-q">{item.Question}</div>
+              <div class="history-meta">
+                <span>Tokens saved: ~{item.TokensSaved || 250}</span>
+              </div>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {:else}
+    <!-- Existing response rendering logic -->
+    {#if localOverride}
+      <!-- Render localOverride markdown -->
+    {:else if response}
+      <!-- Render response markdown -->
+    {/if}
+  {/if}
+</div>
+```
+*Note: Make sure to implement the `localOverride` state mechanism so clicking a history item actually displays the cached answer. When new `response` comes in from props, `localOverride` should be cleared.*
+
+```typescript
+// Clear localOverride when a new live response starts
+$effect(() => {
+  if (isThinking) {
+    localOverride = '';
+  }
+});
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 4: AnswerPanel.svelte — History CSS
+═══════════════════════════════════════════════════════════════
+ADD CSS for the History View:
+```css
+.history-view {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.history-q {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+}
+
+.history-meta {
+  font-size: 11px;
+  color: rgba(74, 222, 128, 0.7);
+}
+
+.history-empty {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+```
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- `npm run build` in `wails-app/frontend` must succeed without warnings or errors.
+- The suggestion chips in the left panel render as a vertical stack.
+- The AnswerPanel features a new History button that successfully fetches and displays cache history from `GetCacheItems()`.
+- Clicking a history item populates the main panel with that cached answer.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): vertical transcripts and cache history UI (#P57-T9)`
