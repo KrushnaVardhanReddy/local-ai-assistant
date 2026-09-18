@@ -21,7 +21,7 @@ func (e *StealthEngine) ProcessAudio(samples []float32) error {
 	}
 	go func() {
 		for transcript := range ch {
-			e.handleTranscript(transcript)
+			e.handleTranscript(transcript, true)
 		}
 	}()
 	return nil
@@ -29,13 +29,13 @@ func (e *StealthEngine) ProcessAudio(samples []float32) error {
 
 // AskQuestion bypasses audio and sends a typed question to the LLM pipeline.
 func (e *StealthEngine) AskQuestion(question string) error {
-	e.handleTranscript(question)
+	e.handleTranscript(question, false)
 	return nil
 }
 
 // handleTranscript contains the core pipeline: filter → cache → LLM.
 // This is the logic extracted from app.go SetAudioDevice (lines 444–551).
-func (e *StealthEngine) handleTranscript(raw string) {
+func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 	if raw == "" ||
 		raw == "[BLANK_AUDIO]" ||
 		raw == " [BLANK_AUDIO]" ||
@@ -82,6 +82,15 @@ func (e *StealthEngine) handleTranscript(raw string) {
 			"id":   fmt.Sprintf("%d", time.Now().UnixNano()),
 			"text": cleanTranscript,
 		})
+	}
+
+	e.mu.RLock()
+	manual := e.manualMode
+	e.mu.RUnlock()
+
+	if isAuto && manual {
+		log.Printf("🎛️ [Manual Mode] Transcript accepted but LLM call bypassed: %q", cleanTranscript)
+		return
 	}
 
 	if e.cache != nil {

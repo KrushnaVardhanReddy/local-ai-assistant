@@ -581,3 +581,60 @@ func (a *App) ToggleMic() bool {
 		return true
 	}
 }
+
+// ExportSession exports all cached Q&A pairs from this session to a markdown file.
+// It writes to ~/Downloads/barnowl_session_<timestamp>.md and returns the file path.
+func (a *App) ExportSession() (string, error) {
+	cacheAdapter, ok := a.engine.GetCache().(interface {
+		GetAllItems() ([]backend.CacheItem, error)
+	})
+	if !ok {
+		return "", fmt.Errorf("cache adapter does not support GetAllItems")
+	}
+
+	items, err := cacheAdapter.GetAllItems()
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch cache items: %w", err)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	filename := fmt.Sprintf("barnowl_session_%s.md", timestamp)
+
+	// Create Downloads directory if it doesn't exist
+	downloadsDir := filepath.Join(homeDir, "Downloads")
+	if err := os.MkdirAll(downloadsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create downloads directory: %w", err)
+	}
+
+	filePath := filepath.Join(downloadsDir, filename)
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("# BarnOwl AI Session — %s\n\n", time.Now().Format("January 2, 2006 at 3:04 PM")))
+
+	for i, item := range items {
+		sb.WriteString(fmt.Sprintf("## Q%d: %s\n\n", i+1, item.Question))
+		sb.WriteString(fmt.Sprintf("%s\n\n", item.Answer))
+		sb.WriteString("---\n\n")
+	}
+
+	if err := os.WriteFile(filePath, []byte(sb.String()), 0644); err != nil {
+		return "", fmt.Errorf("failed to write file: %w", err)
+	}
+
+	log.Printf("📄 Session exported to: %s", filePath)
+	return filePath, nil
+
+// SetManualMode enables or disables automatic LLM processing of transcripts.
+// When manualMode is true, transcripts will still be emitted to the frontend via
+// on_transcript events, but the engine will NOT automatically queue them for LLM processing.
+func (a *App) SetManualMode(enabled bool) {
+	if a.engine != nil {
+		a.engine.SetManualMode(enabled)
+		log.Printf("🎛️ Manual mode set to: %v", enabled)
+	}
+}

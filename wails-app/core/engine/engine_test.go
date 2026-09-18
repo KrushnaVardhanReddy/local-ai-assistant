@@ -402,3 +402,8 @@ func TestActiveDocumentContextInjection(t *testing.T) {
 		t.Errorf("Expected SystemPrompt to NOT contain active document block when disabled, got: %s", llm.LastSystemPrompt)
 	}
 }
+
+func TestSetManualMode(t *testing.T) {
+	e := engine.New(engine.Config{}, nil, nil, nil, nil)
+	e.SetManualMode(true)
+}

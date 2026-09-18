@@ -20,11 +20,23 @@ export const wsState = $state({
   pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>,
   plan: "unknown",
   isMockMode: false,
+  rawMode: false,
+  manualMode: false,
   transcriptHistory: [] as Array<{ role: string; text: string; answer?: string }>,
   pollCount: 0,
   pollError: "none",
   cacheStats: { cached_pairs: 0, estimated_tokens_saved: 0 }
 });
+
+export async function toggleManualMode(): Promise<void> {
+  wsState.manualMode = !wsState.manualMode;
+  try {
+    await (window as any).go.main.App.SetManualMode(wsState.manualMode);
+  } catch (e) {
+    console.error('Failed to set manual mode:', e);
+    wsState.manualMode = !wsState.manualMode; // Rollback on error
+  }
+}
 
 let ws: WebSocket | null = null;
 let chipIdCounter = 0;
@@ -72,7 +84,7 @@ function handleTranscript(data: any) {
   wsState.transcript = data.text;
 
   // Accumulate rolling transcript history (max 10 entries)
-  if (data.text && data.text.trim().length > 3) {
+  if (data.text && (wsState.rawMode || data.text.trim().length > 3)) {
     // Avoid duplicating the last entry
     const last = wsState.transcriptHistory[wsState.transcriptHistory.length - 1];
     if (last?.text !== data.text) {

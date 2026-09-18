@@ -141,3 +141,17 @@ func (m *MockCache) Search(embedding []float32, threshold float64) (string, bool
 }
 func (m *MockCache) Store(question, answer string) error { return nil }
 func (m *MockCache) Count() int                          { return 1 }
+
+func TestPipeline_ManualMode(t *testing.T) {
+	events := &MockEvents{Emitted: make(map[string]int)}
+	eng := New(Config{}, nil, nil, nil, events)
+	eng.SetManualMode(true)
+
+	// In manual mode, AskQuestion should bypass LLM call and return immediately if isAuto is true
+	eng.handleTranscript("Hello manually", true)
+
+	// And if isAuto is false, it should continue normally
+	// eng.AskQuestion calls handleTranscript with false, so it won't hit the bypass early return
+	// but we just pass nil llm to fail naturally if it proceeds, so we know if it bypassed or not.
+	// We'll just verify no panic happens when bypassed
+}
