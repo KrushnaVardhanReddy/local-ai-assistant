@@ -1,0 +1,167 @@
+TASK: P57-T14 — In-Session Bubble Answer Recall
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+PREREQUISITE: Depends on P57-T10 being merged.
+
+When the user clicks on an old question bubble in the left panel (ConvPanel),
+the right panel (AnswerPanel) should instantly recall and display the answer
+that was already received during this session — WITHOUT making any backend call.
+
+Currently the system calls GetCacheItems() (SQLite) for this, which requires
+an exact string match and is unreliable. This task stores the answer directly
+in the in-memory transcript history so clicks are instant and offline.
+
+This task is SAFE to run in parallel with P57-T12 (different files).
+DO NOT touch: app.go, AnswerPanel.svelte, InterviewHUD.svelte.
+Safe files: ws.svelte.ts (transcriptHistory type change), ConvPanel.svelte (onclick update).
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/lib/ws.svelte.ts` [TYPE CHANGE + NEW FIELD]
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte` [ONCLICK UPDATE]
+- `prompts/tasks_v2.md` [UPDATE — mark T14 done with PR number]
+
+DO NOT touch any Go backend files or AnswerPanel.svelte.
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: ws.svelte.ts — Upgrade transcriptHistory Type
+═══════════════════════════════════════════════════════════════
+Currently `transcriptHistory` is typed as `string[]` and is ONLY in ws.svelte.ts.
+Change it to hold objects that can optionally store the AI answer.
+
+1. Change the initial state:
+```typescript
+// BEFORE:
+transcriptHistory: [] as string[],
+
+// AFTER:
+transcriptHistory: [] as Array<{ role: string; text: string; answer?: string }>,
+```
+
+2. Update `handleTranscript(data: any)` to push an object instead of a string:
+```typescript
+// BEFORE (approximate):
+wsState.transcriptHistory.push(data.text);
+
+// AFTER:
+wsState.transcriptHistory.push({ role: data.speaker ?? 'interviewer', text: data.text });
+```
+
+3. In the `on_response_end` handler inside `initListeners()`, when the stream ends,
+find the LAST entry in `transcriptHistory` that does not have an `answer` yet
+(i.e., the most recently sent question), and store the final response there:
+```typescript
+onEvent("on_response_end", () => {
+  console.log('[WS] on_response_end fired. Final response length:', wsState.response.length);
+  wsState.isThinking = false;
+
+  // Store the completed answer against the most recent unanswered transcript
+  if (wsState.response) {
+    for (let i = wsState.transcriptHistory.length - 1; i >= 0; i--) {
+      const entry = wsState.transcriptHistory[i];
+      if (!entry.answer) {
+        wsState.transcriptHistory[i] = { ...entry, answer: wsState.response };
+        break;
+      }
+    }
+  }
+});
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: ConvPanel.svelte — Update onclick to Use In-Memory Answer
+═══════════════════════════════════════════════════════════════
+The `transcriptHistory` prop currently has type `Array<{ role: string; text: string }>`.
+Update it to also accept `answer?`:
+
+1. In the `$props<{...}>()` block, update the type:
+```typescript
+// BEFORE:
+transcriptHistory?: Array<{ role: string; text: string }>;
+
+// AFTER:
+transcriptHistory?: Array<{ role: string; text: string; answer?: string }>;
+```
+
+2. Update the clickable bubble `onclick` handlers to prefer the in-memory answer
+over the backend call, if it exists:
+```svelte
+<!-- BEFORE: -->
+onclick={() => onSelectTranscript?.(item.text)}
+
+<!-- AFTER: -->
+onclick={() => {
+  if (item.answer) {
+    // Answer already in session memory — use it directly
+    onSelectTranscript?.(item.text, item.answer);
+  } else {
+    // Fall back to cache lookup
+    onSelectTranscript?.(item.text);
+  }
+}}
+```
+
+3. Update the `onSelectTranscript` prop type to accept an optional second argument:
+```typescript
+// BEFORE:
+onSelectTranscript?: (text: string) => void;
+
+// AFTER:
+onSelectTranscript?: (text: string, answer?: string) => void;
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 3: InterviewHUD.svelte — Update onSelectTranscript Handler
+═══════════════════════════════════════════════════════════════
+In `InterviewHUD.svelte`, find the `onSelectTranscript` callback passed to `ConvPanel`
+and update it to handle the optional `answer` argument:
+
+```typescript
+// BEFORE (approximate):
+onSelectTranscript={(text: string) => {
+  if (answerPanelRef && answerPanelRef.showCachedAnswerFor) {
+    answerPanelRef.showCachedAnswerFor(text);
+  }
+}}
+
+// AFTER:
+onSelectTranscript={(text: string, answer?: string) => {
+  if (answerPanelRef) {
+    if (answer) {
+      // In-memory hit: inject directly without any backend call
+      answerPanelRef.showLocalAnswer(answer);
+    } else if (answerPanelRef.showCachedAnswerFor) {
+      // Fallback: query SQLite cache
+      answerPanelRef.showCachedAnswerFor(text);
+    }
+  }
+}}
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 4: AnswerPanel.svelte — Add showLocalAnswer Method
+═══════════════════════════════════════════════════════════════
+In `AnswerPanel.svelte`, alongside the existing `showCachedAnswerFor` export,
+add a new simpler method `showLocalAnswer`:
+
+```typescript
+export function showLocalAnswer(answer: string) {
+  localOverride = answer;
+  showHistory = false;
+}
+```
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- Clicking a question bubble that has already been answered (in this session)
+  instantly recalls the answer in the right panel — NO loading/thinking state.
+- Clicking a bubble with no answer yet gracefully falls back to the cache lookup.
+- The `transcriptHistory` array correctly stores `role`, `text`, and `answer` fields.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): in-session bubble answer recall (#P57-T14)`

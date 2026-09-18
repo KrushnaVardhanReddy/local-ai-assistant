@@ -1,0 +1,80 @@
+TASK: P57-T11 — Raw / Filtered Transcript Toggle
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+PREREQUISITE: Depends on P57-T10 being merged.
+
+Add a toggle to let users switch between "Filtered" (current: noise/too-short dropped)
+and "Raw" (every accepted STT output appears as a bubble, even if filter would have
+dropped it) transcript display modes.
+
+This must NOT touch: AnswerPanel.svelte, InterviewHUD.svelte, app.go, any backend Go files.
+Safe files for this task: ConvPanel.svelte (header toggle only), ws.svelte.ts (new state flag).
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/lib/ws.svelte.ts` [NEW STATE]
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte` [HEADER TOGGLE ONLY]
+- `prompts/tasks_v2.md` [UPDATE — mark T11 done with PR number]
+
+DO NOT touch any Go backend files. All changes are frontend-only.
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: ws.svelte.ts — New State Flag
+═══════════════════════════════════════════════════════════════
+Add a new `rawMode` boolean to `wsState`:
+```typescript
+export const wsState = $state({
+  // ...existing fields...
+  rawMode: false,  // When true, show all transcripts without filter
+});
+```
+
+In `handleTranscript(data: any)`, the transcript is currently only added to
+`transcriptHistory` if `data.text.trim().length > 3`.
+When `wsState.rawMode` is true, skip that minimum-length check so everything
+from STT is appended.
+
+The backend already emits `on_transcript` for every STT output. No backend change needed.
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: ConvPanel.svelte — Toggle Button in Header
+═══════════════════════════════════════════════════════════════
+Read-only changes to ConvPanel.svelte. DO NOT modify the bubble rendering,
+the chip area, or any click-handler logic — only add a small toggle button
+to the existing header-right section (near the star/catch-me-up icons).
+
+1. Import wsState at the top of the <script> block:
+```typescript
+import { wsState } from '$lib/ws.svelte';
+```
+
+2. Add a toggle button in the `header-right` area:
+```svelte
+<button
+  class="icon-btn"
+  class:active={wsState.rawMode}
+  title={wsState.rawMode ? 'Raw mode (showing all)' : 'Filtered mode'}
+  onclick={() => wsState.rawMode = !wsState.rawMode}
+>
+  <span class="material-symbols-outlined">
+    {wsState.rawMode ? 'hearing_disabled' : 'hearing'}
+  </span>
+</button>
+```
+
+No new CSS needed — the existing `.icon-btn` and `.icon-btn.active` classes handle this.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- `npm run build` in `wails-app/frontend` must succeed.
+- In filtered mode (default), only transcripts > 3 chars appear.
+- In raw mode, all STT outputs appear.
+- The toggle button icon swaps between `hearing` and `hearing_disabled`.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): add raw/filtered transcript toggle (#P57-T11)`

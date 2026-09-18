@@ -1,0 +1,120 @@
+TASK: P57-T12 — Save Session to File
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+PREREQUISITE: Depends on P57-T10 being merged.
+
+Add the ability to export the current session's Q&A history to a markdown file.
+This task is 100% isolated from other P57 tasks — safe to run in parallel.
+
+This must NOT touch: ConvPanel.svelte, InterviewHUD.svelte, ws.svelte.ts.
+Safe files: app.go (one new method), AnswerPanel.svelte (one new icon button).
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/app.go` [NEW METHOD ONLY — append to end of file]
+- `wails-app/frontend/src/products/interview/AnswerPanel.svelte` [NEW BUTTON + STATE]
+- `prompts/tasks_v2.md` [UPDATE — mark T12 done with PR number]
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: app.go — ExportSession() Method
+═══════════════════════════════════════════════════════════════
+Append this new method to the end of `wails-app/app.go`.
+DO NOT modify any existing methods.
+
+```go
+// ExportSession exports all cached Q&A pairs from this session to a markdown file.
+// It writes to ~/Downloads/barnowl_session_<timestamp>.md and returns the file path.
+func (a *App) ExportSession() (string, error) {
+    items, err := a.vectorDB.GetAllItems()
+    if err != nil {
+        return "", fmt.Errorf("failed to fetch cache items: %w", err)
+    }
+
+    homeDir, err := os.UserHomeDir()
+    if err != nil {
+        return "", fmt.Errorf("failed to get home directory: %w", err)
+    }
+
+    timestamp := time.Now().Format("2006-01-02_15-04-05")
+    filename := fmt.Sprintf("barnowl_session_%s.md", timestamp)
+    filePath := filepath.Join(homeDir, "Downloads", filename)
+
+    var sb strings.Builder
+    sb.WriteString(fmt.Sprintf("# BarnOwl AI Session — %s\n\n", time.Now().Format("January 2, 2006 at 3:04 PM")))
+
+    for i, item := range items {
+        sb.WriteString(fmt.Sprintf("## Q%d: %s\n\n", i+1, item.Question))
+        sb.WriteString(fmt.Sprintf("%s\n\n", item.Answer))
+        sb.WriteString("---\n\n")
+    }
+
+    if err := os.WriteFile(filePath, []byte(sb.String()), 0644); err != nil {
+        return "", fmt.Errorf("failed to write file: %w", err)
+    }
+
+    log.Printf("📄 Session exported to: %s", filePath)
+    return filePath, nil
+}
+```
+
+Make sure the required imports are present in the import block at the top of app.go:
+- `"fmt"` — likely already imported
+- `"os"` — likely already imported
+- `"path/filepath"` — add if missing
+- `"strings"` — likely already imported
+- `"time"` — add if missing
+
+Also note: `a.vectorDB` may not exist as a field. Look for how `GetCacheItems()` is
+currently implemented in `app.go` and use the same pattern to access the cache adapter.
+For example if it uses `a.engine` or a direct adapter call, follow the same pattern.
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: AnswerPanel.svelte — Export Button
+═══════════════════════════════════════════════════════════════
+In the header section of `AnswerPanel.svelte`, add a new export icon button
+next to the existing copy and history buttons.
+
+1. Add state for export feedback:
+```typescript
+let exportStatus = $state<'idle' | 'saving' | 'done' | 'error'>('idle');
+```
+
+2. Add export handler:
+```typescript
+async function handleExport() {
+  exportStatus = 'saving';
+  try {
+    const path = await (window as any).go.main.App.ExportSession();
+    exportStatus = 'done';
+    console.log('Session exported to:', path);
+    setTimeout(() => exportStatus = 'idle', 3000);
+  } catch (e) {
+    console.error('Export failed:', e);
+    exportStatus = 'error';
+    setTimeout(() => exportStatus = 'idle', 3000);
+  }
+}
+```
+
+3. Add the button in the header (near copy and history buttons):
+```svelte
+<button class="icon-btn" title="Export session to file" onclick={handleExport}>
+  <span class="material-symbols-outlined">
+    {exportStatus === 'saving' ? 'hourglass_empty' : exportStatus === 'done' ? 'check' : 'download'}
+  </span>
+</button>
+```
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- `go build ./...` in `wails-app` must succeed (with correct CGO flags).
+- Clicking the export button creates a `.md` file in `~/Downloads/`.
+- The button icon temporarily shows a checkmark on success.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): add session export to markdown file (#P57-T12)`

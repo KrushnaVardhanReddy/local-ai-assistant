@@ -1,0 +1,127 @@
+TASK: P57-T13 — Manual LLM Trigger Mode
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+PREREQUISITES: P57-T10, P57-T11, AND P57-T14 must be merged before starting this task.
+This task has the most file overlap — it must come AFTER T11 and T14.
+
+Add a "Manual Mode" toggle. In manual mode, incoming transcript bubbles accumulate
+in the left panel but do NOT automatically trigger an LLM call. The user must
+explicitly click a bubble to send it to the LLM (or retrieve from cache if already answered).
+
+In "Auto Mode" (default / current behavior), every accepted transcript immediately
+fires the LLM pipeline as it does today.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/lib/ws.svelte.ts` [NEW STATE + INTERCEPT]
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte` [TOGGLE BUTTON + HINT]
+- `wails-app/app.go` [NEW ToggleAutoSend() METHOD]
+- `prompts/tasks_v2.md` [UPDATE — mark T13 done with PR number]
+
+DO NOT touch AnswerPanel.svelte.
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: app.go — Expose ManualMode Toggle to Frontend
+═══════════════════════════════════════════════════════════════
+The auto-sending of transcripts to the LLM is triggered in the Go engine when
+the STT emits a transcript event. We need a way for the frontend to tell the
+backend to stop auto-processing.
+
+Append this new method to the end of `wails-app/app.go`:
+
+```go
+// SetManualMode enables or disables automatic LLM processing of transcripts.
+// When manualMode is true, transcripts will still be emitted to the frontend via
+// on_transcript events, but the engine will NOT automatically queue them for LLM processing.
+func (a *App) SetManualMode(enabled bool) {
+    if a.engine != nil {
+        a.engine.SetManualMode(enabled)
+        log.Printf("🎛️ Manual mode set to: %v", enabled)
+    }
+}
+```
+
+Then look inside `wails-app/core/engine/` for the StealthEngine struct and add
+a `SetManualMode(bool)` method and a `manualMode bool` field to it.
+When `manualMode` is true, the engine should skip queuing the LLM call when a
+transcript arrives. The transcript event should still be emitted to the frontend.
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: ws.svelte.ts — New manualMode State
+═══════════════════════════════════════════════════════════════
+Add a `manualMode` flag to `wsState`:
+```typescript
+export const wsState = $state({
+  // ...existing fields...
+  manualMode: false,
+});
+```
+
+Add a toggle function:
+```typescript
+export async function toggleManualMode(): Promise<void> {
+  wsState.manualMode = !wsState.manualMode;
+  try {
+    await (window as any).go.main.App.SetManualMode(wsState.manualMode);
+  } catch (e) {
+    console.error('Failed to set manual mode:', e);
+    wsState.manualMode = !wsState.manualMode; // Rollback on error
+  }
+}
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 3: ConvPanel.svelte — Manual Mode Toggle Button + UX Hints
+═══════════════════════════════════════════════════════════════
+1. Import `wsState` and `toggleManualMode` from `$lib/ws.svelte`:
+```typescript
+import { wsState, toggleManualMode } from '$lib/ws.svelte';
+```
+
+2. Add a toggle button in the `header-right` area (next to the raw/filter toggle):
+```svelte
+<button
+  class="icon-btn"
+  class:active={wsState.manualMode}
+  title={wsState.manualMode ? 'Manual mode: click a bubble to send' : 'Auto mode: every transcript is sent'}
+  onclick={toggleManualMode}
+>
+  <span class="material-symbols-outlined">
+    {wsState.manualMode ? 'touch_app' : 'send_time_extension'}
+  </span>
+</button>
+```
+
+3. When `wsState.manualMode` is true, add a subtle "click to send" hint text
+below each clickable interviewer/candidate bubble so users know what to do:
+```svelte
+{#if wsState.manualMode && !item.answer}
+  <span class="send-hint">↑ click to ask AI</span>
+{/if}
+```
+
+4. Add CSS for `.send-hint`:
+```css
+.send-hint {
+  font-size: 10px;
+  color: rgba(74, 222, 128, 0.5);
+  margin-top: 4px;
+  display: block;
+}
+```
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- In Auto mode (default): transcripts immediately trigger LLM responses.
+- In Manual mode: transcripts accumulate as bubbles with "click to ask AI" hints.
+  Clicking a bubble sends it to the LLM for the first time, or recalls the cached
+  answer instantly if already answered.
+- The toggle button icon and tooltip correctly reflect current mode.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): add manual LLM trigger mode (#P57-T13)`
