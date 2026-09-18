@@ -34,6 +34,10 @@ export function EndSession() {
   return window['go']['main']['App']['EndSession']();
 }
 
+export function ExportSession() {
+  return window['go']['main']['App']['ExportSession']();
+}
+
 export function GetActiveDocument() {
   return window['go']['main']['App']['GetActiveDocument']();
 }
@@ -116,6 +120,10 @@ export function SetClickthrough(arg1) {
 
 export function SetIncludeActiveDocContext(arg1) {
   return window['go']['main']['App']['SetIncludeActiveDocContext'](arg1);
+}
+
+export function SetManualMode(arg1) {
+  return window['go']['main']['App']['SetManualMode'](arg1);
 }
 
 export function StartBackend() {

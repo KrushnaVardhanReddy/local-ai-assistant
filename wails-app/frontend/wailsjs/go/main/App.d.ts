@@ -20,6 +20,8 @@ export function DeleteToken():Promise<void>;
 
 export function EndSession():Promise<Record<string, any>>;
 
+export function ExportSession():Promise<string>;
+
 export function GetActiveDocument():Promise<driving.WorkspaceDocument>;
 
 export function GetAudioDevices():Promise<Array<audio.AudioDevice>>;
@@ -61,6 +63,8 @@ export function SetAudioDevice(arg1:number,arg2:boolean):Promise<void>;
 export function SetClickthrough(arg1:boolean):Promise<void>;
 
 export function SetIncludeActiveDocContext(arg1:boolean):Promise<void>;
+
+export function SetManualMode(arg1:boolean):Promise<void>;
 
 export function StartBackend():Promise<void>;
 
