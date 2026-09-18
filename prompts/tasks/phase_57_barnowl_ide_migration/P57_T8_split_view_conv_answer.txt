@@ -1,0 +1,245 @@
+TASK: P57-T8 — Split-View Layout: Conversation Left / LLM Answer Right (IDE as Optional Tab)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Redesign the BarnOwl AI interview layout so that the primary screen is a two-panel split view:
+  LEFT PANEL  — Conversation feed (transcript history, suggestion chips, chat input)
+  RIGHT PANEL — Live LLM answer / streaming Markdown response
+
+The current center "IDE" editor pane (CodeEditor / workspace file tree) is demoted to an optional
+mode, toggled via the ActivityBar `explorer` icon. It should NOT be visible by default.
+
+The key insight: candidates do not need a code editor open all the time. The dominant workflow is:
+  1. Hear a question (live transcript appears left).
+  2. AI answer streams in on the right.
+  3. Optionally, open the IDE to paste code context — then collapse it back.
+
+This eliminates the current awkwardness where the Copilot answer is only visible if the right drawer
+is open, while the center pane is wasted space showing an empty editor.
+
+═══════════════════════════════════════════════════════════════
+LAYOUT SPECIFICATION — NEW DEFAULT VIEW
+═══════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────┐
+│  StealthTitleBar (drag region, top)                              │
+│──────────────────────────────────────────────────────────────────│
+│  Header Toolbar: [BarnOwl AI] [Live badge] [Snip] [Report] [..] │
+│──────────────────────────────────────────────────────────────────│
+│ [ActBar] │        CONV PANEL (Left)         │  ANSWER PANEL (Right) │
+│          │  ─────────────────────────────   │  ───────────────────  │
+│  [🗂]   │  Transcript / Chat Feed          │  Streaming LLM Answer │
+│  [✨]   │  · Interviewer bubble            │  · Markdown rendered  │
+│  [🎤]   │  · Candidate bubble              │  · Syntax highlighted │
+│  [⚙]   │  · Suggestion chips              │  · Auto-scroll        │
+│          │  · Multi-line chat input (3-4r)  │  · Copy code buttons │
+│          │                                  │                       │
+└──────────────────────────────────────────────────────────────────┘
+
+When `explorer` is toggled ON from the ActivityBar:
+┌──────────────────────────────────────────────────────────────────┐
+│ [ActBar] │ [File Tree] │  CONV PANEL  │  ANSWER PANEL            │
+└──────────────────────────────────────────────────────────────────┘
+
+The draggable resizer between CONV and ANSWER panels must work (same as existing `.resizer-handle`).
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+Primary changes:
+- `wails-app/frontend/src/products/interview/InterviewHUD.svelte`
+  [MAJOR UPDATE] Replace the IDEShell-centric layout with a new split-view layout.
+- `wails-app/frontend/src/products/interview/CopilotDrawer.svelte`
+  [SPLIT] Extract the conversation feed (left panel) and the answer panel (right panel) as named
+  Svelte snippet props OR split into two separate lightweight components.
+- `wails-app/frontend/src/lib/components/workspace/IDEShell.svelte`
+  [MINOR UPDATE] Ensure `IDEShell` gracefully handles the case where it is only shown when `explorer`
+  is active; its `center-editor-pane` slot should mount/unmount based on a prop.
+
+Optional new files (Jules may choose):
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte`  [NEW — optional split-out]
+- `wails-app/frontend/src/products/interview/AnswerPanel.svelte` [NEW — optional split-out]
+
+Test file update required:
+- `wails-app/frontend/tests/ui.spec.ts` [UPDATE — adjust selectors for new layout]
+- `prompts/tasks_v2.md` [UPDATE task tracking with PR number once merged]
+
+═══════════════════════════════════════════════════════════════
+BEHAVIORAL REQUIREMENTS & SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. DEFAULT LAYOUT (No IDE, Split Conv/Answer):
+   - On app load, the default view is TWO side-by-side panels filling the center area:
+     a) LEFT: Conversation Panel (width: ~40%, resizable, min 280px)
+     b) RIGHT: Answer Panel (width: ~60%, resizable, min 300px)
+   - The `explorer` (file tree sidebar) is CLOSED by default.
+   - The `CodeEditor` / workspace editor is NOT rendered unless a file is explicitly opened via IDE mode.
+   - The ActivityBar still shows its icons:
+       `{ id: 'explorer', icon: 'folder_open', label: 'Files' }`   ← toggles file tree + IDE center
+       `{ id: 'mock', icon: 'record_voice_over', label: 'Mock' }`
+       `{ id: 'settings', icon: 'settings', label: 'Settings' }` (bottom icon)
+   - REMOVE the separate `copilot` ActivityBar icon — the Copilot answer is now always in the RIGHT panel.
+   - REMOVE the `keys` ActivityBar icon from the bar itself — hotkeys remain accessible via the header
+     toolbar gear/keyboard button in the Conversation Panel header.
+
+2. LEFT PANEL — Conversation Panel (ConvPanel):
+   - Header: Small title "Live Session" + status badge (Live/Mock/Mic Off) + RAG context indicator
+     + "🔑 Keys" button (toggles hotkeys overlay within this panel).
+   - Body (scrollable flex-col, newest items at bottom, auto-scroll):
+     · Transcript history items from `wsState.transcriptHistory`:
+       - INTERVIEWER items: left-aligned speech bubble (subtle grey/blue tint).
+       - CANDIDATE items: right-aligned speech bubble (subtle green tint).
+     · Suggestion chips row: pills from `wsState.pendingTranscripts`.
+       - Each chip: click → `sendChip(chip)`, dismiss × → `dismissChip(chip.id)`.
+       - "Clear All" link if chips > 1.
+   - Footer (pinned at bottom):
+     · Multi-line textarea (rows=3, min-h-[84px], max-h-[220px], resize-y).
+     · Placeholder: "Ask a follow-up or custom prompt... (Shift+Enter for newline)".
+     · Submits on Enter (without Shift) via `sendChat(chatText)`.
+     · `sendChat` sets `wsState.isThinking = true` and sends to WS/API.
+     · Send button aligned bottom-right (icon: `send`).
+   - Hotkeys overlay: When "Keys" is toggled, replace the body scroll area with the full hotkeys
+     cheat sheet (same content as currently in CopilotDrawer `showHotkeys` mode), scroll within panel.
+   - STAR Method & Catch Me Up: Move these quick-action buttons to the Conversation Panel header
+     (small icon buttons: `star` for STAR Method, `history` for Catch Me Up).
+
+3. RIGHT PANEL — Answer Panel (AnswerPanel):
+   - Header: Title "BarnOwl AI" with `auto_awesome` icon + Clear Cache button (`mop` icon, shows
+     cached pair count) + Copy All button.
+   - Body (scrollable, newest at bottom, auto-scroll):
+     · When `wsState.isThinking && !wsState.response`: animated "Thinking..." pulse card.
+     · When `wsState.response` has content: render Markdown with syntax highlighting (Shiki/highlight.js),
+       per-code-block copy buttons, streaming cursor if still thinking.
+     · Entire answer panel content should be selectable (user-select: text).
+   - NO chat input here — this panel is output only.
+   - Cache Stats: Small footer chip showing `N Q&A pairs cached` when cache > 0.
+
+4. IDE MODE (Explorer Active):
+   - When user clicks the `explorer` ActivityBar icon:
+     · The WorkspaceSidebar (file tree) slides in on the LEFT of the ConvPanel.
+     · The CENTER pane gets a CodeEditor showing the active document.
+     · Layout: [ActBar] | [FileTree] | [ConvPanel] | [AnswerPanel]
+     · Clicking `explorer` again collapses both FileTree and CodeEditor, returning to default split.
+   - The draggable resizer between ConvPanel and AnswerPanel must still function.
+   - The draggable resizer between FileTree and ConvPanel may be added if feasible (low priority).
+
+5. RESIZABLE PANELS:
+   - There MUST be a draggable `.resizer-handle` between ConvPanel and AnswerPanel (same implementation
+     as the existing resizer in `IDEShell.svelte`).
+   - Persist split widths to `localStorage`:
+     · Key `barnowl_conv_panel_width` (default: 380px, min 280px, max 60vw).
+     · Key `barnowl_answer_panel_width` is derived (flex-grow fills remaining space).
+
+6. HEADER TOOLBAR (unchanged from current):
+   - Keep the existing top header toolbar: [BarnOwl AI branding] [Live/Mock badge] [Snip] [Report] [Clear] [Stealth].
+   - No changes needed here.
+
+7. SETTINGS PANEL (unchanged):
+   - Keep the existing settings slide-out panel triggered by the settings ActivityBar icon.
+   - It overlays on the right side (absolute positioned, z-index 50) just as before.
+
+8. MOCK MODE:
+   - `mock` ActivityBar icon still calls `handleMockModeToggle()`.
+   - Mock badge in top header still shows when `wsState.isMockMode`.
+
+9. RAG CONTEXT BADGE:
+   - Show `📄 N context item(s)` badge in the ConvPanel header if `wsState.ragSources.length > 0`
+     OR if `includeActiveDocContext && activeDocumentName`.
+   - Keep `includeActiveDocContext` state and `activeDocumentName` from `refreshIDEState()`.
+
+═══════════════════════════════════════════════════════════════
+EXACT STATE & VARIABLE MAPPING
+═══════════════════════════════════════════════════════════════
+The following state variables in `InterviewHUD.svelte` MUST be preserved (they drive wsState):
+  - `wsState` (imported from `$lib/ws.svelte`) — transcript, response, isThinking, pendingTranscripts, etc.
+  - `activeAction` — now controls: 'explorer' (IDE on/off), 'settings', '' (default split view)
+  - `includeActiveDocContext`, `activeDocumentName`, `workspaceTree`, `openTabs`, `activeDocumentPath`, `activeDocumentContent`
+  - `clickthrough` — stealth mode
+  - `showSessionReport`, `isAuthModalOpen`
+  - `showBrainHotkeys` → rename to `showConvHotkeys` (toggles hotkeys overlay in ConvPanel)
+
+Remove from state:
+  - `activeDrawer` — no longer needed (drawer concept replaced by persistent panels)
+
+Functions to preserve with EXACT existing signatures (they are tested):
+  - `handleSnip()` — still activates answer panel (was: opens copilot drawer)
+  - `handleMockModeToggle()`
+  - `handleClearContext()`
+  - `toggleStealthMode()`
+  - `handleSelectNode()`, `handleTabSelect()`, `handleTabClose()`, `handleOpenFile()`, `handleOpenFolder()`
+  - `refreshIDEState()`
+
+═══════════════════════════════════════════════════════════════
+COMPONENT ARCHITECTURE DECISION (Jules to choose ONE)
+═══════════════════════════════════════════════════════════════
+Option A — Split CopilotDrawer into two standalone components:
+  - `ConvPanel.svelte` — handles left conversation side (props: wsState bindings, onSend, showHotkeys)
+  - `AnswerPanel.svelte` — handles right answer side (props: response, isThinking, onClearCache)
+  - `InterviewHUD.svelte` renders them side-by-side with a resizer handle between them.
+  - RECOMMENDED: Cleaner separation of concerns.
+
+Option B — Keep CopilotDrawer.svelte but render it as two slots:
+  - Add `{#snippet convPanel()}` and `{#snippet answerPanel()}` exports to CopilotDrawer.
+  - `InterviewHUD.svelte` renders each snippet in its respective panel div.
+  - Acceptable if Option A feels like too much refactor risk.
+
+Either option must produce the same visual result. Jules should document the chosen approach in the PR.
+
+═══════════════════════════════════════════════════════════════
+CURRENT CODEBASE REFERENCE
+═══════════════════════════════════════════════════════════════
+Key files to read before implementing:
+  - `wails-app/frontend/src/products/interview/InterviewHUD.svelte` (lines 1-457)
+    · Lines 32-45: state declarations
+    · Lines 136-170: handleAction() — needs update (remove 'ears'/'copilot', simplify to 'explorer'/'mock'/'settings')
+    · Lines 262-320: IDEShell usage — to be replaced with split-panel layout
+  - `wails-app/frontend/src/products/interview/CopilotDrawer.svelte`
+    · Contains: conversation feed, hotkeys view, suggestion chips, chat input, cache stats
+    · All logic should be preserved, just reorganized into ConvPanel + AnswerPanel
+  - `wails-app/frontend/src/lib/components/workspace/IDEShell.svelte` (lines 160-230)
+    · IDEShell is retained for when IDE mode is active (`explorer` toggled on)
+    · When IDE is OFF, IDEShell is NOT rendered — the split-view renders directly
+  - `wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte`
+    · Remove 'copilot' and 'keys' from topActions
+    · Keep 'explorer', 'mock'; settings in bottomActions
+  - `wails-app/frontend/src/lib/ws.svelte.ts`
+    · `wsState.response` — the streaming LLM answer string
+    · `wsState.isThinking` — controls thinking pulse
+    · `wsState.transcriptHistory` — array of {role, text} objects
+    · `wsState.pendingTranscripts` — suggestion chips array
+
+Import path for API calls (confirmed correct in InterviewHUD.svelte line 4):
+  `import { getApiUrl, apiFetch } from "$lib/api";`
+
+═══════════════════════════════════════════════════════════════
+CSS & STYLING REQUIREMENTS
+═══════════════════════════════════════════════════════════════
+Match the existing BarnOwl AI dark glassmorphic theme:
+  --hud-bg: #0a0a0a
+  --primary: #4ade80 (green accent)
+  --surface: rgba(15, 15, 15, 0.9)
+  Border: 1px solid rgba(255, 255, 255, 0.08)
+  Panel separator: same as existing `.resizer-handle` CSS in IDEShell.svelte
+
+ConvPanel (left): slightly darker background (rgba(12, 12, 12, 0.95))
+AnswerPanel (right): slightly lighter (rgba(18, 18, 18, 0.9)) with subtle green tint on the top border
+  (border-top: 2px solid rgba(74, 222, 128, 0.3)) to signal "AI output zone".
+
+Speech bubbles:
+  - Interviewer: background rgba(30, 41, 59, 0.6), border-left 3px solid rgba(148, 163, 184, 0.4)
+  - Candidate: background rgba(20, 40, 25, 0.6), border-left 3px solid rgba(74, 222, 128, 0.4)
+
+Thinking pulse animation: same `@keyframes pulse` already in codebase.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- `npm run build` in `wails-app/frontend` must succeed without warnings or errors.
+- Playwright tests in `wails-app/frontend/tests/ui.spec.ts` must pass (14/14 green or more).
+  · Update any test selectors that reference `.right-drawer`, `copilot` activity button, etc.
+  · Add tests: ConvPanel visible by default, AnswerPanel visible by default, explorer toggle shows file tree.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): split-view layout — Conversation left, LLM Answer right (#P57-T8)`

@@ -1,0 +1,468 @@
+TASK: P57-T8D — Wire Split-View Layout in InterviewHUD + Update Tests
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+PREREQUISITE: This task depends on P57-T8A, P57-T8B, and P57-T8C all being merged first.
+Confirm those PRs are merged before starting this task.
+
+Replace the current IDE-centric layout in `InterviewHUD.svelte` with the new split-view layout:
+  LEFT:  `ConvPanel.svelte` (created in P57-T8A)
+  RIGHT: `AnswerPanel.svelte` (created in P57-T8B)
+  OPTIONAL: `IDEShell.svelte` with file tree + CodeEditor (only when `explorer` is active)
+
+Also update `IDEShell.svelte` with a minor prop to support being conditionally rendered,
+and update `ui.spec.ts` Playwright tests to match the new layout.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/products/interview/InterviewHUD.svelte` [MAJOR UPDATE]
+- `wails-app/frontend/src/lib/components/workspace/IDEShell.svelte` [MINOR UPDATE]
+- `wails-app/frontend/tests/ui.spec.ts` [UPDATE — test selectors for new layout]
+- `prompts/tasks_v2.md` [UPDATE — mark T8D done with PR number]
+
+DO NOT touch: ConvPanel.svelte, AnswerPanel.svelte, ActivityBar.svelte, CopilotDrawer.svelte,
+              or any other file.
+
+═══════════════════════════════════════════════════════════════
+CURRENT CODEBASE REFERENCE — READ THESE FILES IN FULL BEFORE CODING
+═══════════════════════════════════════════════════════════════
+1. `wails-app/frontend/src/products/interview/InterviewHUD.svelte`
+   - Lines 1-45: imports and state declarations
+   - Lines 136-170: handleAction() function
+   - Lines 262-320: IDEShell usage (the section being replaced)
+   - Lines 348-457: CSS styles
+
+2. `wails-app/frontend/src/products/interview/ConvPanel.svelte` (created by T8A)
+   - Read its $props to know what to pass in.
+
+3. `wails-app/frontend/src/products/interview/AnswerPanel.svelte` (created by T8B)
+   - Read its $props to know what to pass in.
+
+4. `wails-app/frontend/src/lib/components/workspace/IDEShell.svelte`
+   - Current layout: ActivityBar | WorkspaceSidebar | center-editor-pane | rightDrawer
+   - Minor update needed (see Section 3 below).
+
+5. `wails-app/frontend/src/lib/ws.svelte.ts`
+   - `wsState` fields: response, isThinking, transcriptHistory, pendingTranscripts, ragSources, etc.
+   - Import: `import { wsState, toggleMockMode } from "$lib/ws.svelte";`
+
+6. `wails-app/frontend/tests/ui.spec.ts` — current 14 tests, understand selectors before updating.
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: InterviewHUD.svelte — State Changes
+═══════════════════════════════════════════════════════════════
+REMOVE state variable:
+  `let activeDrawer = $state('copilot');`  ← no longer needed
+
+RENAME state variable:
+  `let showBrainHotkeys = $state(false)` → `let showConvHotkeys = $state(false)`
+
+SIMPLIFY `activeAction` (was: 'copilot'|'ears'|'keys'|'explorer'|'settings'|'mock'):
+  Default: `let activeAction = $state('');`  (empty = default split view, no IDE)
+
+ADD new state for cache:
+  `let cacheCount = $state(0);`
+  Populated in `refreshIDEState()` if the API returns cache stats
+  (check if App.GetCacheStats exists; if not, call `/api/cache/stats` via apiFetch).
+  Fallback: leave as 0 if unavailable.
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: InterviewHUD.svelte — handleAction() Rewrite
+═══════════════════════════════════════════════════════════════
+Replace the current handleAction() with this simplified version:
+
+```typescript
+function handleAction(action: string) {
+  if (action === 'explorer') {
+    // Toggle IDE file tree + CodeEditor panel
+    activeAction = activeAction === 'explorer' ? '' : 'explorer';
+  } else if (action === 'mock') {
+    handleMockModeToggle();
+  } else if (action === 'settings') {
+    activeAction = activeAction === 'settings' ? '' : 'settings';
+  } else {
+    activeAction = action;
+  }
+}
+```
+
+Note: 'copilot', 'ears', 'keys' cases are REMOVED because those are no longer ActivityBar items.
+
+═══════════════════════════════════════════════════════════════
+SECTION 3: InterviewHUD.svelte — New Layout HTML
+═══════════════════════════════════════════════════════════════
+Replace the entire `<div class="main-content-area">` block (currently containing `<IDEShell ...>`)
+with the new split-view layout:
+
+```svelte
+<div class="main-content-area">
+  <!-- ActivityBar always visible -->
+  <ActivityBar {activeAction} onAction={handleAction} />
+
+  <!-- IDE Mode: File tree sidebar (only when explorer is active) -->
+  {#if activeAction === 'explorer'}
+    <WorkspaceSidebar
+      nodes={workspaceTree}
+      activePath={activeDocumentPath}
+      totalDocs={openTabs.length}
+      isOpen={true}
+      onToggle={() => handleAction('explorer')}
+      onSelect={handleSelectNode}
+      onOpenFile={handleOpenFile}
+      onOpenFolder={handleOpenFolder}
+    />
+    <!-- CodeEditor panel (only in IDE mode) -->
+    <div class="ide-editor-pane">
+      <WorkspaceTabs
+        tabs={openTabs}
+        activePath={activeDocumentPath}
+        onTabSelect={handleTabSelect}
+        onTabClose={handleTabClose}
+      />
+      <div class="ide-editor-content">
+        <CodeEditor
+          content={activeDocumentContent}
+          language="markdown"
+          readonly={false}
+        />
+        {#if !activeDocumentContent}
+          <div class="editor-empty-state">
+            <span class="material-symbols-outlined">description</span>
+            <p>Open a note or cheat sheet</p>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
+  <!-- Resizable divider between ConvPanel and AnswerPanel -->
+  <div
+    class="panel-resizer"
+    class:resizing={isPanelResizing}
+    onmousedown={startPanelResize}
+    role="separator"
+    aria-orientation="vertical"
+    title="Drag to resize panels"
+  >
+    <div class="resizer-indicator"></div>
+  </div>
+
+  <!-- LEFT: Conversation Panel (always visible) -->
+  <div class="conv-panel-wrapper" style="width: {convPanelWidth}px;">
+    <ConvPanel
+      transcriptHistory={wsState.transcriptHistory}
+      pendingTranscripts={wsState.pendingTranscripts}
+      ragSources={wsState.ragSources}
+      isListening={wsState.isListening}
+      isMockMode={wsState.isMockMode}
+      isPTTHeld={wsState.isPTTHeld}
+      isThinking={wsState.isThinking}
+      {includeActiveDocContext}
+      {activeDocumentName}
+      onSendChat={sendChat}
+      onSendChip={sendChip}
+      onDismissChip={dismissChip}
+      onClearChips={clearAllChips}
+      onStarMethod={handleStarMethod}
+      onCatchMeUp={handleCatchMeUp}
+      showHotkeys={showConvHotkeys}
+      onToggleHotkeys={() => showConvHotkeys = !showConvHotkeys}
+    />
+  </div>
+
+  <!-- RIGHT: Answer Panel (always visible) -->
+  <div class="answer-panel-wrapper">
+    <AnswerPanel
+      response={wsState.response}
+      isThinking={wsState.isThinking}
+      {cacheCount}
+      ragSources={wsState.ragSources}
+      onClearCache={handleClearCache}
+      onCopyAll={handleCopyAll}
+    />
+  </div>
+
+  <!-- Settings overlay (absolute positioned, same as before) -->
+  {#if activeAction === 'settings'}
+    <div class="settings-overlay">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold">Settings</h2>
+        <button onclick={() => handleAction('settings')}>
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto hide-scrollbar">
+        <Settings embedded={true} />
+      </div>
+    </div>
+  {/if}
+</div>
+```
+
+NOTE on ordering: The `conv-panel-wrapper` div MUST come BEFORE `panel-resizer` in the DOM.
+Adjust the order so layout is: [ActivityBar] [FileTree?] [CodeEditor?] [ConvPanel] [Resizer] [AnswerPanel].
+The resizer mousedown handler `startPanelResize` adjusts `convPanelWidth`.
+
+═══════════════════════════════════════════════════════════════
+SECTION 4: InterviewHUD.svelte — New Imports & Functions
+═══════════════════════════════════════════════════════════════
+ADD imports:
+```typescript
+import ConvPanel from './ConvPanel.svelte';
+import AnswerPanel from './AnswerPanel.svelte';
+import ActivityBar from '$lib/components/workspace/ActivityBar.svelte';
+import WorkspaceSidebar from '$lib/components/workspace/WorkspaceSidebar.svelte';
+import WorkspaceTabs from '$lib/components/workspace/WorkspaceTabs.svelte';
+// CodeEditor already imported
+```
+
+REMOVE import (no longer needed at top level if IDEShell is removed):
+```typescript
+import IDEShell from '$lib/components/workspace/IDEShell.svelte';
+// REMOVE — only keep if IDEShell is still used elsewhere
+```
+If IDEShell is fully replaced by the new layout, remove its import.
+
+ADD resizable ConvPanel state & handler:
+```typescript
+const savedConvWidth = typeof window !== 'undefined'
+  ? parseInt(localStorage.getItem('barnowl_conv_panel_width') || '380', 10)
+  : 380;
+let convPanelWidth = $state(Math.max(280, Math.min(savedConvWidth, window.innerWidth * 0.6)));
+let isPanelResizing = $state(false);
+
+function startPanelResize(e: MouseEvent) {
+  e.preventDefault();
+  isPanelResizing = true;
+  const startX = e.clientX;
+  const startWidth = convPanelWidth;
+
+  const onMouseMove = (ev: MouseEvent) => {
+    const maxWidth = window.innerWidth * 0.6;
+    convPanelWidth = Math.max(280, Math.min(startWidth + (ev.clientX - startX), maxWidth));
+  };
+
+  const onMouseUp = () => {
+    isPanelResizing = false;
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+    try { localStorage.setItem('barnowl_conv_panel_width', String(Math.round(convPanelWidth))); } catch {}
+  };
+
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+}
+```
+
+ADD helper functions (wire through to wsState/api — same pattern as CopilotDrawer.svelte):
+```typescript
+function sendChat(text: string) {
+  if (!text.trim()) return;
+  wsState.isThinking = true;
+  // Send via WebSocket or apiFetch — copy the exact implementation from CopilotDrawer.svelte
+}
+
+function sendChip(chip: { id: string; text: string }) {
+  // Copy from CopilotDrawer.svelte
+}
+
+function dismissChip(chipId: string) {
+  wsState.pendingTranscripts = wsState.pendingTranscripts.filter((c: any) => c.id !== chipId);
+}
+
+function clearAllChips() {
+  wsState.pendingTranscripts = [];
+}
+
+function handleStarMethod() {
+  // Copy from CopilotDrawer.svelte STAR method implementation
+}
+
+function handleCatchMeUp() {
+  // Copy from CopilotDrawer.svelte Catch Me Up implementation
+}
+
+function handleCopyAll() {
+  if (wsState.response) {
+    navigator.clipboard.writeText(wsState.response).catch(console.error);
+  }
+}
+```
+IMPORTANT: For `sendChat`, `handleStarMethod`, `handleCatchMeUp` — read `CopilotDrawer.svelte`
+for the exact implementations and copy them. Do not guess or stub them out.
+
+ADD to `handleClearCache` (already exists in InterviewHUD, now also update cacheCount):
+  After clearing: `cacheCount = 0;`
+
+ADD to `refreshIDEState()` — fetch cache count:
+```typescript
+// At the end of refreshIDEState(), attempt to fetch cache stats
+try {
+  const stats = await apiFetch(`${getApiUrl()}/api/cache/stats`, { method: 'GET' });
+  if (stats?.count !== undefined) cacheCount = stats.count;
+} catch { /* ignore if endpoint not available */ }
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 5: InterviewHUD.svelte — CSS Updates
+═══════════════════════════════════════════════════════════════
+The `.main-content-area` now uses flex-row to host ConvPanel + Resizer + AnswerPanel.
+Replace or extend the existing `.main-content-area` style:
+
+```css
+.main-content-area {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  position: relative;
+}
+
+.conv-panel-wrapper {
+  flex-shrink: 0;
+  min-width: 280px;
+  max-width: 60vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.answer-panel-wrapper {
+  flex-grow: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Reuse same resizer style as IDEShell */
+.panel-resizer {
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 60;
+  transition: background-color 0.15s ease;
+  flex-shrink: 0;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-resizer:hover,
+.panel-resizer.resizing {
+  background: rgba(74, 222, 128, 0.3);
+}
+
+.resizer-indicator {
+  width: 2px;
+  height: 32px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: all 0.15s ease;
+}
+
+.panel-resizer:hover .resizer-indicator,
+.panel-resizer.resizing .resizer-indicator {
+  background: #4ade80;
+  height: 48px;
+}
+
+/* IDE mode panes */
+.ide-editor-pane {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.ide-editor-content {
+  flex-grow: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.editor-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.settings-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  background: rgba(15, 15, 15, 0.97);
+  border-left: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow-y: auto;
+}
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 6: IDEShell.svelte — Minor Update
+═══════════════════════════════════════════════════════════════
+IDEShell is no longer the top-level layout container for InterviewHUD.
+It is still used by other products (StealthPresenter etc.) so do NOT delete it.
+
+No changes required to IDEShell.svelte for this task — the layout in InterviewHUD now renders
+ActivityBar, WorkspaceSidebar, ConvPanel, AnswerPanel directly without using IDEShell as a wrapper.
+
+Only update IDEShell if a TypeScript error arises due to the removed import in InterviewHUD.
+
+═══════════════════════════════════════════════════════════════
+SECTION 7: Playwright Tests (ui.spec.ts) — Update
+═══════════════════════════════════════════════════════════════
+Read `wails-app/frontend/tests/ui.spec.ts` in full before editing.
+
+UPDATE existing tests that reference removed selectors:
+  - Tests that looked for `[data-action="copilot"]` → these buttons no longer exist; remove those
+    test steps or replace with checks for ConvPanel / AnswerPanel being visible by default.
+  - Tests that looked for `.right-drawer` → replace with `.answer-panel-wrapper` or AnswerPanel
+    content selectors (e.g., the panel header text "BarnOwl AI").
+  - Tests that toggled the `copilot` ActivityBar button → remove; brain is now always open.
+
+ADD new tests:
+  1. `ConvPanel visible by default`:
+     - Navigate to interview HUD.
+     - Assert ConvPanel is visible (look for the panel header "Live Session" text or a known selector).
+  2. `AnswerPanel visible by default`:
+     - Assert AnswerPanel is visible (look for the "BarnOwl AI" header in the panel).
+  3. `Explorer toggle shows file tree`:
+     - Click the `[data-action="explorer"]` ActivityBar button.
+     - Assert WorkspaceSidebar or file tree element is visible.
+     - Click again, assert it's hidden.
+  4. `Panel resizer is present`:
+     - Assert `.panel-resizer` element exists in DOM.
+
+Keep all existing tests that do not reference removed selectors — do not break them.
+
+Total test count target: ≥ 14 (can be more, not less).
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- `npm run build` in `wails-app/frontend` must succeed without warnings or errors.
+- Playwright tests in `wails-app/frontend/tests/ui.spec.ts` must pass (≥ 14/14 green).
+- The default layout renders ConvPanel and AnswerPanel side-by-side without opening any drawer.
+- The `explorer` toggle correctly shows/hides the file tree + CodeEditor pane.
+- Settings overlay opens correctly from the ActivityBar settings icon.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): wire split-view layout in InterviewHUD — Conv+Answer panels (#P57-T8D)`

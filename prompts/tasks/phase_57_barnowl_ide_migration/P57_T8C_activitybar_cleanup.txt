@@ -1,0 +1,59 @@
+TASK: P57-T8C — Update ActivityBar.svelte (Remove copilot/keys icons)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Small, isolated update to `ActivityBar.svelte`:
+  Remove the `copilot` and `keys` ActivityBar icons from `topActions`.
+  The new split-view layout (P57-T8D) makes these redundant — the answer panel is always
+  visible as a persistent pane and hotkeys are accessed from ConvPanel's header button.
+
+This task touches ONLY `ActivityBar.svelte`. Do NOT modify any other file.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte` [MODIFY]
+- `prompts/tasks_v2.md` [UPDATE — mark T8C done with PR number]
+
+DO NOT touch: InterviewHUD.svelte, ConvPanel.svelte, AnswerPanel.svelte, IDEShell.svelte,
+              CopilotDrawer.svelte, ui.spec.ts, or any other file.
+
+═══════════════════════════════════════════════════════════════
+EXACT CHANGE REQUIRED
+═══════════════════════════════════════════════════════════════
+Read `wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte` in full before editing.
+
+In the `topActions` array (or wherever the action items are defined), make the following changes:
+
+REMOVE these two action items:
+  `{ id: 'copilot', icon: 'auto_awesome', label: 'Brain' }`
+  `{ id: 'keys', icon: 'keyboard', label: 'Keys' }`
+
+KEEP these action items unchanged:
+  `{ id: 'explorer', icon: 'folder_open', label: 'Files' }` (or whatever icon is currently used)
+  `{ id: 'mock', icon: 'record_voice_over', label: 'Mock' }` (or current icon)
+
+KEEP `settings` in bottomActions unchanged (do not touch it).
+
+The final `topActions` array should contain ONLY:
+  1. `explorer` — file tree toggle
+  2. `mock` — mock mode toggle
+
+═══════════════════════════════════════════════════════════════
+IMPORTANT: READ THE ACTUAL FILE FIRST
+═══════════════════════════════════════════════════════════════
+The exact icon names and label strings may differ slightly from what is written above.
+Read `wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte` to find
+the EXACT current icon IDs and labels before making changes.
+Remove whichever items have `id: 'copilot'` and `id: 'keys'`. Do not guess.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- `npm run build` in `wails-app/frontend` must succeed without warnings or errors.
+- The ActivityBar must render without TypeScript errors after the copilot/keys entries are removed.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(interview): remove copilot/keys from ActivityBar topActions (#P57-T8C)`
