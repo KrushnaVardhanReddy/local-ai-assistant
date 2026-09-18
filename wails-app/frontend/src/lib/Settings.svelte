@@ -13,8 +13,10 @@
   const isCloudBuild = import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
 
 
+  let { embedded = false } = $props<{ embedded?: boolean }>();
+
   // New settings state
-  let showSettings = $state(false);
+  let showSettings = $state(embedded);
   let isAuthModalOpen = $state(false);
   let selectedProvider = $state(localStorage.getItem("custom_provider") || "auto");
   let customApiKey = $state(localStorage.getItem("custom_api_key") || "");
@@ -322,13 +324,15 @@
   }
 </script>
 
-<div class="settings-wrapper">
-  <button class="settings-toggle" onclick={toggleSettings} aria-label="Settings" data-testid="settings-btn">
-    ⚙️
-  </button>
+<div class="settings-wrapper" class:embedded>
+  {#if !embedded}
+    <button class="settings-toggle" onclick={toggleSettings} aria-label="Settings" data-testid="settings-btn">
+      ⚙️
+    </button>
+  {/if}
 
-  {#if showSettings}
-  <div class="settings-panel">
+  {#if showSettings || embedded}
+  <div class="settings-panel" class:embedded>
   <div style="display: flex; justify-content: space-between; align-items: center;">
     <h2>Settings</h2>
   </div>
@@ -626,6 +630,23 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     font-family: system-ui, -apple-system, sans-serif;
     z-index: 1000;
+  }
+
+  .settings-wrapper.embedded {
+    width: 100%;
+    height: 100%;
+  }
+
+  .settings-panel.embedded {
+    position: static;
+    width: 100%;
+    max-height: none;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    overflow-y: visible;
   }
 
   .config-section {
