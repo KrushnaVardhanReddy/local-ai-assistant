@@ -4,25 +4,29 @@ TASK: P57-T7 — Unified Live Copilot Drawer (Ears + Brain Conversation Feed)
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
 Merge the separate `LiveEarsDrawer.svelte` and `BrainDrawer.svelte` into a single, cohesive,
-unified right-hand drawer: `CopilotDrawer.svelte` (or unified `LiveEarsDrawer.svelte`).
+unified right-hand drawer: `CopilotDrawer.svelte`.
 
-In high-pressure live technical interviews, switching between separate "Ears" and "Brain" tabs
-creates severe cognitive overhead: the candidate reads the transcript in Ears, but must switch to
-Brain to read the AI answer, and back to Ears for the next question.
+In live technical interviews, switching between separate "Ears" and "Brain" tabs creates cognitive overhead:
+the candidate reads the transcript in Ears, but must switch to Brain to read the AI answer, and back to Ears for the next question.
 
 Unify them into ONE seamless conversation stream:
 1. Linear chronologically-ordered interview chat feed (Interviewer speech bubble, Candidate speech bubble, and BarnOwl AI answer card streaming right below each question).
-2. Action tools pinned at top: STAR Method button, Catch Me Up button, RAG context indicator, Clear Cache.
-3. Suggestion chips & manual chat prompt input bar at the bottom.
-4. Simplify `ActivityBar.svelte` and `InterviewHUD.svelte` navigation to a single unified "Copilot" drawer icon/toggle.
+2. Action tools pinned at top: STAR Method button, Catch Me Up button, Keys cheat-sheet toggle, RAG context indicator, Clear Cache.
+3. Suggestion chips & enlarged multi-line manual chat prompt input bar (3-4 lines, min-h-[84px]) at the bottom.
+4. ActivityBar & Navigation:
+   - Replace separate `ears` and `copilot` with a single unified item: `{ id: 'copilot', icon: 'auto_awesome', label: 'Copilot' }` (or `Brain`).
+   - Keep `keys` in ActivityBar toggling the hotkeys cheat sheet view inside the right drawer.
+   - Keep `settings` opening the right-side settings slide-out panel.
+5. Retain draggable resizer support on IDEShell (`.resizer-handle`) and layout boundaries (100% height, flex-grow, no 100vh window overflow).
 
 ═══════════════════════════════════════════════════════════════
 FILES INVOLVED
 ═══════════════════════════════════════════════════════════════
-- `wails-app/frontend/src/products/interview/CopilotDrawer.svelte` [NEW or replaces BrainDrawer/LiveEarsDrawer]
+- `wails-app/frontend/src/products/interview/CopilotDrawer.svelte` [NEW — unifies BrainDrawer and LiveEarsDrawer]
 - `wails-app/frontend/src/products/interview/InterviewHUD.svelte` [UPDATE drawer rendering & ActivityBar binding]
-- `wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte` [UPDATE action icons if needed]
-- `wails-app/frontend/tests/ui.spec.ts` [UPDATE / ADD Playwright tests for unified drawer]
+- `wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte` [UPDATE topActions to single unified Copilot action]
+- `wails-app/frontend/src/lib/components/workspace/IDEShell.svelte` [Ensure activeAction handling accommodates unified drawer]
+- `wails-app/frontend/tests/ui.spec.ts` [UPDATE Playwright test suite for unified drawer]
 - `prompts/tasks_v2.md` [UPDATE task tracking]
 
 ═══════════════════════════════════════════════════════════════
@@ -30,36 +34,45 @@ BEHAVIORAL REQUIREMENTS & SPECIFICATION
 ═══════════════════════════════════════════════════════════════
 
 1. HEADER CONTROLS (Top Bar of Drawer):
-   - Title: "Copilot" or "Live Assistant" with sparkles icon (`auto_awesome`).
+   - Title: "The Brain" or "Copilot" with sparkles icon (`auto_awesome`).
    - Quick Action: STAR Method toggle (`star` icon). When clicked, sends STAR format prompt, sets pulsing `STAR Method Primed` indicator for 15s.
    - Quick Action: Catch Me Up (`history` icon). When clicked, requests summary of recent context.
+   - Quick Action: Keys toggle (`keyboard` icon). Toggles scrollable hotkeys cheat sheet view.
    - RAG sources count badge (e.g. "📄 2 context item(s)") if `wsState.ragSources.length > 0`.
-   - Clear Cache button (`delete_sweep` or `mop` icon) showing cached Q&A pair count and clearing on click.
+   - Clear Cache button (`mop` icon) showing cached Q&A pair count and clearing on click.
 
 2. UNIFIED CONVERSATION STREAM (Scrollable Middle):
-   - Feed items ordered chronologically:
+   - Feed items ordered chronologically in a single scroll container:
      a) Interviewer / Speaker speech bubble (`.speaker-badge.interviewer` with text from `wsState.transcriptHistory`).
      b) Candidate / "You" speech bubble (`.speaker-badge.candidate` with text).
      c) AI Assistant card:
         - When `wsState.isThinking && !wsState.response`: show subtle animated thinking pulse ("Thinking...").
-        - When `wsState.response` has content: render Markdown with syntax highlighting, copy code buttons, and auto-scroll to bottom.
-   - Preserves history: When a new question comes in, previous questions and their AI answers remain visible in the history scroll area.
+        - When `wsState.response` has content: render Markdown with syntax highlighting (Shiki), copy code buttons, and auto-scroll to bottom.
+   - Hotkeys Toggle Mode: When `showHotkeys` is active (via header button or ActivityBar "Keys"), displays the full scrollable keyboard shortcuts cheat sheet.
 
 3. PENDING SUGGESTIONS & PROMPT INPUT (Bottom Area):
-   - Suggestion Chips: Render `wsState.pendingTranscripts`. Clicking a chip calls `sendChip(chip.text, chip.id)`. Dismiss button calls `dismissChip(chip.id)`.
+   - Suggestion Chips: Render `wsState.pendingTranscripts`. Clicking a chip calls `sendChip(chip)`. Dismiss button calls `dismissChip(chip.id)`. "Clear All" button calls `clearAllChips()`.
    - Chat Textarea / Input Bar:
-     - Placeholder: "Ask or refine anything... (Enter)"
+     - Multi-line textarea (rows=3, min-h-[84px], max-h-[220px], resize-y) with placeholder: "Send custom prompt... (Shift+Enter for newline)".
      - Submits on `Enter` (without Shift) via `sendChat(chatText)`.
      - Sets `wsState.isThinking = true`.
+     - Action button with `send` icon aligned at bottom-right.
 
 4. ACTIVITY BAR & NAVIGATION:
-   - In `ActivityBar.svelte`: replace separate `ears` and `copilot` with a single unified item:
-     `{ id: 'copilot', icon: 'auto_awesome', label: 'Copilot' }`
-   - In `InterviewHUD.svelte`: clicking `copilot` toggles the unified drawer open/collapsed.
+   - In `ActivityBar.svelte`: topActions should have:
+     `{ id: 'explorer', icon: 'folder', label: 'Folder' }`
+     `{ id: 'copilot', icon: 'auto_awesome', label: 'Brain' }`
+     `{ id: 'mock', icon: 'record_voice_over', label: 'Mock' }`
+     (Remove the redundant separate 'ears' button since ears is merged into copilot).
+   - In `InterviewHUD.svelte`:
+     - Clicking `copilot` toggles the unified drawer.
+     - Clicking `keys` activates the unified drawer and sets hotkeys view active.
+     - Snip (`handleSnip`) automatically switches drawer to `copilot` to display the vision answer.
 
 ═══════════════════════════════════════════════════════════════
 TESTING & VERIFICATION CRITERIA
 ═══════════════════════════════════════════════════════════════
 - `npm run check` in `wails-app/frontend` must pass with 0 errors.
 - `npm run build` in `wails-app/frontend` must succeed without warnings or errors.
-- Playwright tests in `wails-app/frontend/tests/ui.spec.ts` must pass.
+- Playwright tests in `wails-app/frontend/tests/ui.spec.ts` must pass (14/14 green).
+- Zero mock / zero hardcoded state violation. Maintain clean Git history on `feature/krushna_golang`.
