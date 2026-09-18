@@ -116,6 +116,10 @@
       >
         <span class="material-symbols-outlined">
           {wsState.rawMode ? 'hearing_disabled' : 'hearing'}
+        </span>
+      </button>
+      <button
+        class="icon-btn"
         class:active={wsState.manualMode}
         title={wsState.manualMode ? 'Manual mode: click a bubble to send' : 'Auto mode: every transcript is sent'}
         onclick={toggleManualMode}
