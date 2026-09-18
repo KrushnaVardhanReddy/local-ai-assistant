@@ -67,21 +67,32 @@
     fetchCacheStats();
   });
 
-  // Keep response scrolled to bottom
-  $effect(() => {
-    if (wsState.response) {
-      renderedResponse = renderMarkdown(wsState.response);
-    } else {
-      renderedResponse = '';
-    }
+  let renderTimer: any = null;
 
-    if (responseEl) {
-      setTimeout(() => {
-         if(responseEl) {
+  // Keep response rendered and scrolled to bottom
+  $effect(() => {
+    const current = wsState.response;
+    if (renderTimer) clearTimeout(renderTimer);
+    renderTimer = setTimeout(async () => {
+      if (current) {
+        try {
+          renderedResponse = await renderMarkdown(current);
+        } catch (e) {
+          console.error("renderMarkdown error:", e);
+          renderedResponse = current;
+        }
+      } else {
+        renderedResponse = '';
+      }
+
+      if (responseEl) {
+        setTimeout(() => {
+          if (responseEl) {
             responseEl.scrollTop = responseEl.scrollHeight;
-         }
-      }, 0);
-    }
+          }
+        }, 0);
+      }
+    }, 50);
   });
 
 </script>

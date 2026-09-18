@@ -185,6 +185,9 @@
     if (App?.CaptureScreen) {
       const b64 = await App.CaptureScreen();
       if (b64) {
+        // Automatically switch drawer to Brain to show incoming vision answer
+        activeAction = 'copilot';
+        activeDrawer = 'copilot';
         if (App.AnalyzeVision) {
           App.AnalyzeVision(b64, "Analyze this technical interview screen and provide key hints, solution or code concisely.");
         } else {
