@@ -167,5 +167,5 @@ BATCH 2 (Sequential Integration)
 | **P57-T10** | Microphone Mute Toggle | ✅ Merged | Sequential | [PR 201] | Update backend to toggle PortAudio/PulseAudio capture state when user clicks Mic Off/Live in ConvPanel header. |
 | **P57-T14** | In-Session Bubble Answer Recall | ✅ Merged | ⚡ Parallel | [PR 202] | In-memory lookup for recent bubbles to skip SQLite. |
 | **P57-T11** | Raw/Filtered Transcript Toggle | ✅ Merged | ⚡ Parallel | [Local] | Toggle to show all STT transcripts regardless of length filter. |
-| **P57-T12** | Save Session to File | ⏳ In Progress | ⚡ Parallel | [PR TODO] | Export session Q&A to markdown file in Downloads. |
+| **P57-T12** | Save Session to File | ✅ Merged | ⚡ Parallel | [PR 203] | Export session Q&A to markdown file in Downloads. |
 | **P57-T13** | Manual LLM Trigger Mode | ⏳ Pending | Sequential | [PR TODO] | Toggle to accumulate bubbles without auto-sending to LLM. |
