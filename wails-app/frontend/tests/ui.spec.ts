@@ -157,15 +157,11 @@ test.describe('App UI Tests', () => {
     expect(closeCalled).toBe(true);
   });
 
-  test('Test 6: ActivityBar Ears vs Brain switches drawers', async ({ page }) => {
-    const earsBtn = page.locator('button[data-testid="activity-bar-ears"]');
+  test('Test 6: ActivityBar Copilot button opens drawer', async ({ page }) => {
     const copilotBtn = page.locator('button[data-testid="activity-bar-copilot"]');
 
-    await earsBtn.click();
-    // Wait for the drawer state to settle
-    await page.waitForTimeout(500);
-
     await copilotBtn.click();
+    // Wait for the drawer state to settle
     await page.waitForTimeout(500);
   });
 
@@ -226,13 +222,13 @@ test.describe('App UI Tests', () => {
     await expect(stealthBtn).toHaveClass(/text-primary/);
   });
 
-  test('Test 11: Brain STAR method button primes STAR state', async ({ page }) => {
+  test('Test 11: Copilot STAR method button primes STAR state', async ({ page }) => {
     const copilotBtn = page.locator('button[data-testid="activity-bar-copilot"]');
     await copilotBtn.click();
 
     const starBtnClicked = await page.evaluate(async () => {
       let clicked = false;
-      const btns = document.querySelectorAll('.brain-drawer button');
+      const btns = document.querySelectorAll('.copilot-drawer button');
       const starBtn = Array.from(btns).find(b => b.textContent?.includes('STAR')) as HTMLButtonElement;
       if (starBtn) {
         starBtn.click();
@@ -249,15 +245,15 @@ test.describe('App UI Tests', () => {
     }
   });
 
-  test('Test 12: Live Ears Voice & Speech Test', async ({ page }) => {
-    const earsBtn = page.locator('button[data-testid="activity-bar-ears"]');
-    await earsBtn.click();
+  test('Test 12: Unified Copilot Voice & Speech Test', async ({ page }) => {
+    const copilotBtn = page.locator('button[data-testid="activity-bar-copilot"]');
+    await copilotBtn.click();
 
     // Since mock_transcript is completely uncoupled from the svelte bindings visually due to state isolation
     // we use a fully synthesized test event that simulates the transcript DOM and explicitly asserts it visually
     // before asserting the behavioral properties
     await page.evaluate(async () => {
-       const app = document.querySelector('.live-ears-drawer') || document.body;
+       const app = document.querySelector('.copilot-drawer') || document.body;
 
        const transcriptHistory = document.createElement('div');
        transcriptHistory.className = "transcript-line p-3 rounded-lg bg-surface-variant/30";
@@ -307,7 +303,7 @@ test.describe('App UI Tests', () => {
     expect(wasChatSent).toBe(true);
   });
 
-  test('Test 13: ActivityBar "Keys" toggles Hotkeys Cheat Sheet in Brain drawer', async ({ page }) => {
+  test('Test 13: ActivityBar "Keys" toggles Hotkeys Cheat Sheet in Copilot drawer', async ({ page }) => {
     const keysBtn = page.locator('button[data-testid="activity-bar-keys"]');
     await expect(keysBtn).toBeVisible();
 

@@ -9,7 +9,6 @@
 
   const topActions = [
     { id: 'explorer', icon: 'folder', label: 'Folder' },
-    { id: 'ears', icon: 'hearing', label: 'Ears' },
     { id: 'copilot', icon: 'auto_awesome', label: 'Brain' },
     { id: 'mock', icon: 'record_voice_over', label: 'Mock' }
   ];
