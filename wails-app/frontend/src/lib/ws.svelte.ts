@@ -20,7 +20,7 @@ export const wsState = $state({
   pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>,
   plan: "unknown",
   isMockMode: false,
-  transcriptHistory: [] as string[],
+  transcriptHistory: [] as Array<{ role: string; text: string; answer?: string }>,
   pollCount: 0,
   pollError: "none",
   cacheStats: { cached_pairs: 0, estimated_tokens_saved: 0 }
@@ -75,8 +75,8 @@ function handleTranscript(data: any) {
   if (data.text && data.text.trim().length > 3) {
     // Avoid duplicating the last entry
     const last = wsState.transcriptHistory[wsState.transcriptHistory.length - 1];
-    if (last !== data.text) {
-      wsState.transcriptHistory.push(data.text);
+    if (last?.text !== data.text) {
+      wsState.transcriptHistory.push({ role: data.speaker ?? 'interviewer', text: data.text });
       if (wsState.transcriptHistory.length > 10) {
         wsState.transcriptHistory.shift();
       }
@@ -163,6 +163,17 @@ function initListeners() {
   onEvent("on_response_end", () => {
     console.log('[WS] on_response_end fired. Final response length:', wsState.response.length);
     wsState.isThinking = false;
+
+    // Store the completed answer against the most recent unanswered transcript
+    if (wsState.response) {
+      for (let i = wsState.transcriptHistory.length - 1; i >= 0; i--) {
+        const entry = wsState.transcriptHistory[i];
+        if (!entry.answer) {
+          wsState.transcriptHistory[i] = { ...entry, answer: wsState.response };
+          break;
+        }
+      }
+    }
   });
 }
 let retryDelay = 500;

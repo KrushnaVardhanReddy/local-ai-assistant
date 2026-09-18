@@ -19,7 +19,7 @@
     onSelectTranscript,
     onToggleMic,
   } = $props<{
-    transcriptHistory?: Array<{ role: string; text: string }>;
+    transcriptHistory?: Array<{ role: string; text: string; answer?: string }>;
     pendingTranscripts?: Array<{ id: string; text: string }>;
     ragSources?: string[];
     isListening?: boolean;
@@ -34,7 +34,7 @@
     onClearChips?: () => void;
     onStarMethod?: () => void;
     onCatchMeUp?: () => void;
-    onSelectTranscript?: (text: string) => void;
+    onSelectTranscript?: (text: string, answer?: string) => void;
     onToggleMic?: () => void;
   }>();
 
@@ -165,12 +165,12 @@
       {:else}
         {#each transcriptHistory as item}
           {#if item.role === 'interviewer'}
-            <div class="bubble bubble-interviewer clickable" onclick={() => onSelectTranscript?.(item.text)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onSelectTranscript?.(item.text)}>
+            <div class="bubble bubble-interviewer clickable" onclick={() => onSelectTranscript?.(item.text, item.answer)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onSelectTranscript?.(item.text, item.answer)}>
               <div class="bubble-label">Interviewer</div>
               <div class="text-content">{item.text}</div>
             </div>
           {:else if item.role === 'candidate'}
-            <div class="bubble bubble-candidate clickable" onclick={() => onSelectTranscript?.(item.text)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onSelectTranscript?.(item.text)}>
+            <div class="bubble bubble-candidate clickable" onclick={() => onSelectTranscript?.(item.text, item.answer)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onSelectTranscript?.(item.text, item.answer)}>
               <div class="bubble-label">You</div>
               <div class="text-content">{item.text}</div>
             </div>

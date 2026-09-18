@@ -165,3 +165,4 @@ BATCH 2 (Sequential Integration)
 
 | **P57-T9** | Cache History UI & Vertical Transcripts | ✅ Merged | Sequential | [PR 200] | Updates ConvPanel for vertical transcripts and AnswerPanel for cache history browsing. |
 | **P57-T10** | Microphone Mute Toggle | ✅ Merged | Sequential | [PR 201] | Update backend to toggle PortAudio/PulseAudio capture state when user clicks Mic Off/Live in ConvPanel header. |
+| **P57-T14** | In-Session Bubble Answer Recall | ✅ Merged | ⚡ Parallel | [PR TODO] | In-memory lookup for recent bubbles to skip SQLite. |

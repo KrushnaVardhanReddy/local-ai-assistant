@@ -391,9 +391,13 @@
         onClearChips={clearAllChips}
         onStarMethod={handleStarMethod}
         onCatchMeUp={handleCatchMeUp}
-        onSelectTranscript={(text: string) => {
-          if (answerPanelRef && answerPanelRef.showCachedAnswerFor) {
-            answerPanelRef.showCachedAnswerFor(text);
+        onSelectTranscript={(text: string, answer?: string) => {
+          if (answerPanelRef) {
+            if (answer && answerPanelRef.showLocalAnswer) {
+              answerPanelRef.showLocalAnswer(answer);
+            } else if (answerPanelRef.showCachedAnswerFor) {
+              answerPanelRef.showCachedAnswerFor(text);
+            }
           }
         }}
         showHotkeys={showConvHotkeys}

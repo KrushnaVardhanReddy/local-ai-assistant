@@ -43,6 +43,11 @@
     }
   });
 
+  export function showLocalAnswer(answer: string) {
+    localOverride = answer;
+    showHistory = false;
+  }
+
   export async function showCachedAnswerFor(questionText: string) {
     try {
       const items = await (window as any).go.main.App.GetCacheItems();
