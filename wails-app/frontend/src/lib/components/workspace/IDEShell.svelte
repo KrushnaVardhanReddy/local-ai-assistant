@@ -81,7 +81,7 @@
 
   let currentActiveAction = $derived(onAction ? activeAction : internalActiveAction);
   let isExplorerOpen = $derived(currentActiveAction === 'explorer' || (currentActiveAction === '' && internalExplorerOpen));
-  let isCopilotOpen = $derived(onAction ? (activeAction === 'copilot' || activeAction === 'ears') : internalIsCopilotOpen);
+  let isCopilotOpen = $derived(onAction ? (activeAction === 'copilot' || activeAction === 'ears' || activeAction === 'keys') : internalIsCopilotOpen);
 
   function handleAction(action: string) {
     if (onAction) {

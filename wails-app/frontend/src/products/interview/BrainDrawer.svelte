@@ -4,6 +4,8 @@
   import { onMount } from "svelte";
   import { apiFetch, getApiUrl } from "$lib/api";
 
+  let { showHotkeys = false, onToggleHotkeys }: { showHotkeys?: boolean; onToggleHotkeys?: () => void } = $props();
+
   let responseEl: HTMLElement | undefined = $state();
   let renderedResponse = $state('');
 
@@ -122,6 +124,22 @@
         >
           <span class="material-symbols-outlined text-[14px]">history</span>
         </button>
+        <button
+          class="action-btn text-xs"
+          class:active-view={showHotkeys}
+          onclick={() => {
+            if (onToggleHotkeys) {
+              onToggleHotkeys();
+            } else {
+              showHotkeys = !showHotkeys;
+            }
+          }}
+          title={showHotkeys ? "Show AI Response" : "Show Keyboard Shortcuts"}
+          data-testid="brain-drawer-keys-toggle"
+        >
+          <span class="material-symbols-outlined text-[14px]">keyboard</span>
+          Keys
+        </button>
       </div>
     </div>
 
@@ -140,9 +158,53 @@
     {/if}
   </div>
 
-  <!-- AI Response Content -->
+  <!-- Content Area (Hotkeys or AI Response) -->
   <div class="flex-1 overflow-y-auto p-4 hide-scrollbar" bind:this={responseEl}>
-    {#if wsState.isThinking && !wsState.response}
+    {#if showHotkeys}
+      <div class="hotkeys-container" data-testid="brain-hotkeys-view">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+          <h3 class="text-sm font-bold text-on-background flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[18px]">keyboard</span>
+            Hotkeys Cheat Sheet
+          </h3>
+          <span class="text-[11px] text-on-surface-variant">Press Keys to return</span>
+        </div>
+        <div class="hotkeys-list">
+          <div class="hotkey-row">
+            <span>Toggle Hotkeys Panel</span>
+            <kbd>Ctrl+/</kbd>
+          </div>
+          <div class="hotkey-row">
+            <span>Push to Talk</span>
+            <kbd>Ctrl+Shift+Space</kbd>
+          </div>
+          <div class="hotkey-row">
+            <span>Screenshot Vision</span>
+            <kbd>Ctrl+Shift+S</kbd>
+          </div>
+          <div class="hotkey-row">
+            <span>Send Transcript Chip 1-6</span>
+            <kbd>Ctrl+Shift+1...6</kbd>
+          </div>
+          <div class="hotkey-row">
+            <span>Scroll Answer Down / Up</span>
+            <kbd>Ctrl+Shift+↓/↑</kbd>
+          </div>
+          <div class="hotkey-row">
+            <span>Toggle Stealth Click-through</span>
+            <kbd>Ctrl+Alt+M</kbd>
+          </div>
+          <div class="hotkey-row">
+            <span>Session Report</span>
+            <kbd>Ctrl+Shift+E</kbd>
+          </div>
+          <div class="hotkey-row">
+            <span>Panic Clear / Hide</span>
+            <kbd>Ctrl+Shift+X</kbd>
+          </div>
+        </div>
+      </div>
+    {:else if wsState.isThinking && !wsState.response}
       <div class="flex items-center gap-2 text-primary/60 text-sm">
         <span class="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
         Thinking...
@@ -222,9 +284,53 @@
     color: white;
   }
 
+  .action-btn.active-view {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.5);
+    color: #4ade80;
+  }
+
   .action-btn.star-primed {
     background: rgba(74, 222, 128, 0.2);
     border-color: rgba(74, 222, 128, 0.5);
+    color: #4ade80;
+  }
+
+  .hotkeys-container {
+    padding: 0.5rem 0;
+  }
+
+  .hotkeys-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+
+  .hotkey-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.45rem 0;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .hotkey-row:last-child {
+    border-bottom: none;
+  }
+
+  .hotkey-row kbd {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
     color: #4ade80;
   }
 

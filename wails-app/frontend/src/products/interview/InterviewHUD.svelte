@@ -14,7 +14,6 @@
 
   import SessionReport from "$lib/SessionReport.svelte";
   import AuthModal from "$lib/components/AuthModal.svelte";
-  import HotkeysPanel from "$lib/components/HotkeysPanel.svelte";
   import Settings from "$lib/Settings.svelte";
   import type { FileNode } from "$lib/components/workspace/types";
 
@@ -32,6 +31,7 @@
 
   // State
   let activeDrawer = $state('copilot'); // 'ears' or 'copilot'
+  let showBrainHotkeys = $state(false);
   let clickthrough = $state(false);
   let showSessionReport = $state(false);
   let isAuthModalOpen = $state(false);
@@ -155,7 +155,14 @@
     } else if (action === 'mock') {
       handleMockModeToggle();
     } else if (action === 'keys') {
-      uiState.hotkeysPanelOpen = !uiState.hotkeysPanelOpen;
+      if (activeAction === 'copilot' && showBrainHotkeys) {
+        // Toggle hotkeys back to normal brain view or close
+        showBrainHotkeys = false;
+      } else {
+        activeAction = 'copilot';
+        activeDrawer = 'copilot';
+        showBrainHotkeys = true;
+      }
     } else if (action === 'settings') {
       activeAction = activeAction === 'settings' ? activeDrawer : 'settings';
     } else {
@@ -291,7 +298,10 @@
         {#if activeDrawer === 'ears'}
           <LiveEarsDrawer />
         {:else}
-          <BrainDrawer />
+          <BrainDrawer
+            showHotkeys={showBrainHotkeys}
+            onToggleHotkeys={() => showBrainHotkeys = !showBrainHotkeys}
+          />
         {/if}
       {/snippet}
 
@@ -315,14 +325,6 @@
   <!-- Modals -->
   {#if showSessionReport}
     <SessionReport onClose={() => showSessionReport = false} />
-  {/if}
-
-  {#if uiState.hotkeysPanelOpen}
-    <div class="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-8 pointer-events-auto" onclick={() => uiState.hotkeysPanelOpen = false} role="button" tabindex="0" onkeydown={(e) => e.key === 'Escape' && (uiState.hotkeysPanelOpen = false)}>
-      <div class="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" tabindex="-1" onkeydown={(e) => e.stopPropagation()}>
-        <HotkeysPanel />
-      </div>
-    </div>
   {/if}
 
   {#if isGated}

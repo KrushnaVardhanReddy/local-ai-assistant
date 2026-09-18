@@ -307,19 +307,18 @@ test.describe('App UI Tests', () => {
     expect(wasChatSent).toBe(true);
   });
 
-  test('Test 13: ActivityBar "Keys" toggles HotkeysPanel', async ({ page }) => {
+  test('Test 13: ActivityBar "Keys" toggles Hotkeys Cheat Sheet in Brain drawer', async ({ page }) => {
     const keysBtn = page.locator('button[data-testid="activity-bar-keys"]');
     await expect(keysBtn).toBeVisible();
 
     await keysBtn.click();
-    const hotkeysHeading = page.locator('h2:has-text("Hotkeys")');
-    await expect(hotkeysHeading.first()).toBeVisible();
+    const shortcutsView = page.locator('[data-testid="brain-hotkeys-view"]');
+    await expect(shortcutsView).toBeVisible();
+    await expect(page.locator('text=Hotkeys Cheat Sheet')).toBeVisible();
 
-    // Close the hotkeys modal using its close button in the header
-    const closeBtn = page.locator('button:has(.material-symbols-outlined:has-text("close"))').last();
-    await closeBtn.click();
-
-    await expect(hotkeysHeading).toBeHidden();
+    // Toggle hotkeys off via Keys button
+    await keysBtn.click();
+    await expect(shortcutsView).toBeHidden();
   });
 
   test('Test 14: ActivityBar "Settings" toggles settings panel', async ({ page }) => {
@@ -327,7 +326,7 @@ test.describe('App UI Tests', () => {
     await expect(settingsBtn).toBeVisible();
 
     await settingsBtn.click();
-    const settingsHeading = page.locator('.settings-panel h2:has-text("Settings")');
+    const settingsHeading = page.locator('.settings-panel h2:has-text("Settings")').first();
     await expect(settingsHeading).toBeVisible();
 
     // Close settings

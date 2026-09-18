@@ -559,6 +559,46 @@
 
   <hr class="divider" />
 
+  <div class="config-section">
+    <div class="section-label">Keyboard Shortcuts</div>
+    <div class="hotkeys-list">
+      <div class="hotkey-row">
+        <span>Toggle Hotkeys / Settings</span>
+        <kbd>Ctrl+/</kbd>
+      </div>
+      <div class="hotkey-row">
+        <span>Push to Talk</span>
+        <kbd>Ctrl+Shift+Space</kbd>
+      </div>
+      <div class="hotkey-row">
+        <span>Screenshot Vision</span>
+        <kbd>Ctrl+Shift+S</kbd>
+      </div>
+      <div class="hotkey-row">
+        <span>Send Transcript Chip 1-6</span>
+        <kbd>Ctrl+Shift+1...6</kbd>
+      </div>
+      <div class="hotkey-row">
+        <span>Scroll Answer Down / Up</span>
+        <kbd>Ctrl+Shift+↓/↑</kbd>
+      </div>
+      <div class="hotkey-row">
+        <span>Toggle Stealth Click-through</span>
+        <kbd>Ctrl+Alt+M</kbd>
+      </div>
+      <div class="hotkey-row">
+        <span>Session Report</span>
+        <kbd>Ctrl+Shift+E</kbd>
+      </div>
+      <div class="hotkey-row">
+        <span>Panic Clear / Hide</span>
+        <kbd>Ctrl+Shift+X</kbd>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
   <h2>Account</h2>
   <div class="content">
     {#if authState.authMode === "local"}
@@ -647,6 +687,40 @@
     padding: 0;
     box-shadow: none;
     overflow-y: visible;
+  }
+
+  .hotkeys-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+
+  .hotkey-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .hotkey-row:last-child {
+    border-bottom: none;
+  }
+
+  .hotkey-row kbd {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 0.15rem 0.4rem;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #4ade80;
   }
 
   .config-section {
