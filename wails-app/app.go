@@ -580,3 +580,4 @@ func (a *App) ToggleMic() bool {
 		a.SetAudioDevice(-1, false)
 		return true
 	}
+}
