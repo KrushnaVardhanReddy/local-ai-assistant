@@ -17,6 +17,7 @@
     onStarMethod,
     onCatchMeUp,
     onSelectTranscript,
+    onToggleMic,
   } = $props<{
     transcriptHistory?: Array<{ role: string; text: string }>;
     pendingTranscripts?: Array<{ id: string; text: string }>;
@@ -34,6 +35,7 @@
     onStarMethod?: () => void;
     onCatchMeUp?: () => void;
     onSelectTranscript?: (text: string) => void;
+    onToggleMic?: () => void;
   }>();
 
   let showHotkeys = $state(false);
@@ -80,13 +82,13 @@
     <div class="header-left">
       <span class="title">Live Session</span>
       {#if isListening && !isMockMode}
-        <button class="status-badge status-live pulse clickable" onclick={() => (window as any).go.main.App.ToggleMic()}>
+        <button class="status-badge status-live pulse clickable" onclick={() => onToggleMic?.()}>
           <span class="material-symbols-outlined" style="font-size: 12px; margin-right: 2px;">mic</span> Live
         </button>
       {:else if isMockMode}
         <div class="status-badge status-mock pulse">● Mock</div>
       {:else}
-        <button class="status-badge status-mic-off clickable" onclick={() => (window as any).go.main.App.ToggleMic()}>
+        <button class="status-badge status-mic-off clickable" onclick={() => onToggleMic?.()}>
           <span class="material-symbols-outlined" style="font-size: 12px; margin-right: 2px;">mic_off</span> Mic Off
         </button>
       {/if}

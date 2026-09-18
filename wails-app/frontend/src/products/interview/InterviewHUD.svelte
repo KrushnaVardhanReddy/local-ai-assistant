@@ -398,6 +398,10 @@
         }}
         showHotkeys={showConvHotkeys}
         onToggleHotkeys={() => showConvHotkeys = !showConvHotkeys}
+        onToggleMic={async () => {
+          const newState = await (window as any).go.main.App.ToggleMic();
+          wsState.isListening = newState;
+        }}
       />
     </div>
 
