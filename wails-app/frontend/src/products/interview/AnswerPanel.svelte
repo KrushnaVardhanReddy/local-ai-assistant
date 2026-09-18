@@ -43,6 +43,19 @@
     }
   });
 
+  export async function showCachedAnswerFor(questionText: string) {
+    try {
+      const items = await (window as any).go.main.App.GetCacheItems();
+      const found = items.find((i: any) => (i.question || i.Question) === questionText);
+      if (found) {
+        localOverride = found.answer || found.Answer;
+        showHistory = false;
+      }
+    } catch (e) {
+      console.error('Failed to fetch cached answer:', e);
+    }
+  }
+
   // Dynamic markdown rendering
   let renderMarkdown: any;
   let markdownTimeout: ReturnType<typeof setTimeout>;

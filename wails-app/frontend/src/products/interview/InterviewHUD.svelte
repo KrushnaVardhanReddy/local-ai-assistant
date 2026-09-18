@@ -36,7 +36,9 @@
   let clickthrough = $state(false);
   let showSessionReport = $state(false);
   let isAuthModalOpen = $state(false);
-  let activeAction = $state('');
+  let activeAction = $state<string | null>(null);
+
+  let answerPanelRef = $state<any>();
 
   let includeActiveDocContext = $state(true);
   let activeDocumentName = $state('');
@@ -389,6 +391,11 @@
         onClearChips={clearAllChips}
         onStarMethod={handleStarMethod}
         onCatchMeUp={handleCatchMeUp}
+        onSelectTranscript={(text: string) => {
+          if (answerPanelRef && answerPanelRef.showCachedAnswerFor) {
+            answerPanelRef.showCachedAnswerFor(text);
+          }
+        }}
         showHotkeys={showConvHotkeys}
         onToggleHotkeys={() => showConvHotkeys = !showConvHotkeys}
       />
@@ -410,6 +417,7 @@
     <!-- RIGHT: Answer Panel (always visible) -->
     <div class="answer-panel-wrapper">
       <AnswerPanel
+        bind:this={answerPanelRef}
         response={wsState.response}
         isThinking={wsState.isThinking}
         {cacheCount}

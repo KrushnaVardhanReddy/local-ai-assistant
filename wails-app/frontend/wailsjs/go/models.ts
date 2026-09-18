@@ -26,6 +26,8 @@ export namespace backend {
 	export class CacheItem {
 	    id: string;
 	    question: string;
+	    answer: string;
+	    tokensSaved: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new CacheItem(source);
@@ -35,6 +37,8 @@ export namespace backend {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.question = source["question"];
+	        this.answer = source["answer"];
+	        this.tokensSaved = source["tokensSaved"];
 	    }
 	}
 

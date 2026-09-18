@@ -16,6 +16,7 @@
     onClearChips,
     onStarMethod,
     onCatchMeUp,
+    onSelectTranscript,
   } = $props<{
     transcriptHistory?: Array<{ role: string; text: string }>;
     pendingTranscripts?: Array<{ id: string; text: string }>;
@@ -32,6 +33,7 @@
     onClearChips?: () => void;
     onStarMethod?: () => void;
     onCatchMeUp?: () => void;
+    onSelectTranscript?: (text: string) => void;
   }>();
 
   let showHotkeys = $state(false);
@@ -157,12 +159,12 @@
       {:else}
         {#each transcriptHistory as item}
           {#if item.role === 'interviewer'}
-            <div class="bubble bubble-interviewer">
+            <div class="bubble bubble-interviewer clickable" onclick={() => onSelectTranscript?.(item.text)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onSelectTranscript?.(item.text)}>
               <div class="bubble-label">Interviewer</div>
               <div class="text-content">{item.text}</div>
             </div>
           {:else if item.role === 'candidate'}
-            <div class="bubble bubble-candidate">
+            <div class="bubble bubble-candidate clickable" onclick={() => onSelectTranscript?.(item.text)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onSelectTranscript?.(item.text)}>
               <div class="bubble-label">You</div>
               <div class="text-content">{item.text}</div>
             </div>
@@ -373,6 +375,20 @@
     line-height: 1.4;
     color: rgba(255, 255, 255, 0.9);
     position: relative;
+  }
+
+  .bubble.clickable {
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .bubble.clickable:hover {
+    opacity: 0.85;
+    box-shadow: 0 2px 8px rgba(74, 222, 128, 0.15);
+  }
+
+  .bubble.clickable:active {
+    transform: scale(0.98);
   }
 
   .bubble-interviewer {
