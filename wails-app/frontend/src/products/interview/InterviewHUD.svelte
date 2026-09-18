@@ -316,7 +316,7 @@
 
   {#if uiState.hotkeysPanelOpen}
     <div class="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-8 pointer-events-auto" onclick={() => uiState.hotkeysPanelOpen = false} role="button" tabindex="0" onkeydown={(e) => e.key === 'Escape' && (uiState.hotkeysPanelOpen = false)}>
-      <div class="w-full max-w-2xl bg-surface/95 border border-white/10 rounded-xl shadow-2xl" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" onkeydown={(e) => e.stopPropagation()}>
+      <div class="w-full max-w-2xl bg-surface/95 border border-white/10 rounded-xl shadow-2xl" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" tabindex="-1" onkeydown={(e) => e.stopPropagation()}>
         <HotkeysPanel />
       </div>
     </div>

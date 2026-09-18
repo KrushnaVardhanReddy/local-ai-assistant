@@ -315,9 +315,9 @@ func (a *App) CaptureScreen() string {
 func (a *App) AnalyzeVision(base64Image string, prompt string) error {
 	log.Println("🤖 [Go] AnalyzeVision starting LLM completion for screenshot...")
 
-	a.engine.UpdateState("📸 [Screenshot Snip Captured]", "", true)
-
-	wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
+	if a.ctx != nil {
+		wailsruntime.EventsEmit(a.ctx, "on_response_start", nil)
+	}
 
 	go func() {
 		var answerBuilder strings.Builder
@@ -328,10 +328,14 @@ func (a *App) AnalyzeVision(base64Image string, prompt string) error {
 		err := llm.StreamVisionCompletion(ctx, base64Image, prompt, func(token string) {
 			answerBuilder.WriteString(token)
 			a.engine.UpdateState("📸 [Screenshot Snip Captured]", answerBuilder.String(), true)
-			wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
+			if a.ctx != nil {
+				wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
+			}
 		}, func() {
 			a.engine.UpdateState("📸 [Screenshot Snip Captured]", answerBuilder.String(), false)
-			wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
+			if a.ctx != nil {
+				wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
+			}
 		})
 
 		if err != nil {

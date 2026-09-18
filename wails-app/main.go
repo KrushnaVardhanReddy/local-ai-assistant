@@ -30,10 +30,10 @@ func main() {
 	// We bind dummy apps to generate TS for both products, BUT we must not bind
 	// two instances of the same struct type, otherwise the dummy (with a nil ctx)
 	// will overwrite the real one in the frontend bindings.
-	if getAppTitle() != "StealthPresenter" {
+	if _, isPresenter := app.(*presenter.PresenterApp); !isPresenter {
 		bindList = append(bindList, presenter.NewPresenterApp())
 	}
-	if getAppTitle() != "Local AI Assistant" {
+	if _, isApp := app.(*App); !isApp {
 		bindList = append(bindList, NewApp())
 	}
 
