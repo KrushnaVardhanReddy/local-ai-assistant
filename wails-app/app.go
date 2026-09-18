@@ -629,3 +629,13 @@ func (a *App) ExportSession() (string, error) {
 	log.Printf("📄 Session exported to: %s", filePath)
 	return filePath, nil
 }
+
+// SetManualMode enables or disables automatic LLM processing of transcripts.
+// When manualMode is true, transcripts will still be emitted to the frontend via
+// on_transcript events, but the engine will NOT automatically queue them for LLM processing.
+func (a *App) SetManualMode(enabled bool) {
+	if a.engine != nil {
+		a.engine.SetManualMode(enabled)
+		log.Printf("🎛️ Manual mode set to: %v", enabled)
+	}
+}

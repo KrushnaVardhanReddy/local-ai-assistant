@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { wsState } from '$lib/ws.svelte';
+  import { wsState, toggleManualMode } from '$lib/ws.svelte';
   let {
     transcriptHistory = [],
     pendingTranscripts = [],
@@ -118,6 +118,16 @@
           {wsState.rawMode ? 'hearing_disabled' : 'hearing'}
         </span>
       </button>
+      <button
+        class="icon-btn"
+        class:active={wsState.manualMode}
+        title={wsState.manualMode ? 'Manual mode: click a bubble to send' : 'Auto mode: every transcript is sent'}
+        onclick={toggleManualMode}
+      >
+        <span class="material-symbols-outlined">
+          {wsState.manualMode ? 'touch_app' : 'send_time_extension'}
+        </span>
+      </button>
       <button class="icon-btn" title="STAR Method" onclick={() => onStarMethod?.()}>
         <span class="material-symbols-outlined">star</span>
       </button>
@@ -176,14 +186,48 @@
       {:else}
         {#each transcriptHistory as item}
           {#if item.role === 'interviewer'}
-            <div class="bubble bubble-interviewer clickable" onclick={() => onSelectTranscript?.(item.text, item.answer)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onSelectTranscript?.(item.text, item.answer)}>
+            <div class="bubble bubble-interviewer clickable" onclick={() => {
+              if (wsState.manualMode && !item.answer) {
+                onSendChat?.(item.text);
+              } else {
+                onSelectTranscript?.(item.text, item.answer);
+              }
+            }} role="button" tabindex="0" onkeydown={(e) => {
+              if (e.key === 'Enter') {
+                if (wsState.manualMode && !item.answer) {
+                  onSendChat?.(item.text);
+                } else {
+                  onSelectTranscript?.(item.text, item.answer);
+                }
+              }
+            }}>
               <div class="bubble-label">Interviewer</div>
               <div class="text-content">{item.text}</div>
+              {#if wsState.manualMode && !item.answer}
+                <span class="send-hint">↑ click to ask AI</span>
+              {/if}
             </div>
           {:else if item.role === 'candidate'}
-            <div class="bubble bubble-candidate clickable" onclick={() => onSelectTranscript?.(item.text, item.answer)} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onSelectTranscript?.(item.text, item.answer)}>
+            <div class="bubble bubble-candidate clickable" onclick={() => {
+              if (wsState.manualMode && !item.answer) {
+                onSendChat?.(item.text);
+              } else {
+                onSelectTranscript?.(item.text, item.answer);
+              }
+            }} role="button" tabindex="0" onkeydown={(e) => {
+              if (e.key === 'Enter') {
+                if (wsState.manualMode && !item.answer) {
+                  onSendChat?.(item.text);
+                } else {
+                  onSelectTranscript?.(item.text, item.answer);
+                }
+              }
+            }}>
               <div class="bubble-label">You</div>
               <div class="text-content">{item.text}</div>
+              {#if wsState.manualMode && !item.answer}
+                <span class="send-hint">↑ click to ask AI</span>
+              {/if}
             </div>
           {:else if item.role === 'assistant' || item.role === 'ai'}
             <div class="bubble bubble-assistant">
@@ -470,6 +514,13 @@
     color: rgba(74, 222, 128, 0.7);
     margin-top: 6px;
     display: inline-block;
+  }
+
+  .send-hint {
+    font-size: 10px;
+    color: rgba(74, 222, 128, 0.5);
+    margin-top: 4px;
+    display: block;
   }
 
   .thinking-pulse {

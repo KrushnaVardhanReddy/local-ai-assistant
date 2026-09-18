@@ -46,6 +46,7 @@ type StealthEngine struct {
 	inFlightMu     sync.Mutex
 	cancelInFlight context.CancelFunc
 	inFlightCtx    context.Context
+	manualMode     bool
 }
 
 func New(
@@ -148,4 +149,11 @@ func (e *StealthEngine) AddContext(contextText string) {
 	defer e.mu.Unlock()
 	// Append context to the system prompt so the LLM knows about it
 	e.cfg.SystemPrompt += "\n\nAdditional Context:\n" + contextText
+}
+
+// SetManualMode toggles whether incoming STT transcripts are automatically sent to the LLM.
+func (e *StealthEngine) SetManualMode(enabled bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.manualMode = enabled
 }

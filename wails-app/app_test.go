@@ -213,3 +213,9 @@ func TestApp_ExportSession(t *testing.T) {
         t.Fatalf("Expected error when cache adapter doesn't implement GetAllItems")
     }
 }
+
+func TestApp_SetManualMode(t *testing.T) {
+	app := NewApp()
+	app.SetManualMode(true)
+	// Just verifies it doesn't panic
+}
