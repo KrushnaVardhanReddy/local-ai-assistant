@@ -1,0 +1,65 @@
+TASK: P57-T7 — Unified Live Copilot Drawer (Ears + Brain Conversation Feed)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Merge the separate `LiveEarsDrawer.svelte` and `BrainDrawer.svelte` into a single, cohesive,
+unified right-hand drawer: `CopilotDrawer.svelte` (or unified `LiveEarsDrawer.svelte`).
+
+In high-pressure live technical interviews, switching between separate "Ears" and "Brain" tabs
+creates severe cognitive overhead: the candidate reads the transcript in Ears, but must switch to
+Brain to read the AI answer, and back to Ears for the next question.
+
+Unify them into ONE seamless conversation stream:
+1. Linear chronologically-ordered interview chat feed (Interviewer speech bubble, Candidate speech bubble, and BarnOwl AI answer card streaming right below each question).
+2. Action tools pinned at top: STAR Method button, Catch Me Up button, RAG context indicator, Clear Cache.
+3. Suggestion chips & manual chat prompt input bar at the bottom.
+4. Simplify `ActivityBar.svelte` and `InterviewHUD.svelte` navigation to a single unified "Copilot" drawer icon/toggle.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/products/interview/CopilotDrawer.svelte` [NEW or replaces BrainDrawer/LiveEarsDrawer]
+- `wails-app/frontend/src/products/interview/InterviewHUD.svelte` [UPDATE drawer rendering & ActivityBar binding]
+- `wails-app/frontend/src/lib/components/workspace/ActivityBar.svelte` [UPDATE action icons if needed]
+- `wails-app/frontend/tests/ui.spec.ts` [UPDATE / ADD Playwright tests for unified drawer]
+- `prompts/tasks_v2.md` [UPDATE task tracking]
+
+═══════════════════════════════════════════════════════════════
+BEHAVIORAL REQUIREMENTS & SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. HEADER CONTROLS (Top Bar of Drawer):
+   - Title: "Copilot" or "Live Assistant" with sparkles icon (`auto_awesome`).
+   - Quick Action: STAR Method toggle (`star` icon). When clicked, sends STAR format prompt, sets pulsing `STAR Method Primed` indicator for 15s.
+   - Quick Action: Catch Me Up (`history` icon). When clicked, requests summary of recent context.
+   - RAG sources count badge (e.g. "📄 2 context item(s)") if `wsState.ragSources.length > 0`.
+   - Clear Cache button (`delete_sweep` or `mop` icon) showing cached Q&A pair count and clearing on click.
+
+2. UNIFIED CONVERSATION STREAM (Scrollable Middle):
+   - Feed items ordered chronologically:
+     a) Interviewer / Speaker speech bubble (`.speaker-badge.interviewer` with text from `wsState.transcriptHistory`).
+     b) Candidate / "You" speech bubble (`.speaker-badge.candidate` with text).
+     c) AI Assistant card:
+        - When `wsState.isThinking && !wsState.response`: show subtle animated thinking pulse ("Thinking...").
+        - When `wsState.response` has content: render Markdown with syntax highlighting, copy code buttons, and auto-scroll to bottom.
+   - Preserves history: When a new question comes in, previous questions and their AI answers remain visible in the history scroll area.
+
+3. PENDING SUGGESTIONS & PROMPT INPUT (Bottom Area):
+   - Suggestion Chips: Render `wsState.pendingTranscripts`. Clicking a chip calls `sendChip(chip.text, chip.id)`. Dismiss button calls `dismissChip(chip.id)`.
+   - Chat Textarea / Input Bar:
+     - Placeholder: "Ask or refine anything... (Enter)"
+     - Submits on `Enter` (without Shift) via `sendChat(chatText)`.
+     - Sets `wsState.isThinking = true`.
+
+4. ACTIVITY BAR & NAVIGATION:
+   - In `ActivityBar.svelte`: replace separate `ears` and `copilot` with a single unified item:
+     `{ id: 'copilot', icon: 'auto_awesome', label: 'Copilot' }`
+   - In `InterviewHUD.svelte`: clicking `copilot` toggles the unified drawer open/collapsed.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `npm run check` in `wails-app/frontend` must pass with 0 errors.
+- `npm run build` in `wails-app/frontend` must succeed without warnings or errors.
+- Playwright tests in `wails-app/frontend/tests/ui.spec.ts` must pass.
