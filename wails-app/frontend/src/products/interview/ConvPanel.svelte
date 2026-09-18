@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { wsState } from '$lib/ws.svelte';
   let {
     transcriptHistory = [],
     pendingTranscripts = [],
@@ -107,6 +108,16 @@
     </div>
 
     <div class="header-right">
+      <button
+        class="icon-btn"
+        class:active={wsState.rawMode}
+        title={wsState.rawMode ? 'Raw mode (showing all)' : 'Filtered mode'}
+        onclick={() => wsState.rawMode = !wsState.rawMode}
+      >
+        <span class="material-symbols-outlined">
+          {wsState.rawMode ? 'hearing_disabled' : 'hearing'}
+        </span>
+      </button>
       <button class="icon-btn" title="STAR Method" onclick={() => onStarMethod?.()}>
         <span class="material-symbols-outlined">star</span>
       </button>
