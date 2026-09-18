@@ -99,14 +99,15 @@
       <textarea
         bind:value={chatText}
         onkeydown={handleKeydown}
-        placeholder="Send custom prompt..."
-        class="w-full bg-surface-variant/50 border border-white/10 rounded-lg py-2 pl-3 pr-10 text-sm text-on-surface focus:outline-none focus:border-primary/50 resize-none h-10 min-h-[40px] max-h-[120px]"
-        rows="1"
+        placeholder="Send custom prompt... (Shift+Enter for newline)"
+        class="w-full bg-surface-variant/50 border border-white/10 rounded-lg py-2.5 pl-3 pr-10 text-sm text-on-surface focus:outline-none focus:border-primary/50 resize-y min-h-[84px] max-h-[220px] leading-relaxed"
+        rows="3"
       ></textarea>
       <button
         onclick={handleChatSubmit}
         disabled={!chatText.trim()}
-        class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:hover:text-on-surface-variant transition-colors"
+        title="Send prompt (Enter)"
+        class="absolute right-2.5 bottom-3 w-7 h-7 flex items-center justify-center rounded-md bg-white/5 hover:bg-primary/20 text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-on-surface-variant transition-all"
       >
         <span class="material-symbols-outlined text-[18px]">send</span>
       </button>

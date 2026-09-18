@@ -16,7 +16,8 @@
   let { embedded = false } = $props<{ embedded?: boolean }>();
 
   // New settings state
-  let showSettings = $state(embedded);
+  let internalShowSettings = $state(false);
+  let showSettings = $derived(embedded || internalShowSettings);
   let isAuthModalOpen = $state(false);
   let selectedProvider = $state(localStorage.getItem("custom_provider") || "auto");
   let customApiKey = $state(localStorage.getItem("custom_api_key") || "");
@@ -217,7 +218,7 @@
   }
 
   async function toggleSettings() {
-    showSettings = !showSettings;
+    internalShowSettings = !internalShowSettings;
     
     // Fetch audio devices when opened, ensuring Wails bindings are fully loaded
     if (showSettings && !isCloudBuild && (window as any).go?.main?.App?.GetAudioDevices) {
