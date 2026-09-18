@@ -163,4 +163,4 @@ BATCH 2 (Sequential Integration)
 
 
 
-| **P57-T9** | Cache History UI & Vertical Transcripts | ⬜ Not Started | Sequential | — | Updates ConvPanel for vertical transcripts and AnswerPanel for cache history browsing. |
+| **P57-T9** | Cache History UI & Vertical Transcripts | ✅ Merged | Sequential | [PR 200] | Updates ConvPanel for vertical transcripts and AnswerPanel for cache history browsing. |
