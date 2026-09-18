@@ -216,7 +216,7 @@
     {/if}
 
     {#if activeAction === 'settings'}
-      <div class="settings-panel fixed inset-y-0 right-0 z-50">
+      <div class="settings-panel absolute inset-y-0 right-0 z-50">
         {#if settingsPanel}
           {@render settingsPanel()}
         {/if}
@@ -233,8 +233,9 @@
   .ide-shell {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    width: 100vw;
+    height: 100%;
+    width: 100%;
+    flex-grow: 1;
     overflow: hidden;
     background-color: var(--hud-bg, #0a0a0a);
     color: var(--hud-text-white, #ffffff);
