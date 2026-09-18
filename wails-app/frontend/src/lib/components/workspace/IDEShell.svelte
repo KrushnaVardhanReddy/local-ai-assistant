@@ -46,6 +46,39 @@
   let internalIsCopilotOpen = $state(false);
   let internalActiveAction = $state('');
 
+  // Resizable drawer width state (default 420px, min 260px, max 80vw)
+  const savedWidth = typeof window !== 'undefined' ? parseInt(localStorage.getItem('barnowl_copilot_drawer_width') || '420', 10) : 420;
+  let drawerWidth = $state(Number.isNaN(savedWidth) ? 420 : Math.max(260, Math.min(savedWidth, 1200)));
+  let isResizing = $state(false);
+
+  function startResize(e: MouseEvent) {
+    e.preventDefault();
+    isResizing = true;
+    const startX = e.clientX;
+    const startWidth = drawerWidth;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = startX - moveEvent.clientX; // Moving left increases drawer width
+      const maxWidth = window.innerWidth * 0.75;
+      const newWidth = Math.max(260, Math.min(startWidth + deltaX, maxWidth));
+      drawerWidth = newWidth;
+    };
+
+    const onMouseUp = () => {
+      isResizing = false;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      try {
+        localStorage.setItem('barnowl_copilot_drawer_width', String(Math.round(drawerWidth)));
+      } catch (err) {
+        console.error('Failed to persist drawer width', err);
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
+
   let currentActiveAction = $derived(onAction ? activeAction : internalActiveAction);
   let isExplorerOpen = $derived(currentActiveAction === 'explorer' || (currentActiveAction === '' && internalExplorerOpen));
   let isCopilotOpen = $derived(onAction ? (activeAction === 'copilot' || activeAction === 'ears') : internalIsCopilotOpen);
@@ -157,7 +190,21 @@
     </div>
 
     {#if isCopilotOpen}
-      <div class="right-drawer">
+      <!-- Resizer divider handle -->
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <div
+        class="resizer-handle"
+        class:resizing={isResizing}
+        onmousedown={startResize}
+        role="separator"
+        aria-orientation="vertical"
+        aria-valuenow={drawerWidth}
+        title="Drag to resize Brain / Copilot drawer"
+      >
+        <div class="resizer-indicator"></div>
+      </div>
+
+      <div class="right-drawer" style="width: {drawerWidth}px;">
         {#if rightDrawer}
           {@render rightDrawer()}
         {:else}
@@ -215,8 +262,43 @@
     flex-direction: column;
   }
 
+  /* Resizer handle between Center Editor and Right Drawer */
+  .resizer-handle {
+    width: 6px;
+    cursor: col-resize;
+    position: relative;
+    background: transparent;
+    z-index: 60;
+    transition: background-color 0.15s ease;
+    flex-shrink: 0;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .resizer-handle:hover,
+  .resizer-handle.resizing {
+    background: rgba(74, 222, 128, 0.4); /* Primary accent tint on drag/hover */
+  }
+
+  .resizer-indicator {
+    width: 2px;
+    height: 32px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.15);
+    transition: background-color 0.15s ease;
+  }
+
+  .resizer-handle:hover .resizer-indicator,
+  .resizer-handle.resizing .resizer-indicator {
+    background: #4ade80; /* Glowing primary pill */
+    height: 48px;
+  }
+
   .right-drawer {
-    width: 320px;
+    min-width: 260px;
+    max-width: 80vw;
     background: rgba(15, 15, 15, 0.9);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(12px);
@@ -224,6 +306,7 @@
     display: flex;
     flex-direction: column;
     z-index: 50;
+    flex-shrink: 0;
   }
 
   .settings-panel {
