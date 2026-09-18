@@ -20,12 +20,35 @@
   let renderedResponse = $state('');
   let copySuccess = $state(false);
 
+  let showHistory = $state(false);
+  let cacheItems = $state<any[]>([]);
+  let localOverride = $state('');
+
+  async function toggleHistory() {
+    if (!showHistory) {
+      try {
+        const items = await (window as any).go.main.App.GetCacheItems();
+        cacheItems = items || [];
+      } catch (e) {
+        console.error('Failed to fetch cache items:', e);
+      }
+    }
+    showHistory = !showHistory;
+  }
+
+  // Clear localOverride when a new live response starts
+  $effect(() => {
+    if (isThinking) {
+      localOverride = '';
+    }
+  });
+
   // Dynamic markdown rendering
   let renderMarkdown: any;
   let markdownTimeout: ReturnType<typeof setTimeout>;
 
   $effect(() => {
-    const current = response;
+    const current = localOverride || response;
 
     if (markdownTimeout) clearTimeout(markdownTimeout);
 
@@ -131,6 +154,9 @@
           <span class="material-symbols-outlined text-[24px]">content_copy</span>
         {/if}
       </button>
+      <button class="icon-btn" title="View History" onclick={toggleHistory} class:active={showHistory}>
+        <span class="material-symbols-outlined text-[24px]">history</span>
+      </button>
       <button class="icon-btn relative" onclick={onClearCache} title={`Clear Cache (${cacheCount} pairs)`}>
         <span class="material-symbols-outlined text-[24px]">mop</span>
         {#if cacheCount > 0}
@@ -142,29 +168,52 @@
 
   <!-- Body -->
   <div class="panel-body" bind:this={scrollEl} onscroll={onScroll}>
-    {#if !isThinking && !response}
-      <!-- Empty State -->
-      <div class="empty-state">
-        <span class="material-symbols-outlined ghost-icon">auto_awesome</span>
-        <p class="ghost-text">Waiting for a question…</p>
-      </div>
-    {:else if isThinking && !response}
-      <!-- Thinking State -->
-      <div class="thinking-state-container">
-        <div class="thinking-card">
-          <div class="dots-container">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
+    {#if showHistory}
+      <div class="history-view">
+        <h3 class="history-title">Cached Q&A History</h3>
+        {#if cacheItems.length === 0}
+          <p class="history-empty">No cached items found.</p>
+        {:else}
+          <div class="history-list">
+            {#each cacheItems as item}
+              <button class="history-item" onclick={() => {
+                localOverride = item.Answer;
+                showHistory = false;
+              }}>
+                <div class="history-q">{item.Question}</div>
+                <div class="history-meta">
+                  <span>Tokens saved: ~{item.TokensSaved || 250}</span>
+                </div>
+              </button>
+            {/each}
           </div>
-          <p>BarnOwl is thinking…</p>
-        </div>
+        {/if}
       </div>
     {:else}
-      <!-- Response -->
-      <div class="response-content">
-        {@html renderedResponse}
-      </div>
+      {#if !isThinking && !response && !localOverride}
+        <!-- Empty State -->
+        <div class="empty-state">
+          <span class="material-symbols-outlined ghost-icon">auto_awesome</span>
+          <p class="ghost-text">Waiting for a question…</p>
+        </div>
+      {:else if isThinking && !response && !localOverride}
+        <!-- Thinking State -->
+        <div class="thinking-state-container">
+          <div class="thinking-card">
+            <div class="dots-container">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+            <p>BarnOwl is thinking…</p>
+          </div>
+        </div>
+      {:else}
+        <!-- Response -->
+        <div class="response-content">
+          {@html renderedResponse}
+        </div>
+      {/if}
     {/if}
   </div>
 
@@ -238,6 +287,10 @@
 
   .icon-btn:hover {
     color: white;
+  }
+
+  .icon-btn.active {
+    color: var(--primary);
   }
 
   .badge {
@@ -436,5 +489,63 @@
     border-radius: 12px;
     padding: 2px 8px;
     color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* History View */
+  .history-view {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .history-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .history-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(74, 222, 128, 0.3);
+  }
+
+  .history-q {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.4;
+  }
+
+  .history-meta {
+    font-size: 11px;
+    color: rgba(74, 222, 128, 0.7);
+  }
+
+  .history-empty {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
   }
 </style>
