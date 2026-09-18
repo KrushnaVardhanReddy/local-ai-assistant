@@ -1,0 +1,192 @@
+TASK: P57-T15 — Platform Component Refactor (Plug-and-Play Header Actions)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+PREREQUISITE: P57-T13 (Manual LLM Trigger Mode) must be merged before starting this task.
+
+The BarnOwl codebase is a multi-product platform. The same ConvPanel and AnswerPanel
+components will be reused across MentorGlass, DebateShield, CounselDesk, ClinicHUD, etc.
+Currently, domain-specific buttons (STAR Method, Catch Me Up) are hardcoded inside
+ConvPanel — making reuse impossible without forking the component.
+
+This task converts those hardcoded buttons to a configurable `headerActions` prop array,
+making ConvPanel and AnswerPanel fully domain-agnostic and plug-and-play for any product.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/lib/types.ts` [NEW FILE]
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte` [REFACTOR]
+- `wails-app/frontend/src/products/interview/AnswerPanel.svelte` [REFACTOR]
+- `wails-app/frontend/src/products/interview/InterviewHUD.svelte` [UPDATE USAGE]
+- `wails-app/frontend/src/products/README.md` [NEW FILE]
+- `prompts/tasks_v2.md` [UPDATE — mark T15 done with PR number]
+
+DO NOT touch any Go backend files.
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: Define the HeaderAction Type
+═══════════════════════════════════════════════════════════════
+Create a new shared type file at:
+  `wails-app/frontend/src/lib/types.ts`
+
+Add this type:
+
+export interface HeaderAction {
+  icon: string;          // Material Symbols icon name, e.g. 'star', 'download'
+  label: string;         // Tooltip text shown on hover
+  onClick: () => void;   // Callback when button is clicked
+  active?: boolean;      // Optional: highlights button when true (like toggles)
+  activeIcon?: string;   // Optional: alternate icon when active=true
+}
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: ConvPanel.svelte — Replace Hardcoded Buttons
+═══════════════════════════════════════════════════════════════
+1. Import HeaderAction from '$lib/types'
+
+2. Add headerActions to the props:
+     headerActions?: HeaderAction[];
+
+3. REMOVE these existing props entirely (and all their usages from the template):
+   - onStarMethod
+   - onCatchMeUp
+   - onToggleHotkeys (internal showHotkeys state can stay if needed for the hotkeys panel)
+
+   Keep as-is (platform-level, always present):
+   - onToggleMic (keep as a named prop — it is a platform feature, not domain)
+   - wsState.rawMode toggle (hearing icon — stays hardcoded, platform-level)
+   - manualMode toggle from T13 (stays hardcoded, platform-level)
+
+4. In the header-right section, replace the star, history, keyboard buttons with a dynamic loop:
+
+  {#if headerActions}
+    {#each headerActions as action}
+      <button
+        class="icon-btn"
+        class:active={action.active}
+        title={action.label}
+        onclick={action.onClick}
+      >
+        <span class="material-symbols-outlined">
+          {action.active && action.activeIcon ? action.activeIcon : action.icon}
+        </span>
+      </button>
+    {/each}
+  {/if}
+
+  Render the dynamic actions AFTER the platform-level raw/filter toggle,
+  and BEFORE the mic toggle.
+
+═══════════════════════════════════════════════════════════════
+SECTION 3: AnswerPanel.svelte — Add Domain Slot
+═══════════════════════════════════════════════════════════════
+1. Import HeaderAction from '$lib/types'
+
+2. Add headerActions to the props:
+     headerActions?: HeaderAction[];
+
+3. The existing copy and export (download) buttons are platform-level — keep them fixed.
+
+4. In the header-right section, render dynamic actions AFTER the fixed copy/export buttons:
+
+  {#if headerActions}
+    {#each headerActions as action}
+      <button
+        class="icon-btn"
+        class:active={action.active}
+        title={action.label}
+        onclick={action.onClick}
+      >
+        <span class="material-symbols-outlined">
+          {action.active && action.activeIcon ? action.activeIcon : action.icon}
+        </span>
+      </button>
+    {/each}
+  {/if}
+
+═══════════════════════════════════════════════════════════════
+SECTION 4: InterviewHUD.svelte — Wire Domain-Specific Actions
+═══════════════════════════════════════════════════════════════
+In InterviewHUD.svelte, replace the individual onStarMethod/onCatchMeUp/onToggleHotkeys
+props with a headerActions array built in the script block:
+
+  import type { HeaderAction } from '$lib/types';
+
+  let showConvHotkeys = $state(false);
+
+  const convHeaderActions: HeaderAction[] = [
+    {
+      icon: 'star',
+      label: 'STAR Method',
+      onClick: handleStarMethod,
+    },
+    {
+      icon: 'history',
+      label: 'Catch Me Up',
+      onClick: handleCatchMeUp,
+    },
+    {
+      icon: 'keyboard',
+      label: 'Hotkeys',
+      onClick: () => { showConvHotkeys = !showConvHotkeys; },
+      get active() { return showConvHotkeys; },
+    },
+  ];
+
+Then pass it to ConvPanel:
+  headerActions={convHeaderActions}
+
+Remove the old individual props: onStarMethod, onCatchMeUp, onToggleHotkeys, showHotkeys.
+The showConvHotkeys state stays local to InterviewHUD.
+
+═══════════════════════════════════════════════════════════════
+SECTION 5: Create Platform README
+═══════════════════════════════════════════════════════════════
+Create: wails-app/frontend/src/products/README.md
+
+Contents:
+
+# Products — Platform Architecture
+
+This directory contains product-specific HUD implementations that share a common
+engine and component library.
+
+## How to Add a New Product Skin
+
+1. Create a new folder: src/products/<product-name>/
+2. Create <ProductName>HUD.svelte — this is your root component.
+3. Import and use ConvPanel and AnswerPanel from ../interview/.
+4. Define your headerActions array with product-specific buttons.
+5. Write your system prompt in prompts/products/<product-name>/system.txt.
+6. Done. No engine changes required.
+
+## Platform-Level vs Domain-Specific Features
+
+| Feature | Level | Where it lives |
+|---|---|---|
+| Raw/Filter transcript toggle | Platform | ConvPanel (always present) |
+| Mic mute toggle | Platform | ConvPanel (always present) |
+| Manual mode toggle | Platform | ConvPanel (always present) |
+| Copy answer button | Platform | AnswerPanel (always present) |
+| Export to file button | Platform | AnswerPanel (always present) |
+| STAR Method button | BarnOwl domain | InterviewHUD -> headerActions |
+| Catch Me Up | BarnOwl domain | InterviewHUD -> headerActions |
+| Hotkeys panel | BarnOwl domain | InterviewHUD -> headerActions |
+| SOAP Note output | ClinicHUD domain | ClinicHUD -> headerActions |
+| Case Brief | CounselDesk domain | CounselDeskHUD -> headerActions |
+| Rebuttal Generator | DebateShield domain | DebateShieldHUD -> headerActions |
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- npm run check in wails-app/frontend must pass with 0 errors.
+- npm run build in wails-app/frontend must succeed.
+- In BarnOwl (InterviewHUD), the STAR, Catch Me Up, and Hotkeys buttons still appear
+  and function correctly — the refactor must be 100% transparent to BarnOwl users.
+- The raw/filter toggle, manual mode toggle and mic button are still always visible.
+- The copy and export buttons in AnswerPanel are still always visible.
+- Zero mock / zero hardcoded state violation.
+- Maintain clean Git history on feature/krushna_golang.
+- PR title format: refactor(platform): plug-and-play header action slots (#P57-T15)
