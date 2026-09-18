@@ -6,10 +6,12 @@
   import { authState } from "$lib/auth.svelte";
 
   import StealthTitleBar from "$lib/components/StealthTitleBar.svelte";
-  import IDEShell from "$lib/components/workspace/IDEShell.svelte";
   import CodeEditor from "$lib/components/workspace/CodeEditor.svelte";
-
-  import CopilotDrawer from "./CopilotDrawer.svelte";
+  import ActivityBar from "$lib/components/workspace/ActivityBar.svelte";
+  import WorkspaceSidebar from "$lib/components/workspace/WorkspaceSidebar.svelte";
+  import WorkspaceTabs from "$lib/components/workspace/WorkspaceTabs.svelte";
+  import ConvPanel from "./ConvPanel.svelte";
+  import AnswerPanel from "./AnswerPanel.svelte";
 
   import SessionReport from "$lib/SessionReport.svelte";
   import AuthModal from "$lib/components/AuthModal.svelte";
@@ -29,12 +31,12 @@
   });
 
   // State
-  let activeDrawer = $state('copilot'); // 'ears' or 'copilot'
-  let showBrainHotkeys = $state(false);
+  let showConvHotkeys = $state(false);
+  let cacheCount = $state(0);
   let clickthrough = $state(false);
   let showSessionReport = $state(false);
   let isAuthModalOpen = $state(false);
-  let activeAction = $state('copilot');
+  let activeAction = $state('');
 
   let includeActiveDocContext = $state(true);
   let activeDocumentName = $state('');
@@ -82,6 +84,10 @@
         activeDocumentContent = state.activeDocumentContent || '';
       }
     }
+    try {
+      const stats = await apiFetch(`${getApiUrl()}/api/cache/stats`, { method: 'GET' });
+      if (stats?.count !== undefined) cacheCount = stats.count;
+    } catch { /* ignore if endpoint not available */ }
   }
 
   const isGated = $derived(authState.authMode === 'saas' && (!authState.user || (!authState.byok_pass_active && authState.remaining_sessions <= 0)));
@@ -136,38 +142,105 @@
   // ActivityBar action handler
   function handleAction(action: string) {
     if (action === 'explorer') {
+      // Toggle IDE file tree + CodeEditor panel
       activeAction = activeAction === 'explorer' ? '' : 'explorer';
-    } else if (action === 'ears') {
-      if (activeAction === 'ears') {
-        activeAction = '';
-      } else {
-        activeAction = 'ears';
-        activeDrawer = 'ears';
-      }
-    } else if (action === 'copilot') {
-      if (activeAction === 'copilot') {
-        activeAction = '';
-      } else {
-        activeAction = 'copilot';
-        activeDrawer = 'copilot';
-      }
     } else if (action === 'mock') {
-      handleMockModeToggle();
-    } else if (action === 'keys') {
-      if (activeAction === 'copilot' && showBrainHotkeys) {
-        // Toggle hotkeys back to normal brain view or close
-        showBrainHotkeys = false;
-      } else {
-        activeAction = 'copilot';
-        activeDrawer = 'copilot';
-        showBrainHotkeys = true;
-      }
+      toggleMockMode(!wsState.isMockMode);
     } else if (action === 'settings') {
-      activeAction = activeAction === 'settings' ? activeDrawer : 'settings';
+      activeAction = activeAction === 'settings' ? '' : 'settings';
     } else {
       activeAction = action;
     }
   }
+
+
+  const savedConvWidth = typeof window !== 'undefined'
+    ? parseInt(localStorage.getItem('barnowl_conv_panel_width') || '380', 10)
+    : 380;
+  let convPanelWidth = $state(Math.max(280, Math.min(savedConvWidth, window.innerWidth * 0.6)));
+  let isPanelResizing = $state(false);
+
+  function startPanelResize(e: MouseEvent) {
+    e.preventDefault();
+    isPanelResizing = true;
+    const startX = e.clientX;
+    const startWidth = convPanelWidth;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const maxWidth = window.innerWidth * 0.6;
+      convPanelWidth = Math.max(280, Math.min(startWidth + (ev.clientX - startX), maxWidth));
+    };
+
+    const onMouseUp = () => {
+      isPanelResizing = false;
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      try { localStorage.setItem('barnowl_conv_panel_width', String(Math.round(convPanelWidth))); } catch {}
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
+
+  function sendChat(text: string) {
+    if (!text.trim()) return;
+    wsState.isThinking = true;
+    if (App?.SendChat) {
+      App.SendChat(text);
+    } else {
+      apiFetch(`${getApiUrl()}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+    }
+  }
+
+  function sendChip(chip: { id: string; text: string }) {
+    sendChat(chip.text);
+    wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
+      (c: any) => c.id !== chip.id
+    );
+  }
+
+  function dismissChip(chipId: string) {
+    wsState.pendingTranscripts = wsState.pendingTranscripts.filter((c: any) => c.id !== chipId);
+  }
+
+  function clearAllChips() {
+    wsState.pendingTranscripts = [];
+  }
+
+  let starPrimed = $state(false);
+  let starPrimedTimer: ReturnType<typeof setTimeout>;
+
+  function handleStarMethod() {
+    sendChat("Format your next response using the STAR method (Situation, Task, Action, Result).");
+    wsState.isThinking = true;
+    starPrimed = true;
+    if (starPrimedTimer) clearTimeout(starPrimedTimer);
+    starPrimedTimer = setTimeout(() => {
+      starPrimed = false;
+    }, 15000);
+  }
+
+  function handleCatchMeUp() {
+    sendChat("Please catch me up on the current context of the interview or conversation.");
+    wsState.isThinking = true;
+  }
+
+  function handleCopyAll() {
+    if (wsState.response) {
+      navigator.clipboard.writeText(wsState.response).catch(console.error);
+    }
+  }
+
+  function handleClearCache() {
+    apiFetch(`${getApiUrl()}/api/cache/clear`, { method: 'POST' }).then(() => {
+        cacheCount = 0;
+    }).catch(e => console.error("Failed to clear cache:", e));
+  }
+
 
   async function handleClearContext() {
     try {
@@ -191,9 +264,8 @@
     if (App?.CaptureScreen) {
       const b64 = await App.CaptureScreen();
       if (b64) {
-        // Automatically switch drawer to Copilot to show incoming vision answer
-        activeAction = 'copilot';
-        activeDrawer = 'copilot';
+
+
         if (App.AnalyzeVision) {
           App.AnalyzeVision(b64, "Analyze this technical interview screen and provide key hints, solution or code concisely.");
         } else {
@@ -259,64 +331,108 @@
     </div>
   </div>
 
-  <div class="main-content-area">
-    <IDEShell
-      {activeAction}
-      onAction={handleAction}
-      workspaceTree={workspaceTree}
-      openTabs={openTabs}
-      activePath={activeDocumentPath}
-      totalDocs={openTabs.length}
-      onSelect={handleSelectNode}
-      onTabSelect={handleTabSelect}
-      onTabClose={handleTabClose}
-      onFileOpen={handleOpenFile}
-      onOpenFolder={handleOpenFolder}
-    >
-      <!-- Center Slot: Code Editor -->
-      <div class="h-full w-full flex flex-col bg-surface/50 relative">
-         <CodeEditor
-           content={activeDocumentContent}
-           language="markdown"
-           readonly={false}
-         />
-         {#if (!activeAction || activeAction === 'explorer') && !activeDocumentContent}
-           <!-- Empty state overlay to suggest opening files -->
-           <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-             <div class="text-center opacity-30">
-               <span class="material-symbols-outlined text-6xl mb-4 block">description</span>
-               <p class="text-lg">Open a note or cheat sheet</p>
-               <p class="text-sm mt-2">Use the Explorer to load files</p>
-             </div>
-           </div>
-         {/if}
-      </div>
+    <div class="main-content-area">
+    <!-- ActivityBar always visible -->
+    <ActivityBar {activeAction} onAction={handleAction} />
 
-      <!-- Right Drawer Slot -->
-      {#snippet rightDrawer()}
-        {#if activeDrawer === 'copilot'}
-          <CopilotDrawer
-            showHotkeys={showBrainHotkeys}
-            onToggleHotkeys={() => showBrainHotkeys = !showBrainHotkeys}
+    <!-- IDE Mode: File tree sidebar (only when explorer is active) -->
+    {#if activeAction === 'explorer'}
+      <WorkspaceSidebar
+        nodes={workspaceTree}
+        activePath={activeDocumentPath}
+        totalDocs={openTabs.length}
+        isOpen={true}
+        onToggle={() => handleAction('explorer')}
+        onSelect={handleSelectNode}
+        onOpenFile={handleOpenFile}
+        onOpenFolder={handleOpenFolder}
+      />
+      <!-- CodeEditor panel (only in IDE mode) -->
+      <div class="ide-editor-pane">
+        <WorkspaceTabs
+          tabs={openTabs}
+          activePath={activeDocumentPath}
+          onTabSelect={handleTabSelect}
+          onTabClose={handleTabClose}
+        />
+        <div class="ide-editor-content">
+          <CodeEditor
+            content={activeDocumentContent}
+            language="markdown"
+            readonly={false}
           />
-        {/if}
-      {/snippet}
-
-      <!-- Settings Panel Slot -->
-      {#snippet settingsPanel()}
-        <div class="h-full flex flex-col">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold text-on-surface">Settings</h2>
-            <button class="text-on-surface-variant hover:text-error transition-colors" onclick={() => handleAction('copilot')}>
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div class="flex-1 overflow-y-auto hide-scrollbar">
-            <Settings embedded={true} />
-          </div>
+          {#if !activeDocumentContent}
+            <div class="editor-empty-state">
+              <span class="material-symbols-outlined">description</span>
+              <p>Open a note or cheat sheet</p>
+            </div>
+          {/if}
         </div>
-      {/snippet}
-    </IDEShell>
+      </div>
+    {/if}
+
+    <!-- LEFT: Conversation Panel (always visible) -->
+    <div class="conv-panel-wrapper" style="width: {convPanelWidth}px;">
+      <ConvPanel
+        transcriptHistory={wsState.transcriptHistory}
+        pendingTranscripts={wsState.pendingTranscripts}
+        ragSources={wsState.ragSources}
+        isListening={wsState.isListening}
+        isMockMode={wsState.isMockMode}
+        isPTTHeld={wsState.isPTTHeld}
+        isThinking={wsState.isThinking}
+        {includeActiveDocContext}
+        {activeDocumentName}
+        onSendChat={sendChat}
+        onSendChip={sendChip}
+        onDismissChip={dismissChip}
+        onClearChips={clearAllChips}
+        onStarMethod={handleStarMethod}
+        onCatchMeUp={handleCatchMeUp}
+        showHotkeys={showConvHotkeys}
+        onToggleHotkeys={() => showConvHotkeys = !showConvHotkeys}
+      />
+    </div>
+
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <!-- Resizable divider between ConvPanel and AnswerPanel -->
+    <div
+      class="panel-resizer"
+      class:resizing={isPanelResizing}
+      onmousedown={startPanelResize}
+      role="separator"
+      aria-orientation="vertical"
+      title="Drag to resize panels"
+    >
+      <div class="resizer-indicator"></div>
+    </div>
+
+    <!-- RIGHT: Answer Panel (always visible) -->
+    <div class="answer-panel-wrapper">
+      <AnswerPanel
+        response={wsState.response}
+        isThinking={wsState.isThinking}
+        {cacheCount}
+        ragSources={wsState.ragSources}
+        onClearCache={handleClearCache}
+        onCopyAll={handleCopyAll}
+      />
+    </div>
+
+    <!-- Settings overlay (absolute positioned, same as before) -->
+    {#if activeAction === 'settings'}
+      <div class="settings-overlay">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold">Settings</h2>
+          <button onclick={() => handleAction('settings')}>
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto hide-scrollbar">
+          <Settings embedded={true} />
+        </div>
+      </div>
+    {/if}
   </div>
 
   <!-- Modals -->
@@ -442,8 +558,103 @@
 
   .main-content-area {
     flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .conv-panel-wrapper {
+    flex-shrink: 0;
+    min-width: 280px;
+    max-width: 60vw;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .answer-panel-wrapper {
+    flex-grow: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Reuse same resizer style as IDEShell */
+  .panel-resizer {
+    width: 6px;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 60;
+    transition: background-color 0.15s ease;
+    flex-shrink: 0;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .panel-resizer:hover,
+  .panel-resizer.resizing {
+    background: rgba(74, 222, 128, 0.3);
+  }
+
+  .resizer-indicator {
+    width: 2px;
+    height: 32px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.12);
+    transition: all 0.15s ease;
+  }
+
+  .panel-resizer:hover .resizer-indicator,
+  .panel-resizer.resizing .resizer-indicator {
+    background: #4ade80;
+    height: 48px;
+  }
+
+  /* IDE mode panes */
+  .ide-editor-pane {
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+
+  .ide-editor-content {
+    flex-grow: 1;
     position: relative;
     overflow: hidden;
+  }
+
+  .editor-empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  .settings-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    background: rgba(15, 15, 15, 0.97);
+    border-left: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    overflow-y: auto;
   }
 
   .hide-scrollbar::-webkit-scrollbar {
