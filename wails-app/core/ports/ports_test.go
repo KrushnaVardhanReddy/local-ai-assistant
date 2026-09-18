@@ -35,10 +35,10 @@ func (m *mockSession) EndSession() (map[string]interface{}, error) {
 
 type mockLLM struct{}
 
-func (m *mockLLM) StreamCompletion(question string, systemPrompt string, history []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
+func (m *mockLLM) StreamCompletion(ctx context.Context, question string, systemPrompt string, history []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
 	return nil
 }
-func (m *mockLLM) StreamVision(base64Image string, prompt string, onToken driven.StreamCallback, onDone func()) error {
+func (m *mockLLM) StreamVision(ctx context.Context, base64Image string, prompt string, onToken driven.StreamCallback, onDone func()) error {
 	return nil
 }
 

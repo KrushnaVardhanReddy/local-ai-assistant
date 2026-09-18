@@ -169,6 +169,9 @@ func TestRealEmbeddingsAndSQLiteStore(t *testing.T) {
 		t.Skip("ONNX model or tokenizer missing, skipping real embedding test")
 	}
 
+	// Restore real embedding func since previous tests might have mocked it
+	GenerateEmbeddingFunc = GenerateEmbedding
+
 	db, err := NewVectorDB(":memory:")
 	if err != nil {
 		t.Fatalf("Failed to init SQLite VectorDB: %v", err)
