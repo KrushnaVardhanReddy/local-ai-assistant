@@ -464,22 +464,24 @@
   .chips-row {
     padding: 6px 10px;
     border-top: 1px solid var(--conv-border);
-    overflow-x: auto;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
+    max-height: 150px;
+    overflow-y: auto;
   }
 
   .chip {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 4px 8px;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.8);
-    white-space: nowrap;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.85);
   }
 
   .chip-text {
@@ -491,6 +493,7 @@
     color: inherit;
     font: inherit;
     padding: 0;
+    text-align: left;
   }
 
   .chip-text:hover {

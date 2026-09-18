@@ -159,6 +159,7 @@ BATCH 2 (Sequential Integration)
 | **P57-T8A** | ConvPanel.svelte — Conversation Left Panel | ✅ Merged | ⚡ Parallel | [PR 198] | NEW file only. Left panel: transcript bubbles, suggestion chips, hotkeys overlay, chat input. No existing file edits. |
 | **P57-T8B** | AnswerPanel.svelte — LLM Answer Right Panel | ✅ Merged | ⚡ Parallel | [PR 197] | NEW file only. Right panel: streaming Markdown response, thinking pulse, cache stats, copy button. No existing file edits. |
 | **P57-T8C** | ActivityBar cleanup — remove copilot/keys icons | ✅ Merged | ⚡ Parallel | [PR 196] | Tiny isolated edit to ActivityBar.svelte only. Remove `copilot` and `keys` from topActions. |
+| **P57-T9** | Cache History UI & Vertical Transcripts | ✅ Merged | Sequential | [PR TODO] | ConvPanel vertical transcripts and AnswerPanel history cache UI. |
 
 
 
