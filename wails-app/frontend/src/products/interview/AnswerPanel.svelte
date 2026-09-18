@@ -150,6 +150,22 @@
     }
   }
 
+
+  let exportStatus = $state<'idle' | 'saving' | 'done' | 'error'>('idle');
+
+  async function handleExport() {
+    exportStatus = 'saving';
+    try {
+      const path = await (window as any).go.main.App.ExportSession();
+      exportStatus = 'done';
+      console.log('Session exported to:', path);
+      setTimeout(() => exportStatus = 'idle', 3000);
+    } catch (e) {
+      console.error('Export failed:', e);
+      exportStatus = 'error';
+      setTimeout(() => exportStatus = 'idle', 3000);
+    }
+  }
 </script>
 
 <div class="answer-panel">
@@ -160,6 +176,11 @@
       <span class="title font-bold text-white">BarnOwl AI</span>
     </div>
     <div class="header-right">
+      <button class="icon-btn" title="Export session to file" onclick={handleExport}>
+        <span class="material-symbols-outlined">
+          {exportStatus === 'saving' ? 'hourglass_empty' : exportStatus === 'done' ? 'check' : 'download'}
+        </span>
+      </button>
       <button class="icon-btn" onclick={handleCopyAll} title="Copy Answer">
         {#if copySuccess}
           <span class="material-symbols-outlined text-[24px] text-primary">check</span>

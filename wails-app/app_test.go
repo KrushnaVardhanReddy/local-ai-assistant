@@ -5,6 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"wails-app/backend"
+	"wails-app/core/engine"
+	"strings"
+	"fmt"
 )
 
 func TestApp_GetAudioDevices(t *testing.T) {
@@ -135,4 +139,77 @@ func TestApp_ToggleMic(t *testing.T) {
 
 	// Another toggle
 	app.ToggleMic()
+}
+
+
+type mockCacheAdapter struct {
+    items []backend.CacheItem
+    err   error
+}
+
+func (m *mockCacheAdapter) GetAllItems() ([]backend.CacheItem, error) {
+    return m.items, m.err
+}
+func (m *mockCacheAdapter) Store(item backend.CacheItem) error { return nil }
+func (m *mockCacheAdapter) Search(query string, limit int) ([]backend.CacheItem, error) { return nil, nil }
+func (m *mockCacheAdapter) DeleteItem(id string) error { return nil }
+func (m *mockCacheAdapter) ClearAll() error { return nil }
+func (m *mockCacheAdapter) EnsureIndex() error { return nil }
+
+func TestApp_ExportSession(t *testing.T) {
+	app := NewApp()
+
+    mockCache := &mockCacheAdapter{
+        items: []backend.CacheItem{
+            {Question: "Q1", Answer: "A1"},
+            {Question: "Q2", Answer: "A2"},
+        },
+    }
+    app.engine = engine.New(
+		engine.Config{},
+		nil,
+		nil,
+		mockCache,
+		nil,
+	)
+
+    tempDir := t.TempDir()
+    t.Setenv("HOME", tempDir)
+    t.Setenv("USERPROFILE", tempDir) // for Windows
+
+    filePath, err := app.ExportSession()
+    if err != nil {
+        t.Fatalf("ExportSession failed: %v", err)
+    }
+
+    if _, err := os.Stat(filePath); os.IsNotExist(err) {
+        t.Fatalf("Expected file to exist at %s", filePath)
+    }
+
+    content, err := os.ReadFile(filePath)
+    if err != nil {
+        t.Fatalf("Failed to read exported file: %v", err)
+    }
+
+    contentStr := string(content)
+    if !strings.Contains(contentStr, "## Q1: Q1") {
+        t.Errorf("Expected content to contain Q1, got: %s", contentStr)
+    }
+    if !strings.Contains(contentStr, "A2") {
+        t.Errorf("Expected content to contain A2, got: %s", contentStr)
+    }
+
+    // Test error case
+    mockCache.err = fmt.Errorf("mock error")
+    _, err = app.ExportSession()
+    if err == nil {
+        t.Fatalf("Expected error when GetAllItems fails")
+    }
+
+    // Test invalid cache adapter type (doesn't implement GetAllItems)
+    app.engine = engine.New(engine.Config{}, nil, nil, nil, nil)
+    _, err = app.ExportSession()
+    if err == nil {
+        t.Fatalf("Expected error when cache adapter doesn't implement GetAllItems")
+    }
 }
