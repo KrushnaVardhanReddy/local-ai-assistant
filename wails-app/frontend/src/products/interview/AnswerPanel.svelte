@@ -177,12 +177,12 @@
           <div class="history-list">
             {#each cacheItems as item}
               <button class="history-item" onclick={() => {
-                localOverride = item.Answer;
+                localOverride = item.answer || item.Answer;
                 showHistory = false;
               }}>
-                <div class="history-q">{item.Question}</div>
+                <div class="history-q">{item.question || item.Question}</div>
                 <div class="history-meta">
-                  <span>Tokens saved: ~{item.TokensSaved || 250}</span>
+                  <span>Tokens saved: ~{item.tokensSaved || item.TokensSaved || 250}</span>
                 </div>
               </button>
             {/each}

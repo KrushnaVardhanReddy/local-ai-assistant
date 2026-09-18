@@ -236,13 +236,15 @@ func (v *VectorDB) GetCount() int {
 }
 
 type CacheItem struct {
-	ID       string `json:"id"`
-	Question string `json:"question"`
+	ID          string `json:"id"`
+	Question    string `json:"question"`
+	Answer      string `json:"answer"`
+	TokensSaved int    `json:"tokensSaved"`
 }
 
-// GetAllItems returns all cached question IDs and question titles
+// GetAllItems returns all cached question IDs, questions, and answers
 func (v *VectorDB) GetAllItems() ([]CacheItem, error) {
-	rows, err := v.db.Query("SELECT id FROM qa_cache_meta ORDER BY rowid DESC")
+	rows, err := v.db.Query("SELECT id, metadata FROM qa_cache_meta ORDER BY rowid DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -251,8 +253,17 @@ func (v *VectorDB) GetAllItems() ([]CacheItem, error) {
 	var items []CacheItem
 	for rows.Next() {
 		var id string
-		if err := rows.Scan(&id); err == nil {
-			items = append(items, CacheItem{ID: id, Question: id})
+		var metadata string
+		if err := rows.Scan(&id, &metadata); err == nil {
+			var meta map[string]interface{}
+			var answer string
+			if err := json.Unmarshal([]byte(metadata), &meta); err == nil {
+				if ans, ok := meta["answer"].(string); ok {
+					answer = ans
+				}
+			}
+			// Estimated tokens saved is ~250 per pair
+			items = append(items, CacheItem{ID: id, Question: id, Answer: answer, TokensSaved: 250})
 		}
 	}
 	return items, nil
