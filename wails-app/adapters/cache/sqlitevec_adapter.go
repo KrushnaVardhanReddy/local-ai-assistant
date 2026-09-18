@@ -40,5 +40,13 @@ func (a *SQLiteVecAdapter) Count() int {
 	return a.db.GetCount()
 }
 
+// GetAllItems returns all cached Q&A pairs via db.GetAllItems().
+func (a *SQLiteVecAdapter) GetAllItems() ([]backend.CacheItem, error) {
+	if a.db == nil {
+		return nil, nil
+	}
+	return a.db.GetAllItems()
+}
+
 // Compile-time interface check.
 var _ driven.CachePort = (*SQLiteVecAdapter)(nil)
