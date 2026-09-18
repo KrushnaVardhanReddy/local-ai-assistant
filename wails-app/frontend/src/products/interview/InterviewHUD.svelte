@@ -9,8 +9,7 @@
   import IDEShell from "$lib/components/workspace/IDEShell.svelte";
   import CodeEditor from "$lib/components/workspace/CodeEditor.svelte";
 
-  import LiveEarsDrawer from "./LiveEarsDrawer.svelte";
-  import BrainDrawer from "./BrainDrawer.svelte";
+  import CopilotDrawer from "./CopilotDrawer.svelte";
 
   import SessionReport from "$lib/SessionReport.svelte";
   import AuthModal from "$lib/components/AuthModal.svelte";
@@ -192,7 +191,7 @@
     if (App?.CaptureScreen) {
       const b64 = await App.CaptureScreen();
       if (b64) {
-        // Automatically switch drawer to Brain to show incoming vision answer
+        // Automatically switch drawer to Copilot to show incoming vision answer
         activeAction = 'copilot';
         activeDrawer = 'copilot';
         if (App.AnalyzeVision) {
@@ -295,10 +294,8 @@
 
       <!-- Right Drawer Slot -->
       {#snippet rightDrawer()}
-        {#if activeDrawer === 'ears'}
-          <LiveEarsDrawer />
-        {:else}
-          <BrainDrawer
+        {#if activeDrawer === 'copilot'}
+          <CopilotDrawer
             showHotkeys={showBrainHotkeys}
             onToggleHotkeys={() => showBrainHotkeys = !showBrainHotkeys}
           />
