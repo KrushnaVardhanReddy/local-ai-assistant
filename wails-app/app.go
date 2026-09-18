@@ -321,7 +321,11 @@ func (a *App) AnalyzeVision(base64Image string, prompt string) error {
 
 	go func() {
 		var answerBuilder strings.Builder
-		err := llm.StreamVisionCompletion(base64Image, prompt, func(token string) {
+		ctx := a.ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		err := llm.StreamVisionCompletion(ctx, base64Image, prompt, func(token string) {
 			answerBuilder.WriteString(token)
 			a.engine.UpdateState("📸 [Screenshot Snip Captured]", answerBuilder.String(), true)
 			wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
