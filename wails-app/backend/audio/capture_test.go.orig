@@ -110,11 +110,6 @@ func TestStopCapture_Initialized(t *testing.T) {
 	}
 }
 
-func TestStop(t *testing.T) {
-	engine := NewCaptureEngine()
-	engine.Stop()
-}
-
 func TestIsCapturing(t *testing.T) {
 	engine := NewCaptureEngine()
 

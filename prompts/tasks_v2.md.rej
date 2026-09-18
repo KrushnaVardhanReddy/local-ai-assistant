@@ -1,0 +1,10 @@
+--- tasks_v2.md
++++ tasks_v2.md
+@@ -29,7 +29,7 @@
+ - [ ] **T07:** Settings Configuration Persistence — Save models/keys to `data/settings.json` locally and persist across reboots. (P57-T07)
+ - [ ] **T08:** Token & Streak Visualization — Build frontend dashboard and stats widgets reflecting usage and streak data from LocalDB. (P57-T08)
+ - [ ] **T09:** Keyboard Navigation Hooks — Use Wails window bindings to allow arrow keys for fast transcript traversing and Enter to append items to a prompt context. (P57-T09)
+-- [ ] **T10:** Microphone Mute Toggle — Update Wails backend to properly release PortAudio/PulseAudio locks when user clicks "Mic Off" in frontend. (P57-T10)
++- [✅ Merged (#P57-T10)] **T10:** Microphone Mute Toggle — Update Wails backend to properly release PortAudio/PulseAudio locks when user clicks "Mic Off" in frontend. (P57-T10)
+ - [ ] **T11:** Markdown Rendering Engine Optimization — Upgrade marked.js or replace with a WASM-based markdown renderer to improve typing speed for heavy token bursts. (P57-T11)
+ - [ ] **T12:** Caching Invalidations — Clear SQLite vector db entries when a user hits the "Panic / Reset" button in the frontend. (P57-T12)

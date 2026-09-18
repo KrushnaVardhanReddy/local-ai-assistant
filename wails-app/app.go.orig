@@ -543,10 +543,7 @@ func (a *App) GetIDEState() map[string]interface{} {
 		activeDocName = activeDoc.Name
 	}
 
-	isListening := false
-	if a.audioCapture != nil {
-		isListening = a.audioCapture.IsCapturing()
-	}
+	isListening := a.audioCapture != nil
 
 	s := a.engine.GetState()
 
@@ -566,17 +563,3 @@ func (a *App) GetIDEState() map[string]interface{} {
 		"includeActiveDocContext": a.engine.GetIncludeActiveDocContext(),
 	}
 }
-
-// ToggleMic toggles the microphone capturing state.
-// Returns true if the microphone was started, false if it was stopped.
-func (a *App) ToggleMic() bool {
-	if a.audioCapture == nil {
-		return false
-	}
-	if a.audioCapture.IsCapturing() {
-		a.audioCapture.StopCapture()
-		return false
-	} else {
-		a.SetAudioDevice(-1, false)
-		return true
-	}

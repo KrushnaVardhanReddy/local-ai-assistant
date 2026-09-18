@@ -80,15 +80,11 @@
     <div class="header-left">
       <span class="title">Live Session</span>
       {#if isListening && !isMockMode}
-        <button class="status-badge status-live pulse clickable" onclick={() => (window as any).go.main.App.ToggleMic()}>
-          <span class="material-symbols-outlined" style="font-size: 12px; margin-right: 2px;">mic</span> Live
-        </button>
+        <div class="status-badge status-live pulse">● Live</div>
       {:else if isMockMode}
         <div class="status-badge status-mock pulse">● Mock</div>
       {:else}
-        <button class="status-badge status-mic-off clickable" onclick={() => (window as any).go.main.App.ToggleMic()}>
-          <span class="material-symbols-outlined" style="font-size: 12px; margin-right: 2px;">mic_off</span> Mic Off
-        </button>
+        <div class="status-badge status-mic-off">● Mic Off</div>
       {/if}
 
       {#if isPTTHeld}
@@ -286,10 +282,6 @@
     gap: 4px;
     font-weight: 600;
     white-space: nowrap;
-    cursor: default;
-  }
-  .status-badge.clickable {
-    cursor: pointer;
   }
 
   .status-live {
