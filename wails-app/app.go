@@ -598,21 +598,23 @@ func (a *App) ExportSession() (string, error) {
 		return "", fmt.Errorf("failed to fetch cache items: %w", err)
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
-	filename := fmt.Sprintf("barnowl_session_%s.md", timestamp)
+	defaultFilename := fmt.Sprintf("barnowl_session_%s.md", timestamp)
 
-	// Create Downloads directory if it doesn't exist
-	downloadsDir := filepath.Join(homeDir, "Downloads")
-	if err := os.MkdirAll(downloadsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create downloads directory: %w", err)
+	filePath, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+		Title:           "Export Session",
+		DefaultFilename: defaultFilename,
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "Markdown Files (*.md)", Pattern: "*.md"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to open save dialog: %w", err)
 	}
-
-	filePath := filepath.Join(downloadsDir, filename)
+	if filePath == "" {
+		return "", nil // User cancelled
+	}
 
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# BarnOwl AI Session — %s\n\n", time.Now().Format("January 2, 2006 at 3:04 PM")))

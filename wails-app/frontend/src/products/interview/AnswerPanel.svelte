@@ -166,6 +166,10 @@
     exportStatus = 'saving';
     try {
       const path = await (window as any).go.main.App.ExportSession();
+      if (!path) {
+        exportStatus = 'idle'; // User cancelled
+        return;
+      }
       exportStatus = 'done';
       console.log('Session exported to:', path);
       setTimeout(() => exportStatus = 'idle', 3000);
