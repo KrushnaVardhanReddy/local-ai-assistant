@@ -170,3 +170,4 @@ BATCH 2 (Sequential Integration)
 | **P57-T11** | Raw/Filtered Transcript Toggle | ✅ Merged | ⚡ Parallel | [Local] | Toggle to show all STT transcripts regardless of length filter. |
 | **P57-T12** | Save Session to File | ✅ Merged | ⚡ Parallel | [PR 203] | Export session Q&A to markdown file in Downloads. |
 | **P57-T13** | Manual LLM Trigger Mode | ✅ Merged | Sequential | [PR 204] | Toggle to accumulate bubbles without auto-sending to LLM. |
+| **P57-T15** | Platform Component Refactor | ✅ Merged | Sequential | [#P57-T15] | Plug-and-Play Header Actions. |

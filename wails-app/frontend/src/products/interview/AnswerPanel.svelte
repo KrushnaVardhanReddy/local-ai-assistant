@@ -1,9 +1,12 @@
 <script lang="ts">
+  import type { HeaderAction } from '$lib/types';
+
   let {
     response = '',
     isThinking = false,
     cacheCount = 0,
     ragSources = [],
+    headerActions,
     onClearCache,
     onCopyAll,
   } = $props<{
@@ -11,6 +14,7 @@
     isThinking?: boolean;
     cacheCount?: number;
     ragSources?: string[];
+    headerActions?: HeaderAction[];
     onClearCache?: () => void;
     onCopyAll?: () => void;
   }>();
@@ -202,6 +206,21 @@
           <span class="badge">{cacheCount}</span>
         {/if}
       </button>
+
+      {#if headerActions}
+        {#each headerActions as action}
+          <button
+            class="icon-btn"
+            class:active={action.active}
+            title={action.label}
+            onclick={action.onClick}
+          >
+            <span class="material-symbols-outlined">
+              {action.active && action.activeIcon ? action.activeIcon : action.icon}
+            </span>
+          </button>
+        {/each}
+      {/if}
     </div>
   </div>
 

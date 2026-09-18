@@ -17,6 +17,7 @@
   import AuthModal from "$lib/components/AuthModal.svelte";
   import Settings from "$lib/Settings.svelte";
   import type { FileNode } from "$lib/components/workspace/types";
+  import type { HeaderAction } from "$lib/types";
 
   // Wails App methods
   let App: any;
@@ -32,6 +33,25 @@
 
   // State
   let showConvHotkeys = $state(false);
+
+  const convHeaderActions: HeaderAction[] = [
+    {
+      icon: 'star',
+      label: 'STAR Method',
+      onClick: handleStarMethod,
+    },
+    {
+      icon: 'history',
+      label: 'Catch Me Up',
+      onClick: handleCatchMeUp,
+    },
+    {
+      icon: 'keyboard',
+      label: 'Hotkeys',
+      onClick: () => { showConvHotkeys = !showConvHotkeys; },
+      get active() { return showConvHotkeys; },
+    },
+  ];
   let cacheCount = $state(0);
   let clickthrough = $state(false);
   let showSessionReport = $state(false);
@@ -385,12 +405,11 @@
         isThinking={wsState.isThinking}
         {includeActiveDocContext}
         {activeDocumentName}
+        headerActions={convHeaderActions}
         onSendChat={sendChat}
         onSendChip={sendChip}
         onDismissChip={dismissChip}
         onClearChips={clearAllChips}
-        onStarMethod={handleStarMethod}
-        onCatchMeUp={handleCatchMeUp}
         onSelectTranscript={(text: string, answer?: string) => {
           if (answerPanelRef) {
             if (answer && answerPanelRef.showLocalAnswer) {
@@ -400,8 +419,6 @@
             }
           }
         }}
-        showHotkeys={showConvHotkeys}
-        onToggleHotkeys={() => showConvHotkeys = !showConvHotkeys}
         onToggleMic={async () => {
           const newState = await (window as any).go.main.App.ToggleMic();
           wsState.isListening = newState;

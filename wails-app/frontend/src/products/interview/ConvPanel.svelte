@@ -1,5 +1,7 @@
 <script lang="ts">
   import { wsState, toggleManualMode } from '$lib/ws.svelte';
+  import type { HeaderAction } from '$lib/types';
+
   let {
     transcriptHistory = [],
     pendingTranscripts = [],
@@ -10,13 +12,12 @@
     isThinking = false,
     includeActiveDocContext = false,
     activeDocumentName = '',
+    headerActions,
 
     onSendChat,
     onSendChip,
     onDismissChip,
     onClearChips,
-    onStarMethod,
-    onCatchMeUp,
     onSelectTranscript,
     onToggleMic,
   } = $props<{
@@ -29,12 +30,11 @@
     isThinking?: boolean;
     includeActiveDocContext?: boolean;
     activeDocumentName?: string;
+    headerActions?: HeaderAction[];
     onSendChat?: (text: string) => void;
     onSendChip?: (chip: { id: string; text: string }) => void;
     onDismissChip?: (chipId: string) => void;
     onClearChips?: () => void;
-    onStarMethod?: () => void;
-    onCatchMeUp?: () => void;
     onSelectTranscript?: (text: string, answer?: string) => void;
     onToggleMic?: () => void;
   }>();
@@ -128,15 +128,21 @@
           {wsState.manualMode ? 'touch_app' : 'send_time_extension'}
         </span>
       </button>
-      <button class="icon-btn" title="STAR Method" onclick={() => onStarMethod?.()}>
-        <span class="material-symbols-outlined">star</span>
-      </button>
-      <button class="icon-btn" title="Catch Me Up" onclick={() => onCatchMeUp?.()}>
-        <span class="material-symbols-outlined">history</span>
-      </button>
-      <button class="icon-btn" class:active={showHotkeys} title="Hotkeys" onclick={() => showHotkeys = !showHotkeys}>
-        <span class="material-symbols-outlined">keyboard</span>
-      </button>
+
+      {#if headerActions}
+        {#each headerActions as action}
+          <button
+            class="icon-btn"
+            class:active={action.active}
+            title={action.label}
+            onclick={action.onClick}
+          >
+            <span class="material-symbols-outlined">
+              {action.active && action.activeIcon ? action.activeIcon : action.icon}
+            </span>
+          </button>
+        {/each}
+      {/if}
     </div>
   </div>
 
