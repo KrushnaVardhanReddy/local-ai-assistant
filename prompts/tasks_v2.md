@@ -158,7 +158,7 @@ BATCH 2 (Sequential Integration)
 | **P57-T7** | Unified Live Copilot Drawer (Ears + Brain) | ✅ Merged | Sequential | [PR 195](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/195) | Merge separate Ears & Brain drawers into unified conversation feed with top tools & bottom chips/chat |
 | **P57-T8A** | ConvPanel.svelte — Conversation Left Panel | ✅ Merged | ⚡ Parallel | [PR 198] | NEW file only. Left panel: transcript bubbles, suggestion chips, hotkeys overlay, chat input. No existing file edits. |
 | **P57-T8B** | AnswerPanel.svelte — LLM Answer Right Panel | ✅ Merged | ⚡ Parallel | [PR 197] | NEW file only. Right panel: streaming Markdown response, thinking pulse, cache stats, copy button. No existing file edits. |
-| **P57-T8C** | ActivityBar cleanup — remove copilot/keys icons | ⬜ Not Started | ⚡ Parallel | — | Tiny isolated edit to ActivityBar.svelte only. Remove `copilot` and `keys` from topActions. |
+| **P57-T8C** | ActivityBar cleanup — remove copilot/keys icons | ✅ Merged | ⚡ Parallel | [PR 196] | Tiny isolated edit to ActivityBar.svelte only. Remove `copilot` and `keys` from topActions. |
 | **P57-T8D** | Wire split-view layout in InterviewHUD + Tests | ⬜ Not Started | Sequential | — | **Depends on T8A+T8B+T8C merged.** Rewrites InterviewHUD layout to use ConvPanel+AnswerPanel side-by-side. Updates ui.spec.ts Playwright tests. |
 
 

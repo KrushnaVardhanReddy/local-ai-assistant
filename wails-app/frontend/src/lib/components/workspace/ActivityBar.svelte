@@ -9,12 +9,10 @@
 
   const topActions = [
     { id: 'explorer', icon: 'folder', label: 'Folder' },
-    { id: 'copilot', icon: 'auto_awesome', label: 'Brain' },
     { id: 'mock', icon: 'record_voice_over', label: 'Mock' }
   ];
 
   const bottomActions = [
-    { id: 'keys', icon: 'keyboard', label: 'Keys' },
     { id: 'settings', icon: 'settings', label: 'Settings' }
   ];
 
