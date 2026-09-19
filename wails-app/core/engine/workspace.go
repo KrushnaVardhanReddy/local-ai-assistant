@@ -174,7 +174,46 @@ func (e *StealthEngine) OpenFile(filePath string) (*driving.WorkspaceDocument, e
 	e.workspaceMu.Lock()
 	e.openDocuments[filePath] = newDoc
 	e.activeDoc = newDoc
+
+	// Check if file is already in workspace tree
+	found := false
+	var walk func(nodes []*driving.FileNode)
+	walk = func(nodes []*driving.FileNode) {
+		for _, node := range nodes {
+			if node.Path == filePath {
+				found = true
+				return
+			}
+			if len(node.Children) > 0 {
+				walk(node.Children)
+			}
+		}
+	}
+	walk(e.workspaceTree)
+
+	var newlyAdded bool
+	if !found {
+		// Not found in tree, create a new node and append
+		info, err := os.Stat(filePath)
+		if err == nil {
+			node := &driving.FileNode{
+				ID:        filePath,
+				Name:      info.Name(),
+				Path:      filePath,
+				IsDir:     false,
+				Extension: strings.ToLower(filepath.Ext(info.Name())),
+				Size:      info.Size(),
+			}
+			e.workspaceTree = append(e.workspaceTree, node)
+			newlyAdded = true
+		}
+	}
+
 	e.workspaceMu.Unlock()
+
+	if newlyAdded && e.events != nil {
+		e.events.Emit("on_workspace_tree_updated", e.workspaceTree)
+	}
 
 	// If cache is enabled, we could potentially index it here.
 	// We'll store it as a single chunk for simplicity in this implementation,

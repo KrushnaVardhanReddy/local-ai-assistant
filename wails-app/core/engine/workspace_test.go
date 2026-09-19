@@ -229,6 +229,61 @@ func TestStealthEngine_Workspace(t *testing.T) {
 		}
 	})
 
+
+	t.Run("OpenFile - Standalone Append to Tree", func(t *testing.T) {
+		// Standalone file not in initial workspace tree
+		standalonePath := filepath.Join(tempDir, "standalone.txt")
+		err := os.WriteFile(standalonePath, []byte("standalone content"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create standalone file: %v", err)
+		}
+
+		doc, err := engine.OpenFile(standalonePath)
+		if err != nil {
+			t.Fatalf("OpenFile failed: %v", err)
+		}
+		if doc.Content != "standalone content" {
+			t.Errorf("Expected standalone content, got %s", doc.Content)
+		}
+
+		// Verify it was appended to workspace tree
+		tree := engine.GetWorkspaceTree()
+		found := false
+		var walk func(nodes []*driving.FileNode)
+		walk = func(nodes []*driving.FileNode) {
+			for _, node := range nodes {
+				if node.Path == standalonePath {
+					found = true
+					return
+				}
+				walk(node.Children)
+			}
+		}
+		walk(tree)
+		if !found {
+			t.Errorf("Expected standalone file to be appended to workspace tree")
+		}
+
+		// Verify event was emitted
+		if payload, ok := events.emitted["on_workspace_tree_updated"]; !ok {
+			t.Errorf("Expected on_workspace_tree_updated event to be emitted")
+		} else {
+			nodes, ok := payload.([]*driving.FileNode)
+			if !ok {
+				t.Errorf("Expected event payload to be []*driving.FileNode, got %T", payload)
+			}
+			foundInPayload := false
+			for _, n := range nodes {
+				if n.Path == standalonePath {
+					foundInPayload = true
+					break
+				}
+			}
+			if !foundInPayload {
+				t.Errorf("Expected standalone file in event payload tree")
+			}
+		}
+	})
 	t.Run("OpenFile - Error", func(t *testing.T) {
 		_, err := engine.OpenFile(filepath.Join(tempDir, "does-not-exist.txt"))
 		if err == nil {

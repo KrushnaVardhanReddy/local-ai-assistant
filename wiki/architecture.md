@@ -54,3 +54,6 @@ Because the `StealthEngine` is completely generic, we can create multiple distin
 1. Which Svelte UI component to load.
 2. The specific system prompt to inject into the LLM adapter.
 3. The specific setup/teardown logic for that tool.
+
+### Workspace
+- **Workspace Tree**: The workspace manages files loaded into the application. Standalone files opened (e.g., resumes, code) are appended to the workspace tree as root nodes, allowing them to be indexed for RAG.
