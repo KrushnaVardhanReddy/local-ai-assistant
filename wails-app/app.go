@@ -645,6 +645,6 @@ func (a *App) SetManualMode(enabled bool) {
 
 // SummarizeSession uses the LLM to summarize the entire interview session
 // using predefined templates.
-func (a *App) SummarizeSession(templateIDs []string) error {
-	return a.engine.SummarizeSession(templateIDs)
+func (a *App) SummarizeSession(requests []engine.SummaryRequest) error {
+	return a.engine.SummarizeSession(requests)
 }

@@ -166,9 +166,15 @@ func (e *StealthEngine) SetManualMode(enabled bool) {
 	e.manualMode = enabled
 }
 
+// SummaryRequest holds the configuration for a single summary template.
+type SummaryRequest struct {
+	ID     string `json:"id"`
+	Prompt string `json:"prompt"`
+}
+
 // SummarizeSession uses the LLM to summarize the entire interview session
-// using predefined templates. It streams the results asynchronously.
-func (e *StealthEngine) SummarizeSession(templateIDs []string) error {
+// using predefined or custom templates. It streams the results asynchronously.
+func (e *StealthEngine) SummarizeSession(requests []SummaryRequest) error {
 	if e.sessionMgr == nil {
 		return fmt.Errorf("session manager not configured")
 	}
@@ -189,23 +195,18 @@ func (e *StealthEngine) SummarizeSession(templateIDs []string) error {
 
 	transcriptStr := transcript.String()
 
-	for _, id := range templateIDs {
-		go func(templateID string) {
-			sysPrompt := "You are a helpful assistant. Summarize the interview."
-			switch templateID {
-			case "granola":
-				sysPrompt = "You are Granola. Create detailed action notes and a professional summary of this interview."
-			case "star":
-				sysPrompt = "Extract the key behaviors and responses from the candidate using the STAR (Situation, Task, Action, Result) method based on the interview transcript."
-			case "scorecard":
-				sysPrompt = "Create a technical scorecard evaluating the candidate based on the interview transcript. Provide ratings and justification."
+	for _, req := range requests {
+		go func(r SummaryRequest) {
+			sysPrompt := r.Prompt
+			if sysPrompt == "" {
+				sysPrompt = "You are a helpful assistant. Summarize the interview."
 			}
 
 			// We use a completely detached context so in-flight cancellations do not affect summaries.
 			ctx := context.Background()
 
 			if e.events != nil {
-				e.events.Emit("on_summary_start", map[string]interface{}{"id": templateID})
+				e.events.Emit("on_summary_start", map[string]interface{}{"id": r.ID})
 			}
 
 			err := e.llm.StreamCompletion(
@@ -216,14 +217,14 @@ func (e *StealthEngine) SummarizeSession(templateIDs []string) error {
 				func(token string) {
 					if e.events != nil {
 						e.events.Emit("on_summary_token", map[string]interface{}{
-							"id":   templateID,
+							"id":   r.ID,
 							"text": token,
 						})
 					}
 				},
 				func() {
 					if e.events != nil {
-						e.events.Emit("on_summary_end", map[string]interface{}{"id": templateID})
+						e.events.Emit("on_summary_end", map[string]interface{}{"id": r.ID})
 					}
 				},
 			)
@@ -232,13 +233,13 @@ func (e *StealthEngine) SummarizeSession(templateIDs []string) error {
 				// Handle error
 				if e.events != nil {
 					e.events.Emit("on_summary_token", map[string]interface{}{
-						"id":   templateID,
+						"id":   r.ID,
 						"text": fmt.Sprintf("\n[Error: %v]", err),
 					})
-					e.events.Emit("on_summary_end", map[string]interface{}{"id": templateID})
+					e.events.Emit("on_summary_end", map[string]interface{}{"id": r.ID})
 				}
 			}
-		}(id)
+		}(req)
 	}
 
 	return nil
