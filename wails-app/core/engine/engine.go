@@ -117,6 +117,11 @@ func (e *StealthEngine) GetSessionManager() *session.SessionManager {
 	return e.sessionMgr
 }
 
+// SetSessionManager sets the session manager instance.
+func (e *StealthEngine) SetSessionManager(sm *session.SessionManager) {
+	e.sessionMgr = sm
+}
+
 // GetCache returns the cache port instance.
 func (e *StealthEngine) GetCache() driven.CachePort {
 	return e.cache

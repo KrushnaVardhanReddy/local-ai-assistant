@@ -194,6 +194,6 @@ BATCH 1 (Parallel execution — both are fully independent)
 | Task ID | Title | Status | Parallel? | PR | Notes |
 |---------|-------|--------|-----------|----|-------|
 | **P58-T1** | Rolling Transcript Context | ⬜ | ⚡ Parallel | — | Buffer last 5 transcripts; wrap LLM prompt so it reconstructs fragmented questions |
-| **P58-T2** | Fix ExportSession — Current Session Only | ⬜ | ⚡ Parallel | — | Read from SessionManager.turns instead of SQLite GetAllItems() |
+| **P58-T2** | Fix ExportSession — Current Session Only | ✅ Merged | ⚡ Parallel | [#P58-T2] | Read from SessionManager.turns instead of SQLite GetAllItems() |
 | **P58-T3** | Summarize Session (LLM Post-Processing) | ⬜ | ⚡ Parallel | — | Template-based LLM summarization of the full session history |
 
