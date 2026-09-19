@@ -1,0 +1,127 @@
+TASK: P58-T2 — Fix ExportSession to Export Current Session Only
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+The `ExportSession()` method in `wails-app/app.go` currently fetches Q&A pairs
+from the SQLite vector cache (`GetAllItems()`), which returns EVERY pair ever
+stored across ALL sessions — not just the current one.
+
+Fix it to export only the Q&A turns from the current live session.
+
+The `SessionManager` in `wails-app/backend/session/session.go` already tracks
+this in-memory via `sm.turns []Turn` (each Turn has InterviewerQuestion + AISuggestion).
+
+This task touches Go backend only. It is SAFE to run in parallel with P58-T1.
+DO NOT touch any Svelte frontend files.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/app.go`                  [MODIFY ExportSession function]
+- `wails-app/app_test.go`             [UPDATE TestApp_ExportSession test]
+- `prompts/tasks_v2.md`               [UPDATE — mark T2 done with PR number]
+
+DO NOT touch any Svelte frontend files.
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: app.go — Rewrite ExportSession()
+═══════════════════════════════════════════════════════════════
+Replace the current implementation of `ExportSession()` (around line 589).
+
+Current (wrong): reads from cache adapter via `GetAllItems()`
+New: reads from `SessionManager` via `GetSessionManager()`
+
+New implementation:
+
+```go
+func (a *App) ExportSession() (string, error) {
+    sessMgr := a.engine.GetSessionManager()
+    if sessMgr == nil {
+        return "", fmt.Errorf("session manager not available")
+    }
+
+    sessionData := sessMgr.Export()
+    turns, _ := sessionData["turns"].([]session.Turn)
+    if len(turns) == 0 {
+        return "", fmt.Errorf("no turns in current session to export")
+    }
+
+    timestamp := time.Now().Format("2006-01-02_15-04-05")
+    defaultFilename := fmt.Sprintf("barnowl_session_%s.md", timestamp)
+
+    filePath, err := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+        Title:           "Export Session",
+        DefaultFilename: defaultFilename,
+        Filters: []wailsruntime.FileFilter{
+            {DisplayName: "Markdown Files (*.md)", Pattern: "*.md"},
+            {DisplayName: "All Files (*.*)", Pattern: "*.*"},
+        },
+    })
+    if err != nil {
+        return "", fmt.Errorf("failed to open save dialog: %w", err)
+    }
+    if filePath == "" {
+        return "", nil // User cancelled
+    }
+
+    var sb strings.Builder
+    sb.WriteString(fmt.Sprintf("# BarnOwl AI Session — %s\n\n", time.Now().Format("January 2, 2006 at 3:04 PM")))
+
+    for _, turn := range turns {
+        sb.WriteString(fmt.Sprintf("## Q%d: %s\n\n", turn.TurnIndex, turn.InterviewerQuestion))
+        sb.WriteString(fmt.Sprintf("%s\n\n", turn.AISuggestion))
+        sb.WriteString("---\n\n")
+    }
+
+    if err := os.WriteFile(filePath, []byte(sb.String()), 0644); err != nil {
+        return "", fmt.Errorf("failed to write file: %w", err)
+    }
+
+    log.Printf("📄 Session exported to: %s", filePath)
+    return filePath, nil
+}
+```
+
+Add the import `"wails-app/backend/session"` to the import block if it is not
+already present. Remove any import that is now unused as a result of this change
+(e.g. `"wails-app/backend"` if it is no longer referenced in this function —
+but CHECK first: it may still be used by GetCacheItems() or GetCacheStats()).
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: app_test.go — Update TestApp_ExportSession
+═══════════════════════════════════════════════════════════════
+The existing `TestApp_ExportSession` test (around line 159) mocks the cache adapter.
+Rewrite it to test the new session-manager-based path instead.
+
+The test should:
+1. Create a `NewApp()`.
+2. Create a new `engine.New(engine.Config{}, nil, nil, nil, nil)` and wire in
+   a real `session.NewSessionManager()` via `engine.New(...)` or the engine's
+   `SetSessionManager` if available, OR directly set `app.engine` to an engine
+   that has a session manager with pre-populated turns.
+3. Manually call `sessMgr.StartTurn("Q1")`, `sessMgr.SetAISuggestion("A1")`,
+   `sessMgr.CompleteTurn()`, and again for Q2/A2.
+4. Set `HOME` env var to a temp dir.
+5. Call `app.ExportSession()` — note: this opens a SaveFileDialog which requires
+   a Wails context, so the test will return an error at that step. Test that the
+   error does NOT come from "no turns in current session" — instead it should fail
+   at the dialog step (which is expected in tests without a GUI context).
+6. Also test the nil-session-manager path: set engine to one with no session
+   manager (pass nil for sessionMgr in `engine.New`) and verify ExportSession
+   returns an error containing "session manager not available".
+7. Delete the old `mockCacheAdapter` struct and all its methods if they are no
+   longer used anywhere else in the test file.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `go build ./...` (with correct CGO flags from Makefile) passes with 0 errors.
+- `go test ./...` passes with 0 failures (use build tags if needed to skip CGO tests).
+- ExportSession reads from SessionManager turns, not from SQLite cache.
+- When SessionManager is nil: returns error "session manager not available".
+- When 0 turns in session: returns error "no turns in current session to export".
+- Markdown output format: `## Q{N}: {InterviewerQuestion}` + `{AISuggestion}` + `---`.
+- Zero changes to any Svelte frontend file.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `fix(app): export current session only via SessionManager (#P58-T2)`

@@ -1,0 +1,109 @@
+TASK: P58-T1 — Rolling Transcript Context for LLM Calls
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+When an interviewer pauses mid-sentence, the VAD (Voice Activity Detection) splits
+a single question into multiple short transcript chunks. For example:
+  Chunk 1: "Tell me about your experience with"
+  Chunk 2: "distributed systems?"
+
+Neither chunk alone is a coherent question, so the LLM gives a poor answer.
+
+Fix: instead of sending only the latest transcript to the LLM, pass the last 5
+transcripts as rolling context and instruct the LLM to identify and answer only
+the most recent complete question (combining fragments if needed).
+
+This task touches Go backend only. It is SAFE to run in parallel with P58-T2.
+DO NOT touch any Svelte frontend files.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/core/engine/engine.go`           [ADD FIELD to StealthEngine struct]
+- `wails-app/core/engine/pipeline.go`         [MODIFY handleTranscript logic]
+- `wails-app/core/engine/pipeline_test.go`    [ADD unit test]
+- `prompts/tasks_v2.md`                       [UPDATE — mark T1 done with PR number]
+
+DO NOT touch any Svelte frontend files or app.go.
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: engine.go — Add transcriptBuffer Field
+═══════════════════════════════════════════════════════════════
+In the `StealthEngine` struct, add a new field:
+
+```go
+transcriptBuffer []string // rolling window of last 5 accepted transcripts
+```
+
+Place it alongside the other state fields (e.g. near `transcript string`).
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: pipeline.go — Populate Buffer & Wrap LLM Prompt
+═══════════════════════════════════════════════════════════════
+In `handleTranscript`, after the filter passes and `cleanTranscript` is set
+(after the `log.Printf("🎤 STT OUTPUT..." ~line 55)`), append to the buffer:
+
+```go
+e.mu.Lock()
+e.transcriptBuffer = append(e.transcriptBuffer, cleanTranscript)
+if len(e.transcriptBuffer) > 5 {
+    e.transcriptBuffer = e.transcriptBuffer[len(e.transcriptBuffer)-5:]
+}
+e.mu.Unlock()
+```
+
+Then, inside the goroutine that calls `e.llm.StreamCompletion`, build the LLM
+question string BEFORE the call. Replace the current usage of `q` with `llmQuestion`:
+
+```go
+e.mu.RLock()
+buf := make([]string, len(e.transcriptBuffer))
+copy(buf, e.transcriptBuffer)
+e.mu.RUnlock()
+
+var llmQuestion string
+if len(buf) > 1 {
+    var sb strings.Builder
+    sb.WriteString("The following are the last few things the interviewer said (in chronological order).\n")
+    sb.WriteString("Some of these may be sentence fragments from natural pauses mid-question.\n\n")
+    for i, t := range buf {
+        sb.WriteString(fmt.Sprintf("[%d] %q\n", i+1, t))
+    }
+    sb.WriteString("\nIdentify the most recent complete question (combining fragments if needed) and answer it concisely.\n")
+    sb.WriteString("Do NOT re-answer earlier unrelated questions.")
+    llmQuestion = sb.String()
+} else {
+    llmQuestion = q
+}
+```
+
+Pass `llmQuestion` to `e.llm.StreamCompletion(streamCtx, llmQuestion, sysPrompt, history, ...)`.
+
+CRITICAL CONSTRAINTS — do NOT change these:
+- Cache lookup key: remains `cleanTranscript` (the single latest transcript)
+- Cache store key: remains `cleanTranscript`
+- `sessionMgr.StartTurn()` arg: remains `cleanTranscript`
+- `e.mu` mutex must protect all reads/writes to `transcriptBuffer`
+
+═══════════════════════════════════════════════════════════════
+SECTION 3: pipeline_test.go — Add Unit Test
+═══════════════════════════════════════════════════════════════
+Add a test that verifies: when 3 transcripts are in the buffer, the string
+passed to the LLM contains all 3 entries formatted with numbered brackets.
+
+Use a mock LLM adapter that captures the `question` argument passed to
+`StreamCompletion`. Pre-populate `e.transcriptBuffer` with 3 strings, then
+call `e.handleTranscript` with a 4th. Assert that the captured question string
+contains `[1]`, `[2]`, `[3]`, and `[4]` entries.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- `go test ./core/engine/...` must pass with 0 failures.
+- When buffer has 1 entry: LLM receives the plain transcript string (no wrapping).
+- When buffer has >1 entry: LLM receives the numbered multi-line rolling context prompt.
+- Cache key is unchanged (still the single cleanTranscript string).
+- Zero changes to any Svelte file.
+- Maintain clean Git history on `feature/krushna_golang`.
+- PR title format: `feat(engine): rolling transcript context for fragmented questions (#P58-T1)`

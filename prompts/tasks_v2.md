@@ -172,3 +172,27 @@ BATCH 2 (Sequential Integration)
 | **P57-T13** | Manual LLM Trigger Mode | ✅ Merged | Sequential | [PR 204] | Toggle to accumulate bubbles without auto-sending to LLM. |
 | **P57-T15** | Platform Component Refactor | ✅ Merged | Sequential | [#P57-T15] | Plug-and-Play Header Actions. |
 | **P57-T15** | Plug-and-Play Header Actions | ✅ Merged | Sequential | [PR 205] | Refactor ConvPanel/AnswerPanel to take dynamic headerActions array. |
+
+---
+
+## Phase 58 — Transcript Intelligence
+
+> **Goal:** Improve how the LLM handles fragmented interviewer speech and fix the session export to download only the current live session (not the full historical cache).
+>
+> **Branch:** `feature/krushna_golang`
+
+### Dependency Order
+
+```
+BATCH 1 (Parallel execution — both are fully independent)
+  P58-T1 ⚡ Rolling Transcript Context (Go Backend)
+  P58-T2 ⚡ Fix ExportSession — Current Session Only (Go Backend)
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P58-T1** | Rolling Transcript Context | ⬜ | ⚡ Parallel | — | Buffer last 5 transcripts; wrap LLM prompt so it reconstructs fragmented questions |
+| **P58-T2** | Fix ExportSession — Current Session Only | ⬜ | ⚡ Parallel | — | Read from SessionManager.turns instead of SQLite GetAllItems() |
+
