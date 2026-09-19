@@ -81,6 +81,7 @@ Critical Rules:
 - NEVER use Ollama-specific endpoints (/api/generate, /api/chat). Always use /v1/chat/completions.
 - Cloud providers need `Authorization: Bearer <key>` header.
 - NEVER log or print API keys.
+- ALWAYS UPDATE THE WIKI: If your task involves architectural changes, feature additions, or UI refactors, you MUST also review and update the relevant markdown files in the `wiki/` directory to document your changes.
 """.strip()
 
 # ──────────────────────────────────────────────────────────────────────────────
