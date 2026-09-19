@@ -643,3 +643,9 @@ func (a *App) SetManualMode(enabled bool) {
 		log.Printf("🎛️ Manual mode set to: %v", enabled)
 	}
 }
+
+// SummarizeSession uses the LLM to summarize the entire interview session
+// using predefined templates.
+func (a *App) SummarizeSession(templateIDs []string) error {
+	return a.engine.SummarizeSession(templateIDs)
+}

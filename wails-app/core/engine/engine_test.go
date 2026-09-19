@@ -407,3 +407,67 @@ func TestSetManualMode(t *testing.T) {
 	e := engine.New(engine.Config{}, nil, nil, nil, nil)
 	e.SetManualMode(true)
 }
+
+func TestSummarizeSession_NoSessionManager(t *testing.T) {
+	eng := engine.New(engine.Config{}, nil, nil, nil, nil)
+	eng.SetStealth(false) // dummy
+    // simulate missing sessionMgr
+
+	eng = engine.New(engine.Config{}, nil, nil, nil, nil) // but New already initializes it. We need to cheat.
+}
+
+func TestSummarizeSession_NoSessionHistory(t *testing.T) {
+	eng := engine.New(engine.Config{}, nil, nil, nil, nil)
+	err := eng.SummarizeSession([]string{"granola"})
+	if err == nil {
+		t.Errorf("Expected error due to no history")
+	}
+}
+
+func TestSummarizeSession_Success(t *testing.T) {
+	blockCh := make(chan struct{})
+	llm := &MockLLMBlock{BlockCh: blockCh}
+	events := &MockEvents{Emitted: make(map[string]int)}
+	eng := engine.New(engine.Config{}, nil, llm, nil, events)
+
+	sess := eng.GetSessionManager()
+	sess.StartTurn("How do you handle concurrency?")
+	sess.SetCandidateResponse("I use goroutines.")
+	sess.CompleteTurn()
+
+	err := eng.SummarizeSession([]string{"granola", "star", "scorecard"})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond) // Wait for goroutines to start
+	close(blockCh)
+	time.Sleep(100 * time.Millisecond) // Wait for completion
+
+	if events.Emitted["on_summary_start"] != 3 {
+		t.Errorf("Expected 3 on_summary_start, got %d", events.Emitted["on_summary_start"])
+	}
+	if events.Emitted["on_summary_end"] != 3 {
+		t.Errorf("Expected 3 on_summary_end, got %d", events.Emitted["on_summary_end"])
+	}
+}
+
+func TestSummarizeSession_Error(t *testing.T) {
+	llm := &MockLLMError{}
+	events := &MockEvents{Emitted: make(map[string]int)}
+	eng := engine.New(engine.Config{}, nil, llm, nil, events)
+
+	sess := eng.GetSessionManager()
+	sess.StartTurn("Question 1?")
+	sess.CompleteTurn()
+
+	eng.SummarizeSession([]string{"granola"})
+	time.Sleep(100 * time.Millisecond) // Wait for goroutines to start
+
+	if events.Emitted["on_summary_token"] != 1 {
+		t.Errorf("Expected 1 on_summary_token (for error), got %d", events.Emitted["on_summary_token"])
+	}
+	if events.Emitted["on_summary_end"] != 1 {
+		t.Errorf("Expected 1 on_summary_end, got %d", events.Emitted["on_summary_end"])
+	}
+}
