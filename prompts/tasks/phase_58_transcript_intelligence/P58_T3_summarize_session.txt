@@ -1,0 +1,68 @@
+TASK: P58-T3 — Summarize Session (LLM Post-Processing)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a new feature that uses the LLM to summarize the entire interview session
+using predefined templates (e.g., Granola Action Notes, STAR Method Breakdown,
+Technical Scorecard).
+
+This requires:
+1. A new backend engine method to format the session history and stream an LLM response.
+2. New frontend Wails bindings and a UI modal to trigger and display the summary.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/core/engine/engine.go`           [ADD method]
+- `wails-app/app.go`                          [ADD Wails binding]
+- `wails-app/frontend/src/lib/ws.svelte.ts`   [ADD event listeners for summary stream]
+- `wails-app/frontend/src/products/interview/SummaryModal.svelte` [NEW file]
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte`    [ADD trigger button]
+- `prompts/tasks_v2.md`                       [UPDATE]
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: Backend Implementation (Go)
+═══════════════════════════════════════════════════════════════
+1. In `wails-app/core/engine/engine.go`, add `SummarizeSession(templateID string) error`.
+   - Retrieve all turns from `e.sessionMgr`. If none, return error.
+   - Format the entire transcript into a single string (Interviewer: X, AI: Y).
+   - Select a system prompt based on `templateID` (e.g. "granola", "star", "scorecard").
+   - Call `e.llm.StreamCompletion(ctx, transcript, systemPrompt, nil, onToken, onEnd)`.
+   - Inside the callbacks, use `e.events.Emit` to send `"on_summary_start"`,
+     `"on_summary_token"`, and `"on_summary_end"` events to the frontend.
+
+2. In `wails-app/app.go`, add the Wails binding:
+```go
+func (a *App) SummarizeSession(templateID string) error {
+    return a.engine.SummarizeSession(templateID)
+}
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: Frontend Implementation (Svelte)
+═══════════════════════════════════════════════════════════════
+1. In `ws.svelte.ts`:
+   - Add state variables: `summaryResult: ""`, `isSummarizing: false`.
+   - Add event listeners for `on_summary_start`, `on_summary_token` (appends to summaryResult),
+     and `on_summary_end`.
+
+2. Create `SummaryModal.svelte` (using standard App modal styling):
+   - A dropdown or row of buttons to select the template (Granola, STAR, Scorecard).
+   - A `Generate` button that calls `SummarizeSession(id)`.
+   - A markdown rendering area for the streaming `summaryResult`.
+   - A `Copy to Clipboard` button that appears when `isSummarizing` completes.
+
+3. In `ConvPanel.svelte`:
+   - Add a "Summarize Session" icon button next to the existing header buttons.
+   - Clicking it opens the `SummaryModal`.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- Compiles successfully (`go build ./...` and `npm run check`).
+- Clicking "Summarize" opens a modal.
+- Requesting a summary streams text into the modal without interfering with the
+  main `AnswerPanel` state.
+- Multiple templates are supported.
+- PR title format: `feat(app): add AI session summarization templates (#P58-T3)`
