@@ -1,0 +1,71 @@
+TASK: P60-T1 — Workspace RAG Document Indexing Pipeline
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Build a full RAG document indexing pipeline so users can select files and folders
+from the workspace file tree and index them into the local sqlite-vec vector store.
+Indexed documents (e.g., resume.pdf, job_description.txt) will be semantically
+searched during every LLM query — exactly like code-based context.
+
+The key UX: checkboxes on file/folder nodes in the existing IDE sidebar. Checked items
+get embedded and indexed. Already-indexed files show a visual badge.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/app.go
+MODIFY: wails-app/backend/vector_db.go  (or relevant file that exposes the sqlite-vec store)
+MODIFY: wails-app/adapters/cache/sqlitevec_adapter.go
+MODIFY: wails-app/core/engine/engine.go  (update RAG query to include document chunks)
+MODIFY: wails-app/frontend/src/lib/components/WorkspacePanel.svelte  (add checkboxes)
+MODIFY: wails-app/frontend/src/products/interview/CacheManagerModal.svelte  (add Docs tab)
+NEW:    wails-app/app_index_test.go
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. In `wails-app/backend/vector_db.go` (or `sqlitevec_adapter.go`):
+   - Add a `source_type` column to the existing embeddings table:
+       `source_type TEXT NOT NULL DEFAULT 'qa'`  -- values: 'qa' | 'document'
+   - Add a `source_path` column to store the originating file path.
+   - Write a new `InsertDocumentChunk(path, chunkText string, embedding []float32) error` method.
+   - Write a `GetIndexedPaths() ([]string, error)` method that returns distinct `source_path` values where `source_type = 'document'`.
+   - Write a `DeleteDocumentsByPath(path string) error` method.
+   - Update `SemanticSearch` to query BOTH 'qa' and 'document' rows, returning the best matches regardless of type.
+
+2. In `wails-app/app.go`:
+   - Add `IndexFile(path string) error`: reads file content, chunks into ~512-token segments,
+     calls the ONNX embedding model (already loaded via `backend.InitEmbeddings()`),
+     and stores each chunk using `InsertDocumentChunk`. Supported extensions: `.txt`, `.md`, `.pdf`, `.go`, `.ts`, `.svelte`.
+   - Add `IndexFolder(path string) error`: recursively walks the directory, calling `IndexFile`
+     for each supported file. Skip hidden files/dirs (starting with `.`).
+   - Add `GetIndexedPaths() []string`: delegates to the cache adapter.
+   - Add `RemoveIndexedPath(path string) error`: delegates to `DeleteDocumentsByPath`.
+
+3. In `wails-app/frontend/src/lib/components/WorkspacePanel.svelte`:
+   - Add a checkbox (`<input type="checkbox">`) to each file and folder node in the tree.
+   - On check: call `window.go.main.App.IndexFile(path)` or `IndexFolder(path)` and show a spinner.
+   - On uncheck: call `window.go.main.App.RemoveIndexedPath(path)`.
+   - On component mount: call `GetIndexedPaths()` and pre-check boxes for already-indexed paths.
+   - Show a small blue dot `●` badge on file nodes whose path is in the indexed set.
+
+4. In `wails-app/frontend/src/products/interview/CacheManagerModal.svelte`:
+   - Add a two-tab layout to the modal header: **"Q&A Cache"** and **"Workspace Docs"**.
+   - The "Workspace Docs" tab lists indexed paths (from `GetIndexedPaths()`), each with a
+     "Remove" button that calls `RemoveIndexedPath(path)`.
+
+5. In `wails-app/core/engine/engine.go`:
+   - The existing RAG `SemanticSearch` call already runs. No change needed IF step 1
+     updates `SemanticSearch` to return results from both source types. Verify this is the case.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- `go test ./...` in `wails-app` must pass with zero failures.
+- New tests in `app_index_test.go` must verify:
+  1. `IndexFile` with a `.txt` file produces entries in the vector store with `source_type = 'document'`.
+  2. `GetIndexedPaths` returns the path after indexing.
+  3. `RemoveIndexedPath` removes all chunks for that path.
+  4. `SemanticSearch` returns document chunks alongside Q&A results.
