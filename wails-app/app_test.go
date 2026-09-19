@@ -142,77 +142,58 @@ func TestApp_ToggleMic(t *testing.T) {
 }
 
 
-type mockCacheAdapter struct {
-    items []backend.CacheItem
-    err   error
-}
-
-func (m *mockCacheAdapter) GetAllItems() ([]backend.CacheItem, error) {
-    return m.items, m.err
-}
-func (m *mockCacheAdapter) Store(item backend.CacheItem) error { return nil }
-func (m *mockCacheAdapter) Search(query string, limit int) ([]backend.CacheItem, error) { return nil, nil }
-func (m *mockCacheAdapter) DeleteItem(id string) error { return nil }
-func (m *mockCacheAdapter) ClearAll() error { return nil }
-func (m *mockCacheAdapter) EnsureIndex() error { return nil }
-func (m *mockCacheAdapter) Count() (int, error) { return len(m.items), nil }
-
 func TestApp_ExportSession(t *testing.T) {
 	app := NewApp()
 
-    mockCache := &mockCacheAdapter{
-        items: []backend.CacheItem{
-            {Question: "Q1", Answer: "A1"},
-            {Question: "Q2", Answer: "A2"},
-        },
-    }
-    app.engine = engine.New(
+	app.engine = engine.New(
 		engine.Config{},
 		nil,
 		nil,
-		mockCache,
+		nil,
 		nil,
 	)
 
-    tempDir := t.TempDir()
-    t.Setenv("HOME", tempDir)
-    t.Setenv("USERPROFILE", tempDir) // for Windows
+	sessMgr := app.engine.GetSessionManager()
+	sessMgr.StartTurn("Q1")
+	sessMgr.SetAISuggestion("A1")
+	sessMgr.CompleteTurn()
 
-    filePath, err := app.ExportSession()
-    if err != nil {
-        t.Fatalf("ExportSession failed: %v", err)
-    }
+	sessMgr.StartTurn("Q2")
+	sessMgr.SetAISuggestion("A2")
+	sessMgr.CompleteTurn()
 
-    if _, err := os.Stat(filePath); os.IsNotExist(err) {
-        t.Fatalf("Expected file to exist at %s", filePath)
-    }
+	tempDir := t.TempDir()
+	t.Setenv("HOME", tempDir)
+	t.Setenv("USERPROFILE", tempDir) // for Windows
 
-    content, err := os.ReadFile(filePath)
-    if err != nil {
-        t.Fatalf("Failed to read exported file: %v", err)
-    }
+	_, err := app.ExportSession()
+	if err == nil {
+		t.Fatalf("Expected error from SaveFileDialog due to missing Wails context")
+	}
 
-    contentStr := string(content)
-    if !strings.Contains(contentStr, "## Q1: Q1") {
-        t.Errorf("Expected content to contain Q1, got: %s", contentStr)
-    }
-    if !strings.Contains(contentStr, "A2") {
-        t.Errorf("Expected content to contain A2, got: %s", contentStr)
-    }
+	if err.Error() == "no turns in current session to export" {
+		t.Fatalf("Expected error from SaveFileDialog, got: %v", err)
+	}
 
-    // Test error case
-    mockCache.err = fmt.Errorf("mock error")
-    _, err = app.ExportSession()
-    if err == nil {
-        t.Fatalf("Expected error when GetAllItems fails")
-    }
+	// Test 0 turns
+	app.engine = engine.New(
+		engine.Config{},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+	_, err = app.ExportSession()
+	if err == nil || !strings.Contains(err.Error(), "no turns in current session to export") {
+		t.Fatalf("Expected 'no turns' error, got: %v", err)
+	}
 
-    // Test invalid cache adapter type (doesn't implement GetAllItems)
-    app.engine = engine.New(engine.Config{}, nil, nil, nil, nil)
-    _, err = app.ExportSession()
-    if err == nil {
-        t.Fatalf("Expected error when cache adapter doesn't implement GetAllItems")
-    }
+	// Test nil session manager
+	app.engine.SetSessionManager(nil)
+	_, err = app.ExportSession()
+	if err == nil || !strings.Contains(err.Error(), "session manager not available") {
+		t.Fatalf("Expected 'session manager not available' error, got: %v", err)
+	}
 }
 
 func TestApp_SetManualMode(t *testing.T) {

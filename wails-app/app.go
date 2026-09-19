@@ -587,16 +587,15 @@ func (a *App) ToggleMic() bool {
 // ExportSession exports all cached Q&A pairs from this session to a markdown file.
 // It writes to ~/Downloads/barnowl_session_<timestamp>.md and returns the file path.
 func (a *App) ExportSession() (string, error) {
-	cacheAdapter, ok := a.engine.GetCache().(interface {
-		GetAllItems() ([]backend.CacheItem, error)
-	})
-	if !ok {
-		return "", fmt.Errorf("cache adapter does not support GetAllItems")
+	sessMgr := a.engine.GetSessionManager()
+	if sessMgr == nil {
+		return "", fmt.Errorf("session manager not available")
 	}
 
-	items, err := cacheAdapter.GetAllItems()
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch cache items: %w", err)
+	sessionData := sessMgr.Export()
+	turns, _ := sessionData["turns"].([]session.Turn)
+	if len(turns) == 0 {
+		return "", fmt.Errorf("no turns in current session to export")
 	}
 
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
@@ -620,9 +619,9 @@ func (a *App) ExportSession() (string, error) {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# BarnOwl AI Session — %s\n\n", time.Now().Format("January 2, 2006 at 3:04 PM")))
 
-	for i, item := range items {
-		sb.WriteString(fmt.Sprintf("## Q%d: %s\n\n", i+1, item.Question))
-		sb.WriteString(fmt.Sprintf("%s\n\n", item.Answer))
+	for _, turn := range turns {
+		sb.WriteString(fmt.Sprintf("## Q%d: %s\n\n", turn.TurnIndex, turn.InterviewerQuestion))
+		sb.WriteString(fmt.Sprintf("%s\n\n", turn.AISuggestion))
 		sb.WriteString("---\n\n")
 	}
 
