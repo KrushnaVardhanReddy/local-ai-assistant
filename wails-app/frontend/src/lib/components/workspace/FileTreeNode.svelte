@@ -15,11 +15,17 @@
   }>();
 
   let isExpanded = $state(false);
+  let isIndexed = $state(false);
+  let isIndexing = $state(false);
 
   const isDir = $derived(Boolean(node.isDirectory ?? (node as any).isDir));
 
   $effect(() => {
     isExpanded = node.isExpanded ?? false;
+    // Check if indexed via window.mockState or global paths array
+    if ((window as any)._indexedPaths) {
+      isIndexed = (window as any)._indexedPaths.includes(node.path);
+    }
   });
 
   function getIcon(node: FileNode): string {
@@ -51,6 +57,48 @@
     isExpanded = !isExpanded;
     node.isExpanded = isExpanded;
   }
+
+  async function handleCheckboxChange(e: Event) {
+    e.stopPropagation();
+    const checked = (e.target as HTMLInputElement).checked;
+    isIndexing = true;
+    try {
+      if (checked) {
+        if (isDir) {
+          await (window as any).go?.main?.App?.IndexFolder(node.path);
+        } else {
+          await (window as any).go?.main?.App?.IndexFile(node.path);
+        }
+      } else {
+        await (window as any).go?.main?.App?.RemoveIndexedPath(node.path);
+      }
+
+      // Refresh global paths
+      if ((window as any).go?.main?.App?.GetIndexedPaths) {
+        const paths = await (window as any).go.main.App.GetIndexedPaths();
+        (window as any)._indexedPaths = paths || [];
+        // Trigger a custom event or reactive update for all nodes
+        window.dispatchEvent(new Event('indexed-paths-updated'));
+      }
+    } catch (err) {
+      console.error("Failed to index path:", err);
+      // Revert state on error
+      isIndexed = !checked;
+    } finally {
+      isIndexing = false;
+      isIndexed = checked;
+    }
+  }
+
+  $effect(() => {
+    const handleUpdate = () => {
+      if ((window as any)._indexedPaths) {
+        isIndexed = (window as any)._indexedPaths.includes(node.path);
+      }
+    };
+    window.addEventListener('indexed-paths-updated', handleUpdate);
+    return () => window.removeEventListener('indexed-paths-updated', handleUpdate);
+  });
 
   function handleSelect(e: MouseEvent | KeyboardEvent) {
     if (isDir) {
@@ -102,7 +150,21 @@
     {:else}
       <div class="expander invisible"></div>
     {/if}
-    <span class="icon">{getIcon(node)}</span>
+    <!-- Indexing checkbox -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="checkbox-wrapper" onclick={(e) => e.stopPropagation()}>
+      <input type="checkbox" checked={isIndexed} onchange={handleCheckboxChange} disabled={isIndexing} />
+      {#if isIndexing}
+        <span class="spinner" aria-label="Indexing"></span>
+      {/if}
+    </div>
+    <span class="icon relative">
+      {getIcon(node)}
+      {#if isIndexed && !isDir}
+        <span class="indexed-badge" aria-label="Indexed">●</span>
+      {/if}
+    </span>
     <span class="name">{node.name}</span>
   </div>
 
@@ -208,5 +270,53 @@
   .children {
     display: flex;
     flex-direction: column;
+  }
+
+  .checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    margin-right: 6px;
+    position: relative;
+  }
+
+  .checkbox-wrapper input[type="checkbox"] {
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+    accent-color: #4ade80; /* Match typical hud green */
+  }
+
+  .spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes spin {
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+
+  .relative {
+    position: relative;
+  }
+
+  .indexed-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    color: #3b82f6; /* Blue dot */
+    font-size: 0.5rem;
+    line-height: 1;
+    text-shadow: 0 0 2px rgba(0,0,0,0.8);
   }
 </style>

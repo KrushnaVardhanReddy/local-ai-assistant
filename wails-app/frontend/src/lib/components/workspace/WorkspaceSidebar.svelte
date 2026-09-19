@@ -22,6 +22,15 @@
     onOpenFolder: () => void;
   }>();
 
+  $effect(() => {
+    // Fetch initially indexed paths
+    if ((window as any).go?.main?.App?.GetIndexedPaths && !(window as any)._indexedPaths) {
+      (window as any).go.main.App.GetIndexedPaths().then((paths: string[]) => {
+        (window as any)._indexedPaths = paths || [];
+        window.dispatchEvent(new Event('indexed-paths-updated'));
+      });
+    }
+  });
 </script>
 
 <div class="workspace-sidebar-container" class:open={isOpen}>
