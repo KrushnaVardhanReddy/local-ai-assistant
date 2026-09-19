@@ -627,3 +627,186 @@
 | Task ID | File(s) | Description | Status | PR |
 |---|---|---|---|---|
 | P53-T1 | `frontend/src/lib/auth.svelte.ts`, `Settings.svelte`, `App.svelte` | **Entitlement & License Gate:** Require Supabase login, check active 30-day/1-year BYOK pass or remaining SaaS sessions, lock app if pass is expired. | ✅ | #169 |
+
+## Phase 54 — Hexagonal Core Engine (Ports & Adapters)
+
+> **Goal:** Refactor the Go backend into a clean Ports & Adapters architecture
+> so multiple products (Interview, StealthPresenter, MentorGlass, ClinicHUD)
+> can share the same engine with different UI skins and system prompts.
+>
+> **Branch:** `feature/krushna_golang-hex-engine`
+
+### Dependency Order (What blocks what)
+
+```
+BATCH 1 (Foundation — must go first, sequential)
+  P54-T1: Core Port Interfaces
+
+BATCH 2 (All 3 can run in PARALLEL after T1 merges)
+  P54-T2 ⚡ LLM Port Adapter
+  P54-T3 ⚡ Cache Port Adapter
+  P54-T4 ⚡ Events Port Adapter
+
+BATCH 3 (Sequential, depends on all of Batch 2)
+  P54-T5: StealthEngine (wires adapters into core pipeline)
+
+BATCH 4 (Sequential, depends on T5)
+  P54-T6: StealthPresenter Product Skin (first new product)
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P54-T1** | Core Port Interfaces | ✅ Merged | Sequential | [PR 170](https://jules.google.com/session/48906415451042314) | Foundation: ports/driving.go, ports/driven.go |
+| **P54-T2** | LLM Port Adapter | ✅ Merged | ⚡ Parallel | [PR 171](https://jules.google.com/session/15853767921854849554) | Wraps backend/llm/ behind LLMPort |
+| **P54-T3** | Cache Port Adapter | ✅ Merged | ⚡ Parallel | [PR 172](https://jules.google.com/session/529672600929029618) | Wraps backend/vector_db.go behind CachePort |
+| **P54-T4** | Events Port Adapter | ✅ Merged | ⚡ Parallel | [PR 173](https://jules.google.com/session/9165291875719402956) | WailsEventAdapter + NoopEventAdapter |
+| **P54-T5** | StealthEngine Core Pipeline | ✅ Merged | Sequential | [PR 174](https://jules.google.com/session/11318015680178095278) | Wires all adapters into engine.Start() |
+| **P54-T6** | StealthPresenter Skin + HUD | ✅ Merged | Sequential | [PR 175](https://jules.google.com/session/8797094189760034044) | PresenterHUD.svelte + presenter build tag |
+
+---
+
+## Notes
+
+- **STT already hexagonal** ✅ — `stt/engine.go`, `stt/manager.go`, `stt/groq.go`, `stt/whisper.go` are already Ports & Adapters. Do NOT touch them in this phase.
+- **Window already hexagonal** ✅ — `backend/window/window_linux.go` already exists. T1 just adds the `WindowPort` interface.
+- **No frontend changes in T1–T5** — UI scaffold only added in T6.
+- Each task **must compile and pass `go test ./...`** before submitting PR.
+- Prompt files for each task: `prompts/tasks/phase_54_hex_engine/P54_T{N}_*.txt`
+
+---
+
+## Phase 55 — StealthPresenter Core UX
+
+> **Goal:** Build the pristine, glassmorphic UI overlay, the document parser (PDF/MD/PPTX), the voice-tracked scroller, and the LLM copilot panel.
+>
+> **Branch:** `feature/krushna_golang-stealth-ux`
+
+### Dependency Order
+
+```
+BATCH 1 (Parallel execution)
+  P55-T1 ⚡ The Presenter Shell & Typography (Svelte)
+  P55-T2 ⚡ Document Parser Backend (Go)
+
+BATCH 2 (Sequential)
+  P55-T3: Voice-Scroller Engine (depends on T1)
+  P55-T4: LLM Audience Copilot (depends on T1 & T3)
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P55-T1** | The Presenter Shell (Svelte) | ✅ Merged | Sequential | [PR 176] | UI layout, opacity, font size sliders |
+| **P55-T2** | Document Parser Backend | ✅ Merged | ⚡ Parallel | [PR 177] | Parses .txt, .md, .pdf, .pptx |
+| **P55-T3** | Voice-Scroller Engine | ✅ Merged | Sequential | [PR 178] | Maps STT events to Svelte auto-scroll |
+| **P55-T4** | LLM Audience Copilot | ✅ Merged | Sequential | [PR 179] | Live Q&A side-panel in HUD |
+
+---
+
+## Phase 56 — Multi-Document IDE Workspace (Hexagonal Core + Reusable Svelte)
+
+> **Goal:** Build an IDE-style workspace (file/folder browser, expandable tree, multi-file tabs) in the hexagonal core engine so multiple products can load folders/files and switch active documents.
+>
+> **Branch:** `feature/krushna_golang`
+
+### Dependency Order
+
+```
+BATCH 1 (Core Ports & Types)
+  P56-T1: Core Workspace Port & Document Node Hierarchy (Go)
+
+BATCH 2 (Parallel Execution)
+  P56-T2 ⚡ StealthEngine Workspace Implementation & RAG Multi-Doc Indexing (Go)
+  P56-T3 ⚡ Reusable IDE File Tree & Workspace Svelte Components (UI)
+
+BATCH 3 (Sequential Product Integration)
+  P56-T4: StealthPresenter Product Integration & Wails Bindings
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P56-T1** | Core Workspace Port & Types | ✅ Merged | Sequential | [PR 180](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/180) | `ports/driving/workspace.go`, `FileNode`, `WorkspacePort` |
+| **P56-T2** | Engine Workspace & RAG Indexer | ✅ Merged | ⚡ Parallel | [PR 182](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/182) | `core/engine/workspace.go`, directory scanning & doc caching |
+| **P56-T3** | Svelte IDE Tree & Tabs UI | ✅ Merged | ⚡ Parallel | [PR 181](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/181) | `lib/components/workspace/` (FileTree, Tabs, Sidebar) |
+| **P56-T4** | StealthPresenter Integration | ✅ Merged | Sequential | [PR 183](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/183) | `PresenterApp` bindings + `PresenterHUD` tabs/tree hookup |
+| **P56-T5** | Universal IDE Shell Framework | ✅ Merged | Sequential | [PR 184](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/184) | `IDEShell.svelte` (ActivityBar, Explorer, Tabs, StatusBar, Slots) |
+| **P56-T6** | CodeMirror 6 & VS Code Layout | ✅ Merged | Sequential | [PR 185](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/185) | CodeMirror 6 editor, docking sidebar, full VS Code HUD |
+
+---
+
+## Phase 57 — BarnOwl AI (Interview Copilot) IDE Migration
+
+> **Goal:** Migrate all BarnOwl AI interview features (Live Ears, The Brain, STAR preset, Snip, Mock interview, hotkeys, and QA cache) out of the legacy floating layout into the unified single-window IDE layout (`IDEShell.svelte`), and connect workspace notes as active context for live interview answering.
+>
+> **Branch:** `feature/krushna_golang`
+
+### Dependency Order
+
+```
+BATCH 1 (Parallel Execution)
+  P57-T1 ⚡ BarnOwl App Workspace & State Bindings (Go Backend in wails-app/app.go)
+  P57-T2 ⚡ Interview IDE HUD Component & ActivityBar Migration (Frontend Svelte)
+
+BATCH 2 (Sequential Integration)
+  P57-T3: Active Code/Notes Context Injection into Copilot RAG Pipeline (Go + Frontend)
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P57-T1** | BarnOwl Workspace Bindings | ✅ Merged | ⚡ Parallel | [PR 187](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/187) | Expose WorkspacePort methods & `GetIDEState` on `*App` in `wails-app/app.go` |
+| **P57-T2** | Interview IDE HUD Migration | ✅ Merged | ⚡ Parallel | [PR 186](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/186) | `InterviewHUD.svelte`, `LiveEarsDrawer`, `BrainDrawer`, migrate toolbar & buttons into `IDEShell` |
+| **P57-T3** | Active Context RAG Injection | ✅ Merged | Sequential | [PR 188](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/188) | Auto-inject open IDE file content into LLM context when answering interview questions |
+| **P57-T4** | Interview IDE Bug Fixes & Polish | ✅ Merged | Sequential | [PR 190](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/190) | Fix SetClickthrough/AnalyzeVision signatures, SessionReport empty/NaNm fix, wire workspace tree & editor, fix Svelte 5 lints, 10/10 Playwright E2E tests (PR 189 closed) |
+| **P57-T5A** | Backend Engine Extensions & Tree Normalization | ✅ Merged | ⚡ Parallel | [PR 192](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/192) | Broaden allowedExtensions in Go engine, fix isDir vs isDirectory in FileTreeNode |
+| **P57-T5B** | Brain & Live Ears Drawers Action Wiring | ✅ Merged | ⚡ Parallel | [PR 191](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/191) | STAR method priming, Catch Me Up, Clear Cache, suggestion chips & chat submit |
+| **P57-T7** | Unified Live Copilot Drawer (Ears + Brain) | ✅ Merged | Sequential | [PR 195](https://github.com/KrushnaVardhanReddy/local-ai-assistant/pull/195) | Merge separate Ears & Brain drawers into unified conversation feed with top tools & bottom chips/chat |
+| **P57-T8A** | ConvPanel.svelte — Conversation Left Panel | ✅ Merged | ⚡ Parallel | [PR 198] | NEW file only. Left panel: transcript bubbles, suggestion chips, hotkeys overlay, chat input. No existing file edits. |
+| **P57-T8B** | AnswerPanel.svelte — LLM Answer Right Panel | ✅ Merged | ⚡ Parallel | [PR 197] | NEW file only. Right panel: streaming Markdown response, thinking pulse, cache stats, copy button. No existing file edits. |
+| **P57-T8C** | ActivityBar cleanup — remove copilot/keys icons | ✅ Merged | ⚡ Parallel | [PR 196] | Tiny isolated edit to ActivityBar.svelte only. Remove `copilot` and `keys` from topActions. |
+| **P57-T9** | Cache History UI & Vertical Transcripts | ✅ Merged | Sequential | [PR TODO] | ConvPanel vertical transcripts and AnswerPanel history cache UI. |
+
+
+
+| **P57-T9** | Cache History UI & Vertical Transcripts | ✅ Merged | Sequential | [PR 200] | Updates ConvPanel for vertical transcripts and AnswerPanel for cache history browsing. |
+| **P57-T10** | Microphone Mute Toggle | ✅ Merged | Sequential | [PR 201] | Update backend to toggle PortAudio/PulseAudio capture state when user clicks Mic Off/Live in ConvPanel header. |
+| **P57-T13** | Manual LLM Trigger Mode | ✅ Merged | Sequential | [PR 203] | Add manual mode toggle to disable automatic STT processing and rely on bubble clicks. |
+| **P57-T14** | In-Session Bubble Answer Recall | ✅ Merged | ⚡ Parallel | [PR 202] | In-memory lookup for recent bubbles to skip SQLite. |
+| **P57-T11** | Raw/Filtered Transcript Toggle | ✅ Merged | ⚡ Parallel | [Local] | Toggle to show all STT transcripts regardless of length filter. |
+| **P57-T12** | Save Session to File | ✅ Merged | ⚡ Parallel | [PR 203] | Export session Q&A to markdown file in Downloads. |
+| **P57-T13** | Manual LLM Trigger Mode | ✅ Merged | Sequential | [PR 204] | Toggle to accumulate bubbles without auto-sending to LLM. |
+| **P57-T15** | Platform Component Refactor | ✅ Merged | Sequential | [#P57-T15] | Plug-and-Play Header Actions. |
+| **P57-T15** | Plug-and-Play Header Actions | ✅ Merged | Sequential | [PR 205] | Refactor ConvPanel/AnswerPanel to take dynamic headerActions array. |
+
+---
+
+## Phase 58 — Transcript Intelligence
+
+> **Goal:** Improve how the LLM handles fragmented interviewer speech and fix the session export to download only the current live session (not the full historical cache).
+>
+> **Branch:** `feature/krushna_golang`
+
+### Dependency Order
+
+```
+BATCH 1 (Parallel execution — both are fully independent)
+  P58-T1 ⚡ Rolling Transcript Context (Go Backend)
+  P58-T2 ⚡ Fix ExportSession — Current Session Only (Go Backend)
+```
+
+---
+
+| Task ID | Title | Status | Parallel? | PR | Notes |
+|---------|-------|--------|-----------|----|-------|
+| **P58-T1** | Rolling Transcript Context | ✅ Merged | ⚡ Parallel | [PR 207] | Buffer last 5 transcripts; wrap LLM prompt so it reconstructs fragmented questions |
+| **P58-T2** | Fix ExportSession — Current Session Only | ✅ Merged | ⚡ Parallel | [Pending] | Read from SessionManager.turns instead of SQLite GetAllItems() |
+| **P58-T3** | Summarize Session (LLM Post-Processing) | ✅ Merged | ⚡ Parallel | [PR 208] | Template-based LLM summarization of the full session history |
+| **P58-T4** | Custom Summary Templates | ✅ Merged | ⚡ Parallel | [PR 209] | Allow users to define custom prompts for AI session summaries and save to localStorage |
+| **P58-T5** | Cache Manager UI & Session Hit Bugfix | ✅ Merged | ⚡ Parallel | [PR 210] | Fix missing cache hits in session export and add UI to selectively clear cached Q&A pairs |
+
