@@ -1,0 +1,60 @@
+TASK: P58-T4 — Custom Summary Templates
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Allow users to create their own custom summary templates (e.g., custom rubrics,
+company-specific scorecards) so the LLM formats the session summary exactly how
+they need it.
+
+This requires adding a "Custom Templates" manager in the frontend, storing those
+templates locally, and updating the backend to accept arbitrary system prompts
+for the summary generation instead of just hardcoded IDs.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/core/engine/engine.go`           [MODIFY SummarizeSession to accept prompt strings]
+- `wails-app/app.go`                          [MODIFY Wails binding]
+- `wails-app/frontend/src/products/interview/SummaryModal.svelte` [ADD Custom Template UI]
+- `wails-app/frontend/src/lib/settings.ts` (or similar) [ADD local storage logic for custom templates]
+- `prompts/tasks_v2.md`                       [UPDATE]
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: Backend Implementation (Go)
+═══════════════════════════════════════════════════════════════
+1. In `wails-app/core/engine/engine.go`:
+   - Refactor `SummarizeSession` to accept a slice of structs instead of string IDs.
+   - Example: `type SummaryRequest struct { ID string; Prompt string }`
+   - Modify the signature to `SummarizeSession(requests []SummaryRequest) error`
+   - The method should use `req.Prompt` directly as the LLM system prompt instead of looking
+     up a hardcoded string based on the ID. (The `req.ID` is still used to tag the frontend events).
+   
+2. In `wails-app/app.go`:
+   - Update the Wails binding to match the new `SummaryRequest` struct signature.
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: Frontend Implementation (Svelte)
+═══════════════════════════════════════════════════════════════
+1. Template Storage:
+   - Use `localStorage` (or your existing frontend store) to save a list of custom templates.
+   - A Custom Template should have: `id`, `name`, `instruction`, and `exampleOutput`.
+
+2. Update `SummaryModal.svelte`:
+   - At the bottom of the "SELECT TEMPLATES" list on the left, add an "+ Add Custom Template" button.
+   - Clicking this should either expand an inline form or replace the right-hand panel with a form to create/edit a custom template (Name, Instruction, Example Output).
+   - Once saved, the new custom template appears in the checkbox list alongside the defaults.
+   - When the user selects templates (both default and custom) and clicks "Generate",
+     the frontend must dynamically construct the final system prompt for any custom templates:
+     e.g., "Follow these exact instructions: {instruction}. Example format: {exampleOutput}"
+   - Pass the array of `{ ID, Prompt }` objects to the new `SummarizeSession` Wails backend method.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- Compiles successfully (`go build ./...` and `npm run check`).
+- Users can create, view, edit, and delete custom templates in the UI.
+- Custom templates persist across page reloads (using localStorage).
+- Generating a summary with a custom template successfully passes the custom prompt
+  to the backend and streams the result into the correct tab.
+- PR title format: `feat(app): add user-defined custom summary templates (#P58-T4)`

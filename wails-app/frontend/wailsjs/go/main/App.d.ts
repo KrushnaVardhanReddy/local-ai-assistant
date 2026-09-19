@@ -70,6 +70,8 @@ export function StartBackend():Promise<void>;
 
 export function StopBackend():Promise<void>;
 
+export function SummarizeSession(arg1:Array<string>):Promise<void>;
+
 export function ToggleClickthroughMode():Promise<boolean>;
 
 export function ToggleMic():Promise<boolean>;

@@ -134,6 +134,10 @@ export function StopBackend() {
   return window['go']['main']['App']['StopBackend']();
 }
 
+export function SummarizeSession(arg1) {
+  return window['go']['main']['App']['SummarizeSession'](arg1);
+}
+
 export function ToggleClickthroughMode() {
   return window['go']['main']['App']['ToggleClickthroughMode']();
 }
