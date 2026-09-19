@@ -64,5 +64,48 @@ func (a *SQLiteVecAdapter) DeleteItem(id string) error {
 	return a.db.DeleteItem(id)
 }
 
+// IndexDocumentChunk inserts a document chunk into the vector database.
+func (a *SQLiteVecAdapter) IndexDocumentChunk(path, text string, embedding []float32) error {
+	if a.db == nil {
+		return nil
+	}
+	return a.db.InsertDocumentChunk(path, text, embedding)
+}
+
+// GetIndexedPaths returns all paths that have been indexed.
+func (a *SQLiteVecAdapter) GetIndexedPaths() ([]string, error) {
+	if a.db == nil {
+		return nil, nil
+	}
+	return a.db.GetIndexedPaths()
+}
+
+// RemoveIndexedPath removes all document chunks for a given path.
+func (a *SQLiteVecAdapter) RemoveIndexedPath(path string) error {
+	if a.db == nil {
+		return nil
+	}
+	return a.db.DeleteDocumentsByPath(path)
+}
+
+// SemanticSearch queries BOTH 'qa' and 'document' rows, returning the best matches regardless of type.
+func (a *SQLiteVecAdapter) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) {
+	if a.db == nil {
+		return nil, nil
+	}
+	results, err := a.db.SemanticSearch(embedding, limit, float32(threshold))
+	if err != nil {
+		return nil, err
+	}
+	var chunks []string
+	for _, res := range results {
+		// Only return document chunks, as QA cache hits are handled separately
+		if res.SourceType == "document" {
+			chunks = append(chunks, res.Metadata)
+		}
+	}
+	return chunks, nil
+}
+
 // Compile-time interface check.
 var _ driven.CachePort = (*SQLiteVecAdapter)(nil)

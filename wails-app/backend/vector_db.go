@@ -17,9 +17,11 @@ import "time"
 
 // DocumentSearchResult represents a result from a vector search
 type DocumentSearchResult struct {
-	ID       string
-	Metadata string
-	Distance float32
+	ID         string
+	Metadata   string
+	Distance   float32
+	SourceType string
+	SourcePath string
 }
 
 // VectorDB represents our local vector database
@@ -48,11 +50,24 @@ func NewVectorDB(dbPath string) (*VectorDB, error) {
 		}
 	}
 
+	// Check if qa_cache_meta has source_type
+	var metaDdl string
+	err = db.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name='qa_cache_meta'").Scan(&metaDdl)
+	if err == nil && metaDdl != "" {
+		if !strings.Contains(metaDdl, "source_type") {
+			log.Printf("[VectorDB] Upgrading qa_cache_meta schema...")
+			_, _ = db.Exec("ALTER TABLE qa_cache_meta ADD COLUMN source_type TEXT NOT NULL DEFAULT 'qa'")
+			_, _ = db.Exec("ALTER TABLE qa_cache_meta ADD COLUMN source_path TEXT")
+		}
+	}
+
 	// Initialize the regular table for metadata mapping
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS qa_cache_meta (
 			id TEXT PRIMARY KEY,
-			metadata TEXT
+			metadata TEXT,
+			source_type TEXT NOT NULL DEFAULT 'qa',
+			source_path TEXT
 		)
 	`)
 	if err != nil {
@@ -151,7 +166,9 @@ func (v *VectorDB) SearchVector(query []float32, limit int) ([]DocumentSearchRes
 		SELECT
 			m.id,
 			m.metadata,
-			v.distance
+			v.distance,
+			COALESCE(m.source_type, 'qa'),
+			COALESCE(m.source_path, '')
 		FROM qa_cache v
 		JOIN qa_cache_meta m ON m.rowid = v.rowid
 		WHERE v.embedding MATCH ? AND k = ?
@@ -165,7 +182,7 @@ func (v *VectorDB) SearchVector(query []float32, limit int) ([]DocumentSearchRes
 	var results []DocumentSearchResult
 	for rows.Next() {
 		var res DocumentSearchResult
-		if err := rows.Scan(&res.ID, &res.Metadata, &res.Distance); err != nil {
+		if err := rows.Scan(&res.ID, &res.Metadata, &res.Distance, &res.SourceType, &res.SourcePath); err != nil {
 			return nil, fmt.Errorf("failed to scan result: %w", err)
 		}
 		results = append(results, res)
@@ -223,6 +240,98 @@ func (v *VectorDB) Store(question, answer string) error {
 	metaBytes, _ := json.Marshal(meta)
 
 	return v.InsertVector(question, emb, string(metaBytes))
+}
+
+// SemanticSearch queries BOTH 'qa' and 'document' rows, returning the best matches regardless of type.
+func (v *VectorDB) SemanticSearch(embedding []float32, limit int, threshold float32) ([]DocumentSearchResult, error) {
+	results, err := v.SearchVector(embedding, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	var filtered []DocumentSearchResult
+	for _, res := range results {
+		if res.Distance <= (1.0 - threshold) {
+			filtered = append(filtered, res)
+		}
+	}
+
+	return filtered, nil
+}
+
+// InsertDocumentChunk inserts a document chunk into the vector database.
+func (v *VectorDB) InsertDocumentChunk(path, chunkText string, embedding []float32) error {
+	if len(embedding) != VectorDimension {
+		return fmt.Errorf("embedding must be exactly %d dimensions, got %d", VectorDimension, len(embedding))
+	}
+
+	embBytes, err := serializeToBinary(embedding)
+	if err != nil {
+		return fmt.Errorf("failed to serialize embedding: %w", err)
+	}
+
+	tx, err := v.db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	id := fmt.Sprintf("%s::%d", path, time.Now().UnixNano())
+
+	_, err = tx.Exec("INSERT OR REPLACE INTO qa_cache_meta (id, metadata, source_type, source_path) VALUES (?, ?, ?, ?)", id, chunkText, "document", path)
+	if err != nil {
+		return fmt.Errorf("failed to insert metadata: %w", err)
+	}
+
+	var rowid int64
+	err = tx.QueryRow("SELECT rowid FROM qa_cache_meta WHERE id = ?", id).Scan(&rowid)
+	if err != nil {
+		return fmt.Errorf("failed to get rowid: %w", err)
+	}
+
+	_, err = tx.Exec("INSERT OR REPLACE INTO qa_cache (rowid, embedding) VALUES (?, ?)", rowid, embBytes)
+	if err != nil {
+		return fmt.Errorf("failed to insert vector: %w", err)
+	}
+
+	return tx.Commit()
+}
+
+// GetIndexedPaths returns all paths that have been indexed.
+func (v *VectorDB) GetIndexedPaths() ([]string, error) {
+	rows, err := v.db.Query("SELECT DISTINCT source_path FROM qa_cache_meta WHERE source_type = 'document' AND source_path IS NOT NULL")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var paths []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err == nil {
+			paths = append(paths, p)
+		}
+	}
+	return paths, nil
+}
+
+// DeleteDocumentsByPath removes all document chunks for a given path.
+func (v *VectorDB) DeleteDocumentsByPath(path string) error {
+	tx, err := v.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM qa_cache WHERE rowid IN (SELECT rowid FROM qa_cache_meta WHERE source_path = ? AND source_type = 'document')", path)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("DELETE FROM qa_cache_meta WHERE source_path = ? AND source_type = 'document'", path)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // GetCount returns the total number of cached Q&A pairs

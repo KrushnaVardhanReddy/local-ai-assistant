@@ -159,6 +159,21 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		}
 	}
 
+	ragContextBlock := ""
+	if e.cache != nil {
+		chunks, err := e.cache.SemanticSearch(emb, 3, 0.75) // Limit to top 3, with 0.75 threshold
+		if err == nil && len(chunks) > 0 {
+			var sb strings.Builder
+			sb.WriteString("\n\n[WORKSPACE RAG CONTEXT]\n")
+			sb.WriteString("The following are excerpts from workspace documents relevant to the question:\n\n")
+			for i, chunk := range chunks {
+				sb.WriteString(fmt.Sprintf("--- Excerpt %d ---\n%s\n", i+1, chunk))
+			}
+			sb.WriteString("[/WORKSPACE RAG CONTEXT]")
+			ragContextBlock = sb.String()
+		}
+	}
+
 	e.mu.RLock()
 	buf := make([]string, len(e.transcriptBuffer))
 	copy(buf, e.transcriptBuffer)
@@ -212,6 +227,9 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		sysPrompt := e.cfg.SystemPrompt
 		if activeDocBlock != "" {
 			sysPrompt += activeDocBlock
+		}
+		if ragContextBlock != "" {
+			sysPrompt += ragContextBlock
 		}
 
 		err := e.llm.StreamCompletion(streamCtx, llmQuestion, sysPrompt, history, func(token string) {
