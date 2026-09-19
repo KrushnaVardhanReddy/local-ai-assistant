@@ -38,10 +38,11 @@ type StealthEngine struct {
 	includeActiveDoc   bool
 
 	// internal state (mutex-protected)
-	mu             sync.RWMutex
-	transcript     string
-	response       string
-	thinking       bool
+	mu               sync.RWMutex
+	transcript       string
+	transcriptBuffer []string // rolling window of last 5 accepted transcripts
+	response         string
+	thinking         bool
 	llmBusy        sync.Mutex
 	inFlightMu     sync.Mutex
 	cancelInFlight context.CancelFunc

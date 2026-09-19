@@ -56,6 +56,10 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 
 	// Update state for frontend polling
 	e.mu.Lock()
+	e.transcriptBuffer = append(e.transcriptBuffer, cleanTranscript)
+	if len(e.transcriptBuffer) > 5 {
+		e.transcriptBuffer = e.transcriptBuffer[len(e.transcriptBuffer)-5:]
+	}
 	e.transcript = cleanTranscript
 	e.response = ""
 	e.thinking = false
@@ -148,7 +152,27 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		}
 	}
 
-	go func(q string, streamCtx context.Context, streamCancel context.CancelFunc) {
+	e.mu.RLock()
+	buf := make([]string, len(e.transcriptBuffer))
+	copy(buf, e.transcriptBuffer)
+	e.mu.RUnlock()
+
+	var llmQuestion string
+	if len(buf) > 1 {
+		var sb strings.Builder
+		sb.WriteString("The following are the last few things the interviewer said (in chronological order).\n")
+		sb.WriteString("Some of these may be sentence fragments from natural pauses mid-question.\n\n")
+		for i, t := range buf {
+			sb.WriteString(fmt.Sprintf("[%d] %q\n", i+1, t))
+		}
+		sb.WriteString("\nIdentify the most recent complete question (combining fragments if needed) and answer it concisely.\n")
+		sb.WriteString("Do NOT re-answer earlier unrelated questions.")
+		llmQuestion = sb.String()
+	} else {
+		llmQuestion = cleanTranscript
+	}
+
+	go func(q string, llmQuestion string, streamCtx context.Context, streamCancel context.CancelFunc) {
 		e.llmBusy.Lock()
 		defer e.llmBusy.Unlock()
 
@@ -183,7 +207,7 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 			sysPrompt += activeDocBlock
 		}
 
-		err := e.llm.StreamCompletion(streamCtx, q, sysPrompt, history, func(token string) {
+		err := e.llm.StreamCompletion(streamCtx, llmQuestion, sysPrompt, history, func(token string) {
 			answerBuilder.WriteString(token)
 			e.mu.Lock()
 			e.response = answerBuilder.String()
@@ -228,5 +252,5 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 			}
 			log.Printf("[LLM] Stream complete. Stored in cache.")
 		}
-	}(cleanTranscript, ctx, cancel)
+	}(cleanTranscript, llmQuestion, ctx, cancel)
 }

@@ -155,3 +155,47 @@ func TestPipeline_ManualMode(t *testing.T) {
 	// but we just pass nil llm to fail naturally if it proceeds, so we know if it bypassed or not.
 	// We'll just verify no panic happens when bypassed
 }
+
+func TestPipeline_RollingTranscriptBuffer(t *testing.T) {
+	blockCh := make(chan struct{})
+	close(blockCh) // unblocked immediately
+	llm := &mockPreemptLLM{
+		tokens:  []string{"A"},
+		blockCh: blockCh,
+	}
+	events := &MockEvents{Emitted: make(map[string]int)}
+	eng := New(Config{}, nil, llm, nil, events)
+
+	// Pre-populate buffer with 3 strings
+	eng.mu.Lock()
+	eng.transcriptBuffer = []string{
+		"Tell me about",
+		"your experience with",
+		"distributed systems",
+	}
+	eng.mu.Unlock()
+
+	// Send a 4th transcript
+	eng.handleTranscript("at scale.", false)
+	time.Sleep(50 * time.Millisecond) // Give time for goroutine to start and call LLM
+
+	if len(llm.calls) != 1 {
+		t.Fatalf("Expected 1 call to LLM, got %d", len(llm.calls))
+	}
+
+	capturedQuestion := llm.calls[0]
+
+	// Check if all entries are correctly present
+	if !strings.Contains(capturedQuestion, "[1] \"Tell me about\"") {
+		t.Errorf("Missing entry 1. Got: %s", capturedQuestion)
+	}
+	if !strings.Contains(capturedQuestion, "[2] \"your experience with\"") {
+		t.Errorf("Missing entry 2. Got: %s", capturedQuestion)
+	}
+	if !strings.Contains(capturedQuestion, "[3] \"distributed systems\"") {
+		t.Errorf("Missing entry 3. Got: %s", capturedQuestion)
+	}
+	if !strings.Contains(capturedQuestion, "[4] \"at scale.\"") {
+		t.Errorf("Missing entry 4. Got: %s", capturedQuestion)
+	}
+}
