@@ -4,11 +4,9 @@
   import AuthModal from "$lib/components/AuthModal.svelte";
   import { reconnect } from "$lib/ws.svelte";
     import { onMount } from "svelte";
-  import * as pdfjsLib from 'pdfjs-dist';
-  import StealthTerminal from "$lib/StealthTerminal.svelte";
+    import StealthTerminal from "$lib/StealthTerminal.svelte";
   import { getApiUrl, getWsUrl } from "$lib/api";
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
   const isCloudBuild = import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
 
@@ -48,19 +46,8 @@
     { label: "General Chat (Default)", value: "You are a helpful AI assistant." }
   ];
   let selectedPrompt = $state(systemPrompts[0].value);
-
-  // Resume state
-  let resumeRawText = $state("");
-  let resumeStatus = $state("");
-  let resumeFilename = $state("");
-
   // System Status state
   let systemStatus = $state<any>(null);
-
-  // Job Description state
-  let jobDescription = $state("");
-  let jobDescriptionStatus = $state("");
-
   onMount(async () => {
     try {
       if ((window as any).go?.main?.App?.GetSystemStatus) {
@@ -101,19 +88,6 @@
 
     try {
       const apiUrl = getApiUrl();
-      const resContext = await apiFetch(`${apiUrl}/api/resume/context`);
-      if (resContext.ok) {
-        const data = await resContext.json();
-        if (data.context) {
-          resumeStatus = "✅ Profile active (from previous session). Note: stored server-side in memory and resets on backend restart.";
-        }
-      }
-    } catch(e) {
-      console.error("Failed to check resume context", e);
-    }
-
-    try {
-      const apiUrl = getApiUrl();
       const resLang = await apiFetch(`${apiUrl}/api/language`);
       if (resLang.ok) {
         const data = await resLang.json();
@@ -150,85 +124,6 @@
       console.error("Failed to get initial doc context state", e);
     }
   });
-
-  async function handleFileSelect(e: Event) {
-    const target = e.target as HTMLInputElement;
-    if (!target.files || target.files.length === 0) return;
-    const file = target.files[0];
-    resumeFilename = file.name;
-    resumeStatus = `📄 ${file.name} — Ready to extract`;
-    resumeRawText = "";
-
-    try {
-      if (file.name.toLowerCase().endsWith(".txt")) {
-        const text = await file.text();
-        resumeRawText = text;
-      } else if (file.name.toLowerCase().endsWith(".pdf")) {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-        let text = "";
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          const strings = content.items.map((item: any) => item.str);
-          text += strings.join(" ") + " ";
-        }
-        resumeRawText = text;
-      }
-    } catch (error) {
-      console.error("Error reading file", error);
-      resumeStatus = "❌ Error reading file content.";
-      resumeRawText = "";
-    }
-  }
-
-  async function saveJobDescription() {
-    if (!jobDescription) return;
-    jobDescriptionStatus = "⏳ Saving job description...";
-    try {
-      const apiUrl = getApiUrl();
-      const res = await apiFetch(`${apiUrl}/config/job-description`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: jobDescription })
-      });
-      if (res.ok) {
-        jobDescriptionStatus = "✅ Job description saved and active";
-      } else {
-        jobDescriptionStatus = "❌ Failed to save job description";
-      }
-    } catch (e) {
-      console.error("Failed to save job description", e);
-      jobDescriptionStatus = "❌ Network error";
-    }
-  }
-
-  async function extractResume() {
-    if (!resumeRawText) return;
-    resumeStatus = "⏳ Extracting candidate profile...";
-    try {
-      const apiUrl = getApiUrl();
-      const res = await apiFetch(`${apiUrl}/api/resume/extract`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: resumeRawText })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        resumeStatus = "✅ Profile extracted and active";
-        if (data.detected_language && !preferredLanguage) {
-          preferredLanguage = data.detected_language;
-          localStorage.setItem("preferred_language", preferredLanguage);
-          resumeStatus = `✅ Profile extracted. Language auto-detected: ${preferredLanguage}`;
-        }
-      } else {
-        resumeStatus = "❌ Extraction failed — check backend";
-      }
-    } catch (e) {
-      console.error("Resume extraction failed", e);
-      resumeStatus = "❌ Extraction failed — network error";
-    }
-  }
 
   async function toggleSettings() {
     internalShowSettings = !internalShowSettings;
@@ -548,38 +443,6 @@
               Auto-filled from resume if detected
             </span>
           </div>
-        </div>
-
-        <hr class="divider" />
-
-        <div class="resume-section">
-          <div class="section-label">Interview Context</div>
-          <div class="input-group">
-            <label for="jobDescription">Target Job Description</label>
-            <textarea id="jobDescription" bind:value={jobDescription} rows="4" placeholder="Paste the job description here..."></textarea>
-          </div>
-          {#if jobDescriptionStatus}
-            <div class="status-indicator">{jobDescriptionStatus}</div>
-          {/if}
-          <button class="btn-primary extract-btn" disabled={!jobDescription} onclick={saveJobDescription}>
-            Save Context
-          </button>
-        </div>
-
-        <hr class="divider" />
-
-        <div class="resume-section">
-          <div class="section-label">Resume Context</div>
-          <div class="input-group">
-            <label for="resumeUpload">Upload Resume (PDF or TXT)</label>
-            <input type="file" id="resumeUpload" accept=".pdf,.txt" onchange={handleFileSelect} />
-          </div>
-          {#if resumeStatus}
-            <div class="status-indicator">{resumeStatus}</div>
-          {/if}
-          <button class="btn-primary extract-btn" disabled={!resumeRawText} onclick={extractResume}>
-            Extract Profile
-          </button>
         </div>
       {/if}
 
@@ -931,13 +794,6 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
-
-  .resume-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
   .section-label {
     font-size: 0.7rem;
     text-transform: uppercase;
@@ -971,20 +827,8 @@
     font-weight: 500;
   }
 
-  .status-indicator {
-    font-size: 0.85rem;
-    color: #ddd;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 0.5rem;
-    border-radius: 4px;
-    border: 1px solid #444;
-  }
-
-  .extract-btn {
-    margin-top: 0.5rem;
-  }
-
   .gemini-live-badge {
+
     display: flex;
     align-items: flex-start;
     gap: 10px;
