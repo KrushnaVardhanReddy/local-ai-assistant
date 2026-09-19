@@ -257,10 +257,10 @@
         {/if}
       </div>
 
-      <div class="flex overflow-x-auto px-2 scrollbar-hide">
+      <div class="flex flex-wrap gap-y-1 px-2 scrollbar-hide">
         {#each tabs as tab}
           <button
-            class="px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors {activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-background hover:border-white/20'}"
+            class="px-3 py-2 text-xs font-medium border-b-2 whitespace-nowrap transition-colors {activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-background hover:border-white/20'}"
             onclick={() => activeTab = tab.id}
           >
             {tab.label}

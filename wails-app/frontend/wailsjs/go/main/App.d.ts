@@ -33,6 +33,8 @@ export function GetCacheStats():Promise<Record<string, any>>;
 
 export function GetIDEState():Promise<Record<string, any>>;
 
+export function GetIndexedPaths():Promise<Array<string>>;
+
 export function GetMachineId():Promise<string>;
 
 export function GetOpenDocuments():Promise<Array<driving.WorkspaceDocument>>;
@@ -45,6 +47,10 @@ export function GetWorkspaceTree():Promise<Array<driving.FileNode>>;
 
 export function Greet(arg1:string):Promise<string>;
 
+export function IndexFile(arg1:string):Promise<void>;
+
+export function IndexFolder(arg1:string):Promise<void>;
+
 export function LoadToken():Promise<string>;
 
 export function OpenDirectory(arg1:string):Promise<driving.FileNode>;
@@ -56,6 +62,8 @@ export function PromptOpenDirectory():Promise<string>;
 export function PromptOpenFile():Promise<string>;
 
 export function QuitApp():Promise<void>;
+
+export function RemoveIndexedPath(arg1:string):Promise<void>;
 
 export function SaveToken(arg1:Record<string, any>):Promise<void>;
 

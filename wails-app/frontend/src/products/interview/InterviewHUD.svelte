@@ -405,7 +405,8 @@
       </div>
     {/if}
 
-    <!-- LEFT: Conversation Panel (always visible) -->
+    {#if activeAction !== 'explorer'}
+    <!-- LEFT: Conversation Panel -->
     <div class="conv-panel-wrapper" style="width: {convPanelWidth}px;">
       <ConvPanel
         transcriptHistory={wsState.transcriptHistory}
@@ -452,7 +453,7 @@
       <div class="resizer-indicator"></div>
     </div>
 
-    <!-- RIGHT: Answer Panel (always visible) -->
+    <!-- RIGHT: Answer Panel -->
     <div class="answer-panel-wrapper">
       <AnswerPanel
         bind:this={answerPanelRef}
@@ -464,6 +465,7 @@
         onCopyAll={handleCopyAll}
       />
     </div>
+    {/if}
 
     <!-- Settings overlay (absolute positioned, same as before) -->
     {#if activeAction === 'settings'}

@@ -1,0 +1,39 @@
+TASK: P61-T1 — Workspace UX Polish & Live Session Collapse
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Improve the UX of the Workspace and IDE layout based on user feedback.
+
+1. **Single File Workspace Integration:** Currently, if a user opens a standalone file (bypassing the folder selection), it opens in the IDE but doesn't appear in the left `WorkspacePanel` tree. This prevents the user from checking the box to index it for RAG. We need standalone files to append to the workspace tree as root nodes.
+2. **Collapsible Live Session Panel:** When the user is focused on the IDE or reading their resume, the "Live Session" transcript panel takes up too much horizontal space. We need a toggle button to collapse the right panel, allowing the IDE/Workspace area to expand fully.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/core/engine/workspace.go  (or wherever engine.OpenFile is implemented)
+MODIFY: wails-app/frontend/src/products/interview/InterviewHUD.svelte
+MODIFY: wails-app/frontend/src/products/interview/ConvPanel.svelte
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. **Workspace Single File Appending (`workspace.go`):**
+   - In the engine's `OpenFile` implementation, check if the opened file path is already part of the `e.workspaceTree`.
+   - If it is not part of the tree, create a standalone `FileNode` for it and append it to `e.workspaceTree`.
+   - Ensure that the frontend receives the updated tree (you may need to emit an event or rely on the frontend calling `GetWorkspaceTree()` when a new document is opened).
+   - This allows standalone files to appear in the `WorkspacePanel.svelte` tree so the user can check the box to index them into RAG.
+
+2. **Collapsible Live Session (`InterviewHUD.svelte` / `ConvPanel.svelte`):**
+   - Add a boolean state in `InterviewHUD.svelte` (e.g., `isConvPanelCollapsed`).
+   - In the main layout flex container, conditionally hide or shrink the `ConvPanel` section based on this state.
+   - When collapsed, the middle IDE panel (`Workspace` + Editor) should expand (`flex: 1`) to take up all remaining horizontal space.
+   - Add a subtle toggle button (e.g., using a Material Symbol like `keyboard_double_arrow_right` or `last_page`) to the `ConvPanel` header (or floating on the edge) to let the user collapse/expand the transcript.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Build and run the app.
+- Click "FILE" in the workspace header, select a file, and verify it appears in the left file tree with a checkbox.
+- Click the collapse button on the Live Session panel and verify the IDE expands smoothly.

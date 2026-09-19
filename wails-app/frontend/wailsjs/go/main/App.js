@@ -58,6 +58,10 @@ export function GetIDEState() {
   return window['go']['main']['App']['GetIDEState']();
 }
 
+export function GetIndexedPaths() {
+  return window['go']['main']['App']['GetIndexedPaths']();
+}
+
 export function GetMachineId() {
   return window['go']['main']['App']['GetMachineId']();
 }
@@ -82,6 +86,14 @@ export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
 
+export function IndexFile(arg1) {
+  return window['go']['main']['App']['IndexFile'](arg1);
+}
+
+export function IndexFolder(arg1) {
+  return window['go']['main']['App']['IndexFolder'](arg1);
+}
+
 export function LoadToken() {
   return window['go']['main']['App']['LoadToken']();
 }
@@ -104,6 +116,10 @@ export function PromptOpenFile() {
 
 export function QuitApp() {
   return window['go']['main']['App']['QuitApp']();
+}
+
+export function RemoveIndexedPath(arg1) {
+  return window['go']['main']['App']['RemoveIndexedPath'](arg1);
 }
 
 export function SaveToken(arg1) {
