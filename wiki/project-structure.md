@@ -37,7 +37,7 @@ Local_AI_Assistant/
 This is the heart of the application. The `StealthEngine` resides here, orchestrating audio processing, STT transcription, and LLM querying. It relies entirely on interfaces defined in `core/ports/`, ensuring that it is completely decoupled from any specific UI framework or database.
 
 ### `wails-app/adapters/` (The Infrastructure)
-Implementations of the ports. For example, `adapters/llm/openai_adapter.go` implements the `driven.LLMPort` interface. This allows us to easily swap out OpenAI for a local Llama model without changing a single line of code in the engine.
+Implementations of the ports. For example, `adapters/llm/openai_adapter.go` implements the `driven.LLMPort` interface, supporting the hybrid local/cloud model approach. The Cache adapter powers the Cache Manager UI using `sqlite-vec` for RAG and vector search.
 
 ### `wails-app/products/` (The Products)
 The engine is generic. The products define what the engine *does*. The `products/presenter/` directory contains the specific system prompts, UI configurations, and initializations required to turn the generic `StealthEngine` into **StealthPresenter**. This allows us to build multiple applications (MentorGlass, GovBrief) on the exact same backend.
