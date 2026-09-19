@@ -111,3 +111,22 @@ export namespace driving {
 
 }
 
+export namespace engine {
+	
+	export class SummaryRequest {
+	    id: string;
+	    prompt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SummaryRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.prompt = source["prompt"];
+	    }
+	}
+
+}
+

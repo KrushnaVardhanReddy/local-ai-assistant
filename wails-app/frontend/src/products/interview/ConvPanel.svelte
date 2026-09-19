@@ -13,6 +13,7 @@
     includeActiveDocContext = false,
     activeDocumentName = '',
     headerActions,
+    showHotkeys = false,
 
     onSendChat,
     onSendChip,
@@ -31,6 +32,7 @@
     includeActiveDocContext?: boolean;
     activeDocumentName?: string;
     headerActions?: HeaderAction[];
+    showHotkeys?: boolean;
     onSendChat?: (text: string) => void;
     onSendChip?: (chip: { id: string; text: string }) => void;
     onDismissChip?: (chipId: string) => void;
@@ -39,7 +41,6 @@
     onToggleMic?: () => void;
   }>();
 
-  let showHotkeys = $state(false);
   let chatText = $state("");
   let scrollEl: HTMLElement | undefined = $state();
 
@@ -109,37 +110,37 @@
 
     <div class="header-right">
       <button
-        class="icon-btn"
+        class="header-action-btn"
         class:active={wsState.rawMode}
-        title={wsState.rawMode ? 'Raw mode (showing all)' : 'Filtered mode'}
         onclick={() => wsState.rawMode = !wsState.rawMode}
       >
         <span class="material-symbols-outlined">
           {wsState.rawMode ? 'hearing_disabled' : 'hearing'}
         </span>
+        <span class="action-label">{wsState.rawMode ? 'Raw' : 'Filtered'}</span>
       </button>
       <button
-        class="icon-btn"
+        class="header-action-btn"
         class:active={wsState.manualMode}
-        title={wsState.manualMode ? 'Manual mode: click a bubble to send' : 'Auto mode: every transcript is sent'}
         onclick={toggleManualMode}
       >
         <span class="material-symbols-outlined">
           {wsState.manualMode ? 'touch_app' : 'send_time_extension'}
         </span>
+        <span class="action-label">{wsState.manualMode ? 'Manual' : 'Auto'}</span>
       </button>
 
       {#if headerActions}
         {#each headerActions as action}
           <button
-            class="icon-btn"
+            class="header-action-btn"
             class:active={action.active}
-            title={action.label}
             onclick={action.onClick}
           >
             <span class="material-symbols-outlined">
               {action.active && action.activeIcon ? action.activeIcon : action.icon}
             </span>
+            <span class="action-label">{action.label}</span>
           </button>
         {/each}
       {/if}
@@ -427,6 +428,44 @@
   .icon-btn.active {
     color: #4ade80;
     background: rgba(74, 222, 128, 0.1);
+  }
+
+  .header-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.6);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 2px 6px;
+    min-width: 44px;
+  }
+
+  .header-action-btn .material-symbols-outlined {
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+
+  .header-action-btn:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .header-action-btn.active {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+  }
+
+  .action-label {
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1;
   }
 
   .body-scroll {

@@ -38,17 +38,17 @@
   const convHeaderActions: HeaderAction[] = [
     {
       icon: 'summarize',
-      label: 'Summarize Session',
+      label: 'Summarize',
       onClick: () => { showSummaryModal = true; },
     },
     {
       icon: 'star',
-      label: 'STAR Method',
+      label: 'STAR',
       onClick: handleStarMethod,
     },
     {
       icon: 'history',
-      label: 'Catch Me Up',
+      label: 'Catch Up',
       onClick: handleCatchMeUp,
     },
     {
@@ -114,8 +114,13 @@
       }
     }
     try {
-      const stats = await apiFetch(`${getApiUrl()}/api/cache/stats`, { method: 'GET' });
-      if (stats?.count !== undefined) cacheCount = stats.count;
+      if (App?.GetCacheStats) {
+        const stats = await App.GetCacheStats();
+        if (stats && stats.count !== undefined) cacheCount = stats.count;
+      } else {
+        const stats = await apiFetch(`${getApiUrl()}/api/cache/stats`, { method: 'GET' });
+        if (stats?.count !== undefined) cacheCount = stats.count;
+      }
     } catch { /* ignore if endpoint not available */ }
   }
 
@@ -413,6 +418,7 @@
         {includeActiveDocContext}
         {activeDocumentName}
         headerActions={convHeaderActions}
+        showHotkeys={showConvHotkeys}
         onSendChat={sendChat}
         onSendChip={sendChip}
         onDismissChip={dismissChip}

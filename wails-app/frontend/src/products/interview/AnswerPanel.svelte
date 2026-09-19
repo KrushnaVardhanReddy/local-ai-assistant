@@ -191,23 +191,25 @@
       <span class="title font-bold text-white">BarnOwl AI</span>
     </div>
     <div class="header-right">
-      <button class="icon-btn" title="Export session to file" onclick={handleExport}>
+      <button class="header-action-btn" onclick={handleExport}>
         <span class="material-symbols-outlined">
           {exportStatus === 'saving' ? 'hourglass_empty' : exportStatus === 'done' ? 'check' : 'download'}
         </span>
+        <span class="action-label">Export</span>
       </button>
-      <button class="icon-btn" onclick={handleCopyAll} title="Copy Answer">
-        {#if copySuccess}
-          <span class="material-symbols-outlined text-[24px] text-primary">check</span>
-        {:else}
-          <span class="material-symbols-outlined text-[24px]">content_copy</span>
-        {/if}
+      <button class="header-action-btn" onclick={handleCopyAll}>
+        <span class="material-symbols-outlined">
+          {copySuccess ? 'check' : 'content_copy'}
+        </span>
+        <span class="action-label">Copy</span>
       </button>
-      <button class="icon-btn" title="View History" onclick={toggleHistory} class:active={showHistory}>
-        <span class="material-symbols-outlined text-[24px]">history</span>
+      <button class="header-action-btn" onclick={toggleHistory} class:active={showHistory}>
+        <span class="material-symbols-outlined">history</span>
+        <span class="action-label">History</span>
       </button>
-      <button class="icon-btn relative" onclick={() => isCacheModalOpen = true} title={`Clear Cache (${cacheCount} pairs)`}>
-        <span class="material-symbols-outlined text-[24px]">mop</span>
+      <button class="header-action-btn relative" onclick={() => isCacheModalOpen = true}>
+        <span class="material-symbols-outlined">mop</span>
+        <span class="action-label">Cache</span>
         {#if cacheCount > 0}
           <span class="badge">{cacheCount}</span>
         {/if}
@@ -216,14 +218,14 @@
       {#if headerActions}
         {#each headerActions as action}
           <button
-            class="icon-btn"
+            class="header-action-btn"
             class:active={action.active}
-            title={action.label}
             onclick={action.onClick}
           >
             <span class="material-symbols-outlined">
               {action.active && action.activeIcon ? action.activeIcon : action.icon}
             </span>
+            <span class="action-label">{action.label}</span>
           </button>
         {/each}
       {/if}
@@ -342,25 +344,42 @@
     gap: 8px;
   }
 
-  .icon-btn {
+  .header-action-btn {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.6);
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.7);
     cursor: pointer;
-    transition: color 0.2s;
+    transition: all 0.2s;
+    padding: 2px 6px;
+    min-width: 44px;
   }
 
-  .icon-btn:hover {
-    color: white;
+  .header-action-btn .material-symbols-outlined {
+    font-size: 16px;
+    margin-bottom: 2px;
   }
 
-  .icon-btn.active {
+  .header-action-btn:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .header-action-btn.active {
     color: var(--primary);
+    background: rgba(74, 222, 128, 0.1);
+  }
+
+  .action-label {
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1;
   }
 
   .badge {

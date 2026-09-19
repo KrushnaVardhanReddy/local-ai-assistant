@@ -57,8 +57,8 @@
     try {
       if ((window as any).go?.main?.App?.ClearCache) {
         await (window as any).go.main.App.ClearCache();
+        await fetchItems();
         if (onCacheCleared) onCacheCleared();
-        onClose();
       }
     } catch (e) {
       console.error("Failed to clear cache:", e);

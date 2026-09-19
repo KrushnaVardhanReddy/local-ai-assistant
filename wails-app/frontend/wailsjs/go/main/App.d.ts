@@ -3,6 +3,7 @@
 import {driving} from '../models';
 import {audio} from '../models';
 import {backend} from '../models';
+import {engine} from '../models';
 
 export function AnalyzeVision(arg1:string,arg2:string):Promise<void>;
 
@@ -70,7 +71,7 @@ export function StartBackend():Promise<void>;
 
 export function StopBackend():Promise<void>;
 
-export function SummarizeSession(arg1:Array<string>):Promise<void>;
+export function SummarizeSession(arg1:Array<engine.SummaryRequest>):Promise<void>;
 
 export function ToggleClickthroughMode():Promise<boolean>;
 
