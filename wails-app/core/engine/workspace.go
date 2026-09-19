@@ -225,6 +225,7 @@ func (e *StealthEngine) OpenFile(filePath string) (*driving.WorkspaceDocument, e
 
 	if e.events != nil {
 		e.events.Emit("on_active_document_changed", newDoc)
+		e.events.Emit("on_workspace_documents_updated", e.GetOpenDocuments())
 	}
 
 	return newDoc, nil
@@ -283,9 +284,8 @@ func (e *StealthEngine) SetActiveDocument(path string) (*driving.WorkspaceDocume
 // CloseFile closes an open document.
 func (e *StealthEngine) CloseFile(path string) error {
 	e.workspaceMu.Lock()
-	defer e.workspaceMu.Unlock()
-
 	if _, exists := e.openDocuments[path]; !exists {
+		e.workspaceMu.Unlock()
 		return errors.New("document not found")
 	}
 
@@ -293,6 +293,16 @@ func (e *StealthEngine) CloseFile(path string) error {
 
 	if e.activeDoc != nil && e.activeDoc.Path == path {
 		e.activeDoc = nil
+	}
+	e.workspaceMu.Unlock()
+
+	if e.events != nil {
+		e.events.Emit("on_workspace_documents_updated", e.GetOpenDocuments())
+		if e.activeDoc == nil {
+			e.events.Emit("on_active_document_changed", nil)
+		} else {
+			e.events.Emit("on_active_document_changed", e.activeDoc)
+		}
 	}
 
 	return nil

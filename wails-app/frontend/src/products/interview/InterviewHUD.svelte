@@ -671,8 +671,7 @@
   .ide-editor-pane {
     display: flex;
     flex-direction: column;
-    width: 320px;
-    flex-shrink: 0;
+    flex: 1;
     border-right: 1px solid rgba(255,255,255,0.06);
     overflow: hidden;
   }

@@ -85,6 +85,8 @@
     display: flex;
     width: 100%;
     height: 36px;
+    min-height: 36px;
+    flex-shrink: 0;
     background: rgba(0, 0, 0, 0.4);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
