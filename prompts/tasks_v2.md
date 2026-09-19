@@ -197,5 +197,5 @@ BATCH 1 (Parallel execution — both are fully independent)
 | **P58-T2** | Fix ExportSession — Current Session Only | ✅ Merged | ⚡ Parallel | [Pending] | Read from SessionManager.turns instead of SQLite GetAllItems() |
 | **P58-T3** | Summarize Session (LLM Post-Processing) | ✅ Merged | ⚡ Parallel | [PR 208] | Template-based LLM summarization of the full session history |
 | **P58-T4** | Custom Summary Templates | 🔄 In Progress | ⚡ Parallel | — | Allow users to define custom prompts for AI session summaries and save to localStorage |
-| **P58-T5** | Cache Manager UI & Session Hit Bugfix | 🔄 In Progress | ⚡ Parallel | — | Fix missing cache hits in session export and add UI to selectively clear cached Q&A pairs |
+| **P58-T5** | Cache Manager UI & Session Hit Bugfix | ✅ Merged | ⚡ Parallel | #PR-P58-T5 | Fix missing cache hits in session export and add UI to selectively clear cached Q&A pairs |
 

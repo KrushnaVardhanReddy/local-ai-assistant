@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { HeaderAction } from '$lib/types';
+  import CacheManagerModal from './CacheManagerModal.svelte';
 
   let {
     response = '',
@@ -25,6 +26,7 @@
   let copySuccess = $state(false);
 
   let showHistory = $state(false);
+  let isCacheModalOpen = $state(false);
   let cacheItems = $state<any[]>([]);
   let localOverride = $state('');
 
@@ -204,7 +206,7 @@
       <button class="icon-btn" title="View History" onclick={toggleHistory} class:active={showHistory}>
         <span class="material-symbols-outlined text-[24px]">history</span>
       </button>
-      <button class="icon-btn relative" onclick={onClearCache} title={`Clear Cache (${cacheCount} pairs)`}>
+      <button class="icon-btn relative" onclick={() => isCacheModalOpen = true} title={`Clear Cache (${cacheCount} pairs)`}>
         <span class="material-symbols-outlined text-[24px]">mop</span>
         {#if cacheCount > 0}
           <span class="badge">{cacheCount}</span>
@@ -295,6 +297,12 @@
     </div>
   {/if}
 </div>
+
+<CacheManagerModal
+  isOpen={isCacheModalOpen}
+  onClose={() => isCacheModalOpen = false}
+  onCacheCleared={onClearCache}
+/>
 
 <style>
   .answer-panel {
