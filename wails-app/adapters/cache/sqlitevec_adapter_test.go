@@ -26,6 +26,24 @@ func TestSQLiteVecAdapter_NilDB(t *testing.T) {
 	if count != 0 {
 		t.Errorf("Expected Count to return 0 with nil db, got %d", count)
 	}
+
+	// Test GetAllItems with nil db
+	items, err := adapter.GetAllItems()
+	if items != nil || err != nil {
+		t.Errorf("Expected GetAllItems to return nil, nil with nil db, got %v, %v", items, err)
+	}
+
+	// Test ClearAll with nil db
+	err = adapter.ClearAll()
+	if err != nil {
+		t.Errorf("Expected ClearAll to return nil with nil db, got %v", err)
+	}
+
+	// Test DeleteItem with nil db
+	err = adapter.DeleteItem("some-id")
+	if err != nil {
+		t.Errorf("Expected DeleteItem to return nil with nil db, got %v", err)
+	}
 }
 
 func TestSQLiteVecAdapter_WithDB(t *testing.T) {
@@ -49,4 +67,13 @@ func TestSQLiteVecAdapter_WithDB(t *testing.T) {
 
 	// Test Count
 	adapter.Count()
+
+	// Test GetAllItems
+	adapter.GetAllItems()
+
+	// Test ClearAll
+	adapter.ClearAll()
+
+	// Test DeleteItem
+	adapter.DeleteItem("some-id")
 }

@@ -115,6 +115,13 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 				e.inFlightCtx = nil
 			}
 			e.inFlightMu.Unlock()
+
+			if e.sessionMgr != nil {
+				e.sessionMgr.StartTurn(cleanTranscript)
+				e.sessionMgr.SetAISuggestion(cachedAns)
+				e.sessionMgr.CompleteTurn()
+			}
+
 			cancel()
 			return
 		}

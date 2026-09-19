@@ -48,5 +48,21 @@ func (a *SQLiteVecAdapter) GetAllItems() ([]backend.CacheItem, error) {
 	return a.db.GetAllItems()
 }
 
+// ClearAll removes all cached Q&A pairs
+func (a *SQLiteVecAdapter) ClearAll() error {
+	if a.db == nil {
+		return nil
+	}
+	return a.db.ClearAll()
+}
+
+// DeleteItem removes a single item from the cache
+func (a *SQLiteVecAdapter) DeleteItem(id string) error {
+	if a.db == nil {
+		return nil
+	}
+	return a.db.DeleteItem(id)
+}
+
 // Compile-time interface check.
 var _ driven.CachePort = (*SQLiteVecAdapter)(nil)
