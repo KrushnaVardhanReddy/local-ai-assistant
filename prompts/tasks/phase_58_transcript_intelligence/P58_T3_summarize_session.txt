@@ -24,18 +24,23 @@ FILES INVOLVED
 ═══════════════════════════════════════════════════════════════
 SECTION 1: Backend Implementation (Go)
 ═══════════════════════════════════════════════════════════════
-1. In `wails-app/core/engine/engine.go`, add `SummarizeSession(templateID string) error`.
+1. In `wails-app/core/engine/engine.go`, add `SummarizeSession(templateIDs []string) error`.
    - Retrieve all turns from `e.sessionMgr`. If none, return error.
    - Format the entire transcript into a single string (Interviewer: X, AI: Y).
+   - For EACH `templateID` in the list, launch a background goroutine to process it in PARALLEL.
+   - **CRITICAL:** Do NOT acquire `e.llmBusy.Lock()` for these summary calls. They must run completely
+     in the background without blocking the live interview. Use a new detached `context.Background()`
+     for the stream, NOT `e.inFlightCtx`, so new interview questions don't cancel the summaries.
    - Select a system prompt based on `templateID` (e.g. "granola", "star", "scorecard").
    - Call `e.llm.StreamCompletion(ctx, transcript, systemPrompt, nil, onToken, onEnd)`.
-   - Inside the callbacks, use `e.events.Emit` to send `"on_summary_start"`,
-     `"on_summary_token"`, and `"on_summary_end"` events to the frontend.
+   - Inside the callbacks, use `e.events.Emit` to send events to the frontend. Pass the `templateID`
+     in the payload so the frontend can route the text to the correct tab.
+     E.g., `e.events.Emit("on_summary_token", map[string]interface{}{"id": templateID, "text": token})`
 
 2. In `wails-app/app.go`, add the Wails binding:
 ```go
-func (a *App) SummarizeSession(templateID string) error {
-    return a.engine.SummarizeSession(templateID)
+func (a *App) SummarizeSession(templateIDs []string) error {
+    return a.engine.SummarizeSession(templateIDs)
 }
 ```
 
@@ -43,15 +48,16 @@ func (a *App) SummarizeSession(templateID string) error {
 SECTION 2: Frontend Implementation (Svelte)
 ═══════════════════════════════════════════════════════════════
 1. In `ws.svelte.ts`:
-   - Add state variables: `summaryResult: ""`, `isSummarizing: false`.
-   - Add event listeners for `on_summary_start`, `on_summary_token` (appends to summaryResult),
-     and `on_summary_end`.
+   - Add state: `summaryResults: Record<string, string> = {}`, `isSummarizing: Record<string, boolean> = {}`.
+   - Add event listeners for `on_summary_start`, `on_summary_token` (appends to `summaryResults[data.id]`),
+     and `on_summary_end` (sets `isSummarizing[data.id] = false`).
 
 2. Create `SummaryModal.svelte` (using standard App modal styling):
-   - A dropdown or row of buttons to select the template (Granola, STAR, Scorecard).
-   - A `Generate` button that calls `SummarizeSession(id)`.
-   - A markdown rendering area for the streaming `summaryResult`.
-   - A `Copy to Clipboard` button that appears when `isSummarizing` completes.
+   - A row of checkboxes or toggles to select multiple templates (Granola, STAR, Scorecard).
+   - A `Generate All` button that calls `SummarizeSession(["granola", "star"])`.
+   - A tabbed interface to switch between the generating summaries.
+   - A markdown rendering area for the currently active tab's `summaryResults[id]`.
+   - A `Copy to Clipboard` button for the active tab.
 
 3. In `ConvPanel.svelte`:
    - Add a "Summarize Session" icon button next to the existing header buttons.
@@ -61,8 +67,8 @@ SECTION 2: Frontend Implementation (Svelte)
 TESTING & VERIFICATION CRITERIA
 ═══════════════════════════════════════════════════════════════
 - Compiles successfully (`go build ./...` and `npm run check`).
-- Clicking "Summarize" opens a modal.
-- Requesting a summary streams text into the modal without interfering with the
-  main `AnswerPanel` state.
-- Multiple templates are supported.
-- PR title format: `feat(app): add AI session summarization templates (#P58-T3)`
+- Clicking "Summarize" opens a modal where multiple templates can be selected.
+- Generating streams multiple templates in parallel into separate tabs.
+- The live interview session (AnswerPanel) remains unblocked and fully functional
+  while summaries are generating in the background.
+- PR title format: `feat(app): parallel AI session summarization templates (#P58-T3)`
