@@ -34,3 +34,7 @@ This document outlines the master task list for the Local AI Assistant, broken d
 - **Phase 32**: SmolLM2 Local Intelligence Layer (on-device turn-taking gating, semantic Q&A cache using ChromaDB).
 - **Phase 33**: Native Mobile App via Capacitor (iOS/Android wrapping, background audio plugins).
 - **Phase 34**: Enterprise Timeline (infinite SQLite persistent searchable memory, Action Item extraction).
+
+## P61: UX Polish
+- ✅ **Workspace UX**: Standalone files appended to workspace tree.
+- ✅ **Live Session**: Added collapsible Live Session panel (ConvPanel) for an expanded IDE mode.

@@ -57,6 +57,12 @@
       onClick: () => { showConvHotkeys = !showConvHotkeys; },
       get active() { return showConvHotkeys; },
     },
+
+    {
+      icon: 'last_page',
+      label: 'Collapse',
+      onClick: () => { isConvPanelCollapsed = true; },
+    }
   ];
   let cacheCount = $state(0);
   let clickthrough = $state(false);
@@ -192,6 +198,7 @@
     ? parseInt(localStorage.getItem('barnowl_conv_panel_width') || '380', 10)
     : 380;
   let convPanelWidth = $state(Math.max(280, Math.min(savedConvWidth, window.innerWidth * 0.6)));
+  let isConvPanelCollapsed = $state(false);
   let isPanelResizing = $state(false);
 
   function startPanelResize(e: MouseEvent) {
@@ -405,7 +412,8 @@
       </div>
     {/if}
 
-    <!-- LEFT: Conversation Panel (always visible) -->
+    {#if !isConvPanelCollapsed}
+    <!-- LEFT: Conversation Panel -->
     <div class="conv-panel-wrapper" style="width: {convPanelWidth}px;">
       <ConvPanel
         transcriptHistory={wsState.transcriptHistory}
@@ -451,6 +459,16 @@
     >
       <div class="resizer-indicator"></div>
     </div>
+    {/if}
+    {#if isConvPanelCollapsed}
+      <button
+        class="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-surface border border-white/10 rounded-r-md p-1 hover:bg-white/10 transition-colors shadow-lg"
+        onclick={() => { isConvPanelCollapsed = false; }}
+        title="Expand Live Session"
+      >
+        <span class="material-symbols-outlined text-white/70 hover:text-white">keyboard_double_arrow_right</span>
+      </button>
+    {/if}
 
     <!-- RIGHT: Answer Panel (always visible) -->
     <div class="answer-panel-wrapper">
