@@ -89,3 +89,26 @@ class LocalIntelligence:
         # The 135M model struggles heavily with zero-shot classification and drops valid queries.
         # Bypassing this for now; smart_filter.py already catches basic conversational filler.
         return True
+
+    async def is_behavioral_question(self, transcript: str) -> bool:
+        if not self._enabled or self._llm is None:
+            return False
+
+        prompt = (
+            "Analyze the following interview question. Is it a behavioral question asking for a past story or example? "
+            "(e.g. 'Tell me about a time', 'Give me an example', 'Describe a situation'). Answer strictly 'yes' or 'no'.\n\n"
+            f"Question: {transcript}\n\nAnswer:"
+        )
+        try:
+            res = await asyncio.to_thread(
+                self._llm,
+                prompt,
+                max_tokens=10,
+                temperature=0.1,
+                stop=["\n"]
+            )
+            text = res["choices"][0]["text"].strip().lower()
+            return text.startswith("yes")
+        except Exception as e:
+            print(f"[SmolLM2] is_behavioral_question error: {e}", file=sys.stderr)
+            return False

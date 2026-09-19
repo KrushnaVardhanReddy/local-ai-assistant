@@ -25,6 +25,7 @@ from auth import get_user_id, AuthError, create_payg_session_token, verify_payg_
 from keys import key_store
 from transcriber import Transcriber
 from llm_client import LLMClient
+from local_intelligence import get_local_intelligence
 from gemini_live_client import GeminiLiveClient
 from rag import ingestor
 from rag import retriever
@@ -782,7 +783,16 @@ async def ws_endpoint(websocket: WebSocket, custom_key: str = None, custom_provi
                         for out_q in list(active_outbound_queues):
                             out_q.put_nowait({"type": "rag_sources", "sources": sources})
 
-                    messages = [{"role": "system", "content": system_content}]
+                    star_primer = ""
+                    if config.SMOLLM2_ENABLED:
+                        li = get_local_intelligence()
+                        is_behavioral = await li.is_behavioral_question(transcript)
+                        if is_behavioral:
+                            star_primer = "\n\nFor your next response only, structure your answer using the STAR format (Situation, Task, Action, Result) if applicable, or break it into a clear step-by-step methodology. Keep it concise."
+                            for out_q in list(active_outbound_queues):
+                                out_q.put_nowait({"type": "star_primed"})
+
+                    messages = [{"role": "system", "content": system_content + star_primer}]
                     messages.extend(chat_history)
                     messages.append({"role": "user", "content": transcript})
                     chat_history.clear()
