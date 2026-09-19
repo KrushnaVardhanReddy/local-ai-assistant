@@ -29,6 +29,10 @@
             <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+/</kbd>
         </div>
         <div class="flex items-center justify-between py-2 border-b border-white/5">
+            <span class="font-bold">Toggle Microphone</span>
+            <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+M</kbd>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-white/5">
             <span class="font-bold">Push to Talk</span>
             <kbd class="px-2 py-1 bg-white/10 rounded font-mono text-sm text-on-background">Ctrl+Shift+Space</kbd>
         </div>

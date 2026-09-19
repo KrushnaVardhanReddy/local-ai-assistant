@@ -38,6 +38,15 @@
       e.preventDefault();
       uiState.hotkeysPanelOpen = !uiState.hotkeysPanelOpen;
     }
+    // Check for Ctrl+M or Cmd+M to toggle mic
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm') {
+      e.preventDefault();
+      if ((window as any).go?.main?.App?.ToggleMic) {
+        (window as any).go.main.App.ToggleMic().then((newState: boolean) => {
+          wsState.isListening = newState;
+        });
+      }
+    }
   }
 </script>
 

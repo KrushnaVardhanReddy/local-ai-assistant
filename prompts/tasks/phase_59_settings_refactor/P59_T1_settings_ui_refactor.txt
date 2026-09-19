@@ -1,0 +1,26 @@
+TASK: P59-T1 — Settings UI Refactor & UX Polish
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Refactor `Settings.svelte` to drastically improve the UI/UX. Currently, the settings panel is a long, monolithic scrolling list of dropdowns, checkboxes, and text areas. It needs to be organized into clean, logical tabs or accordion sections (e.g., "General", "AI Models", "Audio & Devices", "Context & Prompts") to make it professional and highly usable.
+
+═══════════════════════════════════════════════════════════════
+REQUIREMENTS
+═══════════════════════════════════════════════════════════════
+1. **Tabbed Navigation or Accordions**: Group related settings together.
+   - **AI Models**: Custom LLM Provider, OpenRouter Model ID, Custom API Key, Local STT Engine.
+   - **Audio & Devices**: Audio Input Device, System Audio Loopback.
+   - **Context & Prompts**: Persona / System Prompt, Interview Language, Code Language Preference, Job Description, Resume Upload.
+   - **General/Advanced**: Dev Mode Toggle, Include Active File as Context.
+2. **Visual Polish**: 
+   - Use the `glass-panel` and `surface-variant` design system currently seen in the `HotkeysPanel.svelte`.
+   - Improve form inputs (dropdowns, checkboxes) to match the sleek dark-mode aesthetic of the application.
+3. **Responsive**: Ensure it still works perfectly when embedded as a sidebar or as a floating modal overlay.
+4. **No Logic Changes**: DO NOT change how the settings are saved to `localStorage` or how they communicate via `apiFetch` and Wails (`App`). Keep all backend connections intact.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+- Refactored `wails-app/frontend/src/lib/Settings.svelte` with the new tabbed/categorized UI.
+- Any necessary CSS additions for the tabs or improved input styling.

@@ -558,45 +558,7 @@
     </button>
   </div>
 
-  <hr class="divider" />
 
-  <div class="config-section">
-    <div class="section-label">Keyboard Shortcuts</div>
-    <div class="hotkeys-list">
-      <div class="hotkey-row">
-        <span>Toggle Hotkeys / Settings</span>
-        <kbd>Ctrl+/</kbd>
-      </div>
-      <div class="hotkey-row">
-        <span>Push to Talk</span>
-        <kbd>Ctrl+Shift+Space</kbd>
-      </div>
-      <div class="hotkey-row">
-        <span>Screenshot Vision</span>
-        <kbd>Ctrl+Shift+S</kbd>
-      </div>
-      <div class="hotkey-row">
-        <span>Send Transcript Chip 1-6</span>
-        <kbd>Ctrl+Shift+1...6</kbd>
-      </div>
-      <div class="hotkey-row">
-        <span>Scroll Answer Down / Up</span>
-        <kbd>Ctrl+Shift+↓/↑</kbd>
-      </div>
-      <div class="hotkey-row">
-        <span>Toggle Stealth Click-through</span>
-        <kbd>Ctrl+Alt+M</kbd>
-      </div>
-      <div class="hotkey-row">
-        <span>Session Report</span>
-        <kbd>Ctrl+Shift+E</kbd>
-      </div>
-      <div class="hotkey-row">
-        <span>Panic Clear / Hide</span>
-        <kbd>Ctrl+Shift+X</kbd>
-      </div>
-    </div>
-  </div>
 
   <hr class="divider" />
 

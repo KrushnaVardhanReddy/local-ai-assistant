@@ -1,0 +1,22 @@
+TASK: Update Wiki Documentation for Wails / Go Architecture
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Update the markdown files in the `wiki/` directory to accurately reflect the current state of the Local AI Assistant project. The project has undergone massive architecture shifts recently and the documentation needs to be aligned.
+
+═══════════════════════════════════════════════════════════════
+KEY ARCHITECTURE CHANGES TO DOCUMENT
+═══════════════════════════════════════════════════════════════
+1. **Wails + Go Native Desktop:** The app has migrated from web/Tauri to a pure native desktop application using Wails v2 (Go backend, Svelte 5 frontend).
+2. **AI Backend Pipeline:** The backend is written in pure Go. It captures system audio natively via loopback, handles Voice Activity Detection (VAD), and runs speech-to-text (STT) via Groq or local Whisper bindings.
+3. **Caching & DB:** Caching has been moved to SQLite (using `sqlite-vec` for RAG and vector search) and a new Cache Manager UI exists in the right panel.
+4. **Cloud & Local LLMs:** The system supports a hybrid approach: local models (via Ollama/llama.cpp) or cloud models (Groq, Gemini, OpenRouter, Cloudflare Workers AI) configurable via `.env.local`.
+
+═══════════════════════════════════════════════════════════════
+YOUR TASK
+═══════════════════════════════════════════════════════════════
+1. Review the files in `wiki/` (specifically `architecture.md`, `project-structure.md`, and `roadmap.md`).
+2. Update the architecture descriptions to replace old web/Tauri concepts with the new Wails/Go concepts.
+3. Update `project-structure.md` to reflect the `wails-app/` structure containing `frontend/` (Svelte) and `adapters/` (Go).
+4. Commit the changes and open a PR.
