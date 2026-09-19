@@ -26,6 +26,12 @@ NEW:    wails-app/app_index_test.go
 DETAILED SPECIFICATION
 ═══════════════════════════════════════════════════════════════
 
+> [!WARNING]
+> CRITICAL FIX: In a previous attempt, you HALLUCINATED the commit. You wrote a commit message claiming to implement the Go backend indexing and Svelte UI checkboxes, but you ONLY committed the `app_index_test.go` file. The actual frontend and backend files were never touched.
+>
+> YOU MUST WRITE AND COMMIT THE ACTUAL PRODUCTION CODE THIS TIME. Do not just write the tests. You must actually modify `app.go`, `sqlitevec_adapter.go`, `WorkspacePanel.svelte`, and `CacheManagerModal.svelte` as requested below.
+
+
 1. In `wails-app/backend/vector_db.go` (or `sqlitevec_adapter.go`):
    - Add a `source_type` column to the existing embeddings table:
        `source_type TEXT NOT NULL DEFAULT 'qa'`  -- values: 'qa' | 'document'
