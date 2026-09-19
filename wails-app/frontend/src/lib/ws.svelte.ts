@@ -20,6 +20,8 @@ export const wsState = $state({
   pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>,
   plan: "unknown",
   isMockMode: false,
+  summaryResults: {} as Record<string, string>,
+  isSummarizing: {} as Record<string, boolean>,
   rawMode: false,
   manualMode: false,
   transcriptHistory: [] as Array<{ role: string; text: string; answer?: string }>,
@@ -170,6 +172,22 @@ function initListeners() {
     console.log('[WS] on_response_token:', data?.text?.slice(0, 20));
     wsState.response += data.text;
     wsState.isThinking = true;
+  });
+
+  onEvent("on_summary_start", (data: any) => {
+    wsState.isSummarizing[data.id] = true;
+    wsState.summaryResults[data.id] = "";
+  });
+
+  onEvent("on_summary_token", (data: any) => {
+    if (!wsState.summaryResults[data.id]) {
+      wsState.summaryResults[data.id] = "";
+    }
+    wsState.summaryResults[data.id] += data.text;
+  });
+
+  onEvent("on_summary_end", (data: any) => {
+    wsState.isSummarizing[data.id] = false;
   });
 
   onEvent("on_response_end", () => {

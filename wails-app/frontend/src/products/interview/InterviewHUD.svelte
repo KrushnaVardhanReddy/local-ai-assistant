@@ -14,6 +14,7 @@
   import AnswerPanel from "./AnswerPanel.svelte";
 
   import SessionReport from "$lib/SessionReport.svelte";
+  import SummaryModal from "./SummaryModal.svelte";
   import AuthModal from "$lib/components/AuthModal.svelte";
   import Settings from "$lib/Settings.svelte";
   import type { FileNode } from "$lib/components/workspace/types";
@@ -36,6 +37,11 @@
 
   const convHeaderActions: HeaderAction[] = [
     {
+      icon: 'summarize',
+      label: 'Summarize Session',
+      onClick: () => { showSummaryModal = true; },
+    },
+    {
       icon: 'star',
       label: 'STAR Method',
       onClick: handleStarMethod,
@@ -55,6 +61,7 @@
   let cacheCount = $state(0);
   let clickthrough = $state(false);
   let showSessionReport = $state(false);
+  let showSummaryModal = $state(false);
   let isAuthModalOpen = $state(false);
   let activeAction = $state<string | null>(null);
 
@@ -469,6 +476,11 @@
   </div>
 
   <!-- Modals -->
+
+  {#if showSummaryModal}
+    <SummaryModal onClose={() => showSummaryModal = false} />
+  {/if}
+
   {#if showSessionReport}
     <SessionReport onClose={() => showSessionReport = false} />
   {/if}

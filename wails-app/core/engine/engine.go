@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"strings"
+	"fmt"
 	"context"
 	"sync"
 	"wails-app/backend/session"
@@ -162,4 +164,82 @@ func (e *StealthEngine) SetManualMode(enabled bool) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.manualMode = enabled
+}
+
+// SummarizeSession uses the LLM to summarize the entire interview session
+// using predefined templates. It streams the results asynchronously.
+func (e *StealthEngine) SummarizeSession(templateIDs []string) error {
+	if e.sessionMgr == nil {
+		return fmt.Errorf("session manager not configured")
+	}
+
+	turns := e.sessionMgr.GetRecentTurns(10000)
+	if len(turns) == 0 {
+		return fmt.Errorf("no session history to summarize")
+	}
+
+	var transcript strings.Builder
+	for _, t := range turns {
+		transcript.WriteString(fmt.Sprintf("Interviewer: %s\n", t.InterviewerQuestion))
+		if t.CandidateResponse != "" {
+			transcript.WriteString(fmt.Sprintf("Candidate: %s\n", t.CandidateResponse))
+		}
+		transcript.WriteString("\n")
+	}
+
+	transcriptStr := transcript.String()
+
+	for _, id := range templateIDs {
+		go func(templateID string) {
+			sysPrompt := "You are a helpful assistant. Summarize the interview."
+			switch templateID {
+			case "granola":
+				sysPrompt = "You are Granola. Create detailed action notes and a professional summary of this interview."
+			case "star":
+				sysPrompt = "Extract the key behaviors and responses from the candidate using the STAR (Situation, Task, Action, Result) method based on the interview transcript."
+			case "scorecard":
+				sysPrompt = "Create a technical scorecard evaluating the candidate based on the interview transcript. Provide ratings and justification."
+			}
+
+			// We use a completely detached context so in-flight cancellations do not affect summaries.
+			ctx := context.Background()
+
+			if e.events != nil {
+				e.events.Emit("on_summary_start", map[string]interface{}{"id": templateID})
+			}
+
+			err := e.llm.StreamCompletion(
+				ctx,
+				transcriptStr,
+				sysPrompt,
+				nil,
+				func(token string) {
+					if e.events != nil {
+						e.events.Emit("on_summary_token", map[string]interface{}{
+							"id":   templateID,
+							"text": token,
+						})
+					}
+				},
+				func() {
+					if e.events != nil {
+						e.events.Emit("on_summary_end", map[string]interface{}{"id": templateID})
+					}
+				},
+			)
+
+			if err != nil {
+				// Handle error
+				if e.events != nil {
+					e.events.Emit("on_summary_token", map[string]interface{}{
+						"id":   templateID,
+						"text": fmt.Sprintf("\n[Error: %v]", err),
+					})
+					e.events.Emit("on_summary_end", map[string]interface{}{"id": templateID})
+				}
+			}
+		}(id)
+	}
+
+	return nil
 }
