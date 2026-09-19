@@ -1,0 +1,28 @@
+TASK: P59-T2 — Migrate Resume & Job Context to Workspace RAG
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Remove the dedicated "Target Job Description" and "Resume Upload" text areas from `Settings.svelte`. Instead, we will rely on the unified Workspace RAG system (Cache Manager) to handle resume and job description documents exactly like regular codebase context.
+
+This saves tokens, simplifies the Settings UI, and allows the user to drop multiple resumes, company research notes, and job descriptions into the unified workspace cache.
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/frontend/src/lib/Settings.svelte`   [MODIFY — remove resume/job sections]
+- `wails-app/backend/llm/prompts.go`             [MODIFY — update system prompt instructions]
+
+═══════════════════════════════════════════════════════════════
+REQUIREMENTS
+═══════════════════════════════════════════════════════════════
+1. **Remove from Settings UI:** Delete the "Interview Context" (Target Job Description) and "Resume Context" sections from `Settings.svelte` entirely. 
+2. **Remove associated logic:** Delete the Svelte state variables and functions related to them (e.g., `jobDescription`, `resumeRawText`, `extractResume`, `saveJobDescription`, `handleFileSelect`, etc.).
+3. **Update LLM System Prompt:** Modify `wails-app/backend/llm/prompts.go` (or wherever `DefaultSystemPrompt` is defined) to add an explicit instruction. The prompt must tell the AI: "If the user asks about their background, resume, or the target job description, you MUST consult the workspace context provided via RAG. The user will upload their resume and job description to the workspace cache."
+4. **No Cache Manager changes:** Do not touch the Cache Manager itself; it already natively supports importing `.txt` and `.pdf` files.
+
+═══════════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════════
+- Refactored `Settings.svelte` with the clunky text/upload sections removed.
+- Updated core system prompt in the Go backend.

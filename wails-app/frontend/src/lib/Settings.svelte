@@ -63,17 +63,22 @@
 
   onMount(async () => {
     try {
-      const apiUrl = getApiUrl();
-      const healthRes = await apiFetch(`${apiUrl}/health`);
-      if (healthRes.ok) {
-        const healthData = await healthRes.json();
-        currentLLMProvider = healthData.llm_provider;
+      if ((window as any).go?.main?.App?.GetSystemStatus) {
+        systemStatus = await (window as any).go.main.App.GetSystemStatus();
+        currentLLMProvider = systemStatus.llm_provider || 'auto';
+      } else {
+        const apiUrl = getApiUrl();
+        const healthRes = await apiFetch(`${apiUrl}/health`);
+        if (healthRes.ok) {
+          const healthData = await healthRes.json();
+          currentLLMProvider = healthData.llm_provider;
+        }
+        const statusRes = await apiFetch(`${apiUrl}/api/status`);
+        if (statusRes.ok) {
+          systemStatus = await statusRes.json();
+        }
       }
-      const statusRes = await apiFetch(`${apiUrl}/api/status`);
-      if (statusRes.ok) {
-        systemStatus = await statusRes.json();
-      }
-    } catch (e) { console.error("Failed to load health", e); }
+    } catch (e) { console.error("Failed to load health or status", e); }
     try {
       const apiUrl = getApiUrl();
       const res = await apiFetch(`${apiUrl}/api/system_prompt`);

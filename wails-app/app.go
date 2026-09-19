@@ -185,6 +185,17 @@ func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
+// GetSystemStatus returns diagnostic information about the configured models and engines
+func (a *App) GetSystemStatus() map[string]string {
+	return map[string]string{
+		"llm_provider":     os.Getenv("LLM_PROVIDER"),
+		"llm_model":        os.Getenv("LLM_MODEL"),
+		"stt_provider":     os.Getenv("STT_PROVIDER"),
+		"stt_model":        os.Getenv("STT_MODEL"),
+		"local_stt_engine": os.Getenv("LOCAL_STT_ENGINE"),
+	}
+}
+
 // GetState is polled by the frontend every 200ms to get the latest transcript/response state.
 func (a *App) GetState() map[string]interface{} {
 	s := a.engine.GetState()

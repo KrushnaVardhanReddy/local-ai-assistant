@@ -70,6 +70,10 @@ export function GetState() {
   return window['go']['main']['App']['GetState']();
 }
 
+export function GetSystemStatus() {
+  return window['go']['main']['App']['GetSystemStatus']();
+}
+
 export function GetWorkspaceTree() {
   return window['go']['main']['App']['GetWorkspaceTree']();
 }

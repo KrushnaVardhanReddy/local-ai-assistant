@@ -39,6 +39,8 @@ export function GetOpenDocuments():Promise<Array<driving.WorkspaceDocument>>;
 
 export function GetState():Promise<Record<string, any>>;
 
+export function GetSystemStatus():Promise<Record<string, string>>;
+
 export function GetWorkspaceTree():Promise<Array<driving.FileNode>>;
 
 export function Greet(arg1:string):Promise<string>;
