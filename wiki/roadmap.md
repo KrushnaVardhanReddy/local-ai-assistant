@@ -7,7 +7,7 @@ This document outlines the master task list for the Local AI Assistant, broken d
 - **Phase 4 (UI)**: Svelte 5 + Wails floating overlay.
 - **Phase 5-6 (RAG & Vision)**: Document ingestion, web search, and screen capture (`Ctrl+Shift+S`).
 - **Phase 7 (Polish)**: Stealth hotkeys, remote helper mode, and testing.
-- **Phase 8-11 (SaaS & UX)**: Supabase/Stripe auth, smart audio filtering (noise/filler), and resume parsing.
+- **Phase 8-11 (Local Architecture & UX)**: Migration to pure native desktop (Wails/Go), local SQLite caching (`sqlite-vec`), Cache Manager UI, smart audio filtering (noise/filler), and resume parsing.
 - **Phase 12 (UX Polish)**: Syntax highlighting for code, language preference controls, and stealth UI contrast.
 - **Phase 13 (Audio Routing)**: Audio loopback (hearing the interviewer's voice).
 - **Phase 14**: Transcript Chip bar (clickable priority questions).
@@ -16,8 +16,8 @@ This document outlines the master task list for the Local AI Assistant, broken d
 - **Phase 17**: Session scorecards and real-time coaching.
 - **Phase 18**: Portable App packaging (no installation required).
 
-## Phase 19-25: SaaS, Advanced Features & Competitor Parity (✅ Complete)
-- **Phase 19-20**: Pricing tiers, referral engine, and device limit locks.
+## Phase 19-25: Local Config, Advanced Features & Competitor Parity (✅ Complete)
+- **Phase 19-20**: Advanced local configuration and hybrid cloud/local LLM support (`.env.local`).
 - **Phase 21-23**: Mock interviews, job context grounding, and E2E testing suite.
 - **Phase 24**: Lifetime "Bring Your Own Key" (BYOK) system.
 - **Phase 25**: Competitive gaps (STAR framework formatting, rolling transcript buffer, session history trendline, email drafting).
