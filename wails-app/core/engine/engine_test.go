@@ -418,7 +418,7 @@ func TestSummarizeSession_NoSessionManager(t *testing.T) {
 
 func TestSummarizeSession_NoSessionHistory(t *testing.T) {
 	eng := engine.New(engine.Config{}, nil, nil, nil, nil)
-	err := eng.SummarizeSession([]string{"granola"})
+	err := eng.SummarizeSession([]engine.SummaryRequest{{ID: "granola", Prompt: ""}})
 	if err == nil {
 		t.Errorf("Expected error due to no history")
 	}
@@ -435,7 +435,12 @@ func TestSummarizeSession_Success(t *testing.T) {
 	sess.SetCandidateResponse("I use goroutines.")
 	sess.CompleteTurn()
 
-	err := eng.SummarizeSession([]string{"granola", "star", "scorecard"})
+	reqs := []engine.SummaryRequest{
+		{ID: "granola", Prompt: ""},
+		{ID: "star", Prompt: ""},
+		{ID: "scorecard", Prompt: ""},
+	}
+	err := eng.SummarizeSession(reqs)
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
@@ -461,7 +466,7 @@ func TestSummarizeSession_Error(t *testing.T) {
 	sess.StartTurn("Question 1?")
 	sess.CompleteTurn()
 
-	eng.SummarizeSession([]string{"granola"})
+	eng.SummarizeSession([]engine.SummaryRequest{{ID: "granola", Prompt: ""}})
 	time.Sleep(100 * time.Millisecond) // Wait for goroutines to start
 
 	if events.Emitted["on_summary_token"] != 1 {

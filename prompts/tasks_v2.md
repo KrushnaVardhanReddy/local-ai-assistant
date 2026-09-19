@@ -196,4 +196,5 @@ BATCH 1 (Parallel execution — both are fully independent)
 | **P58-T1** | Rolling Transcript Context | 🔄 In Progress | ⚡ Parallel | [PR 207] | Buffer last 5 transcripts; wrap LLM prompt so it reconstructs fragmented questions |
 | **P58-T2** | Fix ExportSession — Current Session Only | 🔄 In Progress | ⚡ Parallel | [Pending] | Read from SessionManager.turns instead of SQLite GetAllItems() |
 | **P58-T3** | Summarize Session (LLM Post-Processing) | 🔄 In Progress | ⚡ Parallel | [PR 208] | Template-based LLM summarization of the full session history |
+| **P58-T4** | Custom Summary Templates | ✅ Merged | ⚡ Parallel | [#P58-T4] | Allow users to create custom summary templates with specific prompts. |
 
