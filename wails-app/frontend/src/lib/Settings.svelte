@@ -28,6 +28,14 @@
   let currentLLMProvider = $state("auto");
   let localSttEngine = $state(localStorage.getItem("local_stt_engine") || "faster-whisper");
   let includeActiveDocContext = $state(true);
+  let activeTab = $state('models');
+  const tabs = [
+    { id: 'models', label: 'AI Models' },
+    { id: 'audio', label: 'Audio & Devices' },
+    { id: 'context', label: 'Context & Prompts' },
+    { id: 'general', label: 'General' },
+    { id: 'account', label: 'Account' }
+  ];
 
   // Audio state
   let audioDevices = $state<Array<{id: number, name: string, is_loopback_capable: boolean}>>([]);
@@ -333,260 +341,304 @@
   {/if}
 
   {#if showSettings || embedded}
-  <div class="settings-panel" class:embedded>
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <h2>Settings</h2>
-  </div>
+  <div class="settings-panel glass-panel flex flex-col pointer-events-auto" class:embedded>
 
-  <div class="config-section">
-    <div class="section-label">System Status</div>
-    {#if systemStatus}
-      <div class="status-grid">
-        <div class="status-item">
-          <span class="status-key">LLM Provider</span>
-          <span class="status-value badge">{systemStatus.llm_provider}</span>
-        </div>
-        <div class="status-item">
-          <span class="status-key">LLM Model</span>
-          <span class="status-value badge">{systemStatus.llm_model}</span>
-        </div>
-        <div class="status-item">
-          <span class="status-key">STT Provider</span>
-          <span class="status-value badge">{systemStatus.stt_provider}</span>
-        </div>
-        <div class="status-item">
-          <span class="status-key">STT Model</span>
-          <span class="status-value badge">{systemStatus.stt_model}</span>
-        </div>
-        <div class="status-item">
-          <span class="status-key">Local STT Engine</span>
-          <span class="status-value badge">{systemStatus.local_stt_engine}</span>
-        </div>
-      </div>
-    {:else}
-      <div class="status-indicator">Loading status...</div>
-    {/if}
-  </div>
-
-  <hr class="divider" />
-
-  <div class="config-section">
-    {#if !isCloudBuild}
-      <div style="margin-bottom: 1rem;">
-        <h3 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: #ddd;">Embedded Stealth Terminal</h3>
-        <StealthTerminal />
+    <!-- Header with Tabs -->
+    <div class="flex-none flex flex-col border-b border-white/10">
+      <div class="flex items-center justify-between p-4 pb-2">
+        <h2 class="text-xl font-headline-md text-on-background tracking-wide m-0">Settings</h2>
+        {#if !embedded}
+        <button
+            class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-on-surface-variant hover:text-red-400 transition-colors"
+            onclick={() => internalShowSettings = false}
+        >
+            <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+        {/if}
       </div>
 
-      <hr class="divider" style="margin-top: 0;" />
-    {/if}
-
-    <div class="checkbox-group">
-      <label>
-        <input type="checkbox" bind:checked={isDevModeChecked} data-testid="dev-mode-toggle" />
-        Dev Mode: Disable Stealth (E2E Visibility)
-      </label>
-    </div>
-
-    <div class="checkbox-group">
-      <label>
-        <input type="checkbox" bind:checked={includeActiveDocContext} />
-        Include Active File as Context
-      </label>
-    </div>
-
-    {#if !isCloudBuild}
-      <div class="input-group">
-        <label for="audioDevice">Audio Input Device</label>
-        <select id="audioDevice" bind:value={selectedDeviceId} class="custom-select">
-          <option value={null}>Default Microphone</option>
-          {#each audioDevices as dev}
-            <option value={dev.id}>{dev.name}</option>
-          {/each}
-        </select>
-      </div>
-
-      {#if audioDevices.find(d => d.id === selectedDeviceId)?.is_loopback_capable}
-        <div class="checkbox-group">
-          <label>
-            <input type="checkbox" bind:checked={isLoopbackEnabled} />
-            Enable System Audio Loopback (Windows WASAPI only)
-          </label>
-        </div>
-      {/if}
-    {/if}
-
-    <div class="input-group">
-      <label for="systemPrompt">Persona / System Prompt</label>
-      <select id="systemPrompt" bind:value={selectedPrompt} class="custom-select">
-        {#each systemPrompts as p}
-          <option value={p.value}>{p.label}</option>
+      <div class="flex overflow-x-auto px-2 scrollbar-hide">
+        {#each tabs as tab}
+          <button
+            class="px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors {activeTab === tab.id ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-background hover:border-white/20'}"
+            onclick={() => activeTab = tab.id}
+          >
+            {tab.label}
+          </button>
         {/each}
-      </select>
+      </div>
     </div>
 
-    {#if currentLLMProvider === "gemini"}
-      <div class="gemini-live-badge">
-        <span class="material-symbols-outlined">bolt</span>
-        <div>
-          <strong>Gemini Live Mode</strong>
-          <p>Audio is processed directly by Gemini — no separate STT provider needed.</p>
+    <!-- Scrollable Content -->
+    <div class="flex-1 overflow-y-auto p-5 pb-20 flex flex-col gap-6">
+
+      {#if activeTab === 'models'}
+        <div class="config-section">
+          <div class="section-label">System Status</div>
+          {#if systemStatus}
+            <div class="status-grid">
+              <div class="status-item">
+                <span class="status-key">LLM Provider</span>
+                <span class="status-value badge">{systemStatus.llm_provider}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-key">LLM Model</span>
+                <span class="status-value badge">{systemStatus.llm_model}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-key">STT Provider</span>
+                <span class="status-value badge">{systemStatus.stt_provider}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-key">STT Model</span>
+                <span class="status-value badge">{systemStatus.stt_model}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-key">Local STT Engine</span>
+                <span class="status-value badge">{systemStatus.local_stt_engine}</span>
+              </div>
+            </div>
+          {:else}
+            <div class="status-indicator">Loading status...</div>
+          {/if}
         </div>
-      </div>
-    {/if}
 
-    <div class="input-group">
-      <label for="interviewLanguage">Interview Language (STT & LLM Override)</label>
-      <select id="interviewLanguage" bind:value={interviewLanguage} class="custom-select">
-        <option value="auto">Auto-Detect</option>
-        <option value="en">English (en)</option>
-        <option value="es">Spanish (es)</option>
-        <option value="fr">French (fr)</option>
-        <option value="de">German (de)</option>
-        <option value="hi">Hindi (hi)</option>
-        <option value="zh">Mandarin (zh)</option>
-      </select>
-    </div>
+        <div class="config-section">
+          {#if currentLLMProvider === "gemini"}
+            <div class="gemini-live-badge">
+              <span class="material-symbols-outlined">bolt</span>
+              <div>
+                <strong>Gemini Live Mode</strong>
+                <p>Audio is processed directly by Gemini — no separate STT provider needed.</p>
+              </div>
+            </div>
+          {/if}
 
-    <div class="input-group">
-      <label for="selectedProvider">Custom LLM Provider (Lifetime Tier Only)</label>
-      <select id="selectedProvider" bind:value={selectedProvider} class="custom-select" disabled={authState.plan !== 'lifetime'}>
-        <option value="auto">Auto (Default)</option>
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic</option>
-        <option value="gemini">Gemini</option>
-        <option value="groq">Groq</option>
-        <option value="openrouter">OpenRouter</option>
-      </select>
-    </div>
-
-    {#if selectedProvider !== 'auto'}
-      <div class="input-group">
-        <label for="customApiKey">Custom API Key</label>
-        <input
-          type="password"
-          id="customApiKey"
-          bind:value={customApiKey}
-          placeholder="sk-..."
-          disabled={authState.plan !== 'lifetime'}
-        />
-        <span class="text-xs text-gray-500 mt-1">Key is stored locally and never saved to our database.</span>
-      </div>
-    {/if}
-
-    {#if !isCloudBuild}
-      <div class="input-group">
-        <label for="localSttEngine">Local STT Engine</label>
-        <select id="localSttEngine" bind:value={localSttEngine} class="custom-select">
-          <option value="faster-whisper">Faster-Whisper (Universal)</option>
-          <option value="parakeet">Nvidia Parakeet (RTX GPUs only)</option>
-        </select>
-      </div>
-    {/if}
-
-    {#if selectedProvider === 'openrouter'}
-      <div class="input-group">
-        <label for="openRouterModel">OpenRouter Model ID</label>
-        <input
-          type="text"
-          id="openRouterModel"
-          bind:value={openRouterModel}
-          placeholder="anthropic/claude-3.5-sonnet:beta"
-          disabled={authState.plan !== 'lifetime'}
-        />
-      </div>
-    {/if}
-    {#if authState.plan !== 'lifetime'}
-      <span class="text-xs text-red-400 mt-1">Custom models require a Lifetime Subscription.</span>
-    {/if}
-
-    <div class="input-group">
-      <label for="preferredLanguage">Code Language Preference</label>
-      <select id="preferredLanguage" bind:value={preferredLanguage} class="custom-select">
-        <option value="">Auto (Let LLM Decide)</option>
-        <option value="Python">Python</option>
-        <option value="JavaScript">JavaScript</option>
-        <option value="TypeScript">TypeScript</option>
-        <option value="Java">Java</option>
-        <option value="C++">C++</option>
-        <option value="C#">C#</option>
-        <option value="Go">Go</option>
-        <option value="Rust">Rust</option>
-        <option value="Ruby">Ruby</option>
-        <option value="Swift">Swift</option>
-        <option value="Kotlin">Kotlin</option>
-        <option value="SQL">SQL</option>
-        <option value="PHP">PHP</option>
-        <option value="Scala">Scala</option>
-      </select>
-      <span style="font-size: 0.72rem; color: #666; margin-top: 2px;">
-        Auto-filled from resume if detected
-      </span>
-    </div>
-
-    <button class="btn-primary save-btn" onclick={handleSaveSettings} data-testid="settings-save-btn">Save & Reconnect</button>
-  </div>
-
-  <hr class="divider" />
-
-  <div class="resume-section">
-    <div class="section-label">Interview Context</div>
-    <div class="input-group">
-      <label for="jobDescription">Target Job Description</label>
-      <textarea id="jobDescription" bind:value={jobDescription} rows="4" placeholder="Paste the job description here..."></textarea>
-    </div>
-    {#if jobDescriptionStatus}
-      <div class="status-indicator">{jobDescriptionStatus}</div>
-    {/if}
-    <button class="btn-primary extract-btn" disabled={!jobDescription} onclick={saveJobDescription}>
-      Save Context
-    </button>
-  </div>
-
-  <hr class="divider" />
-
-  <div class="resume-section">
-    <div class="section-label">Resume Context</div>
-    <div class="input-group">
-      <label for="resumeUpload">Upload Resume (PDF or TXT)</label>
-      <input type="file" id="resumeUpload" accept=".pdf,.txt" onchange={handleFileSelect} />
-    </div>
-    {#if resumeStatus}
-      <div class="status-indicator">{resumeStatus}</div>
-    {/if}
-    <button class="btn-primary extract-btn" disabled={!resumeRawText} onclick={extractResume}>
-      Extract Profile
-    </button>
-  </div>
-
-
-
-  <hr class="divider" />
-
-  <h2>Account</h2>
-  <div class="content">
-    {#if authState.authMode === "local"}
-      <p class="local-mode-text">Running in local mode &mdash; no account needed.</p>
-    {:else}
-      {#if authState.user}
-        <div class="account-info">
-          <p class="email"><strong>{authState.user.email}</strong></p>
-          <div class="badges">
-            <span class="badge plan-badge">SaaS User</span>
+          <div class="input-group">
+            <label for="selectedProvider">Custom LLM Provider (Lifetime Tier Only)</label>
+            <select id="selectedProvider" bind:value={selectedProvider} class="custom-select" disabled={authState.plan !== 'lifetime'}>
+              <option value="auto">Auto (Default)</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="gemini">Gemini</option>
+              <option value="groq">Groq</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
           </div>
-          <div class="actions">
-            <button class="btn-primary" style="background-color: #28a745; margin-bottom: 0.5rem;" onclick={handleBuySessions}>Buy 5 Interviews for $10</button>
-            <a href="https://example.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn-link">Open Dashboard</a>
-            <button class="btn-secondary" onclick={handleSignOut}>Sign Out</button>
-          </div>
-        </div>
-      {:else}
-        <div class="signin-form">
-          <p class="form-title">Sign In to Sync</p>
-          <button class="btn-primary" onclick={() => isAuthModalOpen = true}>Sign In / Register</button>
+
+          {#if selectedProvider !== 'auto'}
+            <div class="input-group">
+              <label for="customApiKey">Custom API Key</label>
+              <input
+                type="password"
+                id="customApiKey"
+                bind:value={customApiKey}
+                placeholder="sk-..."
+                disabled={authState.plan !== 'lifetime'}
+              />
+              <span class="text-xs text-gray-500 mt-1">Key is stored locally and never saved to our database.</span>
+            </div>
+          {/if}
+
+          {#if selectedProvider === 'openrouter'}
+            <div class="input-group">
+              <label for="openRouterModel">OpenRouter Model ID</label>
+              <input
+                type="text"
+                id="openRouterModel"
+                bind:value={openRouterModel}
+                placeholder="anthropic/claude-3.5-sonnet:beta"
+                disabled={authState.plan !== 'lifetime'}
+              />
+            </div>
+          {/if}
+
+          {#if authState.plan !== 'lifetime'}
+            <span class="text-xs text-red-400 mt-1">Custom models require a Lifetime Subscription.</span>
+          {/if}
+
+          {#if !isCloudBuild}
+            <div class="input-group">
+              <label for="localSttEngine">Local STT Engine</label>
+              <select id="localSttEngine" bind:value={localSttEngine} class="custom-select">
+                <option value="faster-whisper">Faster-Whisper (Universal)</option>
+                <option value="parakeet">Nvidia Parakeet (RTX GPUs only)</option>
+              </select>
+            </div>
+          {/if}
         </div>
       {/if}
-    {/if}
+
+      {#if activeTab === 'audio'}
+        <div class="config-section">
+          {#if !isCloudBuild}
+            <div class="input-group">
+              <label for="audioDevice">Audio Input Device</label>
+              <select id="audioDevice" bind:value={selectedDeviceId} class="custom-select">
+                <option value={null}>Default Microphone</option>
+                {#each audioDevices as dev}
+                  <option value={dev.id}>{dev.name}</option>
+                {/each}
+              </select>
+            </div>
+
+            {#if audioDevices.find(d => d.id === selectedDeviceId)?.is_loopback_capable}
+              <div class="checkbox-group">
+                <label>
+                  <input type="checkbox" bind:checked={isLoopbackEnabled} />
+                  Enable System Audio Loopback (Windows WASAPI only)
+                </label>
+              </div>
+            {/if}
+          {:else}
+             <p class="text-sm text-gray-400">Audio devices are managed by your browser in Cloud mode.</p>
+          {/if}
+        </div>
+      {/if}
+
+      {#if activeTab === 'context'}
+        <div class="config-section">
+          <div class="input-group">
+            <label for="systemPrompt">Persona / System Prompt</label>
+            <select id="systemPrompt" bind:value={selectedPrompt} class="custom-select">
+              {#each systemPrompts as p}
+                <option value={p.value}>{p.label}</option>
+              {/each}
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="interviewLanguage">Interview Language (STT & LLM Override)</label>
+            <select id="interviewLanguage" bind:value={interviewLanguage} class="custom-select">
+              <option value="auto">Auto-Detect</option>
+              <option value="en">English (en)</option>
+              <option value="es">Spanish (es)</option>
+              <option value="fr">French (fr)</option>
+              <option value="de">German (de)</option>
+              <option value="hi">Hindi (hi)</option>
+              <option value="zh">Mandarin (zh)</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="preferredLanguage">Code Language Preference</label>
+            <select id="preferredLanguage" bind:value={preferredLanguage} class="custom-select">
+              <option value="">Auto (Let LLM Decide)</option>
+              <option value="Python">Python</option>
+              <option value="JavaScript">JavaScript</option>
+              <option value="TypeScript">TypeScript</option>
+              <option value="Java">Java</option>
+              <option value="C++">C++</option>
+              <option value="C#">C#</option>
+              <option value="Go">Go</option>
+              <option value="Rust">Rust</option>
+              <option value="Ruby">Ruby</option>
+              <option value="Swift">Swift</option>
+              <option value="Kotlin">Kotlin</option>
+              <option value="SQL">SQL</option>
+              <option value="PHP">PHP</option>
+              <option value="Scala">Scala</option>
+            </select>
+            <span style="font-size: 0.72rem; color: #666; margin-top: 2px;">
+              Auto-filled from resume if detected
+            </span>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="resume-section">
+          <div class="section-label">Interview Context</div>
+          <div class="input-group">
+            <label for="jobDescription">Target Job Description</label>
+            <textarea id="jobDescription" bind:value={jobDescription} rows="4" placeholder="Paste the job description here..."></textarea>
+          </div>
+          {#if jobDescriptionStatus}
+            <div class="status-indicator">{jobDescriptionStatus}</div>
+          {/if}
+          <button class="btn-primary extract-btn" disabled={!jobDescription} onclick={saveJobDescription}>
+            Save Context
+          </button>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="resume-section">
+          <div class="section-label">Resume Context</div>
+          <div class="input-group">
+            <label for="resumeUpload">Upload Resume (PDF or TXT)</label>
+            <input type="file" id="resumeUpload" accept=".pdf,.txt" onchange={handleFileSelect} />
+          </div>
+          {#if resumeStatus}
+            <div class="status-indicator">{resumeStatus}</div>
+          {/if}
+          <button class="btn-primary extract-btn" disabled={!resumeRawText} onclick={extractResume}>
+            Extract Profile
+          </button>
+        </div>
+      {/if}
+
+      {#if activeTab === 'general'}
+        <div class="config-section">
+          {#if !isCloudBuild}
+            <div style="margin-bottom: 1rem;">
+              <h3 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: #ddd;">Embedded Stealth Terminal</h3>
+              <StealthTerminal />
+            </div>
+            <hr class="divider" style="margin-top: 0;" />
+          {/if}
+
+          <div class="checkbox-group">
+            <label>
+              <input type="checkbox" bind:checked={isDevModeChecked} data-testid="dev-mode-toggle" />
+              Dev Mode: Disable Stealth (E2E Visibility)
+            </label>
+          </div>
+
+          <div class="checkbox-group">
+            <label>
+              <input type="checkbox" bind:checked={includeActiveDocContext} />
+              Include Active File as Context
+            </label>
+          </div>
+        </div>
+      {/if}
+
+      {#if activeTab === 'account'}
+        <div class="content">
+          {#if authState.authMode === "local"}
+            <p class="local-mode-text">Running in local mode &mdash; no account needed.</p>
+          {:else}
+            {#if authState.user}
+              <div class="account-info">
+                <p class="email"><strong>{authState.user.email}</strong></p>
+                <div class="badges">
+                  <span class="badge plan-badge">SaaS User</span>
+                </div>
+                <div class="actions">
+                  <button class="btn-primary" style="background-color: #28a745; margin-bottom: 0.5rem;" onclick={handleBuySessions}>Buy 5 Interviews for $10</button>
+                  <a href="https://example.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn-link">Open Dashboard</a>
+                  <button class="btn-secondary" onclick={handleSignOut}>Sign Out</button>
+                </div>
+              </div>
+            {:else}
+              <div class="signin-form">
+                <p class="form-title">Sign In to Sync</p>
+                <button class="btn-primary" onclick={() => isAuthModalOpen = true}>Sign In / Register</button>
+              </div>
+            {/if}
+          {/if}
+        </div>
+      {/if}
+
     </div>
+
+    <!-- Footer Save Button (Hidden on Account Tab) -->
+    {#if activeTab !== 'account'}
+      <div class="flex-none p-4 border-t border-white/10 bg-surface-variant/50">
+         <button class="btn-primary save-btn w-full !mt-0" onclick={handleSaveSettings} data-testid="settings-save-btn">Save & Reconnect</button>
+      </div>
+    {/if}
   </div>
   {/if}
 </div>
@@ -618,19 +670,37 @@
     opacity: 1;
   }
 
+
+  .glass-panel {
+      background: rgba(10, 10, 14, 0.88);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  /* Hide scrollbar for tab list */
+  .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+  }
+  .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+  }
+
   .settings-panel {
     position: absolute;
     bottom: calc(100% + 0.5rem);
     right: 0;
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+
+
     border-radius: 8px;
-    padding: 1.5rem;
+    padding: 0;
     color: #fff;
     width: 320px;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+
     font-family: system-ui, -apple-system, sans-serif;
     z-index: 1000;
   }
@@ -647,9 +717,7 @@
     background: transparent;
     border: none;
     border-radius: 0;
-    padding: 0;
     box-shadow: none;
-    overflow-y: visible;
   }
 
   .hotkeys-list {
@@ -714,11 +782,7 @@
 
 
 
-  h2 {
-    margin: 0 0 1rem 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
+
 
   .content {
     font-size: 0.9rem;
