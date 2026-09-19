@@ -1,0 +1,72 @@
+TASK: P58-T5 — Cache Manager UI & Session Hit Tracking Fix
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+This task resolves two critical issues with the caching system:
+1. Cache hits are currently bypassing the SessionManager in `pipeline.go`, which causes them to be missing from the Session Export.
+2. The UI needs a "Cache Manager" that allows users to view all cached Q&A pairs, selectively delete specific entries, or clear everything (restoring functionality from the previous UI version).
+
+═══════════════════════════════════════════════════════════════
+FILES INVOLVED
+═══════════════════════════════════════════════════════════════
+- `wails-app/core/engine/pipeline.go`                  [FIX cache hit logic]
+- `wails-app/adapters/cache/sqlitevec_adapter.go`      [ADD ClearAll and DeleteItems methods]
+- `wails-app/backend/system/database.go` (or similar)  [ADD SQLite delete logic if missing]
+- `wails-app/app.go`                                   [ADD Wails bindings for GetCacheItems, DeleteCacheItems, ClearCache]
+- `wails-app/frontend/src/products/interview/CacheManagerModal.svelte` [NEW file]
+- `wails-app/frontend/src/products/interview/AnswerPanel.svelte`       [UPDATE Clear Cache button to open modal]
+- `prompts/tasks_v2.md`                                [UPDATE]
+
+═══════════════════════════════════════════════════════════════
+SECTION 1: Fix Session Export for Cache Hits
+═══════════════════════════════════════════════════════════════
+In `wails-app/core/engine/pipeline.go`, locate the cache hit block:
+```go
+if hit {
+    log.Printf("[Cache] Hit (similarity >= 0.88): %q", cleanTranscript)
+    ...
+```
+Before the `return` statement in this block, ensure the cache hit is recorded in the session manager so it gets exported:
+```go
+if e.sessionMgr != nil {
+    e.sessionMgr.StartTurn(cleanTranscript)
+    e.sessionMgr.SetAISuggestion(cachedAns)
+    e.sessionMgr.CompleteTurn()
+}
+```
+
+═══════════════════════════════════════════════════════════════
+SECTION 2: Backend Cache Management Methods
+═══════════════════════════════════════════════════════════════
+1. In `wails-app/adapters/cache/sqlitevec_adapter.go` (and the underlying `VectorDB` struct):
+   - Implement `ClearAll() error` to truncate/delete all rows from the cache table.
+   - Implement `DeleteItems(ids []int64) error` (or string keys, depending on the schema) to delete specific rows.
+   - Ensure the `CachePort` interface (if applicable) is updated to include these.
+
+2. In `wails-app/app.go`:
+   - Fix `ClearCache()` to actually call the new `ClearAll()` method.
+   - Add a binding `GetCacheItems()` that calls the existing `GetAllItems()` on the adapter and returns them to the frontend.
+   - Add a binding `DeleteCacheItems(ids []int64)` that passes the IDs to the adapter to delete.
+
+═══════════════════════════════════════════════════════════════
+SECTION 3: Frontend Cache Manager UI
+═══════════════════════════════════════════════════════════════
+1. Create `CacheManagerModal.svelte`:
+   - On mount, it calls `GetCacheItems()` to fetch the list of cached Q&A pairs.
+   - Renders a scrollable list or table showing the `Question` and `Answer` for each item, with a checkbox next to each.
+   - Provides a "Delete Selected" button that calls `DeleteCacheItems(selectedIds)`.
+   - Provides a "Clear All" button (with a confirmation prompt) that calls `ClearCache()`.
+   - Refreshes the list after any deletion.
+
+2. In `AnswerPanel.svelte` (or `CopilotDrawer.svelte` depending on UI layout):
+   - Change the existing `clearCache()` function / trash icon button so that instead of immediately clearing the cache, it opens the new `CacheManagerModal`.
+
+═══════════════════════════════════════════════════════════════
+TESTING & VERIFICATION CRITERIA
+═══════════════════════════════════════════════════════════════
+- Triggering a cache hit successfully includes that Q&A pair in the exported markdown session.
+- Clicking the cache trash icon opens a modal displaying all cached items.
+- Selecting specific items and clicking "Delete Selected" removes them permanently.
+- Clicking "Clear All" drops the entire cache table successfully.
+- PR title format: `fix(engine): track cache hits in session and add Cache Manager UI (#P58-T5)`
