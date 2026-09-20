@@ -1,173 +1,51 @@
-TASK: P64-T3 — Paddle Billing Integration (Webhook Handler + Metered Billing Cron)
+TASK: P64-T3 — Paddle Billing Webhook Setup
 
 ═══════════════════════════════════════════════════════════════
-CONTEXT
+OBJECTIVE
 ═══════════════════════════════════════════════════════════════
-We are replacing LemonSqueezy + Stripe with Paddle as our single unified billing
-Merchant of Record (MoR). Paddle handles both:
-  (A) One-time lifetime deals for BarnOwl AI Desktop (interview product)
-  (B) Monthly SaaS subscriptions for MentorGlass, CounselDesk, ClinicHUD
-
-The Paddle dashboard product/pricing setup is MANUAL (done by the founder).
-This task is ONLY the CODE side — two new Supabase Edge Functions:
-
-1. `paddle-webhook` — Receives Paddle webhook events and activates entitlements
-2. `paddle-billing-cron` — Monthly cron job that reads usage and charges overages
-
-Existing infrastructure to be aware of:
-- `supabase/functions/llm-proxy/index.ts` — existing edge function for reference
-- `supabase/migrations/20260920000000_init_tables.sql` — has `user_entitlements` table
-- `user_entitlements` table has: user_id, product_mode, usage_seconds,
-  demo_expires_at, remaining_sessions, paddle_subscription_id (add if missing)
+We need a Supabase Edge Function to handle incoming webhooks from Paddle (transaction and subscription events) and update the user's entitlements in the `user_entitlements` table.
 
 ═══════════════════════════════════════════════════════════════
-FILES TO CREATE
+FILES TO MODIFY
 ═══════════════════════════════════════════════════════════════
 CREATE: supabase/functions/paddle-webhook/index.ts
-CREATE: supabase/functions/paddle-billing-cron/index.ts
-CREATE: supabase/migrations/20260921000000_paddle_billing.sql
+CREATE: supabase/functions/paddle-webhook/deno.json
 
 ═══════════════════════════════════════════════════════════════
 DETAILED SPECIFICATION
 ═══════════════════════════════════════════════════════════════
 
-──────────────────────────────────────────────────────────────
-1. MIGRATION: supabase/migrations/20260921000000_paddle_billing.sql
-──────────────────────────────────────────────────────────────
-Add the following columns to user_entitlements if they do not exist:
+1. **Edge Function Setup (`paddle-webhook`)**
+   - Create a standard Deno Edge function using `Deno.serve`.
+   - Read the incoming request body as text (needed for signature verification).
+   - Get the `paddle-signature` header.
 
-  ALTER TABLE user_entitlements
-    ADD COLUMN IF NOT EXISTS paddle_subscription_id TEXT,
-    ADD COLUMN IF NOT EXISTS paddle_customer_id TEXT,
-    ADD COLUMN IF NOT EXISTS billing_period_start TIMESTAMPTZ,
-    ADD COLUMN IF NOT EXISTS billing_period_end TIMESTAMPTZ,
-    ADD COLUMN IF NOT EXISTS included_seconds INTEGER DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS license_key TEXT;
+2. **Signature Verification**
+   - Use the `PADDLE_WEBHOOK_SECRET` environment variable to verify the HMAC-SHA256 signature according to Paddle's v1 webhook specification:
+     - Parse the signature header (e.g. `ts=123;h1=abc...`).
+     - Recreate the signed payload: `${ts}:${body}`.
+     - Calculate the HMAC-SHA256 hash using the secret and compare it to `h1`.
+   - If the signature is invalid, return a 401 Unauthorized response.
 
-──────────────────────────────────────────────────────────────
-2. EDGE FUNCTION: supabase/functions/paddle-webhook/index.ts
-──────────────────────────────────────────────────────────────
-A Deno Edge Function that receives POST requests from Paddle webhook system.
+3. **Event Processing**
+   - Parse the JSON body.
+   - Handle the following events:
+     - `transaction.completed`
+     - `subscription.activated`
+     - `subscription.updated`
+     - `subscription.canceled`
+     - `subscription.past_due`
+   - Extract the `customer_id` and the `custom_data.user_id` from the payload (or extract from the transaction checkout data).
 
-SECURITY: Verify the Paddle-Signature header using HMAC-SHA256.
-  - Read secret from env var: PADDLE_WEBHOOK_SECRET
-  - Paddle sends header: Paddle-Signature: ts=<timestamp>;h1=<hmac_hex>
-  - Construct the signed payload as: <timestamp>:<raw_body>
-  - Compare h1 against HMAC-SHA256(PADDLE_WEBHOOK_SECRET, signed_payload)
-  - Return 401 if signature does not match.
-
-Handle the following Paddle event types (read from event_type in JSON body):
-
-  A) transaction.completed
-     Fired when a one-time payment (lifetime deal) completes.
-     Extract from event data:
-       * customer.id -> paddle_customer_id
-       * customer.email -> use to look up Supabase user by email
-       * items[0].price.product_id -> map to product_mode using env vars:
-           PADDLE_PRODUCT_INTERVIEW -> 'interview'
-           PADDLE_PRODUCT_MENTOR    -> 'mentor'
-           PADDLE_PRODUCT_COUNSEL   -> 'counsel'
-           PADDLE_PRODUCT_CLINIC    -> 'clinic'
-       * Generate a license_key: crypto.randomUUID()
-     Upsert into user_entitlements:
-       * product_mode = mapped value
-       * remaining_sessions = 999999 (lifetime = unlimited)
-       * license_key = generated UUID
-       * paddle_customer_id = from event
-
-  B) subscription.activated and subscription.updated
-     Fired when a SaaS subscription starts or changes.
-     Extract: subscription_id, customer_id, customer_email,
-       current_billing_period.starts_at, current_billing_period.ends_at,
-       items[0].price.product_id
-     Map product_id to product_mode using same env var pattern above.
-     Set included_seconds based on product_mode:
-       * 'mentor'  -> 3600 * 20  (20 hours/month)
-       * 'counsel' -> 3600 * 40  (40 hours/month)
-       * 'clinic'  -> 3600 * 30  (30 hours/month)
-     Upsert into user_entitlements:
-       * paddle_subscription_id, paddle_customer_id
-       * billing_period_start, billing_period_end
-       * included_seconds
-       * usage_seconds = 0 (reset on new period)
-
-  C) subscription.canceled
-     Set remaining_sessions = 0 and demo_expires_at = now() to gate the user.
-
-For all events: respond HTTP 200 with {"received": true}.
-
-──────────────────────────────────────────────────────────────
-3. EDGE FUNCTION: supabase/functions/paddle-billing-cron/index.ts
-──────────────────────────────────────────────────────────────
-A Deno Edge Function acting as a monthly billing cron job.
-Called by Supabase CRON schedule or manually via HTTP POST with bearer token.
-
-SECURITY: Verify bearer token matches env var CRON_SECRET.
-
-LOGIC:
-  1. Query all rows from user_entitlements where:
-       paddle_subscription_id IS NOT NULL
-       billing_period_end <= now() + interval '1 day'
-       usage_seconds > included_seconds
-
-  2. For each row with overage:
-       overage_seconds = usage_seconds - included_seconds
-       overage_minutes = Math.ceil(overage_seconds / 60)
-       rate_per_minute from env var by product_mode:
-         PADDLE_RATE_MENTOR_PER_MIN  (default "0.02")
-         PADDLE_RATE_COUNSEL_PER_MIN (default "0.03")
-         PADDLE_RATE_CLINIC_PER_MIN  (default "0.025")
-       overage_amount_usd = overage_minutes * rate_per_minute
-       If overage_amount_usd < 0.50, skip (below Paddle minimum charge)
-
-  3. For each chargeable row, call Paddle API:
-       POST https://api.paddle.com/transactions
-       Authorization: Bearer {PADDLE_API_KEY}
-       Body (JSON):
-         {
-           "items": [{
-             "price": {
-               "description": "Usage overage - {overage_minutes} mins",
-               "unit_price": { "amount": "<cents_string>", "currency_code": "USD" },
-               "quantity": { "minimum": 1, "maximum": 1 }
-             },
-             "quantity": 1
-           }],
-           "customer_id": "<paddle_customer_id>",
-           "collection_mode": "automatic"
-         }
-
-  4. After charging, reset usage_seconds = 0 and advance billing_period_start/end
-     by one month in user_entitlements.
-
-  5. Return a summary JSON: { charged: N, skipped: N, errors: N }
-
-ENV VARS required (document in a comment block at the top of each file):
-  SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-  PADDLE_API_KEY, PADDLE_WEBHOOK_SECRET, CRON_SECRET,
-  PADDLE_PRODUCT_INTERVIEW, PADDLE_PRODUCT_MENTOR,
-  PADDLE_PRODUCT_COUNSEL, PADDLE_PRODUCT_CLINIC,
-  PADDLE_RATE_MENTOR_PER_MIN, PADDLE_RATE_COUNSEL_PER_MIN, PADDLE_RATE_CLINIC_PER_MIN
-
-═══════════════════════════════════════════════════════════════
-CODING STYLE
-═══════════════════════════════════════════════════════════════
-- Match the style of the existing supabase/functions/llm-proxy/index.ts
-- Use: import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-- Use: import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-- All async/await, proper try/catch, meaningful console.error logs
-
-═══════════════════════════════════════════════════════════════
-DO NOT
-═══════════════════════════════════════════════════════════════
-- Do NOT modify any existing files
-- Do NOT set up Paddle dashboard products (that is manual work by founder)
-- Do NOT modify wails-app frontend code
-- Do NOT use Stripe — Paddle only
+4. **Database Update (`user_entitlements`)**
+   - Initialize the Supabase admin client using `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+   - Update the `user_entitlements` table for the corresponding `user_id`.
+   - Set `paddle_subscription_id` to the incoming subscription ID (if active/updated). Set to null or inactive if canceled/past_due.
+   - Set `plan_type` to the product ID or name.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
-- Both edge function files must be valid Deno TypeScript with no syntax errors
-- The SQL migration must be idempotent (IF NOT EXISTS)
-- ENV VARS documented in a comment block at the top of each edge function
+- Ensure Deno standard libraries are imported correctly in `deno.json`.
+- The HMAC logic must properly parse the timestamp and hash it exactly as Paddle specifies.
+- The Supabase client must use the service role key to bypass RLS when updating entitlements from the webhook.
