@@ -43,7 +43,7 @@ func main() {
 		Width:       1440,
 		Height:      768,
 		Frameless:   true,
-		AlwaysOnTop: true,
+		AlwaysOnTop: false,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

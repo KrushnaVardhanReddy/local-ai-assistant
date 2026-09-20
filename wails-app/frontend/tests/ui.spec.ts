@@ -12,6 +12,9 @@ test.describe('App UI Tests', () => {
         WindowHide: () => {},
         WindowShow: () => {},
         WindowSetTitle: () => {},
+        WindowSetAlwaysOnTop: () => {},
+        WindowSetSize: () => {},
+        WindowCenter: () => {},
       } as any;
       window.go = {
         main: {

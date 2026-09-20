@@ -59,7 +59,8 @@ Because the `StealthEngine` is completely generic, we can create multiple distin
 - **Workspace Tree**: The workspace manages files loaded into the application. Standalone files opened (e.g., resumes, code) are appended to the workspace tree as root nodes, allowing them to be indexed for RAG.
 
 ### Authentication & Licensing UI
-The frontend authentication system (`src/lib/auth.svelte.ts`) and modal UI (`AuthModal.svelte`) are designed to support two distinct operational modes controlled by the `VITE_PRODUCT` environment variable:
+The frontend authentication system (`src/lib/auth.svelte.ts`) and modal UI (`AuthModal.svelte`) are designed to support two distinct operational modes controlled by the `VITE_PRODUCT` environment variable. To improve UX during login, the authentication window disables the "invisible shield" mode (`AlwaysOnTop: false`) and presents a fully styled, draggable OS-like window using a custom `Titlebar.svelte` component. Once authentication succeeds, the application transitions back into frameless shield mode.
+
 1. **BarnOwl AI (Lifetime + Demo Mode):** For `VITE_PRODUCT=interview`, the UI presents a dual-option modal. Users can either activate a lifetime license key (via Paddle) or start a 15-minute free demo via Google OAuth. The `dev_allowlist` Supabase table enables machine IDs to bypass checks. Entitlements and 15-minute expirations are tracked in the `user_entitlements` table.
 2. **SaaS Products:** For other products (e.g., MentorGlass, CounselDesk), the UI strictly presents a "Continue with Google" OAuth sign-in, which tracks Paddle subscription plans and overage tracking via `user_entitlements`.
 
