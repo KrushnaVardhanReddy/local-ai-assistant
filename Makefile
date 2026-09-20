@@ -22,8 +22,8 @@ dev: dev-barnowl
 #
 # To setup the local database (required for User Entitlements and OAuth):
 supabase-setup-local:
-	@echo "Pushing database schema to local Supabase instance..."
-	sudo npx supabase db push
+	@echo "Applying database schema and seeds to local Supabase instance..."
+	sudo npx supabase db reset
 	@echo "Local database is now ready."
 
 supabase-start:
