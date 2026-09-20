@@ -32,7 +32,7 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
 | P63-T1 | `supabase/functions/llm-proxy/`, `wails-app/backend/llm/openai.go` | **Edge Function LLM Proxy** — Create a Supabase Deno Edge Function to proxy OpenAI requests. Verify JWT and `demo_expires_at`. Inject `OPENAI_API_KEY`. For SaaS product users (non-demo), report session duration (seconds) to Stripe Metered Billing via `POST /v1/subscription_items/{id}/usage_records`. Increment `usage_seconds` in `user_entitlements` table for in-app usage meter. | ✅ | — |
-| P63-T2 | `wails-app/frontend/src/lib/Settings.svelte` | **Usage Meter UI (SaaS Products)** — Add a live usage meter to the Settings panel for SaaS products (MentorGlass, CounselDesk, ClinicHUD). Show hours used vs included allocation, estimated overage cost this month, and next billing date. Read from `user_entitlements.usage_seconds`. Only visible when `productMode !== 'interview'`. | ⬜ | — |
+| P63-T2 | `wails-app/frontend/src/lib/Settings.svelte` | **Usage Meter UI (SaaS Products)** — Add a live usage meter to the Settings panel for SaaS products (MentorGlass, CounselDesk, ClinicHUD). Show hours used vs included allocation, estimated overage cost this month, and next billing date. Read from `user_entitlements.usage_seconds`. Only visible when `productMode !== 'interview'`. | ✅ Merged | #TBD |
 
 ---
 

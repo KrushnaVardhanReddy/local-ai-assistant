@@ -22,6 +22,7 @@ export const authState = $state({
   demoExpiresAt: null as string | null,
   stripeStatus: null as string | null,
   planType: null as string | null,
+  userEntitlements: null as any,
 });
 
 $effect.root(() => {
@@ -136,6 +137,7 @@ export async function syncUserEntitlements() {
       authState.demoExpiresAt = data.demo_expires_at;
       authState.stripeStatus = data.stripe_subscription_status;
       authState.planType = data.plan_type;
+      authState.userEntitlements = data;
     }
 
     if (authState.productMode === "interview") {
