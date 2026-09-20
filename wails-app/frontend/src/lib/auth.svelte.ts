@@ -146,7 +146,7 @@ export async function syncUserEntitlements() {
   }
 }
 
-function initOAuthListener() {
+export function initAuthEventListeners() {
   const onEvent = typeof window !== "undefined" && (window as any).runtime?.EventsOn ? (window as any).runtime.EventsOn : EventsOn;
   onEvent("on_auth_complete", async (tokenStr: string) => {
     if (!tokenStr || !supabase) return;
@@ -167,7 +167,7 @@ function initOAuthListener() {
 }
 
 if (typeof window !== "undefined") {
-  initOAuthListener();
+  initAuthEventListeners();
 }
 
 export const cloudAuthState = $state({
