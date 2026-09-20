@@ -10,17 +10,28 @@ Because Wails apps run Playwright against the Vite dev server, we need to mock t
 FILES TO MODIFY
 ═══════════════════════════════════════════════════════════════
 MODIFY: wails-app/frontend/src/lib/auth.svelte.ts
+MODIFY: wails-app/frontend/src/App.svelte
+MODIFY: wails-app/frontend/src/lib/Settings.svelte
 MODIFY: wails-app/frontend/tests/entitlement.spec.ts
 
 ═══════════════════════════════════════════════════════════════
 DETAILED SPECIFICATION
 ═══════════════════════════════════════════════════════════════
 
-1. **Expose `authState` to Window (`auth.svelte.ts`):**
+1. **Refactor `App.svelte` for Reactive Product Mode:**
+   - Remove the static `const product = import.meta.env.VITE_PRODUCT || "interview";`.
+   - Update `isGated`, the `onMount` initialization logic, and the UI template rendering to read from `authState.productMode` reactively. This ensures the UI properly updates when Playwright toggles the mode.
+
+2. **Refactor `stripeStatus` to `paddleStatus`:**
+   - In `auth.svelte.ts`, rename `stripeStatus` to `paddleStatus`.
+   - Update `syncUserEntitlements` to read from `data.paddle_subscription_id` or similar logic to set `paddleStatus` instead of the old stripe logic.
+   - Update `Settings.svelte` to use `authState.paddleStatus` for the UI.
+
+3. **Expose `authState` to Window (`auth.svelte.ts`):**
    - Find the initialization block: `if (typeof window !== "undefined") { ... }`
    - Attach `authState` to the window object: `(window as any).__authState = authState;`
 
-2. **Implement Tests (`entitlement.spec.ts`):**
+4. **Implement Tests (`entitlement.spec.ts`):**
    - **Test 1: BarnOwl AI (Interview Mode) — Developer Mode Bypass**
      - Use `page.evaluate()` to set `window.__authState.productMode = 'interview'` and `window.__authState.licenseStatus = 'dev_allowed'`.
      - Assert that the "Developer Mode" badge is visible.
@@ -28,13 +39,13 @@ DETAILED SPECIFICATION
      - Mock `licenseStatus = 'active'`.
      - Assert that the "Lifetime License — Active" badge is visible.
    - **Test 3: SaaS Products — Standard Usage Meter**
-     - Mock `productMode = 'saas'` and `userEntitlements = { usage_seconds: 18000 }` (5 hours).
-     - Assert the text "5h 0m used / 10h included" is visible.
-   - **Test 4: SaaS Products — Overage Warning**
-     - Mock `userEntitlements = { usage_seconds: 40000 }`.
+     - Mock `productMode = 'saas'` and `userEntitlements = { usage_seconds: 18000, included_seconds: 36000 }` (5 hours used / 10 hours included).
+     - Assert the text "5h 0m used / 10h 0m included" is visible.
+   - **Test 4: SaaS Products — Paddle Overage Warning**
+     - Mock `userEntitlements = { usage_seconds: 40000, included_seconds: 36000 }`.
      - Assert the warning text containing "Overage" appears.
-   - **Test 5: SaaS Products — Subscription Status**
-     - Mock `stripeStatus = 'active'` vs `stripeStatus = 'inactive'`.
+   - **Test 5: SaaS Products — Paddle Subscription Status**
+     - Mock `paddleStatus = 'active'` vs `paddleStatus = 'inactive'`.
      - Assert the "Active Subscription" or "Subscription Inactive" text appears.
 
 ═══════════════════════════════════════════════════════════════
