@@ -20,7 +20,7 @@ export const authState = $state({
   user: null as User | null,
   accessToken: null as string | null,
   demoExpiresAt: null as string | null,
-  stripeStatus: null as string | null,
+  paddleStatus: null as string | null,
   planType: null as string | null,
   userEntitlements: null as any,
 });
@@ -135,7 +135,7 @@ export async function syncUserEntitlements() {
 
     if (data) {
       authState.demoExpiresAt = data.demo_expires_at;
-      authState.stripeStatus = data.stripe_subscription_status;
+      authState.paddleStatus = data.paddle_subscription_id ? 'active' : 'inactive';
       authState.planType = data.plan_type;
       authState.userEntitlements = data;
     }
@@ -170,6 +170,7 @@ export function initAuthEventListeners() {
 
 if (typeof window !== "undefined") {
   initAuthEventListeners();
+  (window as any).__authState = authState;
 }
 
 export const cloudAuthState = $state({

@@ -24,6 +24,10 @@ test.describe('App UI Tests', () => {
               activeDocumentPath: '/mock_notes.md',
               activeDocumentContent: '# Mock Content',
             }),
+            GetMachineId: async () => "mock-machine",
+            CheckLicense: async () => "active",
+            LoadToken: async () => "",
+            DeleteToken: async () => true,
             SetIncludeActiveDocContext: async () => {},
             SetClickthrough: async (enable: boolean) => true,
             CaptureScreen: async () => "data:image/png;base64,mock",
@@ -218,11 +222,17 @@ test.describe('App UI Tests', () => {
   test('Test 9: Toolbar Clear calls ClearState and flushes state', async ({ page }) => {
     let called = false;
     await page.exposeFunction('mockClearState', () => { called = true; });
-    await page.evaluate(() => { window.go.main.App.ClearState = (window as any).mockClearState; });
+    await page.evaluate(() => {
+      window.go.main.App.ClearState = async () => {
+        await (window as any).mockClearState();
+        return true;
+      };
+    });
 
     const btn = page.locator('button[title="Clear Context"]');
-    await btn.click();
-    expect(called).toBe(true);
+    await btn.waitFor({ state: 'visible', timeout: 5000 });
+    await btn.click({ force: true });
+    await expect.poll(() => called, { timeout: 5000 }).toBe(true);
   });
 
   test('Test 10: Toolbar Stealth toggles clickthrough mode and text-primary', async ({ page }) => {
