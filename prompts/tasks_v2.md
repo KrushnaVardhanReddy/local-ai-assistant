@@ -44,5 +44,6 @@
 | P64-T2 | `scripts/deploy_supabase.sh` | **Supabase Production Setup Scripts** — Create SQL migration files for the required tables (`dev_allowlist`, `user_entitlements`) and a deployment script (`scripts/deploy_supabase.sh`) for the Edge Function. | ✅ | — |
 | P64-T3 | LemonSqueezy (Manual) | **LemonSqueezy Store Setup (BarnOwl AI only)** — Create the "BarnOwl AI Lifetime" product. Configure three pricing tiers: Founder $49 (max 1,000 sales), Early $79 (max 5,000 sales), Standard $99 (unlimited). Enable "Generate License Keys" on purchase. | ⬜ | — |
 | P64-T4 | Stripe Dashboard (Manual) | **Stripe Metered Billing Setup (SaaS Products)** — Create Stripe products for MentorGlass ($29/mo base), CounselDesk ($99/mo base), ClinicHUD ($49/mo base). Each product has TWO price items: (1) a flat recurring fee and (2) a metered price for overage usage (per minute, charged at month end). Configure Stripe Customer Portal so users can self-manage subscriptions and view billing history without contacting support. | ⬜ | — |
+| P64-T5 | `wails-app/frontend/src/lib/auth.svelte.ts`, `wails-app/frontend/tests/entitlement.spec.ts` | **Entitlement E2E Tests** — Expose `authState` to Playwright via `window.__authState` and write UI E2E tests for Developer Mode, Active License, Usage Meter calculations, Overage warnings, and Stripe subscription status. | 🔄 | — |
 
 ---

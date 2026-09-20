@@ -1,0 +1,43 @@
+TASK: P64-T5 — Entitlement UI End-to-End Tests
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add Playwright E2E tests for the new Entitlement and Usage Meter UI components added in Phase 62 and 63.
+Because Wails apps run Playwright against the Vite dev server, we need to mock the `authState` dynamically from the tests to evaluate different UI states.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/frontend/src/lib/auth.svelte.ts
+MODIFY: wails-app/frontend/tests/entitlement.spec.ts
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. **Expose `authState` to Window (`auth.svelte.ts`):**
+   - Find the initialization block: `if (typeof window !== "undefined") { ... }`
+   - Attach `authState` to the window object: `(window as any).__authState = authState;`
+
+2. **Implement Tests (`entitlement.spec.ts`):**
+   - **Test 1: BarnOwl AI (Interview Mode) — Developer Mode Bypass**
+     - Use `page.evaluate()` to set `window.__authState.productMode = 'interview'` and `window.__authState.licenseStatus = 'dev_allowed'`.
+     - Assert that the "Developer Mode" badge is visible.
+   - **Test 2: BarnOwl AI (Interview Mode) — Active License**
+     - Mock `licenseStatus = 'active'`.
+     - Assert that the "Lifetime License — Active" badge is visible.
+   - **Test 3: SaaS Products — Standard Usage Meter**
+     - Mock `productMode = 'saas'` and `userEntitlements = { usage_seconds: 18000 }` (5 hours).
+     - Assert the text "5h 0m used / 10h included" is visible.
+   - **Test 4: SaaS Products — Overage Warning**
+     - Mock `userEntitlements = { usage_seconds: 40000 }`.
+     - Assert the warning text containing "Overage" appears.
+   - **Test 5: SaaS Products — Subscription Status**
+     - Mock `stripeStatus = 'active'` vs `stripeStatus = 'inactive'`.
+     - Assert the "Active Subscription" or "Subscription Inactive" text appears.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- The Playwright tests must pass when executed (`npm run test:e2e`).
