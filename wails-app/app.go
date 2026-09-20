@@ -20,6 +20,7 @@ import (
 	llmadapter "wails-app/adapters/llm"
 	"wails-app/backend"
 	"wails-app/backend/audio"
+	"wails-app/backend/auth"
 	"wails-app/backend/hotkeys"
 	"wails-app/backend/llm"
 	"wails-app/backend/remote"
@@ -368,19 +369,104 @@ func (a *App) StopBackend() error {
 }
 
 func (a *App) GetMachineId() string {
-	return "wails-machine-id"
+	id, err := auth.GetMachineID()
+	if err != nil {
+		log.Printf("[Auth] GetMachineId error: %v", err)
+		return "unknown"
+	}
+	return id
 }
 
 func (a *App) LoadToken() string {
-	return ""
+	token, err := auth.LoadToken()
+	if err != nil {
+		log.Printf("[Auth] LoadToken error: %v", err)
+		return ""
+	}
+	return token
 }
 
 func (a *App) SaveToken(token map[string]interface{}) {
-	// Not implemented
+	tokenStr, ok := token["token"].(string)
+	if !ok || tokenStr == "" {
+		return
+	}
+	if err := auth.SaveToken(tokenStr); err != nil {
+		log.Printf("[Auth] SaveToken error: %v", err)
+	}
 }
 
 func (a *App) DeleteToken() {
-	// Not implemented
+	if err := auth.DeleteToken(); err != nil {
+		log.Printf("[Auth] DeleteToken error: %v", err)
+	}
+}
+
+func (a *App) StartOAuthFlow(provider string) error {
+	supabaseURL := os.Getenv("PUBLIC_SUPABASE_URL")
+	if supabaseURL == "" {
+		return fmt.Errorf("PUBLIC_SUPABASE_URL not set")
+	}
+	access, refresh, err := auth.StartOAuthFlow(supabaseURL, provider)
+	if err != nil {
+		return fmt.Errorf("OAuth failed: %w", err)
+	}
+	if err := auth.SaveToken(access + ":" + refresh); err != nil {
+		log.Printf("[Auth] Could not save token: %v", err)
+	}
+	wailsruntime.EventsEmit(a.ctx, "on_auth_complete", map[string]string{
+		"access_token":  access,
+		"refresh_token": refresh,
+	})
+	return nil
+}
+
+func (a *App) ActivateLicense(licenseKey string) error {
+	machineID, err := auth.GetMachineID()
+	if err != nil {
+		return fmt.Errorf("could not read machine ID: %w", err)
+	}
+	valid, activationID, err := auth.ValidateLicenseKey(licenseKey, machineID, "BarnOwl-"+machineID[:8])
+	if err != nil {
+		return fmt.Errorf("license validation failed: %w", err)
+	}
+	if !valid {
+		return fmt.Errorf("license key is invalid or already used on another machine")
+	}
+	if err := auth.SaveLicenseKey(licenseKey + ":" + activationID); err != nil {
+		log.Printf("[Auth] Could not save license key: %v", err)
+	}
+	wailsruntime.EventsEmit(a.ctx, "on_license_activated", map[string]string{
+		"license_key":   licenseKey,
+		"activation_id": activationID,
+	})
+	return nil
+}
+
+func (a *App) CheckLicense() string {
+	keyFull, err := auth.LoadLicenseKey()
+	if err != nil || keyFull == "" {
+		return "not_activated"
+	}
+	parts := strings.SplitN(keyFull, ":", 2)
+	status, err := auth.CheckLicenseKeyStatus(parts[0])
+	if err != nil {
+		return "error"
+	}
+	return status
+}
+
+func (a *App) DeactivateLicense() error {
+	keyFull, err := auth.LoadLicenseKey()
+	if err != nil || keyFull == "" {
+		return nil
+	}
+	parts := strings.SplitN(keyFull, ":", 2)
+	if len(parts) == 2 {
+		auth.DeactivateLicenseKey(parts[0], parts[1])
+	}
+	auth.DeleteLicenseKey()
+	return nil
 }
 
 func (a *App) QuitApp() {
