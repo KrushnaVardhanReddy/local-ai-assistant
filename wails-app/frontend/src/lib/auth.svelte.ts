@@ -1,4 +1,5 @@
 import { createClient, type User } from '@supabase/supabase-js';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -8,10 +9,154 @@ export const supabase = supabaseUrl && supabaseAnonKey
   : null;
 
 export const authState = $state({
+  authMode: (supabaseUrl ? "saas" : "local") as "local" | "saas",
+  productMode: (import.meta.env.VITE_PRODUCT || "interview") as string,
+
+  // BarnOwl AI / Lifetime mode
+  licenseStatus: "unchecked" as "unchecked" | "active" | "expired" | "not_activated" | "dev_allowed" | "error" | "demo",
+  licenseKey: null as string | null,
+
+  // OAuth / SaaS / Demo mode
   user: null as User | null,
   accessToken: null as string | null,
-  authMode: (supabaseUrl ? "saas" : "local") as "local" | "saas"
+  demoExpiresAt: null as string | null,
+  stripeStatus: null as string | null,
+  planType: null as string | null,
 });
+
+
+
+export async function checkDevAllowlist(): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const machineId: string = await (window as any).go.main.App.GetMachineId();
+    const { data } = await supabase
+      .from("dev_allowlist")
+      .select("machine_id")
+      .eq("machine_id", machineId)
+      .single();
+    return data !== null;
+  } catch { return false; }
+}
+
+
+export async function initLicenseCheck() {
+  if (authState.productMode !== "interview") return;
+
+  if (await checkDevAllowlist()) {
+    authState.licenseStatus = "dev_allowed";
+    return;
+  }
+
+  try {
+    const status: string = await (window as any).go.main.App.CheckLicense();
+    if (status === "active") {
+      authState.licenseStatus = "active";
+      return;
+    }
+  } catch {}
+
+  // If no valid license key, check if they have an active OAuth demo session
+  if (authState.user && authState.demoExpiresAt) {
+    const exp = new Date(authState.demoExpiresAt).getTime();
+    if (exp > Date.now()) {
+      authState.licenseStatus = "demo";
+      return;
+    }
+  }
+
+  authState.licenseStatus = "not_activated";
+}
+
+export async function activateLicense(key: string) {
+  try {
+    const success: boolean = await (window as any).go.main.App.ActivateLicense(key);
+    if (success) {
+      authState.licenseStatus = "active";
+      authState.licenseKey = key;
+    } else {
+      throw new Error("Invalid license key");
+    }
+  } catch (err: any) {
+    throw err;
+  }
+}
+
+
+export async function syncUserEntitlements() {
+  if (!supabase || !authState.user) return;
+  try {
+    const machineId: string = await (window as any).go.main.App.GetMachineId();
+
+    // First, check if row exists
+    const { data: existingData } = await supabase
+      .from("user_entitlements")
+      .select("*")
+      .eq("user_id", authState.user.id)
+      .eq("machine_id", machineId)
+      .single();
+
+    if (!existingData) {
+      // Upsert new row with demo_expires_at 15 mins from now
+      const demoExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      await supabase.from("user_entitlements").upsert({
+        user_id: authState.user.id,
+        machine_id: machineId,
+        demo_expires_at: demoExpiresAt,
+      });
+    } else {
+      // Just an upsert in case we need to update updated_at or similar in the future,
+      // but otherwise existing is fine
+      await supabase.from("user_entitlements").upsert({
+        user_id: authState.user.id,
+        machine_id: machineId,
+      });
+    }
+
+    const { data } = await supabase
+      .from("user_entitlements")
+      .select("*")
+      .eq("user_id", authState.user.id)
+      .eq("machine_id", machineId)
+      .single();
+
+    if (data) {
+      authState.demoExpiresAt = data.demo_expires_at;
+      authState.stripeStatus = data.stripe_subscription_status;
+      authState.planType = data.plan_type;
+    }
+
+    if (authState.productMode === "interview") {
+      await initLicenseCheck();
+    }
+  } catch (err) {
+    console.error("Failed to sync user entitlements", err);
+  }
+}
+
+function initOAuthListener() {
+  const onEvent = typeof window !== "undefined" && (window as any).runtime?.EventsOn ? (window as any).runtime.EventsOn : EventsOn;
+  onEvent("on_auth_complete", async (tokenStr: string) => {
+    if (!tokenStr || !supabase) return;
+
+    const [access_token, refresh_token] = tokenStr.split(":");
+    if (!access_token || !refresh_token) return;
+
+    const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+    if (!error && data.user) {
+      authState.user = data.user;
+      authState.accessToken = data.session?.access_token || null;
+      try {
+        await (window as any).go.main.App.SaveToken({ token: tokenStr });
+      } catch (e) {}
+      await syncUserEntitlements();
+    }
+  });
+}
+
+if (typeof window !== "undefined") {
+  initOAuthListener();
+}
 
 export const cloudAuthState = $state({
   apiKey: typeof window !== 'undefined' ? localStorage.getItem('cloud_api_key') : null

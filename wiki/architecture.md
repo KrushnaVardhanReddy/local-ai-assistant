@@ -57,3 +57,8 @@ Because the `StealthEngine` is completely generic, we can create multiple distin
 
 ### Workspace
 - **Workspace Tree**: The workspace manages files loaded into the application. Standalone files opened (e.g., resumes, code) are appended to the workspace tree as root nodes, allowing them to be indexed for RAG.
+
+### Authentication & Licensing UI
+The frontend authentication system (`src/lib/auth.svelte.ts`) and modal UI (`AuthModal.svelte`) are designed to support two distinct operational modes controlled by the `VITE_PRODUCT` environment variable:
+1. **BarnOwl AI (Lifetime + Demo Mode):** For `VITE_PRODUCT=interview`, the UI presents a dual-option modal. Users can either activate a lifetime license key (via LemonSqueezy) or start a 15-minute free demo via Google OAuth. The `dev_allowlist` Supabase table enables machine IDs to bypass checks. Entitlements and 15-minute expirations are tracked in the `user_entitlements` table.
+2. **SaaS Products:** For other products (e.g., MentorGlass, CounselDesk), the UI strictly presents a "Continue with Google" OAuth sign-in, which tracks standard Stripe subscription plans via `user_entitlements`.
