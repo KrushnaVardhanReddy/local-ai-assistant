@@ -10,7 +10,7 @@
 ## Legend
 | Symbol | Meaning |
 |--------|---------|
-| ✅ | Done / PR merged |
+| 🔄 | Done / PR merged |
 | 🔄 | Jules working on it |
 | ⬜ | Not started |
 | ⚡ | Can run in PARALLEL with other ⚡ tasks in same batch |
@@ -21,9 +21,9 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|  
-| P62-T1 ⚡ | `wails-app/app.go`, `wails-app/backend/auth/` | **Go OAuth Loopback Server & Machine ID** — Implement local HTTP loopback server for OAuth redirect capture. Implement `GetMachineId()` using OS hardware UUID. Implement `SaveToken`, `LoadToken`, `DeleteToken` via OS keychain (`zalando/go-keyring`). Add `StartOAuthFlow(provider string) error`. | ✅ | — |
-| P62-T2 ⚡ | `wails-app/frontend/src/lib/auth.svelte.ts`, `wails-app/frontend/src/lib/components/AuthModal.svelte` | **Frontend OAuth UI & Device Registration** — Replace email/password form with "Sign in with Google" button. Listen for `on_auth_complete` Wails event. Register hashed machine ID in Supabase `device_registrations` table. Fetch and cache user entitlement profile. | ✅ | — |
-| P62-T3 | `wails-app/frontend/src/App.svelte`, `wails-app/frontend/src/lib/Settings.svelte` | **License Gate & Entitlement UI** — Show full-screen lock banner when `byok_pass_active == false && remaining_sessions <= 0`. Display license status and "Recharge Pass" button in Settings. | ✅ | — |
+| P62-T1 ⚡ | `wails-app/app.go`, `wails-app/backend/auth/` | **Go OAuth Loopback Server & Machine ID** — Implement local HTTP loopback server for OAuth redirect capture. Implement `GetMachineId()` using OS hardware UUID. Implement `SaveToken`, `LoadToken`, `DeleteToken` via OS keychain (`zalando/go-keyring`). Add `StartOAuthFlow(provider string) error`. | 🔄 | — |
+| P62-T2 ⚡ | `wails-app/frontend/src/lib/auth.svelte.ts`, `wails-app/frontend/src/lib/components/AuthModal.svelte` | **Frontend OAuth UI & Device Registration** — Replace email/password form with "Sign in with Google" button. Listen for `on_auth_complete` Wails event. Register hashed machine ID in Supabase `device_registrations` table. Fetch and cache user entitlement profile. | 🔄 | — |
+| P62-T3 | `wails-app/frontend/src/App.svelte`, `wails-app/frontend/src/lib/Settings.svelte` | **License Gate & Entitlement UI** — Show full-screen lock banner when `byok_pass_active == false && remaining_sessions <= 0`. Display license status and "Recharge Pass" button in Settings. | 🔄 | — |
 
 ---
 
@@ -31,8 +31,8 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P63-T1 | `supabase/functions/llm-proxy/`, `wails-app/backend/llm/openai.go` | **Edge Function LLM Proxy** — Create a Supabase Deno Edge Function to proxy OpenAI requests. Verify JWT and `demo_expires_at`. Inject `OPENAI_API_KEY`. For SaaS product users (non-demo), report session duration (seconds) to Stripe Metered Billing via `POST /v1/subscription_items/{id}/usage_records`. Increment `usage_seconds` in `user_entitlements` table for in-app usage meter. | ✅ | — |
-| P63-T2 | `wails-app/frontend/src/lib/Settings.svelte` | **Usage Meter UI (SaaS Products)** — Add a live usage meter to the Settings panel for SaaS products (MentorGlass, CounselDesk, ClinicHUD). Show hours used vs included allocation, estimated overage cost this month, and next billing date. Read from `user_entitlements.usage_seconds`. Only visible when `productMode !== 'interview'`. | ✅ | — |
+| P63-T1 | `supabase/functions/llm-proxy/`, `wails-app/backend/llm/openai.go` | **Edge Function LLM Proxy** — Create a Supabase Deno Edge Function to proxy OpenAI requests. Verify JWT and `demo_expires_at`. Inject `OPENAI_API_KEY`. For SaaS product users (non-demo), report session duration (seconds) to Stripe Metered Billing via `POST /v1/subscription_items/{id}/usage_records`. Increment `usage_seconds` in `user_entitlements` table for in-app usage meter. | 🔄 | — |
+| P63-T2 | `wails-app/frontend/src/lib/Settings.svelte` | **Usage Meter UI (SaaS Products)** — Add a live usage meter to the Settings panel for SaaS products (MentorGlass, CounselDesk, ClinicHUD). Show hours used vs included allocation, estimated overage cost this month, and next billing date. Read from `user_entitlements.usage_seconds`. Only visible when `productMode !== 'interview'`. | 🔄 | — |
 
 ---
 
@@ -40,8 +40,8 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P64-T1 | `wails-app/wails.json`, `Makefile` | **App Packaging & Build** — Configure Wails to produce production-ready binaries: `.dmg` (macOS), `.exe` (Windows), and `.AppImage` (Linux). Add app icons, metadata, and cross-compilation scripts to the Makefile. | ✅ | — |
-| P64-T2 | `scripts/deploy_supabase.sh` | **Supabase Production Setup Scripts** — Create SQL migration files for the required tables (`dev_allowlist`, `user_entitlements`) and a deployment script (`scripts/deploy_supabase.sh`) for the Edge Function. | ✅ | — |
+| P64-T1 | `wails-app/wails.json`, `Makefile` | **App Packaging & Build** — Configure Wails to produce production-ready binaries: `.dmg` (macOS), `.exe` (Windows), and `.AppImage` (Linux). Add app icons, metadata, and cross-compilation scripts to the Makefile. | 🔄 | — |
+| P64-T2 | `scripts/deploy_supabase.sh` | **Supabase Production Setup Scripts** — Create SQL migration files for the required tables (`dev_allowlist`, `user_entitlements`) and a deployment script (`scripts/deploy_supabase.sh`) for the Edge Function. | 🔄 | — |
 | P64-T3 | Paddle Dashboard (Manual) | **Paddle Billing Setup (All Products)** — Single unified billing platform replacing LemonSqueezy + Stripe.<br><br>**Manual Steps Required:**<br>1. Create 3 price tiers for BarnOwl AI Lifetime ($49/$79/$99).<br>2. Create 3 SaaS subscription products (MentorGlass/CounselDesk/ClinicHUD).<br>3. Enable UPI in checkout settings.<br>4. Add webhook URL (`<supabase-url>/functions/v1/paddle-webhook`) in Paddle -> Notifications.<br><br>**Usage Flow (No SmartRouter needed):**<br>1. `llm-proxy` Edge Function increments `usage_seconds` in Supabase.<br>2. At month end, `paddle-billing-cron` reads `usage_seconds` vs `included_seconds`.<br>3. If overage, cron calls Paddle API to charge the overage and resets `usage_seconds` to 0. | ✅ | — |
 | P64-T4 | `wails-app/frontend/src/lib/auth.svelte.ts`, `wails-app/frontend/tests/entitlement.spec.ts` | **Entitlement E2E Tests** — Expose `authState` to Playwright via `window.__authState` and write UI E2E tests for Developer Mode, Active License, Usage Meter calculations, Overage warnings, and Paddle subscription status. | 🔄 | — |
 
