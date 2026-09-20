@@ -1,0 +1,13 @@
+--- wails-app/backend/llm/openai_test.go
++++ wails-app/backend/llm/openai_test.go
+@@ -370,4 +370,9 @@
+		t.Errorf("Expected generic unmarshal error, got: %v", err)
+	}
+ }
++
++func TestSetProxyToken(t *testing.T) {
++	SetProxyToken("test-token")
++	if DemoProxyToken != "test-token" {
++		t.Errorf("Expected DemoProxyToken to be 'test-token', got '%s'", DemoProxyToken)
++	}
++}

@@ -844,3 +844,7 @@ func (a *App) SetManualMode(enabled bool) {
 func (a *App) SummarizeSession(requests []engine.SummaryRequest) error {
 	return a.engine.SummarizeSession(requests)
 }
+
+func (a *App) SetProxyToken(token string) {
+	llm.SetProxyToken(token)
+}

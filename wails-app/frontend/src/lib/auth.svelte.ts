@@ -24,6 +24,18 @@ export const authState = $state({
   planType: null as string | null,
 });
 
+$effect.root(() => {
+  $effect(() => {
+    if (typeof window !== "undefined" && (window as any).go?.main?.App) {
+      if (authState.licenseStatus === "demo" && authState.accessToken) {
+        (window as any).go.main.App.SetProxyToken(authState.accessToken);
+      } else {
+        (window as any).go.main.App.SetProxyToken("");
+      }
+    }
+  });
+});
+
 
 
 export async function checkDevAllowlist(): Promise<boolean> {

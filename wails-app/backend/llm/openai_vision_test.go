@@ -13,6 +13,7 @@ import (
 )
 
 func TestStreamVisionCompletion(t *testing.T) {
+	SetProxyToken("")
 	os.Setenv("OPENAI_API_KEY", "test-key")
 	defer os.Unsetenv("OPENAI_API_KEY")
 
@@ -61,6 +62,7 @@ func TestStreamVisionCompletion(t *testing.T) {
 }
 
 func TestStreamVisionCompletion_EmptyPrompt(t *testing.T) {
+	SetProxyToken("")
 	os.Setenv("OPENAI_API_KEY", "test-key")
 	defer os.Unsetenv("OPENAI_API_KEY")
 
@@ -99,6 +101,7 @@ func TestStreamVisionCompletion_EmptyPrompt(t *testing.T) {
 }
 
 func TestStreamVisionCompletion_NoKey(t *testing.T) {
+	SetProxyToken("")
 	os.Unsetenv("OPENAI_API_KEY")
 	err := StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
@@ -107,6 +110,7 @@ func TestStreamVisionCompletion_NoKey(t *testing.T) {
 }
 
 func TestStreamVisionCompletion_ErrorCases(t *testing.T) {
+	SetProxyToken("")
 	os.Setenv("OPENAI_API_KEY", "test-key")
 	defer os.Unsetenv("OPENAI_API_KEY")
 
@@ -131,6 +135,7 @@ func TestStreamVisionCompletion_ErrorCases(t *testing.T) {
 }
 
 func TestStreamVisionCompletion_JsonParseError(t *testing.T) {
+	SetProxyToken("")
 	os.Setenv("OPENAI_API_KEY", "test-key")
 	defer os.Unsetenv("OPENAI_API_KEY")
 

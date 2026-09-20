@@ -68,4 +68,4 @@ The application supports dual authentication schemes:
 1. **Google OAuth**: A local OAuth loopback server (using an HTML trampoline page to parse URL fragments) provides access to the 15-minute free demo and SaaS tiers via Supabase.
 2. **LemonSqueezy License Validation**: For Lifetime Deals, the app generates a deterministic hardware ID using the OS's native machine UUID, HMAC-hashed for privacy. This ID ensures licenses cannot be shared across physical devices.
 
-All sensitive tokens and activation secrets are stored natively on the user's OS Keychain using `zalando/go-keyring`.
+All sensitive tokens and activation secrets are stored natively on the user's OS Keychain using `zalando/go-keyring`. During the 15-minute free demo, the app uses a Supabase Edge Function (`llm-proxy`) to securely proxy LLM API requests and inject our server-side API key without exposing it to the client binary.

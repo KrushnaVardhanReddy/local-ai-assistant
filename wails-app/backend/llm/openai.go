@@ -1,6 +1,8 @@
 package llm
 
 import (
+	"sync"
+
 	"bufio"
 	"bytes"
 	"context"
@@ -49,6 +51,23 @@ var (
 	}
 )
 
+var (
+	DemoProxyToken string
+	proxyTokenMutex sync.RWMutex
+)
+
+func SetProxyToken(token string) {
+	proxyTokenMutex.Lock()
+	defer proxyTokenMutex.Unlock()
+	DemoProxyToken = token
+}
+
+func GetProxyToken() string {
+	proxyTokenMutex.RLock()
+	defer proxyTokenMutex.RUnlock()
+	return DemoProxyToken
+}
+
 type ImageURLContent struct {
 	URL string `json:"url"`
 }
@@ -77,11 +96,17 @@ func StreamVisionCompletion(ctx context.Context, base64Image string, prompt stri
 		}
 	}()
 
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		return fmt.Errorf("OPENAI_API_KEY environment variable is not set")
+	var baseURL, apiKey string
+	if GetProxyToken() != "" {
+		baseURL = getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy")
+		apiKey = GetProxyToken()
+	} else {
+		apiKey = os.Getenv("OPENAI_API_KEY")
+		if apiKey == "" {
+			return fmt.Errorf("OPENAI_API_KEY environment variable is not set")
+		}
+		baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1")
 	}
-	baseURL := getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1")
 	model := getEnvOrDefault("LLM_MODEL", "gpt-4o")
 
 	if !strings.HasSuffix(baseURL, "/") {
@@ -195,11 +220,17 @@ func StreamCompletionWithContext(ctx context.Context, question string, category 
 		}
 	}()
 
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		return fmt.Errorf("OPENAI_API_KEY environment variable is not set")
+	var baseURL, apiKey string
+	if GetProxyToken() != "" {
+		baseURL = getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy")
+		apiKey = GetProxyToken()
+	} else {
+		apiKey = os.Getenv("OPENAI_API_KEY")
+		if apiKey == "" {
+			return fmt.Errorf("OPENAI_API_KEY environment variable is not set")
+		}
+		baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1")
 	}
-	baseURL := getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1")
 	model := getEnvOrDefault("LLM_MODEL", "gpt-4o")
 
 	if !strings.HasSuffix(baseURL, "/") {
