@@ -1,0 +1,36 @@
+TASK: P63-T2 — Usage Meter UI (SaaS Products)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Add a live usage meter to the Settings panel for our SaaS products (MentorGlass, CounselDesk, ClinicHUD).
+This UI will show users their usage in hours/minutes versus their included monthly allocation, display an estimated overage cost if they exceed it, and show their next billing date.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/frontend/src/lib/Settings.svelte
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. **Usage Meter Component in Settings (`Settings.svelte`):**
+   - In the `account` tab, if the product mode is NOT `'interview'` (e.g., `authState.productMode !== 'interview'`), and the user is authenticated, display a new "Usage & Billing" section.
+   - Read the total usage from `authState.userEntitlements.usage_seconds` (or just assume it's exposed via `authState`).
+   - Convert `usage_seconds` into hours and minutes.
+   - For UI placeholder logic, assume a standard plan includes 10 hours (36000 seconds) per month.
+   - Display a progress bar showing `(usage_seconds / 36000) * 100` (capped at 100% for the visual bar, but turn it red if it goes over).
+   - If `usage_seconds` > 36000, calculate an estimated overage cost at $0.05 per extra minute.
+   - Display a dummy "Next Billing Date" (e.g., the 1st of the next month).
+
+2. **Styling:**
+   - Use the existing CSS conventions in `Settings.svelte`.
+   - Make the progress bar look sleek and modern.
+   - Provide clear textual summaries, e.g., "7h 30m used / 10h included".
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- The changes must be purely UI/frontend logic.
+- Ensure the meter does NOT show up for BarnOwl AI (`productMode === 'interview'`).
