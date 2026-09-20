@@ -41,7 +41,7 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
 | P64-T1 | `wails-app/wails.json`, `Makefile` | **App Packaging & Build** — Configure Wails to produce production-ready binaries: `.dmg` (macOS), `.exe` (Windows), and `.AppImage` (Linux). Add app icons, metadata, and cross-compilation scripts to the Makefile. | 🔄 | — |
-| P64-T2 | Supabase Dashboard (Manual) | **Supabase Production Setup** — Create the `dev_allowlist` and `user_entitlements` tables (with `usage_seconds` column) in the production Supabase project. Deploy the `llm-proxy` Edge Function via Supabase CLI. Set edge secrets: `OPENAI_API_KEY` and `STRIPE_SECRET_KEY`. | 🔄 | — |
+| P64-T2 | `scripts/deploy_supabase.sh` | **Supabase Production Setup Scripts** — Create SQL migration files for the required tables (`dev_allowlist`, `user_entitlements`) and a deployment script (`scripts/deploy_supabase.sh`) for the Edge Function. | ✅ | — |
 | P64-T3 | LemonSqueezy (Manual) | **LemonSqueezy Store Setup (BarnOwl AI only)** — Create the "BarnOwl AI Lifetime" product. Configure three pricing tiers: Founder $49 (max 1,000 sales), Early $79 (max 5,000 sales), Standard $99 (unlimited). Enable "Generate License Keys" on purchase. | ⬜ | — |
 | P64-T4 | Stripe Dashboard (Manual) | **Stripe Metered Billing Setup (SaaS Products)** — Create Stripe products for MentorGlass ($29/mo base), CounselDesk ($99/mo base), ClinicHUD ($49/mo base). Each product has TWO price items: (1) a flat recurring fee and (2) a metered price for overage usage (per minute, charged at month end). Configure Stripe Customer Portal so users can self-manage subscriptions and view billing history without contacting support. | ⬜ | — |
 
