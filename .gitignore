@@ -81,3 +81,4 @@ wails-app/models/
 wails-app/backend/models/
 *.onnx
 .wrangler/
+client_secret_*.json
