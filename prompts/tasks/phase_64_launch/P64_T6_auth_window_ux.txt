@@ -1,0 +1,32 @@
+MANDATORY RULES — VIOLATION = REJECTED PR:
+1. NEVER comment out, stub, or mock existing implementation code.
+2. NEVER replace a working function body with `// TODO` or empty returns.
+3. Every file you modify MUST still compile (run tests and checks).
+4. If a test fails, FIX the code or the test — do NOT delete or skip tests.
+5. Commit message must start with "jules: " prefix.
+
+Task P64-T6: Auth Window UX Redesign
+
+Project Context:
+- Frontend: Svelte 5 (wails-app/frontend)
+- Backend: Wails v2 (Go) (wails-app/)
+
+Objective:
+The Wails application is currently designed to run as an "invisible shield" overlay (`Frameless: true`, `AlwaysOnTop: true`, `BackgroundColour: RGBA{0,0,0,0}`). However, the user needs the initial Authentication and Licensing screen to behave like a normal OS window (Alt-Tabbable, movable, with minimize/close buttons, and a solid background) before it switches to the invisible shield mode.
+
+Requirements:
+1. In `wails-app/main.go`:
+   - Change `AlwaysOnTop: true` to `AlwaysOnTop: false` in the `wails.Run` configuration.
+   - We will still leave `Frameless: true` and `BackgroundColour` as `RGBA{0,0,0,0}` because we cannot dynamically toggle `Frameless` in Wails v2, but we can dynamically control `AlwaysOnTop` and render a solid HTML background when needed.
+   
+2. Create a Custom Titlebar component in Svelte (`wails-app/frontend/src/lib/components/Titlebar.svelte`):
+   - It should sit at the top of the screen during Auth mode.
+   - It MUST include CSS `--wails-draggable: drag` so the user can drag the frameless window.
+   - It must include three buttons (Minimize, Maximize, Close) that call the respective Wails runtime functions:
+     `import { WindowMinimise, WindowToggleMaximise, Quit } from '../../../wailsjs/runtime/runtime'`
+   - Use a sleek, dark-mode flat UI design for the titlebar and buttons.
+
+3. Update `wails-app/frontend/src/lib/components/AuthModal.svelte` and `App.svelte` (or wherever appropriate) to:
+   - Render the `Titlebar` ONLY when the user is NOT authenticated/licensed (i.e., when `AuthModal` is shown).
+   - Apply a solid background color to the main container (e.g., `#1e1e1e`) when the user is NOT authenticated, so it looks like a real window instead of a floating transparent modal.
+   - When authentication/licensing succeeds and the AuthModal is dismissed, strip the solid background so it becomes transparent again, and call `WindowSetAlwaysOnTop(true)` from the Wails runtime to enter the invisible shield mode.
