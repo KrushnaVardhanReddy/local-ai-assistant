@@ -11,17 +11,15 @@
   import { WindowSetSize, WindowCenter } from "../wailsjs/runtime/runtime";
 
 
-  const product = import.meta.env.VITE_PRODUCT || "interview";
-
 
   let showAuthModal = $state(false);
   const isGated = $derived(
     authState.authMode !== "local" && (
-      product === "interview"
+      authState.productMode === "interview"
         ? (authState.licenseStatus !== "active" &&
            authState.licenseStatus !== "dev_allowed" &&
            authState.licenseStatus !== "demo")
-        : (!authState.user || authState.stripeStatus !== "active")
+        : (!authState.user || authState.paddleStatus !== "active")
     )
   );
 
@@ -38,7 +36,7 @@
     }
 
     initAuthEventListeners();
-    if (product === "interview") {
+    if (authState.productMode === "interview") {
       await restoreSession(); // Need session to check demo status
       await initLicenseCheck();
     } else if (authState.authMode === "saas") {
@@ -99,8 +97,8 @@
 
 <AuthModal bind:isOpen={showAuthModal} onClose={() => showAuthModal = false} />
 
-<div class="app-shell" class:pointer-events-none={product !== "presenter" && product !== "interview"} class:pointer-events-auto={product === "presenter" || product === "interview"}>
-  {#if product === "presenter"}
+<div class="app-shell" class:pointer-events-none={authState.productMode !== "presenter" && authState.productMode !== "interview"} class:pointer-events-auto={authState.productMode === "presenter" || authState.productMode === "interview"}>
+  {#if authState.productMode === "presenter"}
     <PresenterHUD />
   {:else}
     <InterviewHUD />

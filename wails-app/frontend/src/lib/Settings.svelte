@@ -512,7 +512,7 @@
               <div class="account-info">
                 <p class="email"><strong>{authState.user.email}</strong></p>
                 <div class="badges">
-                  {#if authState.stripeStatus === "active"}
+                  {#if authState.paddleStatus === "active"}
                     <span class="badge plan-badge" style="background: #28a745;">Active Subscription</span>
                   {:else}
                     <span class="badge plan-badge" style="background: #dc3545;">Subscription Inactive</span>
@@ -545,7 +545,7 @@
                 {/if}
 
                 <div class="actions">
-                  {#if authState.stripeStatus !== "active"}
+                  {#if authState.paddleStatus !== "active"}
                     <button class="btn-primary" style="background-color: #ff9800; margin-bottom: 0.5rem;" onclick={() => window.open('https://example.com/upgrade', '_blank')}>Upgrade Plan</button>
                   {/if}
                   <a href="https://example.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn-link">Open Dashboard</a>

@@ -5,7 +5,7 @@ These notes outline the project state as of the latest handoff (August 2026), ma
 ## Current State
 - **Core Features Complete**: The RAG backend, faster-whisper integration, Svelte 5 frontend, and Wails OS hooks are fully merged.
 - **Killer Features Ready**: Vision Copilot (silent screen reads) and Stealth Mode (OS-level kernel hooks) are functional.
-- **SaaS Framework Ready**: Supabase auth and Stripe billing have been implemented.
+- **SaaS Framework Ready**: Supabase auth and Paddle billing have been implemented.
 
 ## Pending Immediate Action
 - The project is currently waiting on the **E2E Test Suite (P7-T6)** to finish its run on Jules.
