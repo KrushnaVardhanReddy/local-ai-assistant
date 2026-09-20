@@ -1,0 +1,110 @@
+TASK: P63-T1 -- Supabase Edge Proxy for LLM Demo Mode
+
+===============================================================
+OBJECTIVE
+===============================================================
+Implement a Supabase Edge Function to proxy OpenAI API calls during
+the 15-minute free demo, and update the Go backend to route requests
+through it securely.
+
+This ensures our secret OpenAI API key is never shipped inside the
+desktop app binary, protecting it from extraction and abuse.
+
+===============================================================
+BACKGROUND AND CONTEXT
+===============================================================
+During the "Lifetime" mode, users provide their own OpenAI API key
+(BYOK) in the Settings panel, and the Go backend calls api.openai.com
+directly.
+
+During the "15-Minute Demo" mode (when authState.licenseStatus == "demo"),
+the user has no API key. We must pay for their LLM tokens. To do this safely:
+  1. The app passes the user's Supabase OAuth JWT token (not an OpenAI key)
+     to the Go backend.
+  2. Go routes the LLM request to: https://[PROJECT].supabase.co/functions/v1/llm-proxy
+  3. The Edge Function verifies the JWT, checks if demo_expires_at > now(),
+     injects our secure server-side OPENAI_API_KEY, and forwards to OpenAI.
+
+===============================================================
+FILES TO MODIFY / CREATE
+===============================================================
+NEW:    supabase/functions/llm-proxy/index.ts
+MODIFY: wails-app/backend/llm/openai.go
+MODIFY: wails-app/frontend/src/lib/auth.svelte.ts
+
+===============================================================
+DETAILED SPECIFICATION
+===============================================================
+
+1. NEW FILE: supabase/functions/llm-proxy/index.ts
+
+   Create a Deno edge function that acts as an OpenAI proxy.
+   Requirements:
+   - Handle CORS preflight (OPTIONS) requests.
+   - Extract the Authorization Bearer token (the user's Supabase JWT).
+   - Use the Supabase JS Client to verify the user and fetch their
+     demo_expires_at from the user_entitlements table.
+     * Note: You must use the service_role key to query the table
+       if RLS blocks reading demo_expires_at for the user, or simply
+       rely on RLS if configured correctly.
+   - If demo_expires_at <= now(), return 402 Payment Required.
+   - If valid, fetch Deno.env.get("OPENAI_API_KEY").
+   - Forward the exact POST body to https://api.openai.com/v1/chat/completions.
+   - Inject the OPENAI_API_KEY into the new Authorization header.
+   - Stream the response directly back to the client.
+
+2. MODIFY: wails-app/frontend/src/lib/auth.svelte.ts
+
+   We need to pass the Supabase session token to the Go backend so it
+   can use it for the proxy requests.
+
+   a) Add a Wails call whenever the session changes:
+      If authState.licenseStatus === "demo" && authState.accessToken:
+        (window as any).go.main.App.SetProxyToken(authState.accessToken)
+      Else:
+        (window as any).go.main.App.SetProxyToken("")
+
+3. MODIFY: wails-app/backend/llm/openai.go
+
+   a) Add a global variable or method to store the proxy token:
+      var DemoProxyToken string
+      func SetProxyToken(token string) { DemoProxyToken = token }
+      (Make sure to bind this in app.go or expose it cleanly).
+
+   b) In `StreamVisionCompletion()` (and any other completion functions),
+      update the URL and Key logic:
+
+      If DemoProxyToken != "" {
+          // DEMO MODE
+          baseURL = getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy")
+          apiKey = DemoProxyToken // Pass the Supabase JWT as the Bearer token
+      } else {
+          // BYOK MODE
+          apiKey = os.Getenv("OPENAI_API_KEY") // Or however it is loaded from Settings
+          baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1")
+      }
+
+      The rest of the HTTP request logic remains identical, as the Edge
+      Function expects the exact same JSON body as OpenAI.
+
+===============================================================
+IMPORTANT WARNINGS
+===============================================================
+
+[WARNING] The Deno Edge function must support streaming responses
+  (ReadableStream). Do not buffer the entire OpenAI response in memory
+  before returning it, as this will break the live typing UI.
+
+[WARNING] Ensure the Edge Function does not leak the OPENAI_API_KEY
+  in error messages or headers under any circumstances.
+
+===============================================================
+VERIFICATION
+===============================================================
+- Start Supabase locally: `supabase start`
+- Serve the function: `supabase functions serve llm-proxy`
+- Ensure the Go backend correctly routes traffic to the local edge function
+  port when DemoProxyToken is set.
+
+Commit message: "jules: P63-T1 implement Supabase Edge Proxy for secure demo LLM requests"
+Target branch: feature/krushna_golang

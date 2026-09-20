@@ -1,0 +1,125 @@
+TASK: P62-T3 -- License Gate, Demo Timer, and Entitlement UI
+
+===============================================================
+OBJECTIVE
+===============================================================
+Enforce license/auth validation on app launch and show appropriate
+lock screens. Two distinct gate behaviors:
+
+  MODE A: BarnOwl AI (VITE_PRODUCT=interview) -- Lifetime + Demo Gate
+    Gate condition: licenseStatus is NOT "active", "dev_allowed", or "demo"
+    Lock screen: shows AuthModal (Demo + License Key options)
+    BYOK Settings: only enabled if licenseStatus === "active"
+
+  MODE B: SaaS Products (VITE_PRODUCT=mentorglass, etc.) -- Subscription Gate
+    Gate condition: user is null OR stripeStatus is NOT "active"
+    Lock screen: shows AuthModal (Google OAuth)
+
+In BOTH modes:
+  - The Settings panel is NEVER blocked (users need it to activate/login).
+  - "local" authMode (no Supabase configured) bypasses ALL gates entirely.
+
+This task depends on P62-T1 and P62-T2 being merged.
+
+===============================================================
+FILES TO MODIFY
+===============================================================
+MODIFY: wails-app/frontend/src/App.svelte
+MODIFY: wails-app/frontend/src/lib/Settings.svelte
+
+===============================================================
+DETAILED SPECIFICATION
+===============================================================
+
+1. MODIFY: wails-app/frontend/src/App.svelte
+
+a) Import from auth.svelte.ts:
+   import { authState, initLicenseCheck, initAuthEventListeners, restoreSession }
+     from "$lib/auth.svelte";
+   import AuthModal from "$lib/components/AuthModal.svelte";
+
+b) Update onMount to initialize auth:
+   onMount(async () => {
+     initAuthEventListeners();
+     if (product === "interview") {
+       await restoreSession(); // Need session to check demo status
+       await initLicenseCheck();
+     } else if (authState.authMode === "saas") {
+       await restoreSession();
+     }
+   });
+
+c) Setup a 1-minute interval timer for Demo mode:
+   (If the user is in "demo" mode, check if demoExpiresAt has passed.
+    If yes, change licenseStatus to "expired" so the gate appears.)
+   setInterval(() => {
+     if (authState.licenseStatus === "demo" && authState.demoExpiresAt) {
+       if (new Date(authState.demoExpiresAt).getTime() <= Date.now()) {
+         authState.licenseStatus = "expired";
+       }
+     }
+   }, 60000);
+
+d) Derive the gate condition:
+   const isGated = $derived(
+     authState.authMode !== "local" && (
+       product === "interview"
+         ? (authState.licenseStatus !== "active" &&
+            authState.licenseStatus !== "dev_allowed" &&
+            authState.licenseStatus !== "demo")
+         : (!authState.user || authState.stripeStatus !== "active")
+     )
+   );
+
+e) In the template, render the lock screen when isGated is true.
+   The lock screen MUST be position: fixed, inset: 0, z-index: 9999 so
+   it covers the FULL APPLICATION WINDOW.
+
+   Lock screen for BarnOwl AI (product === "interview"):
+     - Headline: "Unlock BarnOwl AI" (if not_activated) or "Demo Expired" (if expired)
+     - Primary button "Unlock" -> sets showAuthModal = true
+     - Dark frosted glass background (backdrop-filter: blur(20px))
+
+f) Add AuthModal at the root:
+   <AuthModal bind:isOpen={showAuthModal} onClose={() => showAuthModal = false} />
+
+2. MODIFY: wails-app/frontend/src/lib/Settings.svelte
+
+a) Find the Custom API Key section (around line 337).
+   Change the `disabled` attribute from `authState.plan !== 'lifetime'` to:
+   disabled={authState.licenseStatus !== 'active' && authState.licenseStatus !== 'dev_allowed'}
+   Update the red warning text below it to:
+   "Custom models require a purchased Lifetime License."
+
+b) Replace the account UI section with a rich status card:
+
+   BarnOwl AI mode:
+     When licenseStatus === "dev_allowed": Show "Developer Mode".
+     When licenseStatus === "active": Show "Lifetime License — Active" with a Deactivate button.
+     When licenseStatus === "demo": Show "15-Minute Free Demo" and calculate minutes remaining. Show "Upgrade to Lifetime" button.
+     When licenseStatus === "expired" or "not_activated": Show "Not Licensed" and "Unlock App" button (opens AuthModal).
+
+   SaaS mode:
+     When user is null: Show "Not signed in".
+     When user exists + stripeStatus === "active": Show "Active Subscription".
+     When user exists + stripeStatus !== "active": Show "Subscription Inactive" and "Upgrade Plan" button.
+
+===============================================================
+IMPORTANT WARNINGS
+===============================================================
+
+[WARNING] The "local" authMode bypasses ALL gates. Every gate check MUST
+  start with: if (authState.authMode === "local") return false / skip.
+
+[WARNING] The existing "isGated" in InterviewHUD.svelte (around line 127)
+  must be REMOVED. Search for "isGated" in InterviewHUD.svelte and delete it.
+
+===============================================================
+VERIFICATION
+===============================================================
+- npm run build: no TypeScript errors.
+- Verify Custom API Key input is disabled during demo mode, but enabled in active mode.
+- Verify 1-minute interval correctly triggers the lock screen when demo expires.
+
+Commit message: "jules: P62-T3 implement license gate, demo timer, and entitlement settings UI"
+Target branch: feature/krushna_golang

@@ -1,0 +1,276 @@
+TASK: P62-T1 -- Go OAuth Loopback Server, OS Hardware Machine ID, and License Validation
+
+===============================================================
+OBJECTIVE
+===============================================================
+Implement the Go-side authentication and license enforcement infrastructure.
+The app requires BOTH Google OAuth (for the 15-minute free demo and SaaS products)
+and LemonSqueezy License Validation (for the BarnOwl AI Lifetime Deal).
+
+Both flows share the same OS Machine ID and Keychain infrastructure.
+
+===============================================================
+BACKGROUND AND CONTEXT
+===============================================================
+The app currently has three stub functions in wails-app/app.go:
+  - GetMachineId() returns the hardcoded string "wails-machine-id".
+  - SaveToken(token), LoadToken(), DeleteToken() are all no-ops.
+
+These stubs must be replaced with production-ready implementations.
+
+===============================================================
+FILES TO MODIFY / CREATE
+===============================================================
+MODIFY: wails-app/app.go
+NEW:    wails-app/backend/auth/auth.go
+NEW:    wails-app/backend/auth/lemonsqueezy.go
+NEW:    wails-app/backend/auth/auth_test.go
+
+===============================================================
+DEPENDENCIES TO ADD
+===============================================================
+Run these in the wails-app/ directory:
+  go get github.com/zalando/go-keyring@v0.2.4
+  go get github.com/denisbrodbeck/machineid@v1.0.1
+
+zalando/go-keyring: cross-platform OS keychain
+  (macOS Keychain, Linux libsecret/Secret Service, Windows Credential Manager)
+denisbrodbeck/machineid: cross-platform hardware UUID
+  (Linux /etc/machine-id, macOS IOPlatformUUID, Windows registry MachineGuid)
+
+===============================================================
+DETAILED SPECIFICATION
+===============================================================
+
+1. NEW FILE: wails-app/backend/auth/auth.go
+   Package: auth
+
+   Constants:
+     KeyringService    = "barnowl-ai"
+     KeyringTokenUser  = "session_token"
+     KeyringLicenseUser = "license_key"
+     OAuthPort         = 34412
+     OAuthRedirectURI  = "http://127.0.0.1:34412/callback"
+
+   a) GetMachineID() (string, error)
+      Use machineid.ProtectedID("barnowl-ai") -- reads the OS hardware UUID
+      and applies HMAC-SHA256 with the app name as key. Returns stable hex.
+      Same value on every call on the same machine, across reboots.
+
+   b) SaveToken(token string) error
+      keyring.Set(KeyringService, KeyringTokenUser, token)
+
+   c) LoadToken() (string, error)
+      keyring.Get(KeyringService, KeyringTokenUser)
+      If ErrNotFound, return ("", nil).
+
+   d) DeleteToken() error
+      keyring.Delete(KeyringService, KeyringTokenUser)
+      If ErrNotFound, return nil.
+
+   e) SaveLicenseKey(key string) error
+      keyring.Set(KeyringService, KeyringLicenseUser, key)
+
+   f) LoadLicenseKey() (string, error)
+      keyring.Get(KeyringService, KeyringLicenseUser)
+      If ErrNotFound, return ("", nil).
+
+   g) DeleteLicenseKey() error
+      keyring.Delete(KeyringService, KeyringLicenseUser)
+
+   h) StartOAuthFlow(supabaseURL, provider string) (accessToken, refreshToken string, err error)
+      (Used for the 15-minute free demo and SaaS products.)
+
+      Step 1: Build Supabase OAuth URL:
+        oauthURL = supabaseURL + "/auth/v1/authorize?provider=" + provider +
+                   "&redirect_to=" + url.QueryEscape(OAuthRedirectURI)
+
+      Step 2: Start local HTTP server on OAuthPort with two routes:
+
+        GET /callback: Serve this HTML trampoline page.
+        IMPORTANT: Supabase returns tokens in the URL fragment (#), not query
+        params. Go cannot read URL fragments server-side. This JS page extracts
+        the fragment and POSTs it back as JSON. This is required.
+
+          <!DOCTYPE html>
+          <html><head><title>BarnOwl AI</title></head><body>
+          <p>Signing you in...</p>
+          <script>
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            fetch("/callback", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({
+                access_token: params.get("access_token"),
+                refresh_token: params.get("refresh_token")
+              })
+            }).then(() => {
+              document.body.innerHTML =
+                "<h2>Signed in successfully! You can close this tab.</h2>";
+            });
+          </script></body></html>
+
+        POST /callback: Read JSON body, extract access_token and refresh_token,
+          send to result channel, respond with 200 OK.
+
+      Step 3: Open system browser to oauthURL using runtime.GOOS:
+        "linux":   exec.Command("xdg-open", oauthURL)
+        "darwin":  exec.Command("open", oauthURL)
+        "windows": exec.Command("cmd", "/c", "start", oauthURL)
+
+      Step 4: select on result channel or 5-minute timeout context.
+        On success: Shutdown server, return tokens.
+        On timeout: Shutdown server, return error.
+
+2. NEW FILE: wails-app/backend/auth/lemonsqueezy.go
+   Package: auth
+
+   This file handles LemonSqueezy license key validation for the BarnOwl AI Lifetime Deal.
+
+   Constants:
+     LemonSqueezyAPIBase = "https://api.lemonsqueezy.com/v1"
+
+   a) ValidateLicenseKey(licenseKey, machineID, instanceName string) (valid bool, activationID string, err error)
+      Makes a POST request to LemonSqueezy license activation endpoint:
+        POST https://api.lemonsqueezy.com/v1/licenses/activate
+        Content-Type: application/x-www-form-urlencoded
+        Body: license_key={licenseKey}&instance_name={instanceName}
+
+      The instanceName should be: "BarnOwl-" + first 8 chars of machineID
+
+      On success (HTTP 200, activated=true in JSON):
+        Return (true, activationID, nil)
+      On failure (already_activated, expired, not_found):
+        Return (false, "", error describing reason)
+
+   b) DeactivateLicenseKey(licenseKey, instanceID string) error
+      POST https://api.lemonsqueezy.com/v1/licenses/deactivate
+      Body: license_key={licenseKey}&instance_id={instanceID}
+
+   c) CheckLicenseKeyStatus(licenseKey string) (status string, err error)
+      POST https://api.lemonsqueezy.com/v1/licenses/validate
+      Body: license_key={licenseKey}
+      Returns the status string: "active", "expired", "disabled", "not_found"
+
+3. MODIFY: wails-app/app.go
+
+   Replace all four existing stub functions:
+
+   func (a *App) GetMachineId() string
+     id, err := auth.GetMachineID()
+     if err != nil { log.Printf("[Auth] GetMachineId error: %v", err); return "unknown" }
+     return id
+
+   func (a *App) LoadToken() string
+     token, err := auth.LoadToken()
+     if err != nil { log.Printf("[Auth] LoadToken error: %v", err); return "" }
+     return token
+
+   func (a *App) SaveToken(token map[string]interface{})
+     tokenStr, ok := token["token"].(string)
+     if !ok || tokenStr == "" { return }
+     if err := auth.SaveToken(tokenStr); err != nil {
+       log.Printf("[Auth] SaveToken error: %v", err)
+     }
+
+   func (a *App) DeleteToken()
+     if err := auth.DeleteToken(); err != nil {
+       log.Printf("[Auth] DeleteToken error: %v", err)
+     }
+
+   Add new exported functions:
+
+   func (a *App) StartOAuthFlow(provider string) error
+     supabaseURL := os.Getenv("PUBLIC_SUPABASE_URL")
+     if supabaseURL == "" { return fmt.Errorf("PUBLIC_SUPABASE_URL not set") }
+     access, refresh, err := auth.StartOAuthFlow(supabaseURL, provider)
+     if err != nil { return fmt.Errorf("OAuth failed: %w", err) }
+     if err := auth.SaveToken(access + ":" + refresh); err != nil {
+       log.Printf("[Auth] Could not save token: %v", err)
+     }
+     wailsruntime.EventsEmit(a.ctx, "on_auth_complete", map[string]string{
+       "access_token":  access,
+       "refresh_token": refresh,
+     })
+     return nil
+
+   func (a *App) ActivateLicense(licenseKey string) error
+     machineID, err := auth.GetMachineID()
+     if err != nil { return fmt.Errorf("could not read machine ID: %w", err) }
+     valid, activationID, err := auth.ValidateLicenseKey(licenseKey, machineID, "BarnOwl-"+machineID[:8])
+     if err != nil { return fmt.Errorf("license validation failed: %w", err) }
+     if !valid { return fmt.Errorf("license key is invalid or already used on another machine") }
+     if err := auth.SaveLicenseKey(licenseKey + ":" + activationID); err != nil {
+       log.Printf("[Auth] Could not save license key: %v", err)
+     }
+     wailsruntime.EventsEmit(a.ctx, "on_license_activated", map[string]string{
+       "license_key":   licenseKey,
+       "activation_id": activationID,
+     })
+     return nil
+
+   func (a *App) CheckLicense() string
+     keyFull, err := auth.LoadLicenseKey()
+     if err != nil || keyFull == "" { return "not_activated" }
+     parts := strings.SplitN(keyFull, ":", 2)
+     status, err := auth.CheckLicenseKeyStatus(parts[0])
+     if err != nil { return "error" }
+     return status
+
+   func (a *App) DeactivateLicense() error
+     keyFull, err := auth.LoadLicenseKey()
+     if err != nil || keyFull == "" { return nil }
+     parts := strings.SplitN(keyFull, ":", 2)
+     if len(parts) == 2 {
+       auth.DeactivateLicenseKey(parts[0], parts[1])
+     }
+     auth.DeleteLicenseKey()
+     return nil
+
+   Add import: "wails-app/backend/auth"
+
+4. NEW FILE: wails-app/backend/auth/auth_test.go
+
+   Tests (pure Go, no CGO):
+
+   TestGetMachineID:
+     id1, err1 := GetMachineID()
+     id2, err2 := GetMachineID()
+     Assert: err1 == nil, err2 == nil, len(id1) > 0, id1 == id2
+
+   TestSaveLoadDeleteToken:
+     Const testToken = "test-access:test-refresh"
+     Assert SaveToken(testToken) == nil
+     loaded, err := LoadToken()
+     Assert err == nil, loaded == testToken
+     Assert DeleteToken() == nil
+     empty, err2 := LoadToken()
+     Assert err2 == nil, empty == ""
+
+   TestSaveLoadDeleteLicenseKey:
+     Same pattern as above but for SaveLicenseKey/LoadLicenseKey/DeleteLicenseKey.
+
+===============================================================
+IMPORTANT WARNINGS
+===============================================================
+
+[WARNING] Do NOT use github.com/keybase/go-keychain. It is macOS only.
+  Use ONLY github.com/zalando/go-keyring which supports all platforms.
+
+[WARNING] Do NOT use MAC addresses for machine ID. Use machineid library only.
+
+[WARNING] Supabase OAuth returns tokens in URL fragment (#), not query params.
+  Go cannot read URL fragments server-side. MUST use the JS trampoline pattern.
+
+===============================================================
+VERIFICATION
+===============================================================
+- cd wails-app && go test ./backend/auth/... -v
+  All unit tests pass.
+- cd wails-app && go build ./...
+  Compiles cleanly.
+- Confirm GetMachineId() no longer returns "wails-machine-id".
+
+Commit message: "jules: P62-T1 implement OAuth loopback, LemonSqueezy license validation, machine ID, keychain"
+Target branch: feature/krushna_golang

@@ -1,0 +1,175 @@
+TASK: P62-T2 -- Frontend License/Auth UI, Device Registration, and Demo Tracking
+
+===============================================================
+OBJECTIVE
+===============================================================
+Implement the frontend authentication UI and data syncing.
+Two distinct flows depending on the product (VITE_PRODUCT env var):
+
+  MODE A: BarnOwl AI (VITE_PRODUCT=interview) -- Lifetime + Demo
+    -> Must support BOTH a 15-Minute Free Demo (via Google OAuth)
+       AND a Lifetime License Key (via LemonSqueezy API).
+    -> Must register the machine_id in Supabase to prevent demo abuse.
+
+  MODE B: SaaS Products (VITE_PRODUCT=mentorglass, counseldesk, etc.)
+    -> "Sign in with Google" OAuth button only.
+    -> Checks Stripe subscription via Supabase entitlement table.
+
+This task depends on P62-T1 being merged, as it provides:
+  - App.GetMachineId()
+  - App.ActivateLicense(key)
+  - App.StartOAuthFlow(provider)
+
+===============================================================
+FILES TO MODIFY
+===============================================================
+MODIFY: wails-app/frontend/src/lib/auth.svelte.ts
+MODIFY: wails-app/frontend/src/lib/components/AuthModal.svelte
+
+===============================================================
+SUPABASE SCHEMA ASSUMED
+===============================================================
+The following Supabase tables are assumed to exist. The frontend
+reads/writes from them. Do NOT write Supabase migration files.
+
+  Table: dev_allowlist
+    - machine_id: text (primary key)
+    - label: text
+  Purpose: Machines in this table bypass all license/demo checks.
+
+  Table: user_entitlements
+    - user_id: uuid (FK to auth.users)
+    - machine_id: text
+    - demo_expires_at: timestamptz
+    - stripe_subscription_status: text
+    - plan_type: text
+  Purpose: Tracks both the 15-minute demo (for BarnOwl) AND
+           Stripe subscriptions (for SaaS products).
+
+===============================================================
+DETAILED SPECIFICATION
+===============================================================
+
+1. MODIFY: wails-app/frontend/src/lib/auth.svelte.ts
+
+a) Extend authState with fields for BOTH modes:
+
+   export const authState = $state({
+     authMode: (supabaseUrl ? "saas" : "local") as "local" | "saas",
+     productMode: (import.meta.env.VITE_PRODUCT || "interview") as string,
+
+     // BarnOwl AI / Lifetime mode
+     licenseStatus: "unchecked" as "unchecked" | "active" | "expired" | "not_activated" | "dev_allowed" | "error" | "demo",
+     licenseKey: null as string | null,
+
+     // OAuth / SaaS / Demo mode
+     user: null as User | null,
+     accessToken: null as string | null,
+     demoExpiresAt: null as string | null,
+     stripeStatus: null as string | null,
+     planType: null as string | null,
+   });
+
+b) Add checkDevAllowlist() function:
+   (Checks if current machine is in dev_allowlist using anon key.)
+
+   export async function checkDevAllowlist(): Promise<boolean> {
+     if (!supabase) return false;
+     try {
+       const machineId: string = await (window as any).go.main.App.GetMachineId();
+       const { data } = await supabase
+         .from("dev_allowlist")
+         .select("machine_id")
+         .eq("machine_id", machineId)
+         .single();
+       return data !== null;
+     } catch { return false; }
+   }
+
+c) Add initLicenseCheck() function for BarnOwl AI:
+
+   export async function initLicenseCheck() {
+     if (authState.productMode !== "interview") return;
+
+     if (await checkDevAllowlist()) {
+       authState.licenseStatus = "dev_allowed";
+       return;
+     }
+
+     try {
+       const status: string = await (window as any).go.main.App.CheckLicense();
+       if (status === "active") {
+         authState.licenseStatus = "active";
+         return;
+       }
+     } catch {}
+
+     // If no valid license key, check if they have an active OAuth demo session
+     if (authState.user && authState.demoExpiresAt) {
+       const exp = new Date(authState.demoExpiresAt).getTime();
+       if (exp > Date.now()) {
+         authState.licenseStatus = "demo";
+         return;
+       }
+     }
+
+     authState.licenseStatus = "not_activated";
+   }
+
+d) Add activateLicense(key) function:
+   (Calls App.ActivateLicense. If successful, sets licenseStatus="active".)
+
+e) Update handleOAuthComplete():
+   When "on_auth_complete" fires, set session, then call `syncUserEntitlements()`.
+
+f) Add syncUserEntitlements() function:
+   - Gets current `machineId` from Go.
+   - Upserts into `user_entitlements`:
+     If inserting new row, set `demo_expires_at` to 15 mins from now.
+   - After upsert, fetch the row back and populate `authState.demoExpiresAt`, `stripeStatus`, etc.
+   - Finally, if productMode === "interview", call `initLicenseCheck()` to update `licenseStatus`.
+
+2. MODIFY: wails-app/frontend/src/lib/components/AuthModal.svelte
+
+   The modal must render DIFFERENT UI based on productMode:
+
+   MODE A: BarnOwl AI (productMode === "interview")
+   -----------------------------------------------
+   Show TWO options side-by-side or stacked:
+   Option 1: "Start 15-Min Free Demo"
+     - Subtext: "Try all features, no credit card required."
+     - Button: "Continue with Google" -> calls StartOAuthFlow("google").
+   Option 2: "Enter Lifetime License"
+     - Subtext: "Already purchased? Enter your key to unlock forever."
+     - Input field for license key.
+     - Button: "Activate License" -> calls activateLicense().
+   Footer: "Buy a Lifetime License" link pointing to LemonSqueezy.
+
+   MODE B: SaaS Products (productMode !== "interview")
+   ---------------------------------------------------
+   Show ONLY the OAuth sign-in UI:
+   - Headline: "Sign in to {productName}"
+   - Button: "Continue with Google" -> calls StartOAuthFlow("google").
+
+   SHARED styling requirements:
+   - Dark modal (background: rgba(15, 15, 20, 0.97))
+   - Subtle border with primary color glow
+   - isLoading state while waiting for OAuth or LemonSqueezy activation.
+
+===============================================================
+IMPORTANT WARNINGS
+===============================================================
+
+[WARNING] When supabase is null (no PUBLIC_SUPABASE_URL configured), all
+  Supabase calls must be guarded with "if (!supabase) return ...".
+  Local dev mode should always work without Supabase.
+
+===============================================================
+VERIFICATION
+===============================================================
+- npm run build: no TypeScript errors.
+- Set VITE_PRODUCT=interview: verify both Demo (Google) and License Key options appear.
+- Set VITE_PRODUCT=mentorglass: verify only Google option appears.
+
+Commit message: "jules: P62-T2 implement auth modal with Google OAuth demo and license key inputs"
+Target branch: feature/krushna_golang
