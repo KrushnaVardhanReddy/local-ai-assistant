@@ -7,8 +7,9 @@
   import { restoreSession, authState, initLicenseCheck, initAuthEventListeners } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
   import AuthModal from "$lib/components/AuthModal.svelte";
+  import Titlebar from "$lib/components/Titlebar.svelte";
 
-  import { WindowSetSize, WindowCenter } from "../wailsjs/runtime/runtime";
+  import { WindowSetSize, WindowCenter, WindowSetAlwaysOnTop } from "../wailsjs/runtime/runtime";
 
 
 
@@ -22,6 +23,16 @@
         : (!authState.user || authState.paddleStatus !== "active")
     )
   );
+
+  $effect(() => {
+    if (!isGated && typeof window !== 'undefined') {
+      try {
+        WindowSetAlwaysOnTop(true);
+      } catch (err) {
+        console.error("Failed to set window always on top", err);
+      }
+    }
+  });
 
   onMount(async () => {
     // Dynamically size window based on screen width, clamped between 1024 and 1440
@@ -81,17 +92,20 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if isGated}
-  <div class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/80 backdrop-blur-[20px]">
-    <h1 class="text-3xl text-white font-semibold mb-6">
+  <div class="fixed inset-0 z-[9999] flex flex-col bg-[#1e1e1e]">
+    <Titlebar />
+    <div class="flex-1 flex flex-col items-center justify-center">
+      <h1 class="text-3xl text-white font-semibold mb-6">
       {#if authState.licenseStatus === 'expired'}
         Demo Expired
       {:else}
-        Unlock BarnOwl AI
-      {/if}
-    </h1>
-    <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
-      Unlock
-    </button>
+          Unlock BarnOwl AI
+        {/if}
+      </h1>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
+        Unlock
+      </button>
+    </div>
   </div>
 {/if}
 
