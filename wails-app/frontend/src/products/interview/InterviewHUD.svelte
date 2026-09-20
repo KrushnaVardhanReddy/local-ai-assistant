@@ -15,7 +15,6 @@
 
   import SessionReport from "$lib/SessionReport.svelte";
   import SummaryModal from "./SummaryModal.svelte";
-  import AuthModal from "$lib/components/AuthModal.svelte";
   import Settings from "$lib/Settings.svelte";
   import type { FileNode } from "$lib/components/workspace/types";
   import type { HeaderAction } from "$lib/types";
@@ -62,7 +61,6 @@
   let clickthrough = $state(false);
   let showSessionReport = $state(false);
   let showSummaryModal = $state(false);
-  let isAuthModalOpen = $state(false);
   let activeAction = $state<string | null>(null);
 
   let answerPanelRef = $state<any>();
@@ -124,7 +122,6 @@
     } catch { /* ignore if endpoint not available */ }
   }
 
-  const isGated = $derived(authState.authMode === 'saas' && (!authState.user || (!authState.byok_pass_active && authState.remaining_sessions <= 0)));
 
   async function handleSelectNode(node: any) {
     if (App?.OpenFile && node && node.path && !node.isDirectory) {
@@ -493,9 +490,6 @@
     <SessionReport onClose={() => showSessionReport = false} />
   {/if}
 
-  {#if isGated}
-    <AuthModal bind:isOpen={isAuthModalOpen} />
-  {/if}
 
   {#if wsState.sessionExpired}
     <div class="fixed inset-0 z-[9999] pointer-events-auto flex items-center justify-center bg-black/80 backdrop-blur-md">

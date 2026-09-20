@@ -1,14 +1,29 @@
 <script lang="ts">
+
   import { onMount, onDestroy } from "svelte";
   import { connect, disconnect, wsState } from "$lib/ws.svelte";
   import PresenterHUD from "./products/presenter/PresenterHUD.svelte";
   import InterviewHUD from "./products/interview/InterviewHUD.svelte";
-  import { restoreSession, authState } from "$lib/auth.svelte";
+  import { restoreSession, authState, initLicenseCheck, initAuthEventListeners } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
+  import AuthModal from "$lib/components/AuthModal.svelte";
 
   import { WindowSetSize, WindowCenter } from "../wailsjs/runtime/runtime";
 
+
   const product = import.meta.env.VITE_PRODUCT || "interview";
+
+
+  let showAuthModal = $state(false);
+  const isGated = $derived(
+    authState.authMode !== "local" && (
+      product === "interview"
+        ? (authState.licenseStatus !== "active" &&
+           authState.licenseStatus !== "dev_allowed" &&
+           authState.licenseStatus !== "demo")
+        : (!authState.user || authState.stripeStatus !== "active")
+    )
+  );
 
   onMount(async () => {
     // Dynamically size window based on screen width, clamped between 1024 and 1440
@@ -22,11 +37,25 @@
       setTimeout(WindowCenter, 100);
     }
 
-    if (authState.authMode === "saas") {
+    initAuthEventListeners();
+    if (product === "interview") {
+      await restoreSession(); // Need session to check demo status
+      await initLicenseCheck();
+    } else if (authState.authMode === "saas") {
       await restoreSession();
     }
+
+    setInterval(() => {
+      if (authState.licenseStatus === "demo" && authState.demoExpiresAt) {
+        if (new Date(authState.demoExpiresAt).getTime() <= Date.now()) {
+          authState.licenseStatus = "expired";
+        }
+      }
+    }, 60000);
+
     connect();
   });
+
 
   onDestroy(() => {
     disconnect();
@@ -50,7 +79,25 @@
   }
 </script>
 
+
 <svelte:window onkeydown={handleKeydown} />
+
+{#if isGated}
+  <div class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/80 backdrop-blur-[20px]">
+    <h1 class="text-3xl text-white font-semibold mb-6">
+      {#if authState.licenseStatus === 'expired'}
+        Demo Expired
+      {:else}
+        Unlock BarnOwl AI
+      {/if}
+    </h1>
+    <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
+      Unlock
+    </button>
+  </div>
+{/if}
+
+<AuthModal bind:isOpen={showAuthModal} onClose={() => showAuthModal = false} />
 
 <div class="app-shell" class:pointer-events-none={product !== "presenter" && product !== "interview"} class:pointer-events-auto={product === "presenter" || product === "interview"}>
   {#if product === "presenter"}

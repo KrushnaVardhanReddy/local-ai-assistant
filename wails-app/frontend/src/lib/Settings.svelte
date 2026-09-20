@@ -316,7 +316,7 @@
 
           <div class="input-group">
             <label for="selectedProvider">Custom LLM Provider (Lifetime Tier Only)</label>
-            <select id="selectedProvider" bind:value={selectedProvider} class="custom-select" disabled={authState.plan !== 'lifetime'}>
+            <select id="selectedProvider" bind:value={selectedProvider} class="custom-select" disabled={authState.licenseStatus !== 'active' && authState.licenseStatus !== 'dev_allowed'}>
               <option value="auto">Auto (Default)</option>
               <option value="openai">OpenAI</option>
               <option value="anthropic">Anthropic</option>
@@ -334,8 +334,9 @@
                 id="customApiKey"
                 bind:value={customApiKey}
                 placeholder="sk-..."
-                disabled={authState.plan !== 'lifetime'}
+                disabled={authState.licenseStatus !== 'active' && authState.licenseStatus !== 'dev_allowed'}
               />
+              <span class="text-xs text-red-500 mt-1">Custom models require a purchased Lifetime License.</span>
               <span class="text-xs text-gray-500 mt-1">Key is stored locally and never saved to our database.</span>
             </div>
           {/if}
@@ -348,14 +349,11 @@
                 id="openRouterModel"
                 bind:value={openRouterModel}
                 placeholder="anthropic/claude-3.5-sonnet:beta"
-                disabled={authState.plan !== 'lifetime'}
+                disabled={authState.licenseStatus !== 'active' && authState.licenseStatus !== 'dev_allowed'}
               />
             </div>
           {/if}
 
-          {#if authState.plan !== 'lifetime'}
-            <span class="text-xs text-red-400 mt-1">Custom models require a Lifetime Subscription.</span>
-          {/if}
 
           {#if !isCloudBuild}
             <div class="input-group">
@@ -473,18 +471,57 @@
       {/if}
 
       {#if activeTab === 'account'}
+
         <div class="content">
           {#if authState.authMode === "local"}
             <p class="local-mode-text">Running in local mode &mdash; no account needed.</p>
+          {:else if authState.productMode === "interview"}
+            <div class="account-info">
+              {#if authState.licenseStatus === "dev_allowed"}
+                <p class="email"><strong>Developer Mode</strong></p>
+                <div class="badges">
+                  <span class="badge" style="background: #6f42c1;">Unlocked</span>
+                </div>
+              {:else if authState.licenseStatus === "active"}
+                <p class="email"><strong>Lifetime License &mdash; Active</strong></p>
+                <div class="badges">
+                  <span class="badge" style="background: #28a745;">Active</span>
+                </div>
+                <div class="actions">
+                  <button class="btn-secondary" onclick={async () => { await (window as any).go.main.App.DeactivateLicense(); authState.licenseStatus = "not_activated"; }}>Deactivate</button>
+                </div>
+              {:else if authState.licenseStatus === "demo"}
+                <p class="email"><strong>15-Minute Free Demo</strong></p>
+                <p style="margin: 0; font-size: 0.85rem; color: #ccc;">
+                  {#if authState.demoExpiresAt}
+                    {Math.max(0, Math.ceil((new Date(authState.demoExpiresAt).getTime() - Date.now()) / 60000))} minutes remaining
+                  {/if}
+                </p>
+                <div class="actions">
+                  <button class="btn-primary" style="background-color: #ff9800; margin-bottom: 0.5rem;" onclick={() => window.open('https://example.com/buy', '_blank')}>Upgrade to Lifetime</button>
+                </div>
+              {:else}
+                <p class="email"><strong>Not Licensed</strong></p>
+                <div class="actions">
+                  <button class="btn-primary" onclick={() => isAuthModalOpen = true}>Unlock App</button>
+                </div>
+              {/if}
+            </div>
           {:else}
             {#if authState.user}
               <div class="account-info">
                 <p class="email"><strong>{authState.user.email}</strong></p>
                 <div class="badges">
-                  <span class="badge plan-badge">SaaS User</span>
+                  {#if authState.stripeStatus === "active"}
+                    <span class="badge plan-badge" style="background: #28a745;">Active Subscription</span>
+                  {:else}
+                    <span class="badge plan-badge" style="background: #dc3545;">Subscription Inactive</span>
+                  {/if}
                 </div>
                 <div class="actions">
-                  <button class="btn-primary" style="background-color: #28a745; margin-bottom: 0.5rem;" onclick={handleBuySessions}>Buy 5 Interviews for $10</button>
+                  {#if authState.stripeStatus !== "active"}
+                    <button class="btn-primary" style="background-color: #ff9800; margin-bottom: 0.5rem;" onclick={() => window.open('https://example.com/upgrade', '_blank')}>Upgrade Plan</button>
+                  {/if}
                   <a href="https://example.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn-link">Open Dashboard</a>
                   <button class="btn-secondary" onclick={handleSignOut}>Sign Out</button>
                 </div>
