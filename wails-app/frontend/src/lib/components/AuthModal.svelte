@@ -1,20 +1,18 @@
 <script lang="ts">
-  import { signIn, signUp } from "$lib/auth.svelte";
+  import { authState, activateLicense } from "$lib/auth.svelte";
   import { onMount } from "svelte";
 
   let { isOpen = $bindable(), onClose } = $props<{ isOpen: boolean; onClose: () => void }>();
 
-  let mode: "signin" | "signup" = $state("signin");
-  let email = $state("");
-  let password = $state("");
+  let licenseKey = $state("");
   let isLoading = $state(false);
   let errorMsg = $state<string | null>(null);
   let successMsg = $state<string | null>(null);
 
-  async function handleSubmit(e: Event) {
+  async function handleActivateLicense(e: Event) {
     e.preventDefault();
-    if (!email || !password) {
-      errorMsg = "Please enter email and password.";
+    if (!licenseKey) {
+      errorMsg = "Please enter a valid license key.";
       return;
     }
 
@@ -23,34 +21,30 @@
     successMsg = null;
 
     try {
-      if (mode === "signin") {
-        const { error } = await signIn(email, password);
-        if (error) {
-          errorMsg = error;
-        } else {
-          onClose();
-        }
-      } else {
-        const { error } = await signUp(email, password);
-        if (error) {
-          errorMsg = error;
-        } else {
-          successMsg = "Registration successful! You can now sign in.";
-          mode = "signin";
-        }
-      }
+      await activateLicense(licenseKey);
+      successMsg = "License activated successfully!";
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (err: any) {
-      errorMsg = err.message || "An unexpected error occurred.";
+      errorMsg = err.message || "Failed to activate license.";
     } finally {
       isLoading = false;
     }
   }
 
-  function toggleMode() {
-    mode = mode === "signin" ? "signup" : "signin";
+  async function handleGoogleOAuth() {
+    isLoading = true;
     errorMsg = null;
-    successMsg = null;
+    try {
+      await (window as any).go.main.App.StartOAuthFlow("google");
+      // The on_auth_complete listener in auth.svelte.ts handles the rest
+    } catch (err: any) {
+      errorMsg = err.message || "Failed to start Google OAuth flow.";
+      isLoading = false; // We only clear this on error, otherwise we stay loading until the popup returns
+    }
   }
+
 </script>
 
 {#if isOpen}
@@ -71,56 +65,72 @@
       onkeydown={(e) => e.stopPropagation()}
     >
       <button class="close-btn" onclick={onClose}>✖</button>
+
       <div class="auth-container">
-        <h2>{mode === 'signin' ? 'Sign In' : 'Create Account'}</h2>
+        {#if errorMsg}
+          <div class="error-msg">{errorMsg}</div>
+        {/if}
+        {#if successMsg}
+          <div class="success-msg">{successMsg}</div>
+        {/if}
 
-        <form onsubmit={handleSubmit} class="auth-form">
-          {#if errorMsg}
-            <div class="error-msg">{errorMsg}</div>
-          {/if}
-          {#if successMsg}
-            <div class="success-msg">{successMsg}</div>
-          {/if}
+        {#if authState.productMode === "interview"}
+          <!-- MODE A: BarnOwl AI -->
+          <div class="split-layout">
+            <div class="panel demo-panel">
+              <h2>Start 15-Min Free Demo</h2>
+              <p class="subtext">Try all features, no credit card required.</p>
+              <button class="btn-google" onclick={handleGoogleOAuth} disabled={isLoading}>
+                {#if isLoading}
+                  Loading...
+                {:else}
+                  Continue with Google
+                {/if}
+              </button>
+            </div>
 
-          <div class="input-group">
-            <label for="auth-email">Email</label>
-            <input
-              type="email"
-              id="auth-email"
-              bind:value={email}
-              placeholder="you@example.com"
-              required
-            />
+            <div class="panel license-panel">
+              <h2>Enter Lifetime License</h2>
+              <p class="subtext">Already purchased? Enter your key to unlock forever.</p>
+
+              <form onsubmit={handleActivateLicense} class="auth-form">
+                <div class="input-group">
+                  <input
+                    type="text"
+                    bind:value={licenseKey}
+                    placeholder="XXXX-XXXX-XXXX-XXXX"
+                    required
+                  />
+                </div>
+                <button type="submit" class="btn-primary" disabled={isLoading || !licenseKey}>
+                  {#if isLoading}
+                    Activating...
+                  {:else}
+                    Activate License
+                  {/if}
+                </button>
+              </form>
+            </div>
           </div>
 
-          <div class="input-group">
-            <label for="auth-password">Password</label>
-            <input
-              type="password"
-              id="auth-password"
-              bind:value={password}
-              placeholder="••••••••"
-              required
-            />
+          <div class="footer-link">
+            <a href="https://store.parakeet.app" target="_blank" rel="noopener noreferrer">Buy a Lifetime License</a>
           </div>
 
-          <button type="submit" class="btn-primary" disabled={isLoading}>
-            {#if isLoading}
-              {mode === 'signin' ? 'Signing In...' : 'Creating Account...'}
-            {:else}
-              {mode === 'signin' ? 'Sign In' : 'Create Account'}
-            {/if}
-          </button>
-        </form>
-
-        <div class="toggle-mode">
-          <p>
-            {mode === 'signin' ? "Don't have an account?" : 'Already have an account?'}
-            <button class="btn-link" onclick={toggleMode}>
-              {mode === 'signin' ? 'Sign Up' : 'Sign In'}
+        {:else}
+          <!-- MODE B: SaaS Products -->
+          <h2>Sign in to {authState.productMode.charAt(0).toUpperCase() + authState.productMode.slice(1)}</h2>
+          <div class="saas-panel">
+            <button class="btn-google saas-btn" onclick={handleGoogleOAuth} disabled={isLoading}>
+              {#if isLoading}
+                Signing In...
+              {:else}
+                Continue with Google
+              {/if}
             </button>
-          </p>
-        </div>
+          </div>
+        {/if}
+
       </div>
     </div>
   </div>
@@ -143,13 +153,13 @@
 
   .modal-content {
     position: relative;
-    width: 90%;
-    max-width: 400px;
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 95%;
+    max-width: 600px;
+    background: rgba(15, 15, 20, 0.97);
+    border: 1px solid rgba(0, 123, 255, 0.2);
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.1), 0 4px 12px rgba(0,0,0,0.5);
     border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     color: #fff;
     font-family: system-ui, -apple-system, sans-serif;
   }
@@ -179,15 +189,53 @@
 
   h2 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 600;
     text-align: center;
+    color: #f1f5f9;
+  }
+
+  .subtext {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-align: center;
+    margin: 0.5rem 0 1rem 0;
+  }
+
+  .split-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  @media (min-width: 500px) {
+    .split-layout {
+      flex-direction: row;
+      gap: 1.5rem;
+    }
+  }
+
+  .panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .saas-panel {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
   }
 
   .auth-form {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    margin-top: auto;
   }
 
   .input-group {
@@ -196,23 +244,21 @@
     gap: 0.25rem;
   }
 
-  .input-group label {
-    font-size: 0.8rem;
-    color: #aaa;
-  }
-
   .input-group input {
     padding: 0.75rem;
     border-radius: 4px;
     border: 1px solid #444;
     background: #222;
     color: white;
-    font-size: 1rem;
+    font-size: 0.9rem;
+    text-align: center;
+    letter-spacing: 1px;
   }
 
   .input-group input:focus {
     outline: none;
     border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
   }
 
   .btn-primary {
@@ -226,7 +272,6 @@
     cursor: pointer;
     font-size: 1rem;
     transition: background 0.2s;
-    margin-top: 0.5rem;
   }
 
   .btn-primary:hover:not(:disabled) {
@@ -238,40 +283,67 @@
     cursor: not-allowed;
   }
 
+  .btn-google {
+    background: white;
+    color: #333;
+    font-weight: 600;
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: auto;
+  }
+
+  .btn-google:hover:not(:disabled) {
+    background: #f1f5f9;
+  }
+
+  .btn-google:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .saas-btn {
+    max-width: 300px;
+  }
+
   .error-msg {
     color: #ff6b6b;
     background: rgba(255, 107, 107, 0.1);
-    padding: 0.5rem;
+    padding: 0.75rem;
     border-radius: 4px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+    text-align: center;
   }
 
   .success-msg {
     color: #28a745;
     background: rgba(40, 167, 69, 0.1);
-    padding: 0.5rem;
+    padding: 0.75rem;
     border-radius: 4px;
-    font-size: 0.85rem;
-  }
-
-  .toggle-mode {
+    font-size: 0.9rem;
     text-align: center;
-    font-size: 0.9rem;
-    color: #aaa;
   }
 
-  .btn-link {
-    background: none;
-    border: none;
-    color: #007bff;
-    cursor: pointer;
+  .footer-link {
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+
+  .footer-link a {
+    color: #94a3b8;
     font-size: 0.9rem;
-    padding: 0;
-    margin-left: 0.25rem;
     text-decoration: underline;
+    transition: color 0.2s;
   }
 
-  .btn-link:hover {
-    color: #0056b3;
+  .footer-link a:hover {
+    color: #e2e8f0;
   }
 </style>
