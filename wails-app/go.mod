@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/ebitengine/purego v0.11.0
 	github.com/gen2brain/malgo v0.11.26
 	github.com/ggerganov/whisper.cpp/bindings/go v0.0.0-20260911141324-1da4dc82fa79
@@ -17,6 +18,7 @@ require (
 	github.com/sugarme/tokenizer v0.3.0
 	github.com/wailsapp/wails/v2 v2.15.0
 	github.com/yalue/onnxruntime_go v1.9.0
+	github.com/zalando/go-keyring v0.2.4
 	golang.design/x/hotkey v0.6.1
 	golang.org/x/sys v0.46.0
 )
@@ -26,7 +28,6 @@ require (
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
-	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/gen2brain/shm v0.1.0 // indirect
 	github.com/go-audio/audio v1.0.0 // indirect
@@ -63,7 +64,6 @@ require (
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	github.com/zalando/go-keyring v0.2.4 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/text v0.39.0 // indirect

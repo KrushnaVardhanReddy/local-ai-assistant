@@ -135,7 +135,7 @@ export async function syncUserEntitlements() {
 
     if (data) {
       authState.demoExpiresAt = data.demo_expires_at;
-      authState.paddleStatus = data.paddle_subscription_id ? 'active' : 'inactive';
+      authState.paddleStatus = data.paddle_status;
       authState.planType = data.plan_type;
       authState.userEntitlements = data;
     }

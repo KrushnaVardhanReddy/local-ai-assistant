@@ -5,15 +5,21 @@ import {audio} from '../models';
 import {backend} from '../models';
 import {engine} from '../models';
 
+export function ActivateLicense(arg1:string):Promise<void>;
+
 export function AnalyzeVision(arg1:string,arg2:string):Promise<void>;
 
 export function CaptureScreen():Promise<string>;
+
+export function CheckLicense():Promise<string>;
 
 export function ClearCache():Promise<void>;
 
 export function ClearState():Promise<void>;
 
 export function CloseDocument(arg1:string):Promise<void>;
+
+export function DeactivateLicense():Promise<void>;
 
 export function DeleteCacheItems(arg1:Array<string>):Promise<void>;
 
@@ -77,7 +83,11 @@ export function SetIncludeActiveDocContext(arg1:boolean):Promise<void>;
 
 export function SetManualMode(arg1:boolean):Promise<void>;
 
+export function SetProxyToken(arg1:string):Promise<void>;
+
 export function StartBackend():Promise<void>;
+
+export function StartOAuthFlow(arg1:string):Promise<void>;
 
 export function StopBackend():Promise<void>;
 
