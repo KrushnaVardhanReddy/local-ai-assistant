@@ -1,0 +1,45 @@
+TASK: P64-T2 — Supabase Production Setup Scripts
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+We need to automate the Supabase production setup instead of doing it manually in the dashboard.
+Generate the SQL migration files for the required tables and a deployment script for the Edge Function.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+CREATE: supabase/migrations/20260920000000_init_tables.sql
+CREATE: scripts/deploy_supabase.sh
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. **SQL Migration (`init_tables.sql`):**
+   - Create table `dev_allowlist`:
+     - `id` (uuid, primary key)
+     - `machine_id` (text, unique)
+     - `created_at` (timestamp)
+   - Create table `user_entitlements`:
+     - `id` (uuid, primary key)
+     - `user_id` (uuid, references auth.users)
+     - `usage_seconds` (integer, default 0)
+     - `plan_type` (text, default 'free')
+     - `stripe_subscription_status` (text)
+     - `demo_expires_at` (timestamp)
+   - Enable Row Level Security (RLS) on both tables and add appropriate policies (e.g., users can only read their own entitlements).
+
+2. **Deploy Script (`deploy_supabase.sh`):**
+   - Write a bash script that:
+     1. Links the Supabase project (`supabase link`)
+     2. Pushes the migrations (`supabase db push`)
+     3. Deploys the Edge Function (`supabase functions deploy llm-proxy`)
+     4. Sets secrets (`supabase secrets set OPENAI_API_KEY=...`)
+   - Include echo statements to guide the user on running it.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Make sure the SQL syntax is valid PostgreSQL.
+- Ensure the bash script has `chmod +x` instructions in a comment.

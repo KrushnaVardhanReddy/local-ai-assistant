@@ -1,0 +1,34 @@
+TASK: P64-T1 — App Packaging & Build (Wails Makefile)
+
+═══════════════════════════════════════════════════════════════
+OBJECTIVE
+═══════════════════════════════════════════════════════════════
+Configure the Wails application to build production-ready binaries for Windows, macOS, and Linux, and wrap them in a simple Makefile.
+
+═══════════════════════════════════════════════════════════════
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════
+MODIFY: wails-app/wails.json
+MODIFY: Makefile (create in wails-app/ or root)
+
+═══════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+═══════════════════════════════════════════════════════════════
+
+1. **`wails.json` Configuration:**
+   - Ensure the app `name` is properly set (e.g., "LocalAIAssistant" or "BarnOwlAI").
+   - Configure the output binary name.
+
+2. **`Makefile` Creation:**
+   - Create a `Makefile` (preferably in `wails-app/` but root is fine).
+   - Add targets for:
+     - `build-mac`: Runs `wails build -platform darwin/universal`
+     - `build-windows`: Runs `wails build -platform windows/amd64`
+     - `build-linux`: Runs `wails build -platform linux/amd64`
+     - `build-all`: Runs all three.
+   - Note: We do NOT need Apple code signing yet. Just the raw `.app` and `.exe` bundles.
+
+═══════════════════════════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════════════════════════
+- Running `make build-mac` should execute without syntax errors (you don't need to actually compile it for the PR, just ensure the Makefile is valid).
