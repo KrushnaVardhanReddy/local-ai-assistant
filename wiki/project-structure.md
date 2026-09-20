@@ -44,3 +44,14 @@ The engine is generic. The products define what the engine *does*. The `products
 
 ### `wails-app/frontend/`
 Contains the user interface, built with Svelte 5. It connects to the Go backend via Wails' IPC (Inter-Process Communication) event bus, acting purely as a dumb terminal to display data and capture UI events.
+
+## Build and Packaging
+
+The application includes a root `Makefile` that wraps the Wails CLI commands for creating production-ready binaries for different platforms.
+
+* `make build-mac`: Builds a universal binary (`darwin/universal`) for macOS.
+* `make build-windows`: Builds a binary (`windows/amd64`) for Windows.
+* `make build-linux`: Builds a binary (`linux/amd64`) for Linux.
+* `make build-all`: Runs the build commands for all three platforms sequentially.
+
+*Note: For the time being, Apple code signing is not handled via these commands; they strictly build the raw `.app` and `.exe` bundles.*
