@@ -60,18 +60,22 @@ Because the `StealthEngine` is completely generic, we can create multiple distin
 
 ### Authentication & Licensing UI
 The frontend authentication system (`src/lib/auth.svelte.ts`) and modal UI (`AuthModal.svelte`) are designed to support two distinct operational modes controlled by the `VITE_PRODUCT` environment variable:
-1. **BarnOwl AI (Lifetime + Demo Mode):** For `VITE_PRODUCT=interview`, the UI presents a dual-option modal. Users can either activate a lifetime license key (via LemonSqueezy) or start a 15-minute free demo via Google OAuth. The `dev_allowlist` Supabase table enables machine IDs to bypass checks. Entitlements and 15-minute expirations are tracked in the `user_entitlements` table.
-2. **SaaS Products:** For other products (e.g., MentorGlass, CounselDesk), the UI strictly presents a "Continue with Google" OAuth sign-in, which tracks standard Stripe subscription plans via `user_entitlements`.
+1. **BarnOwl AI (Lifetime + Demo Mode):** For `VITE_PRODUCT=interview`, the UI presents a dual-option modal. Users can either activate a lifetime license key (via Paddle) or start a 15-minute free demo via Google OAuth. The `dev_allowlist` Supabase table enables machine IDs to bypass checks. Entitlements and 15-minute expirations are tracked in the `user_entitlements` table.
+2. **SaaS Products:** For other products (e.g., MentorGlass, CounselDesk), the UI strictly presents a "Continue with Google" OAuth sign-in, which tracks Paddle subscription plans and overage tracking via `user_entitlements`.
 
 ## Authentication and Licensing (`wails-app/backend/auth/`)
 The application supports dual authentication schemes:
 1. **Google OAuth**: A local OAuth loopback server (using an HTML trampoline page to parse URL fragments) provides access to the 15-minute free demo and SaaS tiers via Supabase.
-2. **LemonSqueezy License Validation**: For Lifetime Deals, the app generates a deterministic hardware ID using the OS's native machine UUID, HMAC-hashed for privacy. This ID ensures licenses cannot be shared across physical devices.
+2. **Paddle License Validation**: For Lifetime Deals, the app generates a deterministic hardware ID using the OS's native machine UUID, HMAC-hashed for privacy. This ID ensures licenses cannot be shared across physical devices. Paddle acts as the MoR for all billing.
 
 All sensitive tokens and activation secrets are stored natively on the user's OS Keychain using `zalando/go-keyring`. During the 15-minute free demo, the app uses a Supabase Edge Function (`llm-proxy`) to securely proxy LLM API requests and inject our server-side API key without exposing it to the client binary.
 
-## SaaS Entitlements
-For our SaaS products (MentorGlass, CounselDesk, ClinicHUD), user entitlements (such as `usage_seconds` and `plan_type`) are synchronized from Supabase and tracked globally in the frontend via `authState.userEntitlements`. This powers the live Usage & Billing meter UI in the Settings panel.
+## SaaS Entitlements & Paddle Billing
+For our SaaS products (MentorGlass, CounselDesk, ClinicHUD), user entitlements (such as `usage_seconds`, `included_seconds`, and `product_mode`) are synchronized from Supabase and tracked globally in the frontend via `authState.userEntitlements`. This powers the live Usage & Billing meter UI in the Settings panel.
+
+We use Paddle as our single unified billing Merchant of Record (MoR). Paddle handles both one-time lifetime deals and monthly SaaS subscriptions. This is supported by two Supabase Edge Functions:
+- **`paddle-webhook`**: Receives Paddle webhook events (e.g., `transaction.completed`, `subscription.activated`, `subscription.updated`, `subscription.canceled`) and activates or deactivates entitlements in `user_entitlements`. It sets up limits like `included_seconds` depending on the product mode.
+- **`paddle-billing-cron`**: A monthly cron job that reads actual usage vs included limits from `user_entitlements` and dynamically charges any overages directly via the Paddle API.
 
 ## Supabase Deployment
 Supabase production setup is fully automated. The SQL migrations (e.g., creating `dev_allowlist` and `user_entitlements` tables) and Edge Functions (`llm-proxy`) can be automatically deployed using the included bash script.
