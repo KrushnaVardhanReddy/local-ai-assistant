@@ -518,6 +518,32 @@
                     <span class="badge plan-badge" style="background: #dc3545;">Subscription Inactive</span>
                   {/if}
                 </div>
+
+                {#if authState.productMode !== "interview"}
+                  {@const usageSeconds = authState.userEntitlements?.usage_seconds || 0}
+                  {@const planSeconds = 36000}
+                  {@const percent = Math.min(100, Math.max(0, (usageSeconds / planSeconds) * 100))}
+                  {@const isOverage = usageSeconds > planSeconds}
+                  {@const overageSeconds = isOverage ? usageSeconds - planSeconds : 0}
+                  {@const overageMinutes = Math.ceil(overageSeconds / 60)}
+                  {@const overageCost = (overageMinutes * 0.05).toFixed(2)}
+                  {@const usageHours = Math.floor(usageSeconds / 3600)}
+                  {@const usageMins = Math.floor((usageSeconds % 3600) / 60)}
+                  {@const planHours = Math.floor(planSeconds / 3600)}
+
+                  <div class="usage-section">
+                    <p class="section-title">Usage & Billing</p>
+                    <p class="usage-stats">{usageHours}h {usageMins}m used / {planHours}h included</p>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar {isOverage ? 'overage' : ''}" style="width: {percent}%"></div>
+                    </div>
+                    {#if isOverage}
+                      <p class="overage-warning">Overage: {overageMinutes}m (${overageCost} est. extra)</p>
+                    {/if}
+                    <p class="billing-date">Next billing date: 1st of next month</p>
+                  </div>
+                {/if}
+
                 <div class="actions">
                   {#if authState.stripeStatus !== "active"}
                     <button class="btn-primary" style="background-color: #ff9800; margin-bottom: 0.5rem;" onclick={() => window.open('https://example.com/upgrade', '_blank')}>Upgrade Plan</button>
@@ -879,5 +905,53 @@
   }
   .gemini-live-badge strong { color: #63b3ed; display: block; margin-bottom: 2px; }
   .gemini-live-badge p { margin: 0; opacity: 0.7; font-size: 12px; }
+
+  .usage-section {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .section-title {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .usage-stats {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #ddd;
+  }
+  .progress-bar-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    background: #007bff;
+    transition: width 0.3s ease;
+  }
+  .progress-bar.overage {
+    background: #dc3545;
+  }
+  .overage-warning {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #dc3545;
+    font-weight: 600;
+  }
+  .billing-date {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #888;
+  }
 
 </style>
