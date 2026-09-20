@@ -74,7 +74,8 @@ All sensitive tokens and activation secrets are stored natively on the user's OS
 For our SaaS products (MentorGlass, CounselDesk, ClinicHUD), user entitlements (such as `usage_seconds`, `included_seconds`, and `product_mode`) are synchronized from Supabase and tracked globally in the frontend via `authState.userEntitlements`. This powers the live Usage & Billing meter UI in the Settings panel.
 
 We use Paddle as our single unified billing Merchant of Record (MoR). Paddle handles both one-time lifetime deals and monthly SaaS subscriptions. This is supported by two Supabase Edge Functions:
-- **`paddle-webhook`**: Receives Paddle webhook events (e.g., `transaction.completed`, `subscription.activated`, `subscription.updated`, `subscription.canceled`) and activates or deactivates entitlements in `user_entitlements`. It sets up limits like `included_seconds` depending on the product mode.
+- **`paddle-webhook`**: Receives Paddle webhook events (e.g., `transaction.completed`, `subscription.activated`, `subscription.updated`, `subscription.canceled`) and activates or deactivates entitlements in `user_entitlements`.
+- **`paddle-billing-cron`**: A monthly cron job that reads actual usage vs included limits from `user_entitlements` and dynamically charges any overages directly via the Paddle API.
 - **`paddle-billing-cron`**: A monthly cron job that reads actual usage vs included limits from `user_entitlements` and dynamically charges any overages directly via the Paddle API.
 
 ## Supabase Deployment
