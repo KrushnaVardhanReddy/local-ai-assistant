@@ -31,6 +31,8 @@
       } catch (err) {
         console.error("Failed to set window always on top", err);
       }
+      // Auto-close the auth modal when the user is authenticated
+      showAuthModal = false;
     }
   });
 
