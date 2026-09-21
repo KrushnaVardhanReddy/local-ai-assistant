@@ -5,6 +5,13 @@
 
   let { isOpen = $bindable(), onClose } = $props<{ isOpen: boolean; onClose: () => void }>();
 
+  onMount(() => {
+    if (typeof window !== "undefined" && (window as any).Paddle) {
+      (window as any).Paddle.Environment.set('sandbox');
+      (window as any).Paddle.Initialize({ token: 'test_3f7fa396fcfc66888bbfde4c26b' });
+    }
+  });
+
   let licenseKey = $state("");
   let isLoading = $state(false);
   let errorMsg = $state<string | null>(null);
@@ -124,7 +131,17 @@
           </div>
 
           <div class="footer-link">
-            <a href="#" onclick={(e) => { e.preventDefault(); try { WindowMinimise(); } catch (_) {}; BrowserOpenURL(import.meta.env.VITE_STORE_URL || "https://store.parakeet.app"); }}>Buy a Lifetime License</a>
+            <a href="#" onclick={(e) => {
+              e.preventDefault();
+              if (typeof window !== "undefined" && (window as any).Paddle) {
+                (window as any).Paddle.Checkout.open({
+                  items: [{ priceId: 'pri_01m2zefm3t55p4pn424kmv9d5n', quantity: 1 }],
+                  customData: {
+                    user_id: authState.user?.id || 'unknown'
+                  }
+                });
+              }
+            }}>Buy a Lifetime License</a>
           </div>
 
         {:else}
