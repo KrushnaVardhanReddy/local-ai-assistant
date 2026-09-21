@@ -1,0 +1,60 @@
+# P65-T1: Stealth Mode Feature Flag — Frontend UI Conditional Rendering
+
+## Context
+
+We are building a multi-product desktop AI platform (Go/Wails + Svelte). The same codebase powers multiple products:
+- **BarnOwl AI** (Interview Copilot) — NEEDS stealth: invisible to screen capture, hidden from taskbar, clickthrough mode
+- **MentorGlass** (Coaching Copilot) — does NOT need stealth: coaching sessions where client can't see coach's screen anyway
+- **CounselDesk** (Legal Copilot) — does NOT need stealth: attorney's private machine
+
+The Go backend stealth mode has ALREADY been wired up via `STEALTH_MODE` environment variable in `main.go` and `app.go`. When `STEALTH_MODE=false`, the window starts with a solid background and does NOT auto-hide from the taskbar.
+
+The frontend also has a `VITE_STEALTH_MODE=true/false` variable in `wails-app/frontend/.env`, but the frontend UI still ALWAYS shows stealth-related buttons/controls regardless of this value.
+
+## Your Task
+
+**Conditionally hide stealth-related UI elements based on `import.meta.env.VITE_STEALTH_MODE`.**
+
+### Files to modify
+
+1. **`wails-app/frontend/src/lib/Assistant.svelte`** (~line 604–610)
+   - The "STEALTH" button in the sidebar. Wrap it in `{#if stealthMode}...{/if}`
+
+2. **`wails-app/frontend/src/products/interview/InterviewHUD.svelte`** (~line 368–371)
+   - The "Stealth" tool button in the top toolbar. Wrap in `{#if stealthMode}...{/if}`
+
+3. **`wails-app/frontend/src/products/interview/ConvPanel.svelte`** (~line 175)
+   - "Toggle Stealth Click-through" menu item. Wrap in `{#if stealthMode}...{/if}`
+
+4. **`wails-app/frontend/src/products/interview/CopilotDrawer.svelte`** (~line 253)
+   - "Toggle Stealth Click-through" option. Wrap in `{#if stealthMode}...{/if}`
+
+5. **`wails-app/frontend/src/lib/components/workspace/StatusBar.svelte`** (~line 42–45)
+   - The `stealthStatus` indicator. Wrap in `{#if stealthMode}...{/if}`
+
+6. **`wails-app/frontend/src/lib/Settings.svelte`** (~line 460)
+   - "Dev Mode: Disable Stealth (E2E Visibility)" checkbox. Wrap in `{#if stealthMode}...{/if}`
+
+### Implementation Pattern
+
+At the top of each file's `<script>` block, add:
+```typescript
+const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
+```
+
+Then wrap stealth-specific UI in `{#if stealthMode}...{/if}`.
+
+### What NOT to change
+- Do NOT remove any stealth logic, hotkey handlers, or Go binding calls — they must remain functional when `VITE_STEALTH_MODE=true`.
+- Do NOT touch `StealthTitleBar.svelte`, `StealthTerminal.svelte`, or any Go backend files.
+- Do NOT change the default behavior when `VITE_STEALTH_MODE=true` — BarnOwl AI must still work exactly as before.
+
+### Expected result
+- When `VITE_STEALTH_MODE=true`: Stealth buttons visible, behavior unchanged (BarnOwl AI)
+- When `VITE_STEALTH_MODE=false`: Stealth buttons hidden, rest of UI fully functional (MentorGlass, CounselDesk)
+
+## Branch
+Create a new branch off `frontend-paddle-checkout-18382059798446084015` named `feature/stealth-mode-feature-flag`.
+
+## Verification
+After making changes, confirm no TypeScript errors and that the conditional renders correctly by checking the template logic.
