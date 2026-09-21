@@ -1,0 +1,38 @@
+===============================================================
+TASK: Phase 64 Task 7 (P64-T7) - Frontend Paddle Checkout Integration
+===============================================================
+
+CONTEXT:
+We need to embed Paddle Billing (v2) into our Svelte frontend. Currently, users are clicking a "Buy Lifetime License" button in `AuthModal.svelte` that opens an external URL using `BrowserOpenURL()`. We need to replace this with an inline Paddle Checkout overlay directly inside our app so we can pass the user's ID as `customData` to the checkout session. 
+This ensures our Supabase Webhook (which processes the purchase) knows which user to unlock.
+
+===============================================================
+DETAILED SPECIFICATION
+===============================================================
+
+1. MODIFY: wails-app/frontend/index.html
+   - Add the Paddle.js script tag inside the `<head>`:
+     `<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>`
+
+2. MODIFY: wails-app/frontend/src/lib/components/AuthModal.svelte
+   - When the component mounts, initialize Paddle if `import.meta.env.VITE_STORE_URL` or a client token is available. Since we need the client token, you can initialize it with the sandbox token `test_3f7fa396fcfc66888bbfde4c26b`.
+   - Add a `<script>` block logic to run `Paddle.Environment.set('sandbox');` and `Paddle.Initialize({ token: 'test_3f7fa396fcfc66888bbfde4c26b' });` on mount (make sure to check if `window.Paddle` exists).
+   - Update the "Buy a Lifetime License" button `onclick` handler. Instead of calling `BrowserOpenURL()`, it should call:
+     ```javascript
+     Paddle.Checkout.open({
+         items: [{ priceId: 'pri_01m2zefm3t55p4pn424kmv9d5n', quantity: 1 }],
+         customData: {
+             user_id: authState.user?.id || 'unknown'
+         }
+     });
+     ```
+   - Make sure to import `authState` at the top of the `<script>` tag if it isn't already imported: `import { authState } from '../auth.svelte';`
+   - REMOVE the `import.meta.env.VITE_STORE_URL` usage entirely since we are using Paddle.js inline checkout instead of a redirected URL.
+
+===============================================================
+ACCEPTANCE CRITERIA
+===============================================================
+1. `index.html` must include the paddle.js CDN script.
+2. `AuthModal.svelte` must initialize Paddle Sandbox with the client token on mount.
+3. Clicking the "Buy Lifetime License" button must invoke `Paddle.Checkout.open` with the correct `priceId` and `customData.user_id`.
+4. No external navigation or `BrowserOpenURL` should be used for the checkout button anymore.
