@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2"
@@ -37,6 +38,20 @@ func main() {
 		bindList = append(bindList, NewApp())
 	}
 
+	// Stealth mode: controlled by STEALTH_MODE env var.
+	// When true: translucent background + window excluded from taskbar/capture.
+	// When false: opaque background, normal window (for MentorGlass, CounselDesk, etc.)
+	stealthMode := os.Getenv("STEALTH_MODE") == "true"
+
+	bgColour := &options.RGBA{R: 18, G: 18, B: 18, A: 255} // Solid dark background (non-stealth)
+	if stealthMode {
+		bgColour = &options.RGBA{R: 0, G: 0, B: 0, A: 0} // Fully transparent (stealth)
+	}
+
+	linuxOpts := &linux.Options{
+		WindowIsTranslucent: stealthMode,
+	}
+
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:       getAppTitle(),
@@ -47,13 +62,11 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
-		Linux: &linux.Options{
-			WindowIsTranslucent: true,
-		},
-		OnStartup:  onStartup,
-		OnShutdown: onShutdown,
-		Bind:       bindList,
+		BackgroundColour: bgColour,
+		Linux:            linuxOpts,
+		OnStartup:        onStartup,
+		OnShutdown:       onShutdown,
+		Bind:             bindList,
 	})
 
 	if err != nil {

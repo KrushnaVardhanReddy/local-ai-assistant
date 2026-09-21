@@ -134,6 +134,18 @@ func (a *App) startup(ctx context.Context) {
 	// We no longer hide from taskbar on startup because it breaks Alt+Tab
 	// during the Auth flow. Instead, the frontend calls HideFromTaskbar()
 	// once authentication completes.
+	// EXCEPTION: In stealth mode, hide from taskbar immediately on startup.
+	if os.Getenv("STEALTH_MODE") == "true" {
+		go func() {
+			// Small delay to let the window fully initialize before hiding
+			time.Sleep(500 * time.Millisecond)
+			if err := window.HideFromTaskbar(ctx); err != nil {
+				log.Printf("[Stealth] Failed to hide from taskbar on startup: %v\n", err)
+			} else {
+				log.Println("[Stealth] Hidden from taskbar on startup")
+			}
+		}()
+	}
 
 	// Initialize hotkeys Wails runtime dependencies
 	hotkeys.WindowGetPosition = wailsruntime.WindowGetPosition
