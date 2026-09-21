@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paddle Sandbox Checkout</title>
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+            background: #2d2d2d;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        h1 { margin-top: 0; }
+        p { color: #aaa; margin-bottom: 2rem; }
+        .checkout-btn {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .checkout-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BarnOwl AI Lifetime License</h1>
+        <p>This is a local sandbox environment. Real cards will be rejected. Please use Paddle's test cards to complete the checkout.</p>
+        <button class="checkout-btn" onclick="openCheckout()">Open Paddle Checkout</button>
+    </div>
+
+    <script>
+        // Initialize Paddle in Sandbox mode with the client token
+        Paddle.Environment.set('sandbox');
+        Paddle.Initialize({ 
+            token: 'test_3f7fa396fcfc66888bbfde4c26b' 
+        });
+
+        function openCheckout() {
+            Paddle.Checkout.open({
+                items: [
+                    {
+                        priceId: 'pri_01m2zefm3t55p4pn424kmv9d5n',
+                        quantity: 1
+                    }
+                ]
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { authState, activateLicense } from "$lib/auth.svelte";
   import { onMount } from "svelte";
-  import { BrowserOpenURL } from "../../wailsjs/runtime/runtime";
+  import { BrowserOpenURL, WindowMinimise } from "../../../wailsjs/runtime/runtime";
 
   let { isOpen = $bindable(), onClose } = $props<{ isOpen: boolean; onClose: () => void }>();
 
@@ -38,6 +38,7 @@
     isLoading = true;
     errorMsg = null;
     try {
+      try { WindowMinimise(); } catch (e) {} // Minimize app so the browser is clearly visible
       await (window as any).go.main.App.StartOAuthFlow("google");
       // The on_auth_complete listener in auth.svelte.ts handles the rest
       // We must reset isLoading here so the button isn't permanently stuck
@@ -123,7 +124,7 @@
           </div>
 
           <div class="footer-link">
-            <a href="#" onclick={(e) => { e.preventDefault(); BrowserOpenURL("https://store.parakeet.app"); }}>Buy a Lifetime License</a>
+            <a href="#" onclick={(e) => { e.preventDefault(); try { WindowMinimise(); } catch (_) {}; BrowserOpenURL(import.meta.env.VITE_STORE_URL || "https://store.parakeet.app"); }}>Buy a Lifetime License</a>
           </div>
 
         {:else}

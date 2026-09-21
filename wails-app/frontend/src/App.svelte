@@ -25,17 +25,27 @@
   );
 
   $effect(() => {
-    if (!isGated && typeof window !== 'undefined') {
-      try {
-        WindowSetAlwaysOnTop(true);
-        if ((window as any).go?.main?.App?.HideFromTaskbar) {
-          (window as any).go.main.App.HideFromTaskbar();
+    if (typeof window !== 'undefined') {
+      if (!isGated) {
+        try {
+          WindowSetAlwaysOnTop(true);
+          if ((window as any).go?.main?.App?.HideFromTaskbar) {
+            (window as any).go.main.App.HideFromTaskbar();
+          }
+        } catch (err) {
+          console.error("Failed to set window always on top", err);
         }
-      } catch (err) {
-        console.error("Failed to set window always on top", err);
+        // Auto-close the auth modal when the user is authenticated
+        showAuthModal = false;
+      } else {
+        // App is gated (Auth screen) - ensure it's NOT always on top so the browser can appear above it
+        try {
+          WindowSetAlwaysOnTop(false);
+          // (Taskbar showing is handled by the OS default since we removed HideFromTaskbar from main.go startup)
+        } catch (err) {
+          console.error("Failed to unset always on top", err);
+        }
       }
-      // Auto-close the auth modal when the user is authenticated
-      showAuthModal = false;
     }
   });
 
