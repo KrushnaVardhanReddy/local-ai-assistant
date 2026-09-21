@@ -69,6 +69,12 @@ export async function initLicenseCheck() {
     }
   } catch {}
 
+  // Check if they purchased a lifetime license via Paddle Webhook
+  if (authState.planType) {
+    authState.licenseStatus = "active";
+    return;
+  }
+
   // If no valid license key, check if they have an active OAuth demo session
   if (authState.user && authState.demoExpiresAt) {
     const exp = new Date(authState.demoExpiresAt).getTime();
@@ -262,6 +268,7 @@ export async function restoreSession() {
     } else {
       authState.user = data.user;
       authState.accessToken = data.session?.access_token || null;
+      await syncUserEntitlements();
     }
   } catch (err) {
     // Normal for first launch (no token found)

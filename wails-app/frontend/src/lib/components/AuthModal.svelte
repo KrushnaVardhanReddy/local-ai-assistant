@@ -1,9 +1,34 @@
 <script lang="ts">
-  import { authState, activateLicense } from "$lib/auth.svelte";
+  import { authState, activateLicense, syncUserEntitlements } from "$lib/auth.svelte";
   import { onMount } from "svelte";
   import { BrowserOpenURL, WindowMinimise } from "../../../wailsjs/runtime/runtime";
 
   let { isOpen = $bindable(), onClose } = $props<{ isOpen: boolean; onClose: () => void }>();
+
+  onMount(() => {
+    if (typeof window !== "undefined" && (window as any).Paddle) {
+      (window as any).Paddle.Environment.set('sandbox');
+      (window as any).Paddle.Initialize({ 
+        token: 'test_3f7fa396fcfc66888bbfde4c26b',
+        eventCallback: function(data: any) {
+          if (data.name === "checkout.completed") {
+            // Close the checkout overlay immediately
+            (window as any).Paddle.Checkout.close();
+            
+            // Webhooks take a few seconds to arrive. Poll Supabase a few times.
+            let attempts = 0;
+            const poll = setInterval(async () => {
+              attempts++;
+              await syncUserEntitlements();
+              if (authState.licenseStatus === "active" || attempts > 5) {
+                clearInterval(poll);
+              }
+            }, 2000);
+          }
+        }
+      });
+    }
+  });
 
   let licenseKey = $state("");
   let isLoading = $state(false);
@@ -124,7 +149,17 @@
           </div>
 
           <div class="footer-link">
-            <a href="#" onclick={(e) => { e.preventDefault(); try { WindowMinimise(); } catch (_) {}; BrowserOpenURL(import.meta.env.VITE_STORE_URL || "https://store.parakeet.app"); }}>Buy a Lifetime License</a>
+            <a href="#" onclick={(e) => {
+              e.preventDefault();
+              if (typeof window !== "undefined" && (window as any).Paddle) {
+                (window as any).Paddle.Checkout.open({
+                  items: [{ priceId: 'pri_01m2zefm3t55p4pn424kmv9d5n', quantity: 1 }],
+                  customData: {
+                    user_id: authState.user?.id || 'unknown'
+                  }
+                });
+              }
+            }}>Buy a Lifetime License</a>
           </div>
 
         {:else}
