@@ -75,9 +75,14 @@ export async function initLicenseCheck() {
     if (exp > Date.now()) {
       authState.licenseStatus = "demo";
       return;
+    } else {
+      // Demo was used but has now expired — show the expired gate, not generic "not_activated"
+      authState.licenseStatus = "expired";
+      return;
     }
   }
 
+  // User has never started a demo on this machine
   authState.licenseStatus = "not_activated";
 }
 
@@ -102,22 +107,24 @@ export async function syncUserEntitlements() {
     const machineId: string = await (window as any).go.main.App.GetMachineId();
     console.log("🔥 [ENTITLEMENTS] machineId:", machineId, "userId:", authState.user.id);
 
-    // Check if row exists
-    const { data: existingData, error: selectError } = await supabase
+    // OR check: demo is blocked if EITHER this Google account OR this machine has already had one.
+    // This prevents bypassing the limit by using a different account or a different machine.
+    const { data: existingRows, error: selectError } = await supabase
       .from("user_entitlements")
       .select("*")
-      .eq("user_id", authState.user.id)
-      .eq("machine_id", machineId)
-      .maybeSingle();
+      .or(`user_id.eq.${authState.user.id},machine_id.eq.${machineId}`)
+      .limit(1);
 
     if (selectError) {
       console.error("🔥 [ENTITLEMENTS] SELECT error:", selectError);
     }
 
+    const existingData = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+
     if (!existingData) {
-      // No row → insert fresh with 15-min demo timer
+      // Neither this account nor this machine has ever had a demo → grant one
       const demoExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      console.log("🔥 [ENTITLEMENTS] No existing row, inserting with demo_expires_at:", demoExpiresAt);
+      console.log("🔥 [ENTITLEMENTS] No existing row for user OR machine. Granting demo:", demoExpiresAt);
       const { error: insertError } = await supabase.from("user_entitlements").upsert({
         user_id: authState.user.id,
         machine_id: machineId,
@@ -128,15 +135,22 @@ export async function syncUserEntitlements() {
         console.error("🔥 [ENTITLEMENTS] INSERT error:", insertError);
       }
     } else {
-      console.log("🔥 [ENTITLEMENTS] Existing row found, demo_expires_at:", existingData.demo_expires_at);
+      console.log("🔥 [ENTITLEMENTS] Existing record found (user or machine already used demo). demo_expires_at:", existingData.demo_expires_at);
+      // Update the existing row to associate both current user_id AND machine_id
+      // (handles the case where they log in with a different account on same machine)
+      await supabase.from("user_entitlements").upsert({
+        ...existingData,
+        user_id: authState.user.id,
+        machine_id: machineId,
+      }, { onConflict: "user_id,machine_id" });
     }
 
-    // Re-read the final row
+    // Re-read the final row for the current user+machine
     const { data, error: finalError } = await supabase
       .from("user_entitlements")
       .select("*")
-      .eq("user_id", authState.user.id)
-      .eq("machine_id", machineId)
+      .or(`user_id.eq.${authState.user.id},machine_id.eq.${machineId}`)
+      .limit(1)
       .maybeSingle();
 
     if (finalError) {

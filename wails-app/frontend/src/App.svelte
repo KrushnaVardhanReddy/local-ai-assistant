@@ -96,17 +96,20 @@
 {#if isGated}
   <div class="fixed inset-0 z-[9999] flex flex-col bg-[#1e1e1e]">
     <Titlebar />
-    <div class="flex-1 flex flex-col items-center justify-center">
-      <h1 class="text-3xl text-white font-semibold mb-6">
+    <div class="flex-1 flex flex-col items-center justify-center gap-4">
       {#if authState.licenseStatus === 'expired'}
-        Demo Expired
+        <h1 class="text-3xl text-white font-semibold">🕐 Demo Expired</h1>
+        <p class="text-gray-400 text-center max-w-sm">Your 15-minute free trial has ended. Enter a lifetime license to keep using BarnOwl AI.</p>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
+          Enter License Key
+        </button>
       {:else}
-          Unlock BarnOwl AI
-        {/if}
-      </h1>
-      <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
-        Unlock
-      </button>
+        <h1 class="text-3xl text-white font-semibold">Unlock BarnOwl AI</h1>
+        <p class="text-gray-400 text-center max-w-sm">Start a free 15-minute demo or enter your lifetime license key.</p>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
+          Unlock
+        </button>
+      {/if}
     </div>
   </div>
 {/if}
