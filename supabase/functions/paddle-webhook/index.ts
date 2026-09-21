@@ -43,6 +43,10 @@ async function verifySignature(signatureHeader: string | null, rawBody: string, 
   const hashArray = Array.from(new Uint8Array(signatureBuffer));
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 
+  console.log(`ts: ${ts}`);
+  console.log(`h1 (from header): ${h1}`);
+  console.log(`hashHex (calculated): ${hashHex}`);
+
   return hashHex === h1;
 }
 
@@ -51,10 +55,16 @@ serve(async (req: Request) => {
     console.error("Supabase environment variables missing");
     return new Response("Internal Server Error", { status: 500 });
   }
-
   const rawBody = await req.text();
   const signatureHeader = req.headers.get("paddle-signature");
-  const secret = Deno.env.get("PADDLE_WEBHOOK_SECRET");
+  // In production, this is set via `supabase secrets set`
+  // For local development, `supabase start` doesn't always inject custom env vars, so we use a fallback.
+  const secret = Deno.env.get("PADDLE_WEBHOOK_SECRET") || "pdl_ntfset_01m2zzns85prwy4ytwtgg6rfe3_Yv8/J96rqVJ8kjxLOAf7K1ytIXHlwK76";
+  
+  if (!secret) {
+    console.error("Missing PADDLE_WEBHOOK_SECRET in environment");
+    return new Response("Internal Server Error: Missing Secret", { status: 500 });
+  }
 
   const isValid = await verifySignature(signatureHeader, rawBody, secret);
   if (!isValid) {
