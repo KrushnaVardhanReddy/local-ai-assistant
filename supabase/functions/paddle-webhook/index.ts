@@ -121,11 +121,11 @@ serve(async (req: Request) => {
 
         const { error } = await supabase
           .from("user_entitlements")
-          .upsert({
-            user_id: userId,
+          .update({
             paddle_customer_id: customerId,
             plan_type: productId,
-          }, { onConflict: "user_id" });
+          })
+          .eq("user_id", userId);
 
         if (error) console.error("Transaction upsert error:", error);
         break;
@@ -139,12 +139,13 @@ serve(async (req: Request) => {
 
         const { error } = await supabase
           .from("user_entitlements")
-          .upsert({
-            user_id: userId,
+          .update({
             paddle_customer_id: customerId,
-            paddle_subscription_id: subscriptionId,
             plan_type: productId,
-          }, { onConflict: "user_id" });
+            paddle_subscription_id: subscriptionId,
+            paddle_status: data.status,
+          })
+          .eq("user_id", userId);
 
         if (error) console.error("Subscription upsert error:", error);
         break;

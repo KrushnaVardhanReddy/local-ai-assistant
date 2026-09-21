@@ -20,7 +20,7 @@
             const poll = setInterval(async () => {
               attempts++;
               await syncUserEntitlements();
-              if (authState.licenseStatus === "lifetime" || attempts > 5) {
+              if (authState.licenseStatus === "active" || attempts > 5) {
                 clearInterval(poll);
               }
             }, 2000);

@@ -28,9 +28,9 @@ const mockEvent = {
   occurred_at: new Date().toISOString(),
   data: {
     id: "txn_01m30...",
-    customer_id: "ctm_01m30...",
+    customer_id: "ctm_01m31kj06fwm40r93kmgkyk97m",
     custom_data: {
-      user_id: "test-user-id-from-supabase"
+      user_id: "7f54e50c-2be9-4f2a-a78b-398e14019cd5"
     },
     items: [
       {

@@ -69,6 +69,12 @@ export async function initLicenseCheck() {
     }
   } catch {}
 
+  // Check if they purchased a lifetime license via Paddle Webhook
+  if (authState.planType) {
+    authState.licenseStatus = "active";
+    return;
+  }
+
   // If no valid license key, check if they have an active OAuth demo session
   if (authState.user && authState.demoExpiresAt) {
     const exp = new Date(authState.demoExpiresAt).getTime();
