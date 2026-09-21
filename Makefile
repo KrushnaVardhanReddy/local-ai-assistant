@@ -23,11 +23,20 @@ dev: dev-barnowl
 # To setup the local database (required for User Entitlements and OAuth):
 supabase-setup-local:
 	@echo "Applying database schema and seeds to local Supabase instance..."
+	@cp .env.local .env 2>/dev/null || :
+	sudo npx supabase start
 	sudo npx supabase db reset
 	@echo "Local database is now ready."
 
 supabase-start:
+	@cp .env.local .env 2>/dev/null || :
 	sudo npx supabase start
+
+# Reset the demo timer — clears user_entitlements so the next login gets a fresh 15-min demo.
+# Usage: make reset-demo
+reset-demo:
+	@echo "🔄 Resetting demo timer (deleting all user_entitlements rows)..."
+	@psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -c "DELETE FROM user_entitlements;" && echo "✅ Demo reset! Log in again to get a fresh 15-min timer."
 
 # Platform-specific builds
 build-mac:

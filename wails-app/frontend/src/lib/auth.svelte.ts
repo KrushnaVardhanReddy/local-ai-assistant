@@ -1,5 +1,5 @@
 import { createClient, type User } from '@supabase/supabase-js';
-import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { EventsOn, WindowShow } from '../../wailsjs/runtime/runtime';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -100,44 +100,57 @@ export async function syncUserEntitlements() {
   if (!supabase || !authState.user) return;
   try {
     const machineId: string = await (window as any).go.main.App.GetMachineId();
+    console.log("🔥 [ENTITLEMENTS] machineId:", machineId, "userId:", authState.user.id);
 
-    // First, check if row exists
-    const { data: existingData } = await supabase
+    // Check if row exists
+    const { data: existingData, error: selectError } = await supabase
       .from("user_entitlements")
       .select("*")
       .eq("user_id", authState.user.id)
       .eq("machine_id", machineId)
-      .single();
+      .maybeSingle();
+
+    if (selectError) {
+      console.error("🔥 [ENTITLEMENTS] SELECT error:", selectError);
+    }
 
     if (!existingData) {
-      // Upsert new row with demo_expires_at 15 mins from now
+      // No row → insert fresh with 15-min demo timer
       const demoExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      await supabase.from("user_entitlements").upsert({
+      console.log("🔥 [ENTITLEMENTS] No existing row, inserting with demo_expires_at:", demoExpiresAt);
+      const { error: insertError } = await supabase.from("user_entitlements").upsert({
         user_id: authState.user.id,
         machine_id: machineId,
         demo_expires_at: demoExpiresAt,
-      });
+      }, { onConflict: "user_id,machine_id" });
+
+      if (insertError) {
+        console.error("🔥 [ENTITLEMENTS] INSERT error:", insertError);
+      }
     } else {
-      // Just an upsert in case we need to update updated_at or similar in the future,
-      // but otherwise existing is fine
-      await supabase.from("user_entitlements").upsert({
-        user_id: authState.user.id,
-        machine_id: machineId,
-      });
+      console.log("🔥 [ENTITLEMENTS] Existing row found, demo_expires_at:", existingData.demo_expires_at);
     }
 
-    const { data } = await supabase
+    // Re-read the final row
+    const { data, error: finalError } = await supabase
       .from("user_entitlements")
       .select("*")
       .eq("user_id", authState.user.id)
       .eq("machine_id", machineId)
-      .single();
+      .maybeSingle();
+
+    if (finalError) {
+      console.error("🔥 [ENTITLEMENTS] Final SELECT error:", finalError);
+    }
 
     if (data) {
       authState.demoExpiresAt = data.demo_expires_at;
       authState.paddleStatus = data.paddle_status;
       authState.planType = data.plan_type;
       authState.userEntitlements = data;
+      console.log("🔥 [ENTITLEMENTS] State updated. demo_expires_at:", data.demo_expires_at);
+    } else {
+      console.error("🔥 [ENTITLEMENTS] No data returned after upsert!");
     }
 
     if (authState.productMode === "interview") {
@@ -151,19 +164,46 @@ export async function syncUserEntitlements() {
 export function initAuthEventListeners() {
   const onEvent = typeof window !== "undefined" && (window as any).runtime?.EventsOn ? (window as any).runtime.EventsOn : EventsOn;
   onEvent("on_auth_complete", async (tokenStr: string) => {
+    console.log("🔥 [AUTH] on_auth_complete received!", tokenStr ? "Token length: " + tokenStr.length : "No token");
     if (!tokenStr || !supabase) return;
 
     const [access_token, refresh_token] = tokenStr.split(":");
-    if (!access_token || !refresh_token) return;
+    if (!access_token || !refresh_token) {
+      console.error("🔥 [AUTH] Missing access or refresh token!");
+      return;
+    }
 
+    console.log("🔥 [AUTH] Setting session...");
     const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+    
+    if (error) {
+      console.error("🔥 [AUTH] setSession error:", error);
+    }
+    
     if (!error && data.user) {
+      console.log("🔥 [AUTH] Session set successfully! User ID:", data.user.id);
       authState.user = data.user;
       authState.accessToken = data.session?.access_token || null;
       try {
         await (window as any).go.main.App.SaveToken({ token: tokenStr });
-      } catch (e) {}
+      } catch (e) {
+        console.error("🔥 [AUTH] SaveToken failed", e);
+      }
+      
+      console.log("🔥 [AUTH] Syncing user entitlements...");
       await syncUserEntitlements();
+      console.log("🔥 [AUTH] Entitlements synced! isGated should update.");
+      
+      // Bring Wails app to foreground after browser OAuth
+      if (typeof WindowShow !== 'undefined') {
+        try {
+          WindowShow();
+        } catch (e) {
+           console.log("Failed to show window", e);
+        }
+      }
+    } else {
+      console.error("🔥 [AUTH] data.user is null or missing!", data);
     }
   });
 }

@@ -407,17 +407,23 @@ func (a *App) StartOAuthFlow(provider string) error {
 	if supabaseURL == "" {
 		return fmt.Errorf("PUBLIC_SUPABASE_URL not set")
 	}
-	access, refresh, err := auth.StartOAuthFlow(supabaseURL, provider)
+	access, refresh, err := auth.StartOAuthFlow(a.ctx, supabaseURL, provider)
 	if err != nil {
 		return fmt.Errorf("OAuth failed: %w", err)
 	}
 	if err := auth.SaveToken(access + ":" + refresh); err != nil {
-		log.Printf("[Auth] Could not save token: %v", err)
+		log.Printf("❌ [Auth] Could not save token: %v", err)
+	} else {
+		log.Printf("✅ [Auth] Token saved successfully!")
 	}
-	wailsruntime.EventsEmit(a.ctx, "on_auth_complete", map[string]string{
-		"access_token":  access,
-		"refresh_token": refresh,
-	})
+	
+	log.Printf("📡 [Auth] Emitting on_auth_complete event to frontend...")
+	wailsruntime.EventsEmit(a.ctx, "on_auth_complete", access+":"+refresh)
+	
+	// Force window to foreground from the backend
+	wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
+	wailsruntime.WindowShow(a.ctx)
+	
 	return nil
 }
 
@@ -559,6 +565,7 @@ func (a *App) ToggleClickthroughMode() bool {
 	if err := window.SetIgnoreMouseEvents(a.ctx, curr); err != nil {
 		log.Printf("❌ SetIgnoreMouseEvents error: %v\n", err)
 	}
+	wailsruntime.EventsEmit(a.ctx, "on_clickthrough_changed", curr)
 	wailsruntime.EventsEmit(a.ctx, "toggle-clickthrough", curr)
 	return curr
 }

@@ -25,6 +25,16 @@
   onMount(() => {
     App = (window as any).go?.main?.App;
     statePollInterval = setInterval(refreshIDEState, 1000);
+    
+    // Listen for backend clickthrough toggles (e.g. from hotkeys)
+    if (typeof window !== 'undefined') {
+      const onEvent = (window as any).runtime?.EventsOn ? (window as any).runtime.EventsOn : null;
+      if (onEvent) {
+        onEvent("toggle-clickthrough", (isClickthrough: boolean) => {
+          clickthrough = isClickthrough;
+        });
+      }
+    }
   });
 
   onDestroy(() => {

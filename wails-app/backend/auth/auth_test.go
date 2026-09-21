@@ -362,7 +362,7 @@ func TestStartOAuthFlow_Cancel(t *testing.T) {
 	// Since StartOAuthFlow tries to open browser, it might fail or block.
 	// If it blocks, it will hit our post request and exit.
 	// If exec.Command fails, it returns an error. Let's see what it does.
-	at, rt, err := StartOAuthFlow("http://example.com", "google")
+	at, rt, err := StartOAuthFlow(context.Background(), "http://example.com", "google")
 
 	// Depending on environment, exec.Command might fail immediately (e.g. if xdg-open doesn't exist in sandbox)
 	// If it fails, err != nil. If it succeeds, err == nil.
@@ -396,7 +396,7 @@ func TestStartOAuthFlow_Success(t *testing.T) {
 		http.Post(fmt.Sprintf("http://127.0.0.1:%d/callback", OAuthPort), "application/json", bytes.NewBufferString(`{"access_token":"at","refresh_token":"rt"}`))
 	}()
 
-	at, rt, err := StartOAuthFlow("http://example.com", "google")
+	at, rt, err := StartOAuthFlow(context.Background(), "http://example.com", "google")
 	if err != nil {
 		t.Fatalf("StartOAuthFlow failed: %v", err)
 	}
@@ -419,7 +419,7 @@ func TestStartOAuthFlow_Errors(t *testing.T) {
 		http.Post(fmt.Sprintf("http://127.0.0.1:%d/callback", OAuthPort), "application/json", bytes.NewBufferString(`{invalid`))
 	}()
 
-	_, _, err := StartOAuthFlow("http://example.com", "google")
+	_, _, err := StartOAuthFlow(context.Background(), "http://example.com", "google")
 	if err == nil {
 		t.Fatalf("Expected error for bad json")
 	}
@@ -447,7 +447,7 @@ func TestStartOAuthFlow_MethodNotAllowed(t *testing.T) {
 	// Since exec.Command is "true", cmd.Start() succeeds. It waits on select.
 	// The server will fail to start and push to errorChan.
 	// The select should pull from errorChan.
-	_, _, err := StartOAuthFlow("http://example.com", "google")
+	_, _, err := StartOAuthFlow(context.Background(), "http://example.com", "google")
 	if err == nil {
 		t.Fatalf("Expected error due to blocked port")
 	}
@@ -469,7 +469,7 @@ func TestStartOAuthFlow_MethodNotAllowed2(t *testing.T) {
 		http.Post(fmt.Sprintf("http://127.0.0.1:%d/callback", OAuthPort), "application/json", bytes.NewBufferString(`{"access_token":"at","refresh_token":"rt"}`))
 	}()
 
-	at, _, err := StartOAuthFlow("http://example.com", "google")
+	at, _, err := StartOAuthFlow(context.Background(), "http://example.com", "google")
 	if err != nil {
 		t.Fatalf("StartOAuthFlow failed: %v", err)
 	}
@@ -490,7 +490,7 @@ func TestStartOAuthFlow_ReadBodyError(t *testing.T) {
 		http.DefaultClient.Do(req)
 	}()
 
-	_, _, err := StartOAuthFlow("http://example.com", "google")
+	_, _, err := StartOAuthFlow(context.Background(), "http://example.com", "google")
 	if err == nil {
 		t.Fatalf("Expected error")
 	}
@@ -507,7 +507,7 @@ func TestStartOAuthFlow_Timeout2(t *testing.T) {
 	oauthTimeout = 1 * time.Millisecond
 	defer func() { oauthTimeout = origTimeout }()
 
-	_, _, err := StartOAuthFlow("http://example.com", "google")
+	_, _, err := StartOAuthFlow(context.Background(), "http://example.com", "google")
 	if err == nil {
 		t.Fatalf("Expected timeout error")
 	}
@@ -520,7 +520,7 @@ func TestStartOAuthFlow_CmdError(t *testing.T) {
 	// Provide a binary that doesn't exist to guarantee Start() fails
 	execCommand = func(name string, arg ...string) *exec.Cmd { return exec.Command("/does/not/exist/binary") }
 
-	_, _, err := StartOAuthFlow("http://example.com", "google")
+	_, _, err := StartOAuthFlow(context.Background(), "http://example.com", "google")
 	if err == nil {
 		t.Fatalf("Expected error")
 	}
@@ -540,13 +540,13 @@ func TestStartOAuthFlow_OSCoverage2(t *testing.T) {
 	defer func() { runtimeGOOS = origOS }()
 
 	runtimeGOOS = "windows"
-	StartOAuthFlow("http://example.com", "google")
+	StartOAuthFlow(context.Background(), "http://example.com", "google")
 
 	runtimeGOOS = "darwin"
-	StartOAuthFlow("http://example.com", "google")
+	StartOAuthFlow(context.Background(), "http://example.com", "google")
 
 	runtimeGOOS = "linux"
-	StartOAuthFlow("http://example.com", "google")
+	StartOAuthFlow(context.Background(), "http://example.com", "google")
 }
 
 // This will trigger the context timeout and we will test the error from error channel

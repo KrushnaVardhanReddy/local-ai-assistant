@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/denisbrodbeck/machineid"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"github.com/zalando/go-keyring"
 )
 
@@ -116,7 +118,7 @@ type authResponse struct {
 }
 
 // StartOAuthFlow initiates an OAuth flow for the given provider.
-func StartOAuthFlow(supabaseURL, provider string) (string, string, error) {
+func StartOAuthFlow(ctx context.Context, supabaseURL, provider string) (string, string, error) {
 	oauthURL := supabaseURL + "/auth/v1/authorize?provider=" + provider +
 		"&redirect_to=" + url.QueryEscape(OAuthRedirectURI)
 
@@ -154,17 +156,20 @@ func StartOAuthFlow(supabaseURL, provider string) (string, string, error) {
 			var resp authResponse
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
+				log.Printf("❌ [Auth Server] Failed to read body: %v", err)
 				errorChan <- fmt.Errorf("failed to read body: %w", err)
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
 
 			if err := json.Unmarshal(body, &resp); err != nil {
+				log.Printf("❌ [Auth Server] Failed to parse JSON: %v", err)
 				errorChan <- fmt.Errorf("failed to parse JSON: %w", err)
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
 
+			log.Printf("✅ [Auth Server] Successfully received tokens! Length: %d, %d", len(resp.AccessToken), len(resp.RefreshToken))
 			w.WriteHeader(http.StatusOK)
 			resultChan <- resp
 			return
@@ -184,19 +189,8 @@ func StartOAuthFlow(supabaseURL, provider string) (string, string, error) {
 		}
 	}()
 
-	var cmd *exec.Cmd
-	if runtimeGOOS == "windows" {
-		cmd = execCommand("cmd", "/c", "start", oauthURL)
-	} else if runtimeGOOS == "darwin" {
-		cmd = execCommand("open", oauthURL)
-	} else {
-		cmd = execCommand("xdg-open", oauthURL)
-	}
-
-	if err := cmd.Start(); err != nil {
-		server.Close()
-		return "", "", fmt.Errorf("failed to open browser: %w", err)
-	}
+	// Use Wails runtime to open the browser safely on all platforms
+	wailsruntime.BrowserOpenURL(ctx, oauthURL)
 
 	ctx, cancel := context.WithTimeout(context.Background(), oauthTimeout)
 	defer cancel()

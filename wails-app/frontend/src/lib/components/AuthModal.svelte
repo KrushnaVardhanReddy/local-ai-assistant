@@ -39,9 +39,12 @@
     try {
       await (window as any).go.main.App.StartOAuthFlow("google");
       // The on_auth_complete listener in auth.svelte.ts handles the rest
+      // We must reset isLoading here so the button isn't permanently stuck
+      // if the auth finishes but the user's demo is expired.
+      isLoading = false;
     } catch (err: any) {
       errorMsg = err.message || "Failed to start Google OAuth flow.";
-      isLoading = false; // We only clear this on error, otherwise we stay loading until the popup returns
+      isLoading = false;
     }
   }
 
@@ -69,6 +72,9 @@
       <div class="auth-container">
         {#if errorMsg}
           <div class="error-msg">{errorMsg}</div>
+        {/if}
+        {#if authState.licenseStatus === "not_activated" && authState.user}
+          <div class="error-msg">Your 15-minute free demo has expired. Please enter a lifetime license to continue using BarnOwl AI.</div>
         {/if}
         {#if successMsg}
           <div class="success-msg">{successMsg}</div>
