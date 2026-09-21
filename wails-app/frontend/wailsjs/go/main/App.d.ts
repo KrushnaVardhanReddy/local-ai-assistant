@@ -53,6 +53,8 @@ export function GetWorkspaceTree():Promise<Array<driving.FileNode>>;
 
 export function Greet(arg1:string):Promise<string>;
 
+export function HideFromTaskbar():Promise<void>;
+
 export function IndexFile(arg1:string):Promise<void>;
 
 export function IndexFolder(arg1:string):Promise<void>;

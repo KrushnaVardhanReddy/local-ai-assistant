@@ -131,10 +131,9 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
 
-	// Hide from taskbar for maximum stealth
-	if err := window.HideFromTaskbar(ctx); err != nil {
-		log.Printf("Failed to hide from taskbar: %v\n", err)
-	}
+	// We no longer hide from taskbar on startup because it breaks Alt+Tab
+	// during the Auth flow. Instead, the frontend calls HideFromTaskbar()
+	// once authentication completes.
 
 	// Initialize hotkeys Wails runtime dependencies
 	hotkeys.WindowGetPosition = wailsruntime.WindowGetPosition
@@ -611,6 +610,15 @@ func (a *App) EndSession() (map[string]interface{}, error) {
 		"session":   sessionData,
 		"scorecard": scorecard,
 	}, nil
+}
+
+func (a *App) HideFromTaskbar() {
+	if a.ctx == nil {
+		return
+	}
+	if err := window.HideFromTaskbar(a.ctx); err != nil {
+		log.Printf("Failed to hide from taskbar: %v\n", err)
+	}
 }
 
 func (a *App) GetAudioDevices() []audio.AudioDevice {

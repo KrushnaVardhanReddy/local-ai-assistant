@@ -9,7 +9,7 @@
   import AuthModal from "$lib/components/AuthModal.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
 
-  import { WindowSetSize, WindowCenter, WindowSetAlwaysOnTop } from "../wailsjs/runtime/runtime";
+  import { WindowSetSize, WindowCenter, WindowSetAlwaysOnTop, WindowShow } from "../wailsjs/runtime/runtime";
 
 
 
@@ -28,6 +28,9 @@
     if (!isGated && typeof window !== 'undefined') {
       try {
         WindowSetAlwaysOnTop(true);
+        if ((window as any).go?.main?.App?.HideFromTaskbar) {
+          (window as any).go.main.App.HideFromTaskbar();
+        }
       } catch (err) {
         console.error("Failed to set window always on top", err);
       }
@@ -48,6 +51,22 @@
       setTimeout(WindowCenter, 100);
     }
 
+    // On Linux, the frameless+translucent Wails window gets hidden by the compositor
+    // when it loses focus (Alt+Tab). Re-show it whenever it regains focus.
+    // This is harmless on other platforms.
+    const handleFocus = () => {
+      try {
+        WindowShow();
+        // While gated (auth screen), keep the window in normal z-order (not always-on-top)
+        // so the user can switch to their browser and log in. But we still need to
+        // make it visible after focus returns.
+        if (!isGated) {
+          WindowSetAlwaysOnTop(true);
+        }
+      } catch (_) {}
+    };
+    window.addEventListener('focus', handleFocus);
+
     initAuthEventListeners();
     if (authState.productMode === "interview") {
       await restoreSession(); // Need session to check demo status
@@ -65,6 +84,10 @@
     }, 60000);
 
     connect();
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   });
 
 
@@ -93,6 +116,17 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
+<svelte:head>
+  {#if isGated}
+    <!-- Force solid background during auth — the window has a transparent background colour
+         for stealth mode, which causes the window to appear invisible on Alt+Tab on Linux 
+         unless we explicitly paint a solid background here. -->
+    <style>body { background: #1e1e1e !important; }</style>
+  {:else}
+    <style>body { background: transparent !important; }</style>
+  {/if}
+</svelte:head>
+
 {#if isGated}
   <div class="fixed inset-0 z-[9999] flex flex-col bg-[#1e1e1e]">
     <Titlebar />
@@ -116,13 +150,15 @@
 
 <AuthModal bind:isOpen={showAuthModal} onClose={() => showAuthModal = false} />
 
-<div class="app-shell" class:pointer-events-none={authState.productMode !== "presenter" && authState.productMode !== "interview"} class:pointer-events-auto={authState.productMode === "presenter" || authState.productMode === "interview"}>
-  {#if authState.productMode === "presenter"}
-    <PresenterHUD />
-  {:else}
-    <InterviewHUD />
-  {/if}
-</div>
+{#if !isGated}
+  <div class="app-shell" class:pointer-events-none={authState.productMode !== "presenter" && authState.productMode !== "interview"} class:pointer-events-auto={authState.productMode === "presenter" || authState.productMode === "interview"}>
+    {#if authState.productMode === "presenter"}
+      <PresenterHUD />
+    {:else}
+      <InterviewHUD />
+    {/if}
+  </div>
+{/if}
 
 <style>
   .app-shell {

@@ -98,6 +98,10 @@ export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
 
+export function HideFromTaskbar() {
+  return window['go']['main']['App']['HideFromTaskbar']();
+}
+
 export function IndexFile(arg1) {
   return window['go']['main']['App']['IndexFile'](arg1);
 }
