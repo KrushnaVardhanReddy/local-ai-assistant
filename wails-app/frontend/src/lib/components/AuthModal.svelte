@@ -1,6 +1,7 @@
 <script lang="ts">
   import { authState, activateLicense } from "$lib/auth.svelte";
   import { onMount } from "svelte";
+  import { BrowserOpenURL } from "../../wailsjs/runtime/runtime";
 
   let { isOpen = $bindable(), onClose } = $props<{ isOpen: boolean; onClose: () => void }>();
 
@@ -73,7 +74,7 @@
         {#if errorMsg}
           <div class="error-msg">{errorMsg}</div>
         {/if}
-        {#if authState.licenseStatus === "not_activated" && authState.user}
+        {#if authState.licenseStatus === "expired"}
           <div class="error-msg">Your 15-minute free demo has expired. Please enter a lifetime license to continue using BarnOwl AI.</div>
         {/if}
         {#if successMsg}
@@ -86,9 +87,11 @@
             <div class="panel demo-panel">
               <h2>Start 15-Min Free Demo</h2>
               <p class="subtext">Try all features, no credit card required.</p>
-              <button class="btn-google" onclick={handleGoogleOAuth} disabled={isLoading}>
+              <button class="btn-google" onclick={handleGoogleOAuth} disabled={isLoading || authState.licenseStatus === "expired"}>
                 {#if isLoading}
                   Loading...
+                {:else if authState.licenseStatus === "expired"}
+                  Demo Expired
                 {:else}
                   Continue with Google
                 {/if}
@@ -120,7 +123,7 @@
           </div>
 
           <div class="footer-link">
-            <a href="https://store.parakeet.app" target="_blank" rel="noopener noreferrer">Buy a Lifetime License</a>
+            <a href="#" onclick={(e) => { e.preventDefault(); BrowserOpenURL("https://store.parakeet.app"); }}>Buy a Lifetime License</a>
           </div>
 
         {:else}
