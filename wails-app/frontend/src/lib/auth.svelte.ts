@@ -268,6 +268,7 @@ export async function restoreSession() {
     } else {
       authState.user = data.user;
       authState.accessToken = data.session?.access_token || null;
+      await syncUserEntitlements();
     }
   } catch (err) {
     // Normal for first launch (no token found)
