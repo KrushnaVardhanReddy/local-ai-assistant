@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { authState, activateLicense } from "$lib/auth.svelte";
+  import { authState, activateLicense, syncUserEntitlements } from "$lib/auth.svelte";
   import { onMount } from "svelte";
   import { BrowserOpenURL, WindowMinimise } from "../../../wailsjs/runtime/runtime";
 
@@ -8,7 +8,25 @@
   onMount(() => {
     if (typeof window !== "undefined" && (window as any).Paddle) {
       (window as any).Paddle.Environment.set('sandbox');
-      (window as any).Paddle.Initialize({ token: 'test_3f7fa396fcfc66888bbfde4c26b' });
+      (window as any).Paddle.Initialize({ 
+        token: 'test_3f7fa396fcfc66888bbfde4c26b',
+        eventCallback: function(data: any) {
+          if (data.name === "checkout.completed") {
+            // Close the checkout overlay immediately
+            (window as any).Paddle.Checkout.close();
+            
+            // Webhooks take a few seconds to arrive. Poll Supabase a few times.
+            let attempts = 0;
+            const poll = setInterval(async () => {
+              attempts++;
+              await syncUserEntitlements();
+              if (authState.licenseStatus === "lifetime" || attempts > 5) {
+                clearInterval(poll);
+              }
+            }, 2000);
+          }
+        }
+      });
     }
   });
 
