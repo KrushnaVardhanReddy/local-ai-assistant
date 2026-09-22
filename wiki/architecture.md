@@ -77,7 +77,11 @@ For our SaaS products (MentorGlass, CounselDesk, ClinicHUD), user entitlements (
 We use Paddle as our single unified billing Merchant of Record (MoR). Paddle handles both one-time lifetime deals and monthly SaaS subscriptions. This is supported by two Supabase Edge Functions:
 - **`paddle-webhook`**: Receives Paddle webhook events (e.g., `transaction.completed`, `subscription.activated`, `subscription.updated`, `subscription.canceled`) and activates or deactivates entitlements in `user_entitlements`.
 - **`paddle-billing-cron`**: A monthly cron job that reads actual usage vs included limits from `user_entitlements` and dynamically charges any overages directly via the Paddle API.
-- **`paddle-billing-cron`**: A monthly cron job that reads actual usage vs included limits from `user_entitlements` and dynamically charges any overages directly via the Paddle API.
+
+### Multi-Device Referral Engine
+Every user gets a unique referral code auto-generated when their entitlements row is created in `user_entitlements`.
+When a new user buys the Lifetime License using someone's referral code, the referrer gets their `allowed_devices` count incremented (e.g. from 1 to 2, permanently unlocking a 2nd device).
+The new buyer gets a $10 discount via a Paddle coupon. Device limit enforcement is done in the frontend during `syncUserEntitlements()`.
 
 ## Supabase Deployment
 Supabase production setup is fully automated. The SQL migrations (e.g., creating `dev_allowlist` and `user_entitlements` tables) and Edge Functions (`llm-proxy`) can be automatically deployed using the included bash script.
