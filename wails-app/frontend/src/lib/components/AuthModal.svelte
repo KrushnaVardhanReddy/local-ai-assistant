@@ -15,12 +15,15 @@
             // Close the checkout overlay immediately
             (window as any).Paddle.Checkout.close();
             
-            // Webhooks take a few seconds to arrive. Poll Supabase a few times.
+            // Optimistically unlock the app instantly for a magical UX
+            authState.licenseStatus = "active";
+            
+            // Webhooks in sandbox take time. Poll Supabase in the background for up to 30 seconds.
             let attempts = 0;
             const poll = setInterval(async () => {
               attempts++;
               await syncUserEntitlements();
-              if (authState.licenseStatus === "active" || attempts > 5) {
+              if (authState.planType || attempts > 15) {
                 clearInterval(poll);
               }
             }, 2000);
