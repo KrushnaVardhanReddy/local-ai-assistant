@@ -71,15 +71,10 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		e.events.Emit("on_transcript", map[string]interface{}{"text": cleanTranscript})
 	}
 
-	e.inFlightMu.Lock()
-	if e.cancelInFlight != nil {
-		log.Printf("[PREEMPT] Interrupting active LLM stream for new question: %q", cleanTranscript)
-		e.cancelInFlight()
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	e.cancelInFlight = cancel
-	e.inFlightCtx = ctx
-	e.inFlightMu.Unlock()
+
+	e.mu.RLock()
+	manual := e.manualMode
+	e.mu.RUnlock()
 
 	// Always emit suggestion chip for accepted transcripts
 	if e.events != nil {
@@ -89,14 +84,33 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		})
 	}
 
-	e.mu.RLock()
-	manual := e.manualMode
-	e.mu.RUnlock()
-
-	if isAuto && manual {
-		log.Printf("🎛️ [Manual Mode] Transcript accepted but LLM call bypassed: %q", cleanTranscript)
-		return
+	if isAuto {
+		if manual {
+			log.Printf("🎛️ [Manual Mode] Transcript accepted but LLM call bypassed: %q", cleanTranscript)
+			return
+		}
+		if e.questionBuffer != nil {
+			e.questionBuffer.AddChunk(cleanTranscript)
+		}
+	} else {
+		// Manual query bypassing buffer
+		e.triggerLLMWithQuestion(cleanTranscript)
 	}
+}
+
+
+func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
+	emb := backend.GenerateEmbedding(cleanTranscript)
+
+	e.inFlightMu.Lock()
+	if e.cancelInFlight != nil {
+		log.Printf("[PREEMPT] Interrupting active LLM stream for new question: %q", cleanTranscript)
+		e.cancelInFlight()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	e.cancelInFlight = cancel
+	e.inFlightCtx = ctx
+	e.inFlightMu.Unlock()
 
 	if e.cache != nil {
 		cachedAns, hit := e.cache.Search(emb, 0.88)
@@ -175,25 +189,7 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		}
 	}
 
-	e.mu.RLock()
-	buf := make([]string, len(e.transcriptBuffer))
-	copy(buf, e.transcriptBuffer)
-	e.mu.RUnlock()
-
-	var llmQuestion string
-	if len(buf) > 1 {
-		var sb strings.Builder
-		sb.WriteString("The following are the last few things the interviewer said (in chronological order).\n")
-		sb.WriteString("Some of these may be sentence fragments from natural pauses mid-question.\n\n")
-		for i, t := range buf {
-			sb.WriteString(fmt.Sprintf("[%d] %q\n", i+1, t))
-		}
-		sb.WriteString("\nIdentify the most recent complete question (combining fragments if needed) and answer it concisely.\n")
-		sb.WriteString("Do NOT re-answer earlier unrelated questions.")
-		llmQuestion = sb.String()
-	} else {
-		llmQuestion = cleanTranscript
-	}
+	llmQuestion := cleanTranscript
 
 	go func(q string, llmQuestion string, streamCtx context.Context, streamCancel context.CancelFunc) {
 		e.llmBusy.Lock()
@@ -232,16 +228,6 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		if ragContextBlock != "" {
 			sysPrompt += ragContextBlock
 		}
-
-		// sysPrompt was populated from e.cfg.SystemPrompt above.
-		// We replace the literal concatenation with BuildFullSystemPrompt to adhere strictly
-		// to the intended architectural flow, passing e.cfg.SystemPrompt as the category text.
-		// But wait! BuildFullSystemPrompt expects the category (e.g. "behavioral"), not the full system prompt.
-		// Wait, e.cfg.SystemPrompt IS the full system prompt already. We just need to append the context block.
-		// The instructions say: "Replace: llm.BuildSystemPrompt(category) With: llm.BuildFullSystemPrompt(category, recentTurns)".
-		// But in pipeline.go we don't have category, we have sysPrompt.
-		// Let's stick with our direct injection since OpenAIAdapter doesn't inject it properly anyway.
-		// Actually, I'll just keep the working code as it solves the problem correctly in the Hexagonal Architecture.
 
 		if e.sessionMgr != nil {
 			recentTurns := e.sessionMgr.GetRecentTurns(llm.MaxContextTurns)

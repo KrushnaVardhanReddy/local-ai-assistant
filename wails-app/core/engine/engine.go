@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"log"
 	"strings"
 	"fmt"
 	"context"
@@ -9,6 +10,7 @@ import (
 	"wails-app/backend/stt"
 	"wails-app/core/ports/driven"
 	"wails-app/core/ports/driving"
+	"wails-app/backend/classifier"
 )
 
 // Config holds product-specific configuration injected at startup.
@@ -29,6 +31,8 @@ type StealthEngine struct {
 	events     driven.EventPort
 
 	sessionMgr *session.SessionManager
+
+	questionBuffer *classifier.QuestionBuffer
 
 	// workspace state
 	workspaceTree []*driving.FileNode
@@ -59,7 +63,7 @@ func New(
 	cache driven.CachePort,
 	events driven.EventPort,
 ) *StealthEngine {
-	return &StealthEngine{
+	e := &StealthEngine{
 		cfg:              cfg,
 		sttManager:       sttMgr,
 		llm:              llm,
@@ -69,6 +73,8 @@ func New(
 		openDocuments:    make(map[string]*driving.WorkspaceDocument),
 		includeActiveDoc: true,
 	}
+	e.questionBuffer = classifier.NewQuestionBuffer(e.triggerLLMWithQuestion)
+	return e
 }
 
 // SetEventsAdapter sets the events port.
@@ -106,6 +112,10 @@ func (e *StealthEngine) ClearState() {
 	e.transcript = ""
 	e.response = ""
 	e.thinking = false
+
+	if e.questionBuffer != nil {
+		e.questionBuffer.Reset()
+	}
 }
 
 // SetStealth is a no-op here — window management is handled by the
@@ -243,4 +253,25 @@ func (e *StealthEngine) SummarizeSession(requests []SummaryRequest) error {
 	}
 
 	return nil
+}
+
+
+func (e *StealthEngine) Start(ctx context.Context) {
+	if e.questionBuffer != nil {
+		e.questionBuffer.Start()
+	}
+	if err := classifier.DefaultLlamaServer.Start(ctx); err != nil {
+		log.Printf("[Engine] Gemma sidecar unavailable (turn-detection disabled): %v\n", err)
+	}
+}
+
+func (e *StealthEngine) Stop() {
+	if e.questionBuffer != nil {
+		e.questionBuffer.Stop()
+	}
+	classifier.DefaultLlamaServer.Stop()
+}
+
+func (e *StealthEngine) GetQuestionBuffer() *classifier.QuestionBuffer {
+	return e.questionBuffer
 }

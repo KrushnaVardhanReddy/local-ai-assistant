@@ -476,3 +476,55 @@ func TestSummarizeSession_Error(t *testing.T) {
 		t.Errorf("Expected 1 on_summary_end, got %d", events.Emitted["on_summary_end"])
 	}
 }
+
+func TestEngine_QuestionBuffer_Integration(t *testing.T) {
+	sttEngine := &mockSTT{transcripts: []string{"hello", "world", "this is complete"}}
+	sttMgr := stt.NewSTTManager(sttEngine)
+
+	llm := &MockLLM{}
+	eng := engine.New(engine.Config{}, sttMgr, llm, nil, nil)
+
+	eng.SetManualMode(false)
+
+	eng.GetQuestionBuffer().SetClassifier(func(ctx context.Context, text string) (bool, error) {
+		return strings.Contains(text, "complete"), nil
+	})
+
+	eng.ProcessAudio([]float32{0.1, 0.2})
+	eng.ProcessAudio([]float32{0.1, 0.2})
+	eng.ProcessAudio([]float32{0.1, 0.2})
+
+	time.Sleep(200 * time.Millisecond)
+}
+
+func TestEngine_ClearState_ResetsBuffer(t *testing.T) {
+	sttEngine := &mockSTT{transcripts: []string{"hello"}}
+	sttMgr := stt.NewSTTManager(sttEngine)
+	eng := engine.New(engine.Config{}, sttMgr, nil, nil, nil)
+
+	eng.ProcessAudio([]float32{0.1})
+	time.Sleep(50 * time.Millisecond)
+
+	if len(eng.GetQuestionBuffer().GetChunks()) == 0 {
+		t.Errorf("Expected chunks to be added")
+	}
+
+	eng.ClearState()
+	if len(eng.GetQuestionBuffer().GetChunks()) != 0 {
+		t.Errorf("Expected buffer to be reset")
+	}
+}
+
+func TestEngine_ManualMode_SkipsBuffer(t *testing.T) {
+	sttEngine := &mockSTT{transcripts: []string{"hello"}}
+	sttMgr := stt.NewSTTManager(sttEngine)
+	eng := engine.New(engine.Config{}, sttMgr, nil, nil, nil)
+	eng.SetManualMode(true)
+
+	eng.ProcessAudio([]float32{0.1})
+	time.Sleep(50 * time.Millisecond)
+
+	if len(eng.GetQuestionBuffer().GetChunks()) != 0 {
+		t.Errorf("Expected manual mode to skip buffer")
+	}
+}
