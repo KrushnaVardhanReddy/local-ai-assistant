@@ -4,15 +4,14 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"testing"
-	"wails-app/backend"
-	"wails-app/core/engine"
 	"strings"
-	"fmt"
+	"testing"
+	"wails-app/backend/config"
+	"wails-app/core/engine"
 )
 
 func TestApp_GetAudioDevices(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 	devices := app.GetAudioDevices()
 	// Length might be zero in CI, but it shouldn't panic
 	if devices == nil {
@@ -21,7 +20,7 @@ func TestApp_GetAudioDevices(t *testing.T) {
 }
 
 func TestApp_SetAudioDevice_Invalid(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 	// Start with an invalid index
 	err := app.SetAudioDevice(-1, false)
 	if err == nil {
@@ -30,14 +29,14 @@ func TestApp_SetAudioDevice_Invalid(t *testing.T) {
 }
 
 func TestApp_StartupShutdown(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 	app.startup(context.Background())
 	// Test basic execution path
 	app.shutdown(context.Background())
 }
 
 func TestApp_WorkspaceMethods(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 	// Create a temp workspace directory
 	tempDir := t.TempDir()
 	txtPath := filepath.Join(tempDir, "testdoc.txt")
@@ -114,7 +113,7 @@ func TestApp_WorkspaceMethods(t *testing.T) {
 }
 
 func TestApp_PromptMethodsContext(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 	// Should fail because context is nil
 	_, err := app.PromptOpenDirectory()
 	if err == nil {
@@ -128,7 +127,7 @@ func TestApp_PromptMethodsContext(t *testing.T) {
 }
 
 func TestApp_ToggleMic(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 
 	// Wait for any async initialization to avoid races, though NewApp doesn't start capture by itself
 
@@ -143,7 +142,7 @@ func TestApp_ToggleMic(t *testing.T) {
 
 
 func TestApp_ExportSession(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 
 	app.engine = engine.New(
 		engine.Config{},
@@ -197,13 +196,13 @@ func TestApp_ExportSession(t *testing.T) {
 }
 
 func TestApp_SetManualMode(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 	app.SetManualMode(true)
 	// Just verifies it doesn't panic
 }
 
 func TestSetProxyToken(t *testing.T) {
-	app := NewApp()
+	app := NewApp(&config.AppConfig{})
 	app.SetProxyToken("test-token")
 
 	// We'll just test that it doesn't crash since llm.DemoProxyToken isn't exported here

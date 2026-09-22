@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"wails-app/backend/config"
 	"time"
 
 	cacheadapter "wails-app/adapters/cache"
@@ -60,9 +61,9 @@ func TestPrompts(t *testing.T) {
 }
 
 func TestNewPresenterApp(t *testing.T) {
-	app := NewPresenterApp()
+	app := NewPresenterApp(&config.AppConfig{})
 	if app == nil {
-		t.Fatal("NewPresenterApp() returned nil")
+		t.Fatal("NewPresenterApp(&config.AppConfig{}) returned nil")
 	}
 	if app.engine == nil {
 		t.Fatal("PresenterApp.engine is nil")
@@ -74,9 +75,9 @@ func TestNewPresenterApp(t *testing.T) {
 
 func TestNewPresenterAppWithGroqKey(t *testing.T) {
 	t.Setenv("GROQ_API_KEY", "test-key")
-	app := NewPresenterApp()
+	app := NewPresenterApp(&config.AppConfig{})
 	if app == nil {
-		t.Fatal("NewPresenterApp() returned nil")
+		t.Fatal("NewPresenterApp(&config.AppConfig{}) returned nil")
 	}
 	// We expect Groq engine to be used, but we just want coverage for the branch
 }

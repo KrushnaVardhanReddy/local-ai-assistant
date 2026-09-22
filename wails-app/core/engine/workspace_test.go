@@ -27,6 +27,22 @@ func (m *mockCachePort) Count() int {
 	return len(m.stored)
 }
 
+func (m *mockCachePort) IndexDocumentChunk(path, text string, embedding []float32) error {
+	return nil
+}
+
+func (m *mockCachePort) GetIndexedPaths() ([]string, error) {
+	return nil, nil
+}
+
+func (m *mockCachePort) RemoveIndexedPath(path string) error {
+	return nil
+}
+
+func (m *mockCachePort) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) {
+	return nil, nil
+}
+
 // mockEventPort is a mock implementation of driven.EventPort for testing.
 type mockEventPort struct {
 	emitted map[string]any

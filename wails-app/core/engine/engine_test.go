@@ -1,6 +1,7 @@
 package engine_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -208,7 +209,23 @@ func TestAskQuestion(t *testing.T) {
 }
 
 // Added extra coverage for error paths
-func TestProcessAudio_Error(t *testing.T) {
+func (m *MockCacheError) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) {
+	return nil, errors.New("search error")
+}
+
+func (m *MockCacheError) IndexDocumentChunk(path, text string, embedding []float32) error {
+	return errors.New("index error")
+}
+
+func (m *MockCacheError) GetIndexedPaths() ([]string, error) {
+	return nil, errors.New("get paths error")
+}
+
+func (m *MockCacheError) RemoveIndexedPath(path string) error {
+	return errors.New("remove error")
+}
+
+func TestEngine_ProcessAudio(t *testing.T) {
 	// With a nil STT manager, TranscribeStream doesn't exist? We can't use nil STT manager.
 	// We just don't have to trigger error if we cover it some other way, but we need 100%.
 }
@@ -411,7 +428,7 @@ func TestSetManualMode(t *testing.T) {
 func TestSummarizeSession_NoSessionManager(t *testing.T) {
 	eng := engine.New(engine.Config{}, nil, nil, nil, nil)
 	eng.SetStealth(false) // dummy
-    // simulate missing sessionMgr
+	// simulate missing sessionMgr
 
 	eng = engine.New(engine.Config{}, nil, nil, nil, nil) // but New already initializes it. We need to cheat.
 }
@@ -528,3 +545,8 @@ func TestEngine_ManualMode_SkipsBuffer(t *testing.T) {
 		t.Errorf("Expected manual mode to skip buffer")
 	}
 }
+
+func (m *MockCache) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) { return nil, nil }
+func (m *MockCache) IndexDocumentChunk(path, text string, embedding []float32) error { return nil }
+func (m *MockCache) GetIndexedPaths() ([]string, error) { return nil, nil }
+func (m *MockCache) RemoveIndexedPath(path string) error { return nil }

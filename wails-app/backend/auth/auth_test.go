@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os/exec"
 	"testing"
+	"context"
 	"time"
 
 	"github.com/zalando/go-keyring"
