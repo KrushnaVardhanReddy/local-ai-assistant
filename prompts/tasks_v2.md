@@ -66,9 +66,9 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|-----|
-| P66-T1 | `supabase/migrations/20261000000000_add_referral_system.sql` | **DB Migration** — Add `referral_code` (auto-generated `BARN-XXXX` via trigger), `allowed_devices` (default 1), `referred_by_code`, `referral_rewarded_at` columns to `user_entitlements`. | ⬜ | — |
-| P66-T2 ⚡ | `supabase/functions/paddle-webhook/index.ts` | **Webhook Reward Logic** — In `transaction.completed` handler, read `custom_data.referred_by`, look up the referrer, set `allowed_devices = 2` and stamp `referral_rewarded_at` (idempotent — never double-reward). | ⬜ | — |
-| P66-T3 ⚡ | `auth.svelte.ts`, `AuthModal.svelte`, `Settings.svelte` | **Frontend UI** — (A) Add `referralCode`, `allowedDevices`, `deviceLimitReached` to `authState`. (B) Add referral code input above "Buy a Lifetime License" in AuthModal — passes `referred_by` + `discountId` to Paddle. (C) Add "Refer a Friend" card in Settings showing the user's own code with a Copy button and device slot status. | ⬜ | — |
+| P66-T1 | `supabase/migrations/20261000000000_add_referral_system.sql` | **DB Migration** — Add `referral_code` (auto-generated `BARN-XXXX` via trigger), `allowed_devices` (default 1), `referred_by_code`, `referral_rewarded_at` columns to `user_entitlements`. | ✅ | #231 |
+| P66-T2 ⚡ | `supabase/functions/paddle-webhook/index.ts` | **Webhook Reward Logic** — In `transaction.completed` handler, read `custom_data.referred_by`, look up the referrer, set `allowed_devices = 2` and stamp `referral_rewarded_at` (idempotent — never double-reward). | 🔄 | — |
+| P66-T3 ⚡ | `auth.svelte.ts`, `AuthModal.svelte`, `Settings.svelte` | **Frontend UI** — (A) Add `referralCode`, `allowedDevices`, `deviceLimitReached` to `authState`. (B) Add referral code input above "Buy a Lifetime License" in AuthModal — passes `referred_by` + `discountId` to Paddle. (C) Add "Refer a Friend" card in Settings showing the user's own code with a Copy button and device slot status. | 🔄 | — |
 
 ## Phase 67 — Gemma "System One" Turn-Detection Engine 🧠
 
