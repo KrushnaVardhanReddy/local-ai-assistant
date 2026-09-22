@@ -89,6 +89,26 @@ type VisionChatRequest struct {
 	Stream   bool                `json:"stream"`
 }
 
+func getProviderConfig() (baseURL string, apiKey string, err error) {
+	if proxyToken := GetProxyToken(); proxyToken != "" {
+		return getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy"), proxyToken, nil
+	}
+
+	if os.Getenv("LLM_PROVIDER") == "groq" {
+		key := os.Getenv("GROQ_API_KEY")
+		if key == "" {
+			return "", "", fmt.Errorf("GROQ_API_KEY environment variable is not set")
+		}
+		return getEnvOrDefault("LLM_BASE_URL", "https://api.groq.com/openai/v1"), key, nil
+	}
+
+	key := os.Getenv("OPENAI_API_KEY")
+	if key == "" {
+		return "", "", fmt.Errorf("OPENAI_API_KEY environment variable is not set")
+	}
+	return getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1"), key, nil
+}
+
 func StreamVisionCompletion(ctx context.Context, base64Image string, prompt string, onToken StreamCallback, onDone func()) error {
 	defer func() {
 		if onDone != nil {
@@ -96,22 +116,9 @@ func StreamVisionCompletion(ctx context.Context, base64Image string, prompt stri
 		}
 	}()
 
-	var baseURL, apiKey string
-	if GetProxyToken() != "" {
-		baseURL = getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy")
-		apiKey = GetProxyToken()
-	} else if os.Getenv("LLM_PROVIDER") == "groq" {
-		apiKey = os.Getenv("GROQ_API_KEY")
-		if apiKey == "" {
-			return fmt.Errorf("GROQ_API_KEY environment variable is not set")
-		}
-		baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-	} else {
-		apiKey = os.Getenv("OPENAI_API_KEY")
-		if apiKey == "" {
-			return fmt.Errorf("OPENAI_API_KEY environment variable is not set")
-		}
-		baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1")
+	baseURL, apiKey, err := getProviderConfig()
+	if err != nil {
+		return err
 	}
 	model := getEnvOrDefault("LLM_MODEL", "gpt-4o")
 
@@ -226,22 +233,9 @@ func StreamCompletionWithContext(ctx context.Context, question string, category 
 		}
 	}()
 
-	var baseURL, apiKey string
-	if GetProxyToken() != "" {
-		baseURL = getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy")
-		apiKey = GetProxyToken()
-	} else if os.Getenv("LLM_PROVIDER") == "groq" {
-		apiKey = os.Getenv("GROQ_API_KEY")
-		if apiKey == "" {
-			return fmt.Errorf("GROQ_API_KEY environment variable is not set")
-		}
-		baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.groq.com/openai/v1")
-	} else {
-		apiKey = os.Getenv("OPENAI_API_KEY")
-		if apiKey == "" {
-			return fmt.Errorf("OPENAI_API_KEY environment variable is not set")
-		}
-		baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1")
+	baseURL, apiKey, err := getProviderConfig()
+	if err != nil {
+		return err
 	}
 	model := getEnvOrDefault("LLM_MODEL", "gpt-4o")
 
