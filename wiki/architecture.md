@@ -36,6 +36,7 @@ The `StealthEngine` is the brain. It is responsible for:
 - Constructing prompts and routing them to the LLM.
 - Handling local semantic caching to save on API costs.
 - **Rule:** The engine cannot import *any* external libraries or Wails packages. It only communicates through interface definitions located in `core/ports/`.
+- **System One Classifier**: A lightweight turn-detection mechanism using Gemma 3 270M running on a local CPU-only `llama-server` sidecar subprocess. This engine decides exactly when an interviewer has finished speaking to optimize expensive Cloud LLM triggers.
 
 ## 2. Infrastructure Adapters (`wails-app/adapters/`)
 Adapters plug into the core engine.
