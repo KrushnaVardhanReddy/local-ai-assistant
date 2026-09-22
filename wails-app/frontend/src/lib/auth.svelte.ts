@@ -23,6 +23,9 @@ export const authState = $state({
   paddleStatus: null as string | null,
   planType: null as string | null,
   userEntitlements: null as any,
+  referralCode: null as string | null,
+  allowedDevices: 1 as number,
+  deviceLimitReached: false as boolean,
 });
 
 $effect.root(() => {
@@ -168,7 +171,31 @@ export async function syncUserEntitlements() {
       authState.paddleStatus = data.paddle_status;
       authState.planType = data.plan_type;
       authState.userEntitlements = data;
+      authState.referralCode = data.referral_code ?? null;
+      authState.allowedDevices = data.allowed_devices ?? 1;
       console.log("🔥 [ENTITLEMENTS] State updated. demo_expires_at:", data.demo_expires_at);
+
+      // Device limit enforcement:
+      // Count how many distinct machine_ids are registered for this user_id.
+      // If more machines than allowed, block this device.
+      if (authState.allowedDevices < 2) {
+        const { data: deviceRows } = await supabase
+          .from("user_entitlements")
+          .select("machine_id")
+          .eq("user_id", authState.user.id);
+
+        const uniqueMachines = new Set((deviceRows ?? []).map((r: any) => r.machine_id).filter(Boolean));
+
+        // If this machine is already registered, it's fine (it's the primary device).
+        // If it's a brand new machine and we're at the limit, block it.
+        const currentMachineId: string = await (window as any).go.main.App.GetMachineId();
+        const alreadyRegistered = uniqueMachines.has(currentMachineId);
+        const overLimit = !alreadyRegistered && uniqueMachines.size >= authState.allowedDevices;
+
+        authState.deviceLimitReached = overLimit;
+      } else {
+        authState.deviceLimitReached = false;
+      }
     } else {
       console.error("🔥 [ENTITLEMENTS] No data returned after upsert!");
     }

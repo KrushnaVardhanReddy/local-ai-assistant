@@ -554,6 +554,50 @@
                   <a href="https://example.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn-link">Open Dashboard</a>
                   <button class="btn-secondary" onclick={handleSignOut}>Sign Out</button>
                 </div>
+
+                {#if authState.productMode === "interview" && authState.referralCode}
+                  <div class="referral-card">
+                    <div class="referral-card-header">
+                      <span class="referral-icon">🔗</span>
+                      <div>
+                        <p class="referral-title">Refer a Friend — Unlock 2nd Device</p>
+                        <p class="referral-subtitle">
+                          {#if authState.allowedDevices >= 2}
+                            ✅ You've already unlocked a 2nd device!
+                          {:else}
+                            Give a friend $10 off. When they buy, you unlock a 2nd device slot — permanently.
+                          {/if}
+                        </p>
+                      </div>
+                    </div>
+                    <div class="referral-code-row">
+                      <span class="referral-code-display" id="referral-code-display">{authState.referralCode}</span>
+                      <button
+                        class="copy-btn"
+                        id="copy-referral-code-btn"
+                        onclick={() => {
+                          navigator.clipboard.writeText(authState.referralCode ?? '');
+                          // Brief visual feedback
+                          const btn = document.getElementById('copy-referral-code-btn');
+                          if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+                        }}
+                      >Copy</button>
+                    </div>
+                    <p class="referral-devices-label">
+                      Devices: {authState.allowedDevices >= 2 ? '2 / 2' : '1 / 1'} registered
+                      {#if authState.allowedDevices < 2}
+                        · <em>Refer 1 friend to unlock 2nd slot</em>
+                      {/if}
+                    </p>
+                  </div>
+                {/if}
+
+                {#if authState.deviceLimitReached}
+                  <div class="device-limit-banner">
+                    ⚠️ Device limit reached. You are already using BarnOwl AI on {authState.allowedDevices} device(s).
+                    Refer a friend to unlock a 2nd device slot.
+                  </div>
+                {/if}
               </div>
             {:else}
               <div class="signin-form">
@@ -957,4 +1001,85 @@
     color: #888;
   }
 
+  .referral-card {
+    background: rgba(99, 179, 237, 0.05);
+    border: 1px solid rgba(99, 179, 237, 0.2);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .referral-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .referral-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+
+  .referral-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin: 0;
+  }
+
+  .referral-subtitle {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0.25rem 0 0;
+  }
+
+  .referral-code-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .referral-code-display {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #63b3ed;
+    letter-spacing: 2px;
+    flex: 1;
+  }
+
+  .copy-btn {
+    background: rgba(99, 179, 237, 0.15);
+    border: 1px solid rgba(99, 179, 237, 0.3);
+    color: #63b3ed;
+    border-radius: 4px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .copy-btn:hover {
+    background: rgba(99, 179, 237, 0.25);
+  }
+
+  .referral-devices-label {
+    font-size: 0.75rem;
+    color: #718096;
+    margin: 0;
+  }
+
+  .device-limit-banner {
+    background: rgba(245, 101, 101, 0.1);
+    border: 1px solid rgba(245, 101, 101, 0.3);
+    color: #fc8181;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
 </style>

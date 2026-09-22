@@ -33,6 +33,7 @@
     }
   });
 
+  let referralCodeInput = $state("");
   let licenseKey = $state("");
   let isLoading = $state(false);
   let errorMsg = $state<string | null>(null);
@@ -152,15 +153,34 @@
           </div>
 
           <div class="footer-link">
+            <div class="referral-input-group">
+              <input
+                id="referral-code-input"
+                type="text"
+                bind:value={referralCodeInput}
+                placeholder="Referral code (optional)"
+                maxlength="9"
+                autocomplete="off"
+              />
+            </div>
             <a href="#" onclick={(e) => {
               e.preventDefault();
               if (typeof window !== "undefined" && (window as any).Paddle) {
-                (window as any).Paddle.Checkout.open({
+                const checkoutOptions: any = {
                   items: [{ priceId: 'pri_01m2zefm3t55p4pn424kmv9d5n', quantity: 1 }],
                   customData: {
                     user_id: authState.user?.id || 'unknown'
                   }
-                });
+                };
+                // If user entered a referral code, pass it as customData AND apply $10 discount.
+                const trimmedCode = referralCodeInput.trim().toUpperCase();
+                if (trimmedCode) {
+                  checkoutOptions.customData.referred_by = trimmedCode;
+                  // IMPORTANT: Replace 'dsc_YOUR_PADDLE_DISCOUNT_ID' with the real Paddle discount ID
+                  // for the $10 off coupon. Create this in the Paddle dashboard as a flat $10 discount.
+                  checkoutOptions.discountId = 'dsc_YOUR_PADDLE_DISCOUNT_ID';
+                }
+                (window as any).Paddle.Checkout.open(checkoutOptions);
               }
             }}>Buy a Lifetime License</a>
           </div>
@@ -393,5 +413,35 @@
 
   .footer-link a:hover {
     color: #e2e8f0;
+  }
+
+  .referral-input-group {
+    margin-bottom: 0.5rem;
+  }
+
+  .referral-input-group input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: #94a3b8;
+    font-size: 0.85rem;
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    box-sizing: border-box;
+  }
+
+  .referral-input-group input:focus {
+    outline: none;
+    border-color: rgba(99, 179, 237, 0.4);
+    color: #e2e8f0;
+  }
+
+  .referral-input-group input::placeholder {
+    letter-spacing: 0;
+    text-transform: none;
+    color: #4a5568;
   }
 </style>
