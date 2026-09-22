@@ -3,9 +3,15 @@ ALTER TABLE public.user_entitlements ADD COLUMN IF NOT EXISTS machine_id text;
 ALTER TABLE public.user_entitlements ADD COLUMN IF NOT EXISTS paddle_status text;
 
 -- Add unique constraint so upsert(onConflict: "user_id,machine_id") works
-ALTER TABLE public.user_entitlements
-  ADD CONSTRAINT IF NOT EXISTS user_entitlements_user_machine_unique
-  UNIQUE (user_id, machine_id);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'user_entitlements_user_machine_unique'
+  ) THEN
+    ALTER TABLE public.user_entitlements
+      ADD CONSTRAINT user_entitlements_user_machine_unique UNIQUE (user_id, machine_id);
+  END IF;
+END $$;
 
 -- Add RLS policies for insert and update
 DO $$ BEGIN

@@ -38,6 +38,16 @@ reset-demo:
 	@echo "🔄 Resetting demo timer (deleting all user_entitlements rows)..."
 	@psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -c "DELETE FROM user_entitlements;" && echo "✅ Demo reset! Log in again to get a fresh 15-min timer."
 
+# Apply new database migrations (like Phase 66) to the local database without destroying existing data
+supabase-push:
+	@echo "⬆️ Pushing new migrations to local database..."
+	npx supabase migration up
+
+# Rebuild the database from scratch, applying all migrations and destroying existing data
+supabase-reset:
+	@echo "⚠️ Resetting local database..."
+	npx supabase db reset
+
 # Platform-specific builds
 build-mac:
 	cd wails-app && VITE_PRODUCT=interview C_INCLUDE_PATH=$(shell pwd)/wails-app/backend/lib LIBRARY_PATH=$(shell pwd)/wails-app/backend/lib CGO_CFLAGS="-I$(shell pwd)/wails-app/backend/lib" CGO_LDFLAGS="-L$(shell pwd)/wails-app/backend/lib -lwhisper -lstdc++ -lm" $(shell go env GOPATH)/bin/wails build -tags webkit2_41 -platform darwin/universal
