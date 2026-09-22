@@ -21,6 +21,8 @@ import (
 	"wails-app/backend"
 	"wails-app/backend/audio"
 	"wails-app/backend/auth"
+	"wails-app/backend/config"
+	"wails-app/backend/filter"
 	"wails-app/backend/hotkeys"
 	"wails-app/backend/llm"
 	"wails-app/backend/remote"
@@ -47,16 +49,21 @@ type App struct {
 	audioCapture *audio.CaptureEngine
 
 	engine *engine.StealthEngine
+	cfg    *config.AppConfig
 
 	isClickthrough bool
 }
 
 // NewApp creates a new App application struct
-func NewApp() *App {
+func NewApp(cfg *config.AppConfig) *App {
+	// Register config with packages that need it
+	llm.SetConfig(cfg)
+	filter.SetConfig(cfg)
+	audio.SetConfig(cfg)
+
 	// Initialize default STT engine if model path is provided via env var or exists.
-	// For now we'll just try to load a default path or leave it nil if it fails.
 	var initialEngine stt.STTEngine
-	modelPath := os.Getenv("WHISPER_MODEL_PATH")
+	modelPath := cfg.WhisperModelPath
 	if modelPath == "" {
 		// Try several candidate paths relative to the working directory
 		candidates := []string{
@@ -72,12 +79,9 @@ func NewApp() *App {
 			}
 		}
 	}
-	sttProvider := os.Getenv("STT_PROVIDER")
-	if sttProvider == "groq" {
-		groqKey := os.Getenv("GROQ_API_KEY")
-		groqModel := os.Getenv("STT_MODEL")
-		initialEngine = stt.NewGroqEngine(groqKey, groqModel)
-		log.Printf("☁️ Using Groq Cloud STT Engine (Model: %s)\n", groqModel)
+	if cfg.STTProvider == "groq" {
+		initialEngine = stt.NewGroqEngine(cfg.GroqAPIKey, cfg.STTModel)
+		log.Printf("☁️ Using Groq Cloud STT Engine (Model: %s)\n", cfg.STTModel)
 	} else {
 		validPath, err := stt.EnsureWhisperModel(modelPath)
 		if err != nil {
@@ -122,6 +126,7 @@ func NewApp() *App {
 		sttManager:   stt.NewSTTManager(initialEngine),
 		audioCapture: captureEngine,
 		engine:       eng,
+		cfg:          cfg,
 	}
 }
 
@@ -157,8 +162,7 @@ func (a *App) startup(ctx context.Context) {
 		a.remoteServer.Start()
 	}
 
-	sttProvider := os.Getenv("STT_PROVIDER")
-	if sttProvider == "parakeet" {
+	if a.cfg.STTProvider == "parakeet" {
 		go system.StartBackgroundDownload(ctx, func(progress float32) {
 			// Example: Emit progress event to frontend
 			wailsruntime.EventsEmit(ctx, "download_progress", progress)
@@ -189,11 +193,11 @@ func (a *App) Greet(name string) string {
 // GetSystemStatus returns diagnostic information about the configured models and engines
 func (a *App) GetSystemStatus() map[string]string {
 	return map[string]string{
-		"llm_provider":     os.Getenv("LLM_PROVIDER"),
-		"llm_model":        os.Getenv("LLM_MODEL"),
-		"stt_provider":     os.Getenv("STT_PROVIDER"),
-		"stt_model":        os.Getenv("STT_MODEL"),
-		"local_stt_engine": os.Getenv("LOCAL_STT_ENGINE"),
+		"llm_provider":     a.cfg.LLMProvider,
+		"llm_model":        a.cfg.LLMModel,
+		"stt_provider":     a.cfg.STTProvider,
+		"stt_model":        a.cfg.STTModel,
+		"local_stt_engine": a.cfg.LocalSTTEngine,
 	}
 }
 
@@ -403,11 +407,10 @@ func (a *App) DeleteToken() {
 }
 
 func (a *App) StartOAuthFlow(provider string) error {
-	supabaseURL := os.Getenv("PUBLIC_SUPABASE_URL")
-	if supabaseURL == "" {
+	if a.cfg.PublicSupabaseURL == "" {
 		return fmt.Errorf("PUBLIC_SUPABASE_URL not set")
 	}
-	access, refresh, err := auth.StartOAuthFlow(a.ctx, supabaseURL, provider)
+	access, refresh, err := auth.StartOAuthFlow(a.ctx, a.cfg.PublicSupabaseURL, provider)
 	if err != nil {
 		return fmt.Errorf("OAuth failed: %w", err)
 	}

@@ -3,11 +3,30 @@ package audio
 import (
 	"log"
 	"math"
-	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"wails-app/backend/config"
 )
+
+var (
+	audioCfg   *config.AppConfig
+	audioCfgMu sync.RWMutex
+)
+
+// SetConfig stores the application config for use by audio components.
+func SetConfig(cfg *config.AppConfig) {
+	audioCfgMu.Lock()
+	defer audioCfgMu.Unlock()
+	audioCfg = cfg
+}
+
+func getAudioCfg() *config.AppConfig {
+	audioCfgMu.RLock()
+	defer audioCfgMu.RUnlock()
+	return audioCfg
+}
 
 type AudioProcessor struct {
 	mu               sync.Mutex
@@ -20,8 +39,8 @@ type AudioProcessor struct {
 
 func NewAudioProcessor(callback func([]float32)) *AudioProcessor {
 	silenceThresholdSecs := 1.5
-	if val := os.Getenv("SILENCE_THRESHOLD_SECONDS"); val != "" {
-		if parsed, err := strconv.ParseFloat(val, 64); err == nil {
+	if cfg := getAudioCfg(); cfg != nil && cfg.SilenceThresholdSeconds != "" {
+		if parsed, err := strconv.ParseFloat(cfg.SilenceThresholdSeconds, 64); err == nil {
 			silenceThresholdSecs = parsed
 		}
 	}

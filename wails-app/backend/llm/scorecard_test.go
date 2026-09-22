@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 )
@@ -68,15 +67,9 @@ func TestGenerateScorecard_ValidOutput(t *testing.T) {
 	}))
 	defer server.Close()
 
-	os.Setenv("LLM_PROVIDER", "openai")
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	os.Setenv("LLM_BASE_URL", server.URL)
-	defer func() {
-		os.Unsetenv("LLM_PROVIDER")
-		os.Unsetenv("OPENAI_API_KEY")
-		os.Unsetenv("LLM_BASE_URL")
-	}()
+	SetConfig(mockCfg(server.URL))
+	defer SetConfig(nil)
 
 	sessionData := map[string]interface{}{
 		"turns": []interface{}{
@@ -138,15 +131,9 @@ func TestGenerateScorecard_MarkdownRemoval(t *testing.T) {
 	}))
 	defer server.Close()
 
-	os.Setenv("LLM_PROVIDER", "openai")
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	os.Setenv("LLM_BASE_URL", server.URL)
-	defer func() {
-		os.Unsetenv("LLM_PROVIDER")
-		os.Unsetenv("OPENAI_API_KEY")
-		os.Unsetenv("LLM_BASE_URL")
-	}()
+	SetConfig(mockCfg(server.URL))
+	defer SetConfig(nil)
 
 	// Testing the type struct slice parsing logic branch
 	type MockTurn struct {
@@ -194,15 +181,9 @@ func TestGenerateScorecard_Error(t *testing.T) {
 	}))
 	defer server.Close()
 
-	os.Setenv("LLM_PROVIDER", "openai")
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	os.Setenv("LLM_BASE_URL", server.URL)
-	defer func() {
-		os.Unsetenv("LLM_PROVIDER")
-		os.Unsetenv("OPENAI_API_KEY")
-		os.Unsetenv("LLM_BASE_URL")
-	}()
+	SetConfig(mockCfg(server.URL))
+	defer SetConfig(nil)
 
 	sessionData := map[string]interface{}{
 		"turns": []interface{}{
@@ -225,15 +206,9 @@ func TestGenerateScorecard_StreamError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	os.Setenv("LLM_PROVIDER", "openai")
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	os.Setenv("LLM_BASE_URL", server.URL)
-	defer func() {
-		os.Unsetenv("LLM_PROVIDER")
-		os.Unsetenv("OPENAI_API_KEY")
-		os.Unsetenv("LLM_BASE_URL")
-	}()
+	SetConfig(mockCfg(server.URL))
+	defer SetConfig(nil)
 
 	sessionData := map[string]interface{}{
 		"turns": []interface{}{
@@ -306,15 +281,9 @@ func TestGenerateScorecard_MarkdownRemoval_NoJson(t *testing.T) {
 	}))
 	defer server.Close()
 
-	os.Setenv("LLM_PROVIDER", "openai")
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	os.Setenv("LLM_BASE_URL", server.URL)
-	defer func() {
-		os.Unsetenv("LLM_PROVIDER")
-		os.Unsetenv("OPENAI_API_KEY")
-		os.Unsetenv("LLM_BASE_URL")
-	}()
+	SetConfig(mockCfg(server.URL))
+	defer SetConfig(nil)
 
 	sessionData := map[string]interface{}{
 		"turns": []interface{}{

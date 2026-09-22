@@ -2,13 +2,14 @@ package main
 
 import (
 	"embed"
-	"os"
+	"log"
 
 	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"wails-app/backend/config"
 	"wails-app/products/presenter"
 )
 
@@ -20,8 +21,13 @@ func main() {
 	_ = godotenv.Load(".env.local")
 	_ = godotenv.Load("../.env.local")
 
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
 	// Create an instance of the app structure dynamically
-	app, onStartup, onShutdown := getAppInstance()
+	app, onStartup, onShutdown := getAppInstance(cfg)
 
 	bindList := []interface{}{
 		app,
@@ -32,16 +38,16 @@ func main() {
 	// two instances of the same struct type, otherwise the dummy (with a nil ctx)
 	// will overwrite the real one in the frontend bindings.
 	if _, isPresenter := app.(*presenter.PresenterApp); !isPresenter {
-		bindList = append(bindList, presenter.NewPresenterApp())
+		bindList = append(bindList, presenter.NewPresenterApp(cfg))
 	}
 	if _, isApp := app.(*App); !isApp {
-		bindList = append(bindList, NewApp())
+		bindList = append(bindList, NewApp(cfg))
 	}
 
 	// Stealth mode: controlled by STEALTH_MODE env var.
 	// When true: translucent background + window excluded from taskbar/capture.
 	// When false: opaque background, normal window (for MentorGlass, CounselDesk, etc.)
-	stealthMode := os.Getenv("STEALTH_MODE") == "true"
+	stealthMode := cfg.StealthMode
 
 	bgColour := &options.RGBA{R: 18, G: 18, B: 18, A: 255} // Solid dark background (non-stealth)
 	if stealthMode {
@@ -53,7 +59,7 @@ func main() {
 	}
 
 	// Create application with options
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:       getAppTitle(),
 		Width:       1440,
 		Height:      768,

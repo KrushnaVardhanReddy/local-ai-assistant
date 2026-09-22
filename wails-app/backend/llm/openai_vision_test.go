@@ -8,18 +8,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
+
+	"wails-app/backend/config"
 )
 
 func TestStreamVisionCompletion(t *testing.T) {
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	defer os.Unsetenv("OPENAI_API_KEY")
-
-	// Create mock server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Read and decode the body
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Fatalf("failed to read request body: %v", err)
@@ -36,8 +32,8 @@ func TestStreamVisionCompletion(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	os.Setenv("LLM_BASE_URL", ts.URL)
-	defer os.Unsetenv("LLM_BASE_URL")
+	SetConfig(mockCfg(ts.URL))
+	defer SetConfig(nil)
 
 	var tokens []string
 	var doneCalled bool
@@ -63,12 +59,7 @@ func TestStreamVisionCompletion(t *testing.T) {
 
 func TestStreamVisionCompletion_EmptyPrompt(t *testing.T) {
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	defer os.Unsetenv("OPENAI_API_KEY")
-
-	// Create mock server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Read and decode the body
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Fatalf("failed to read request body: %v", err)
@@ -90,11 +81,10 @@ func TestStreamVisionCompletion_EmptyPrompt(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	os.Setenv("LLM_BASE_URL", ts.URL)
-	defer os.Unsetenv("LLM_BASE_URL")
+	SetConfig(mockCfg(ts.URL))
+	defer SetConfig(nil)
 
 	err := StreamVisionCompletion(context.Background(), "base64data", "", nil, nil)
-
 	if err != nil {
 		t.Fatalf("StreamVisionCompletion failed: %v", err)
 	}
@@ -102,7 +92,8 @@ func TestStreamVisionCompletion_EmptyPrompt(t *testing.T) {
 
 func TestStreamVisionCompletion_NoKey(t *testing.T) {
 	SetProxyToken("")
-	os.Unsetenv("OPENAI_API_KEY")
+	SetConfig(&config.AppConfig{LLMProvider: "openai", LLMBaseURL: "https://api.openai.com/v1", OpenAIAPIKey: ""})
+	defer SetConfig(nil)
 	err := StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for missing API key")
@@ -111,11 +102,9 @@ func TestStreamVisionCompletion_NoKey(t *testing.T) {
 
 func TestStreamVisionCompletion_ErrorCases(t *testing.T) {
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	defer os.Unsetenv("OPENAI_API_KEY")
 
 	// Bad URL
-	os.Setenv("LLM_BASE_URL", "http://inv\x00alid-url")
+	SetConfig(mockCfg("http://inv\x00alid-url"))
 	err := StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for invalid URL")
@@ -125,24 +114,19 @@ func TestStreamVisionCompletion_ErrorCases(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
-	os.Setenv("LLM_BASE_URL", ts.URL)
+	SetConfig(mockCfg(ts.URL))
 	err = StreamVisionCompletion(context.Background(), "b64", "Test", nil, nil)
 	if err == nil {
 		t.Error("Expected error for non-200 status code")
 	}
 	ts.Close()
-	os.Unsetenv("LLM_BASE_URL")
+	SetConfig(nil)
 }
 
 func TestStreamVisionCompletion_JsonParseError(t *testing.T) {
 	SetProxyToken("")
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	defer os.Unsetenv("OPENAI_API_KEY")
-
-	// Create mock server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
-
 		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"Good\"}}]}\n\n")
 		fmt.Fprint(w, "data: invalid_json\n\n")
 		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"bye\"}}]}\n\n")
@@ -150,8 +134,8 @@ func TestStreamVisionCompletion_JsonParseError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	os.Setenv("LLM_BASE_URL", ts.URL)
-	defer os.Unsetenv("LLM_BASE_URL")
+	SetConfig(mockCfg(ts.URL))
+	defer SetConfig(nil)
 
 	var tokens []string
 	err := StreamVisionCompletion(context.Background(), "b64", "Test question", func(token string) {
@@ -168,8 +152,8 @@ func TestStreamVisionCompletion_JsonParseError(t *testing.T) {
 }
 
 func TestStreamVisionCompletion_MockErrors(t *testing.T) {
-	os.Setenv("OPENAI_API_KEY", "test-key")
-	defer os.Unsetenv("OPENAI_API_KEY")
+	SetConfig(mockCfg("https://api.openai.com/v1"))
+	defer SetConfig(nil)
 
 	// jsonMarshal error
 	originalJsonMarshal := jsonMarshal

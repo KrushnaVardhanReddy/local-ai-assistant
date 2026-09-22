@@ -4,10 +4,11 @@ package main
 
 import (
 	"context"
+	"wails-app/backend/config"
 )
 
-func getAppInstance() (interface{}, func(context.Context), func(context.Context)) {
-	app := NewApp()
+func getAppInstance(cfg *config.AppConfig) (interface{}, func(context.Context), func(context.Context)) {
+	app := NewApp(cfg)
 	return app, app.startup, app.shutdown
 }
 

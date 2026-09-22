@@ -1,13 +1,14 @@
 package filter
 
 import (
-	"os"
 	"sync"
 	"testing"
+
+	"wails-app/backend/config"
 )
 
 func TestCheck(t *testing.T) {
-	os.Setenv("MIN_WORDS", "3")
+	SetConfig(&config.AppConfig{MinWords: "3"})
 
 	// Set up mock centroids for Check
 	centroidsOnce = sync.Once{}
@@ -60,7 +61,7 @@ func TestCheck(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.name == "filler (okay) forced enough words" {
-				os.Setenv("MIN_WORDS", "1")
+				SetConfig(&config.AppConfig{MinWords: "1"})
 				tt.text = "Okay..."
 			}
 			if tt.name == "accepted" {
@@ -91,11 +92,11 @@ func TestCheck(t *testing.T) {
 			}
 		})
 	}
-	os.Setenv("MIN_WORDS", "3")
+	SetConfig(&config.AppConfig{MinWords: "3"})
 }
 
 func TestCheckNoiseCentroid(t *testing.T) {
-	os.Setenv("MIN_WORDS", "3")
+	SetConfig(&config.AppConfig{MinWords: "3"})
 
 	// Set up mock centroids for Check
 	centroidsOnce = sync.Once{}
@@ -140,13 +141,13 @@ func TestCosineSimilarity(t *testing.T) {
 }
 
 func TestMinWordsEnv(t *testing.T) {
-	os.Setenv("MIN_WORDS", "invalid")
+	SetConfig(&config.AppConfig{MinWords: "invalid"})
 	res := Check("One two", nil)
 	if res.Reason != "too_short" {
 		t.Errorf("expected too short for invalid min words")
 	}
 
-	os.Setenv("MIN_WORDS", "1")
+	SetConfig(&config.AppConfig{MinWords: "1"})
 	emb := make([]float32, 1)
 	res = Check("Valid", emb)
 	if !res.ShouldSend {
