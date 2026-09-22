@@ -3,7 +3,6 @@ package presenter
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -14,6 +13,7 @@ import (
 	windowadapter "wails-app/adapters/window"
 	"wails-app/backend"
 	"wails-app/backend/audio"
+	"wails-app/backend/config"
 	"wails-app/backend/parser"
 	"wails-app/backend/stt"
 	"wails-app/core/engine"
@@ -85,7 +85,7 @@ type PresenterApp struct {
 	script       string
 }
 
-func NewPresenterApp() *PresenterApp {
+func NewPresenterApp(cfg *config.AppConfig) *PresenterApp {
 	// Build adapters
 	db, _ := backend.NewVectorDB("./data/presenter_cache.db")
 
@@ -101,8 +101,8 @@ func NewPresenterApp() *PresenterApp {
 
 	// STT: prefer Groq if key set, else fall back to local Whisper
 	var sttEngine stt.STTEngine
-	if key := os.Getenv("GROQ_API_KEY"); key != "" {
-		sttEngine = stt.NewGroqEngine(key, "whisper-large-v3-turbo")
+	if cfg != nil && cfg.GroqAPIKey != "" {
+		sttEngine = stt.NewGroqEngine(cfg.GroqAPIKey, "whisper-large-v3-turbo")
 	} else {
 		validPath, err := stt.EnsureWhisperModel("")
 		if err == nil {
