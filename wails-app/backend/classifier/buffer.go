@@ -115,3 +115,17 @@ func (b *QuestionBuffer) Reset() {
 func (b *QuestionBuffer) Stop() {
 	close(b.stopCh)
 }
+
+func (b *QuestionBuffer) SetClassifier(fn func(ctx context.Context, text string) (bool, error)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.classifyFn = fn
+}
+
+func (b *QuestionBuffer) GetChunks() []string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	chunks := make([]string, len(b.chunks))
+	copy(chunks, b.chunks)
+	return chunks
+}
