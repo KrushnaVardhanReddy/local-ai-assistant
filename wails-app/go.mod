@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/asg017/sqlite-vec-go-bindings v0.1.6
+	github.com/caarlos0/env/v11 v11.4.1
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/ebitengine/purego v0.11.0
 	github.com/gen2brain/malgo v0.11.26
@@ -15,6 +16,7 @@ require (
 	github.com/ledongthuc/pdf v0.0.0-20260907135840-6c8c28e0e8a0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/stretchr/testify v1.11.1
 	github.com/sugarme/tokenizer v0.3.0
 	github.com/wailsapp/wails/v2 v2.15.0
 	github.com/yalue/onnxruntime_go v1.9.0
@@ -28,6 +30,7 @@ require (
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/gen2brain/shm v0.1.0 // indirect
 	github.com/go-audio/audio v1.0.0 // indirect
@@ -51,6 +54,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/samber/lo v1.49.1 // indirect
@@ -67,6 +71,7 @@ require (
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 // replace github.com/wailsapp/wails/v2 v2.15.0 => /home/jules/go/pkg/mod
