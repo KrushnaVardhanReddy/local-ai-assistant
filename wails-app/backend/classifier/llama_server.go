@@ -28,6 +28,13 @@ var (
 		"darwin/amd64":  "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-darwin-amd64",
 		"darwin/arm64":  "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-darwin-arm64",
 	}
+
+	LlamaServerFallbackURLs = map[string]string{
+		"linux/amd64":   "https://huggingface.co/datasets/KrushnaVardhanReddy/barnowl-binaries/resolve/main/llama-server-linux-amd64",
+		"windows/amd64": "https://huggingface.co/datasets/KrushnaVardhanReddy/barnowl-binaries/resolve/main/llama-server-windows-amd64.exe",
+		"darwin/amd64":  "https://huggingface.co/datasets/KrushnaVardhanReddy/barnowl-binaries/resolve/main/llama-server-darwin-amd64",
+		"darwin/arm64":  "https://huggingface.co/datasets/KrushnaVardhanReddy/barnowl-binaries/resolve/main/llama-server-darwin-arm64",
+	}
 	LlamaServerPort = 18080
 )
 
@@ -86,7 +93,11 @@ func EnsureLlamaServerBinary(ctx context.Context) (string, error) {
 
 	log.Printf("[Classifier] Downloading llama-server binary for %s...", key)
 	if err := system.DownloadFileAtomic(ctx, url, binPath, nil); err != nil {
-		return "", fmt.Errorf("failed to download llama-server: %w", err)
+		log.Printf("[Classifier] Primary binary download failed (%v), trying fallback...", err)
+		fallbackURL := LlamaServerFallbackURLs[key]
+		if err := system.DownloadFileAtomic(ctx, fallbackURL, binPath, nil); err != nil {
+			return "", fmt.Errorf("failed to download llama-server binary from both primary and fallback: %w", err)
+		}
 	}
 
 	if runtime.GOOS != "windows" {

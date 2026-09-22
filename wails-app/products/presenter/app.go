@@ -135,6 +135,7 @@ func NewPresenterAppWithPorts(eng *engine.StealthEngine, ac driven.AudioCaptureP
 func (p *PresenterApp) Startup(ctx context.Context) {
 	p.ctx = ctx
 	p.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
+	p.engine.Start(ctx)
 
 	// Hide from taskbar for stealth
 	_ = p.window.HideFromTaskbar(ctx)

@@ -26,7 +26,7 @@ func NewQuestionBuffer(onFlush func(string)) *QuestionBuffer {
 		chunks:           make([]string, 0),
 		lastChunkAt:      time.Now(),
 		maxAge:           45 * time.Second,
-		minChunks:        2,
+		minChunks:        1,
 		onFlush:          onFlush,
 		classifyFn:       IsQuestionComplete,
 		stopCh:           make(chan struct{}),

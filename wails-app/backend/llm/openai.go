@@ -100,6 +100,12 @@ func StreamVisionCompletion(ctx context.Context, base64Image string, prompt stri
 	if GetProxyToken() != "" {
 		baseURL = getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy")
 		apiKey = GetProxyToken()
+	} else if os.Getenv("LLM_PROVIDER") == "groq" {
+		apiKey = os.Getenv("GROQ_API_KEY")
+		if apiKey == "" {
+			return fmt.Errorf("GROQ_API_KEY environment variable is not set")
+		}
+		baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.groq.com/openai/v1")
 	} else {
 		apiKey = os.Getenv("OPENAI_API_KEY")
 		if apiKey == "" {
@@ -224,6 +230,12 @@ func StreamCompletionWithContext(ctx context.Context, question string, category 
 	if GetProxyToken() != "" {
 		baseURL = getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy")
 		apiKey = GetProxyToken()
+	} else if os.Getenv("LLM_PROVIDER") == "groq" {
+		apiKey = os.Getenv("GROQ_API_KEY")
+		if apiKey == "" {
+			return fmt.Errorf("GROQ_API_KEY environment variable is not set")
+		}
+		baseURL = getEnvOrDefault("LLM_BASE_URL", "https://api.groq.com/openai/v1")
 	} else {
 		apiKey = os.Getenv("OPENAI_API_KEY")
 		if apiKey == "" {
@@ -258,6 +270,8 @@ func StreamCompletionWithContext(ctx context.Context, question string, category 
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
+	
+	log.Printf("[LLM] Making request to endpoint: %s", endpoint)
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)

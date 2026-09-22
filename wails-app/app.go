@@ -130,6 +130,7 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
+	a.engine.Start(ctx)
 
 	// We no longer hide from taskbar on startup because it breaks Alt+Tab
 	// during the Auth flow. Instead, the frontend calls HideFromTaskbar()
