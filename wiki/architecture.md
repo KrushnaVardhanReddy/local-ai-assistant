@@ -83,6 +83,10 @@ Every user gets a unique referral code auto-generated when their entitlements ro
 When a new user buys the Lifetime License using someone's referral code, the referrer gets their `allowed_devices` count incremented (e.g. from 1 to 2, permanently unlocking a 2nd device).
 The new buyer gets a $10 discount via a Paddle coupon. Device limit enforcement is done in the frontend during `syncUserEntitlements()`.
 
+The UI surfaces for the referral engine include:
+- A "Refer a Friend" panel in the `Settings.svelte` tab for users to copy their shareable code.
+- A "Have a referral code?" input in the `AuthModal.svelte` checkout footer for new users to enter their referrer's code before purchase, passed as custom data to Paddle.
+
 ## Supabase Deployment
 Supabase production setup is fully automated. The SQL migrations (e.g., creating `dev_allowlist` and `user_entitlements` tables) and Edge Functions (`llm-proxy`) can be automatically deployed using the included bash script.
 Run `scripts/deploy_supabase.sh` to link your Supabase project, push all schema migrations, deploy Edge Functions, and set required secrets.
