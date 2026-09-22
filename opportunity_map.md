@@ -1,5 +1,5 @@
 # 🔭 Stealth Tech Opportunity Map — Validated & Updated
-*Last updated: September 2026 — post competitive research*
+*Last updated: September 2026 — post competitive research + LinguaOwl & SalesFloor pivot analysis*
 
 > **Core tech:** OS-level invisible window + local Whisper STT + LLM + hotkeys
 > This is a platform, not just one product.
@@ -41,8 +41,10 @@ The previous version of this document had an internal contradiction: the scoreca
 | 🟡 Wave 2 | **4th** | **GovBrief** | Govt / PR spokespeople | 🟢 Very Low (confirmed) | 🟢 Very Strong | 4–6 weeks | $$$$ | GovBrief.us exists but is a federal contracting platform — completely different. Real-time spokesperson HUD is still blue ocean. |
 | 🔵 Wave 3 | **5th** | **CounselDesk** | Solo / small firm attorneys | 🟡 Medium (Verbit Legal Visor, Filevine, Prevail CheckMate) | 🟢 Strong — local-only = no SOC2 required for small firms | 6–8 weeks | $$$$ | Verbit Legal Visor is cloud + ISO 27001/SOC2/HIPAA. Small firms can't afford it. Our $79–$149/mo local-first tool is the gap. Raise target price from $29 to $99–$149/mo. |
 | 🔵 Wave 3 | **6th** | **ClinicHUD** | Telehealth doctors | 🟡 Medium (Nuance DAX, Abridge, Suki, DeepScribe — all cloud) | 🟢 Very Strong — HIPAA by design | 6–8 weeks | $$$$ | Ambient AI scribing confirmed as highest-ROI clinical AI feature in 2026. All competitors cloud-based $300+/mo/seat. Our local-only = zero BAA complexity for solo practices. |
-| 🔵 Wave 3 | **7th** | **LangShadow** | Language learners | 🔴 Crowded (Duolingo Max Video Call, Langua, JotMe, Praktika) | 🟡 Moderate — live-call invisible HUD is unique | 5–6 weeks | $$ | Market is saturated at the app level. Unique angle is invisible overlay during real business calls / iTalki sessions — no competitor does that. Reframe pitch accordingly. |
-| 🔴 Wave 4 | **8th** | **AgentPrompt** | Call center agents | 🔴 High (Balto, Level AI, Glia) | 🟡 Moderate | 8–10 weeks | $$$$$ | Year 2. Requires SOC2, FINRA/TCPA, SIP integration, enterprise sales. IT policy on locked corporate machines is the real blocker. |
+| 🔵 Wave 3 | **7th** | **LangShadow** | Non-native business professionals | 🔴 Crowded at app level (Duolingo Max, Langua, Praktika) | 🟡 Moderate — live-call invisible HUD is unique | 5–6 weeks | $$ | Repositioned: NOT a learner app. Real-time invisible assistant for non-native English speakers on live Zoom/Meet calls. No competitor does this. Viral in immigrant professional communities. |
+| 🔵 Wave 3 | **8th** | **SalesFloor Copilot** | B2B sales reps / SDRs | 🟡 Medium (Gong, Chorus, Salesloft — all post-call analysis) | 🟢 Strong — real-time is uncontested | 4–5 weeks | $$$$ | Gong/Chorus are POST-call tools. Nothing sits invisibly on a live cold call and surfaces objection responses, battle cards, and case studies in real time. High-ARPU: $49–$79/mo per rep. |
+| 🔴 Wave 4 | **9th** | **AgentPrompt** | Call center agents | 🔴 High (Balto, Level AI, Glia) | 🟡 Moderate | 8–10 weeks | $$$$$ | Year 2. Requires SOC2, FINRA/TCPA, SIP integration, enterprise sales. IT policy on locked corporate machines is the real blocker. |
+| 🟣 Wave 5 🔭 | **Future** | **LinguaOwl** | Language learners (stealth tutor) | 🔴 Crowded (Duolingo, Babbel, Pimsleur) | 🟢 Strong — stealth overlay during real media is genuinely unique | 3–4 weeks | $$ | Invisible tutor overlay while watching Netflix/YouTube in target language. User speaks back, AI grades pronunciation + grammar. No competitor does this. Viral demo potential. Pull forward if LangShadow gets traction. |
 | 🟣 Wave 5 🔭 | **Future** | **StreamerHUD** | Twitch/YouTube streamers | 🟡 Medium (StreamElements, Streamlabs, OBS plugins — none are invisible-to-capture) | 🟢 Strong — invisible to OBS capture is genuinely novel | 3–4 weeks | $$$ | No competitor does OS-level capture exclusion for streamers. Viral demo potential. Pull forward if BarnOwl gets early traction. |
 | 🟣 Wave 5 🔭 | **Future** | **TabletopDM** | D&D / TTRPG DMs | 🟢 Very Low | 🟢 Strong | 4–5 weeks | $$ | Passionate community, zero software competition, LLM panic button angle is compelling |
 | 🟣 Wave 5 🔭 | **Future** | **LyricsHUD** | Live singers / performers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $$ | No STT needed. Foot-pedal scroll. Niche but zero competition. |
@@ -184,7 +186,7 @@ The previous version of this document had an internal contradiction: the scoreca
 
 ---
 
-### 6. 🌍 LangShadow — Language Learners *(Repositioned)*
+### 6. 🌍 LangShadow — Non-Native Business Professionals *(Repositioned)*
 
 **Market reality as of 2026:** Duolingo Max (Video Call + AI Roleplay), Langua ($19.99/mo, 23 languages), JotMe, Praktika ($8/mo), and italki all compete for language learners. The app market is genuinely crowded.
 
@@ -193,6 +195,48 @@ The previous version of this document had an internal contradiction: the scoreca
 **Repositioned pitch:** "LangShadow is not a learning app. It's a real-time business call assistant for non-native professionals." Target: immigrant professionals, ESL business users, international remote workers. Not Duolingo's audience at all.
 
 **New pricing:** $14–$19/month. Don't compete on the learner price tier — compete on professional productivity.
+
+---
+
+### 7. 💼 SalesFloor Copilot — B2B Sales Reps / SDRs *(New Entry)*
+
+**Confirmed competition as of 2026:**
+
+| Competitor | Type | Price | Weakness |
+|---|---|---|---|
+| Gong | Call intelligence | $100+/mo/seat | **Post-call only** — recording and analysis after the fact |
+| Chorus (ZoomInfo) | Call intelligence | Enterprise | Post-call analysis, no live HUD |
+| Salesloft | Sales engagement | $125+/mo/seat | Cadence/workflow tool, not a live overlay |
+| Balto | Real-time agent guidance | Enterprise | Contact center only, requires telephony system integration |
+| Cresta | Real-time coaching | Enterprise | Enterprise contact centers only, not individual desktop reps |
+
+**Confirmed gap:** Gong and Chorus are the market leaders but are *post-call* tools. Nothing exists for a desktop sales rep that sits invisibly during a live outbound call and surfaces objection responses, battle cards, pricing tiers, and relevant case studies in real time.
+
+**Wedge:** 100% local = no call recording required. Works in fintech and healthcare sales where prospects explicitly forbid third-party cloud recording tools. Gong is blocked at many enterprise prospects — this fills that gap.
+
+**Pricing:** $49–$79/month per rep. Sales orgs pay top dollar for tools that close deals. A team of 5 reps = $250–$395 MRR.
+
+---
+
+### 8. 🦉 LinguaOwl — Language Learning Tutor *(New Entry, Wave 5)*
+
+**The idea:** Use the BarnOwl engine as a stealth language tutor overlay while the user watches real media (Netflix, YouTube) in their target language. The user repeats or speaks a phrase — the AI grades pronunciation and corrects grammar in real time.
+
+**Why this is different from all existing apps:**
+
+| Capability | Duolingo / Babbel / Pimsleur | LinguaOwl (our approach) |
+|---|---|---|
+| Learning environment | Synthetic exercises | Real media (Netflix, YouTube, podcasts) |
+| Overlay during media consumption | ❌ Cannot | ✅ Stealth overlay — invisible to capture |
+| Pronunciation feedback | Limited (Duolingo Max only) | ✅ Whisper STT grades live speech |
+| Grammar correction | Multiple choice | ✅ LLM corrects natural speech in context |
+| Works offline | ❌ | ✅ Fully local |
+
+**The viral demo:** A 30-second screen recording showing the overlay appearing over a Spanish Netflix scene — user speaks a phrase, AI grades it instantly — would be highly shareable. No one has ever seen a product do this.
+
+**Build prerequisite:** TTS (text-to-speech) output so the AI can *speak* correct pronunciation back to the user. This is the main delta vs. a simple prompt swap.
+
+**Pricing:** $9–$14/month (learner tier). Keep price low — acquisition is through virality, not high ARPU. Upgrade path to LangShadow (business call tier) is natural.
 
 ---
 
@@ -254,6 +298,12 @@ WAVE 3 (Month 6–12) — High-Value Professionals
      → No competitor sits invisibly on a live Zoom call for non-native speakers
      → Revenue: $14–$19/mo, viral in immigrant professional communities
 
+  8. SalesFloor Copilot (B2B sales reps / SDRs)
+     → Real-time invisible battle card + objection surfacing during live sales calls
+     → Gong/Chorus are POST-call tools — this fills the live-call gap they can't
+     → No call recording needed = works in regulated industries where Gong is blocked
+     → Revenue: $49–$79/mo per rep, team plans
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 WAVE 4 (Year 2) — Enterprise Play
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -269,6 +319,9 @@ WAVE 5 (Explorers — Pull Forward if Early Traction)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   StreamerHUD — Consider pulling to Wave 2 for brand/viral reach
+  LinguaOwl   — Stealth tutor overlay during Netflix/YouTube in target language.
+               Pull forward if LangShadow gets early traction (shares 90% of the codebase).
+               Requires TTS to be wired up before shipping.
   TabletopDM  — Passionate community, near-zero build effort
   LyricsHUD   — Niche, but genuinely zero competition
   RTS Co-Pilot — Lowest priority
@@ -304,5 +357,8 @@ Per-product variables:
 - [ ] **Update BarnOwl pitch** to explicitly reference Cluely data breach as a trust differentiator
 - [ ] **Evaluate StreamerHUD** — pull forward to Wave 2 as a viral brand play?
 - [ ] **Reframe LangShadow** from "learner app" to "non-native professional call assistant" in all copy
+- [ ] **Validate SalesFloor Copilot gap** — talk to 5 B2B sales reps: do they want a real-time overlay, or are they happy with Gong post-call? Confirm the live-call gap is real before building.
+- [ ] **LinguaOwl TTS** — wire up TTS engine before LinguaOwl can ship (AI must speak pronunciation examples back). Decide between local TTS (Piper, Coqui) vs. cloud TTS fallback.
+- [ ] **LinguaOwl viral demo** — record a 30s clip of the overlay appearing during a Spanish Netflix scene. This is the marketing asset, not the product.
 - [ ] **Add platform story** — single pricing page showing all skins under one "Stealth HUD Platform" umbrella for future bundling
 - [ ] **Clarify platform priority** — confirm Windows-first given enterprise buyer profile (legal, medical, gov buyers are predominantly Windows)

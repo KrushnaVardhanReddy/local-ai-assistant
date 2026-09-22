@@ -81,4 +81,8 @@
 | P67-T3 | `wails-app/backend/lib/engine/engine.go`, `manager.go` | **Engine Wiring** — Remove the existing silence/timer-based LLM trigger. Wire `QuestionBuffer.AddChunk()` into the transcript pipeline. Start/stop the `DefaultLlamaServer` alongside the engine lifecycle. Preserve ManualMode guard and ClearState buffer reset. Graceful degradation: if llama-server fails to start, the 45s watchdog keeps the app functional. | ✅ | #237 |
 | P67-T4 | `wails-app/backend/llm/prompts.go` | **Conversational Context Window** — Add `BuildContextBlock(turns []Turn) string` and `BuildFullSystemPrompt(category string, turns []Turn) string` to the prompt builder. Injects the last 3 completed turns (Q + AI answer) as a compact, token-limited context block into every LLM system prompt. Fixes follow-up questions like "Why?" or "Explain that" that reference previous turns. Independent of T1/T2/T3 — can run in parallel. | ✅ | #235 |
 
+## Phase 68 — Environment Configuration Refactor ⚙️
 
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|-----|
+| P68-T1 | `wails-app/backend/config/config.go`, `main.go`, `openai.go` | **Environment Configuration Refactoring** — Introduce `caarlos0/env` to parse environment variables into a strongly-typed `AppConfig` struct. Implement a fail-fast Must pattern on startup. Replace scattered `os.Getenv` and `getEnvOrDefault` calls across the codebase, injecting `AppConfig` instead. | 🔄 | — |
