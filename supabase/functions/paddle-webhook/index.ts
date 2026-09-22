@@ -119,6 +119,7 @@ serve(async (req: Request) => {
         const items = data.items || [];
         const productId = items[0]?.price?.product_id || items[0]?.price?.name || "unknown";
 
+        // 1. Update the buyer's own entitlement row as before
         const { error } = await supabase
           .from("user_entitlements")
           .update({
@@ -128,6 +129,50 @@ serve(async (req: Request) => {
           .eq("user_id", userId);
 
         if (error) console.error("Transaction upsert error:", error);
+
+        // 2. Referral Reward Logic
+        // The frontend injects referred_by into customData when user entered a code.
+        const referralCode: string | undefined = data.custom_data?.referred_by;
+
+        if (referralCode) {
+          // Record who referred the new buyer (for analytics/audit)
+          await supabase
+            .from("user_entitlements")
+            .update({ referred_by_code: referralCode })
+            .eq("user_id", userId);
+
+          // Find the referrer by their referral_code.
+          // Only grant reward if it hasn't been granted yet (idempotency guard).
+          const { data: referrer, error: referrerErr } = await supabase
+            .from("user_entitlements")
+            .select("user_id, allowed_devices, referral_rewarded_at")
+            .eq("referral_code", referralCode)
+            .maybeSingle();
+
+          if (referrerErr) {
+            console.error("Referrer lookup error:", referrerErr);
+          } else if (referrer && !referrer.referral_rewarded_at) {
+            // Grant reward: unlock 2nd device and stamp the timestamp.
+            const { error: rewardErr } = await supabase
+              .from("user_entitlements")
+              .update({
+                allowed_devices: 2,
+                referral_rewarded_at: new Date().toISOString(),
+              })
+              .eq("user_id", referrer.user_id);
+
+            if (rewardErr) {
+              console.error("Failed to grant referral reward:", rewardErr);
+            } else {
+              console.log(`✅ Referral reward granted to user ${referrer.user_id} — 2nd device unlocked.`);
+            }
+          } else if (referrer && referrer.referral_rewarded_at) {
+            console.log(`ℹ️ Referral reward already granted to ${referrer.user_id} at ${referrer.referral_rewarded_at}. Skipping.`);
+          } else {
+            console.warn(`⚠️ Referral code "${referralCode}" not found in user_entitlements.`);
+          }
+        }
+
         break;
       }
 
