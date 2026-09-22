@@ -82,3 +82,8 @@ DETAILED SPECIFICATION
 
 1. Update tests that previously used `os.Setenv` to instead initialize a mock `&config.AppConfig{...}` and pass it into the functions or adapters being tested.
 2. Ensure no test modifies global `os.Environ()` variables.
+
+─── 5. SPECIFIC ADVICE & TROUBLESHOOTING ──────────────
+
+1. **Test Mocks (`openai_test.go`)**: When replacing `os.Setenv` setup strings with `config.AppConfig`, be very careful with automated string replacements (like python/sed). Go string literals (specifically JSON blocks with `\n` inside backticks vs double quotes) can easily get malformed. If you encounter JSON Parse Errors in tests, fix the syntax manually.
+2. **Component Injection (`processor.go`, `filter.go`)**: Do not inject `cfg *config.AppConfig` globally just for consistency. Only inject `cfg` into components (like `processor.go` or `filter.go`) if they *actually read* environment variables (e.g. `STEALTH_MODE`, `RAG_ENABLED`). If they just perform pure data transformation without needing the config, leave their signatures alone.
