@@ -26,3 +26,5 @@ Append-only chronological record of all changes to this wiki.
 - Created `wiki/adversarial-testing.md` to document the cat-and-mouse dynamic
 - Updated `wiki/index.md`
 
+## [2026-09-22] update | Architecture
+- Documented addition of the Conversational Context Window (rolling turn memory) in `architecture.md`

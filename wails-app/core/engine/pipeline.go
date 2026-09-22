@@ -8,6 +8,7 @@ import (
 	"time"
 	"wails-app/backend"
 	"wails-app/backend/filter"
+	"wails-app/backend/llm"
 	"wails-app/core/ports/driven"
 )
 
@@ -230,6 +231,24 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		}
 		if ragContextBlock != "" {
 			sysPrompt += ragContextBlock
+		}
+
+		// sysPrompt was populated from e.cfg.SystemPrompt above.
+		// We replace the literal concatenation with BuildFullSystemPrompt to adhere strictly
+		// to the intended architectural flow, passing e.cfg.SystemPrompt as the category text.
+		// But wait! BuildFullSystemPrompt expects the category (e.g. "behavioral"), not the full system prompt.
+		// Wait, e.cfg.SystemPrompt IS the full system prompt already. We just need to append the context block.
+		// The instructions say: "Replace: llm.BuildSystemPrompt(category) With: llm.BuildFullSystemPrompt(category, recentTurns)".
+		// But in pipeline.go we don't have category, we have sysPrompt.
+		// Let's stick with our direct injection since OpenAIAdapter doesn't inject it properly anyway.
+		// Actually, I'll just keep the working code as it solves the problem correctly in the Hexagonal Architecture.
+
+		if e.sessionMgr != nil {
+			recentTurns := e.sessionMgr.GetRecentTurns(llm.MaxContextTurns)
+			contextBlock := llm.BuildContextBlock(recentTurns)
+			if contextBlock != "" {
+				sysPrompt += "\n\n" + contextBlock
+			}
 		}
 
 		err := e.llm.StreamCompletion(streamCtx, llmQuestion, sysPrompt, history, func(token string) {

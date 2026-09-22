@@ -33,7 +33,7 @@ The Local AI Assistant operates on a **Hexagonal Architecture** (Ports and Adapt
 ## 1. The Core Domain (`wails-app/core/engine/`)
 The `StealthEngine` is the brain. It is responsible for:
 - Orchestrating native system audio loopback capture, Voice Activity Detection (VAD), and routing to STT (via Groq or local Whisper bindings).
-- Constructing prompts and routing them to the LLM.
+- Constructing prompts and routing them to the LLM. Includes injecting a **Conversational Context Window** (rolling turn memory, default 3 turns) into the system prompt to allow the LLM to understand contextual follow-up questions.
 - Handling local semantic caching to save on API costs.
 - **Rule:** The engine cannot import *any* external libraries or Wails packages. It only communicates through interface definitions located in `core/ports/`.
 
