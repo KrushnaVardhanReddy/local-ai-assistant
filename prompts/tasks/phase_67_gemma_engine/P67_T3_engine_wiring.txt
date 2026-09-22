@@ -1,0 +1,158 @@
+MANDATORY RULES — VIOLATION = REJECTED PR:
+- NEVER stub, mock, or TODO existing implementation code. Write real, working code only.
+- Commit message must start with "jules: " prefix.
+- Use clean module design and idiomatic Go architecture. No spaghetti code.
+- NEVER hardcode secrets, API keys, or local paths.
+- UNIT TESTS REQUIRED: For every Go file you modify, write or update _test.go.
+- ALWAYS UPDATE THE WIKI: Update relevant markdown files in wiki/.
+
+Project: Local AI Assistant (BarnOwl AI)
+Tech stack: Go 1.25+, Wails v2, whisper.cpp, onnxruntime_go, Svelte 5 frontend
+
+════════════════════════════════════════════════════════════════
+TASK: P67-T3 — Wire Gemma Buffer into the StealthEngine Pipeline
+════════════════════════════════════════════════════════════════
+
+OBJECTIVE:
+Wire the QuestionBuffer (from P67-T2) and the LlamaServerProcess (from P67-T1) into
+the existing StealthEngine audio pipeline. Replace the existing dumb silence-heuristic
+LLM trigger with the Gemma-powered intelligent buffer. Start/stop the llama-server
+subprocess alongside the engine's own lifecycle.
+
+PREREQUISITES: Both P67-T1 AND P67-T2 must be merged before this task.
+This task depends on:
+  wails-app/backend/classifier/gemma.go        → IsQuestionComplete()
+  wails-app/backend/classifier/llama_server.go → DefaultLlamaServer
+  wails-app/backend/classifier/buffer.go       → QuestionBuffer
+
+════════════════════════════════════════════════════════════════
+BACKGROUND / ARCHITECTURE CONTEXT
+════════════════════════════════════════════════════════════════
+
+The StealthEngine is located in: wails-app/backend/lib/engine/
+Key files to understand before editing:
+  - engine.go        (main struct, New(), Start(), Stop())
+  - manager.go       (where transcript chunks are received and LLM is triggered)
+
+The Wails app bridges into the engine via: wails-app/app.go
+  - app.go line ~635: a.engine.ProcessAudio(samples) — this feeds raw audio into the engine.
+  - The engine's audio pipeline runs Whisper STT and then emits transcript chunks.
+
+CURRENT TRIGGER MECHANISM (to be REPLACED):
+In manager.go or engine.go, there is currently a time-based or silence-based heuristic
+that decides when to call the LLM. You will find it by searching for:
+  - timer, time.After, time.NewTicker related to "transcript" or "question"
+  - Any call to llm.StreamCompletion or similar that is triggered by audio/transcript events.
+
+YOUR JOB: Replace that timer-based trigger with the QuestionBuffer.
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY
+════════════════════════════════════════════════════════════════
+
+MODIFY: wails-app/backend/lib/engine/engine.go
+MODIFY: wails-app/backend/lib/engine/manager.go  (or wherever transcripts are currently routed)
+
+DO NOT modify any other files. app.go, audio pipeline, STT, and LLM files must NOT be changed.
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── CHANGES TO engine.go ─────────────────────────────────────────────────────────
+
+1. Add a field to the StealthEngine struct:
+     questionBuffer *classifier.QuestionBuffer
+
+2. In the New() constructor:
+   - Create a QuestionBuffer:
+       e.questionBuffer = classifier.NewQuestionBuffer(func(aggregatedQuestion string) {
+           // This callback is called by Gemma when the question is detected as complete.
+           // Call the existing LLM trigger logic here with the aggregatedQuestion as input.
+           // This replaces whatever was previously calling the LLM from the timer.
+           e.triggerLLMWithQuestion(aggregatedQuestion)
+       })
+
+3. Create a new private method: triggerLLMWithQuestion(question string)
+   - This method contains exactly the logic that was previously triggered by the old timer.
+   - It should call session.StartTurn(question), then invoke the LLM streaming pipeline
+     exactly as it was before, passing the question as the user message.
+   - IMPORTANT: Do not rewrite the LLM call logic — simply MOVE it into this method.
+
+4. In the Start(ctx context.Context) method of the engine:
+   - After the engine starts successfully, also start the llama-server sidecar:
+       if err := classifier.DefaultLlamaServer.Start(ctx); err != nil {
+           log.Printf("[Engine] Gemma sidecar unavailable (turn-detection disabled): %v", err)
+           // Non-fatal: the buffer will still flush via the 45-second failsafe watchdog.
+       }
+   - CRITICAL: If the llama-server fails to start, the engine MUST still work normally.
+     The QuestionBuffer's 45-second failsafe watchdog will ensure LLM triggers still happen.
+
+5. In the Stop() method of the engine:
+   - Call e.questionBuffer.Stop() to shut down the watchdog goroutine.
+   - Call classifier.DefaultLlamaServer.Stop() to kill the llama-server subprocess.
+
+─── CHANGES TO manager.go ────────────────────────────────────────────────────────
+
+1. Find the place where a transcript chunk string is currently handed off to trigger the LLM.
+   Look for calls like: go e.processTranscript(text) or time.AfterFunc or similar.
+
+2. REPLACE that trigger logic with:
+       e.questionBuffer.AddChunk(transcriptChunk)
+   
+   That's it. The buffer will asynchronously call Gemma and flush when appropriate.
+
+3. REMOVE the old timer/silence-heuristic trigger. If there is a time.After or ticker
+   that was used to trigger LLM calls, remove it and replace with the buffer approach above.
+
+════════════════════════════════════════════════════════════════
+IMPORTANT BEHAVIORS TO PRESERVE
+════════════════════════════════════════════════════════════════
+
+1. ManualMode: The existing SetManualMode(bool) functionality in app.go must still work.
+   When manualMode is true, the engine should NOT add chunks to the buffer (or the buffer
+   should be disabled). Check the existing manualMode guard and ensure it wraps the
+   questionBuffer.AddChunk() call.
+
+2. ClearState: When the user calls ClearState() (app.go line ~213), also call
+   e.questionBuffer.Reset() to discard accumulated buffer chunks.
+
+3. Graceful degradation: If DefaultLlamaServer fails to start (network down, binary missing),
+   the app must still function. The 45-second failsafe in QuestionBuffer ensures the LLM
+   is always triggered eventually, just without intelligent turn detection.
+
+════════════════════════════════════════════════════════════════
+TESTING REQUIREMENTS
+════════════════════════════════════════════════════════════════
+
+MODIFY: wails-app/backend/lib/engine/engine_test.go (or manager_test.go if it exists)
+
+Add these tests:
+
+TestEngine_QuestionBuffer_Integration:
+  - Create a StealthEngine with a mock classifyFn injected into its QuestionBuffer
+    (you may need to expose a SetClassifier(fn) method on QuestionBuffer for testability).
+  - The mock classifyFn returns true after 3 chunks.
+  - Feed 3 transcript chunks via the internal transcript routing path.
+  - Assert that triggerLLMWithQuestion is called with all 3 chunks joined.
+  - Assert SessionManager.StartTurn() was called with the aggregated text.
+
+TestEngine_ClearState_ResetsBuffer:
+  - Add 3 chunks to the buffer via the internal path.
+  - Call engine.ClearState() (or the internal equivalent).
+  - Assert the buffer is empty after ClearState.
+
+TestEngine_ManualMode_SkipsBuffer:
+  - Enable manualMode on the engine.
+  - Feed 3 transcript chunks.
+  - Assert that the buffer receives ZERO chunks (AddChunk was never called).
+
+════════════════════════════════════════════════════════════════
+VERIFICATION
+════════════════════════════════════════════════════════════════
+- cd wails-app && go build ./... must succeed with zero errors.
+- cd wails-app && go test ./backend/lib/engine/... must pass all existing and new tests.
+- cd wails-app && go test -race ./backend/lib/engine/... must pass (no race conditions).
+- Manual verification: Run the app locally. Speak a sentence. Pause for 2 seconds.
+  Speak a second fragment. The LLM should NOT trigger after the first pause.
+  The LLM SHOULD trigger after the complete question is detected by Gemma.

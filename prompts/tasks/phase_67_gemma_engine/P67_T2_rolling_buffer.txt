@@ -1,0 +1,151 @@
+MANDATORY RULES — VIOLATION = REJECTED PR:
+- NEVER stub, mock, or TODO existing implementation code. Write real, working code only.
+- Commit message must start with "jules: " prefix.
+- Use clean module design and idiomatic Go architecture. No spaghetti code.
+- NEVER hardcode secrets, API keys, or local paths — always read from environment variables or OS user-config dirs.
+- UNIT TESTS REQUIRED: For every Go file you create or modify, write an accompanying _test.go file.
+- ALWAYS UPDATE THE WIKI: Update relevant markdown files in wiki/.
+
+Project: Local AI Assistant (BarnOwl AI)
+Tech stack: Go 1.25+, Wails v2, whisper.cpp, onnxruntime_go, Svelte 5 frontend
+
+════════════════════════════════════════════════════════════════
+TASK: P67-T2 — Rolling Question Buffer with Gemma Turn-Detection
+════════════════════════════════════════════════════════════════
+
+OBJECTIVE:
+Replace the current dumb "silence timer" approach to triggering LLM generation with an
+intelligent rolling buffer that uses the Gemma 3 270M classifier (built in P67-T1) to
+detect when an interviewer has TRULY finished asking their question — even when they pause,
+stutter, or ask multi-part questions with natural breaks.
+
+PREREQUISITE: P67-T1 must be merged first. This task depends on:
+  wails-app/backend/classifier/gemma.go → IsQuestionComplete(ctx, buffer string) (bool, error)
+  wails-app/backend/classifier/llama_server.go → DefaultLlamaServer
+
+════════════════════════════════════════════════════════════════
+BACKGROUND / ARCHITECTURE CONTEXT
+════════════════════════════════════════════════════════════════
+
+Currently, in wails-app/backend/lib/engine/ (the StealthEngine), audio transcripts from
+Whisper STT are emitted in chunks. The engine decides when to send them to the Cloud LLM
+using a basic silence/timer heuristic. This causes two problems:
+  1. FALSE TRIGGERS: The LLM fires mid-question during a pause.
+  2. FRAGMENTED CONTEXT: When an interviewer asks a multi-part question with breaks,
+     only the last fragment is sent to the LLM, losing earlier context.
+
+The Rolling Buffer solves both problems:
+  - It accumulates ALL transcript chunks since the last LLM trigger into one buffer.
+  - It calls Gemma's IsQuestionComplete() every time a new chunk arrives.
+  - Only when Gemma returns TRUE does it flush the buffer to the LLM and reset.
+  - A hard 45-second failsafe ensures the buffer always flushes eventually.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[NEW]    wails-app/backend/classifier/buffer.go
+[NEW]    wails-app/backend/classifier/buffer_test.go
+
+IMPORTANT: Do NOT modify any other files in this PR. The buffer is self-contained.
+The wiring into the engine is done in P67-T3 to avoid merge conflicts.
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── FILE: wails-app/backend/classifier/buffer.go ────────────────────────────────
+
+Package: classifier
+
+STRUCT: QuestionBuffer
+Fields:
+  - mu               sync.Mutex
+  - chunks           []string          // all accumulated transcript chunks since last flush
+  - lastChunkAt      time.Time         // timestamp of the most recent chunk addition
+  - maxAge           time.Duration     // hard failsafe limit (default: 45 seconds)
+  - minChunks        int               // minimum chunks before Gemma is consulted (default: 2)
+  - onFlush          func(string)      // callback called with the full aggregated text when flushed
+  - classifyFn       func(ctx context.Context, text string) (bool, error)  // injectable for testing
+
+CONSTRUCTOR: NewQuestionBuffer(onFlush func(string)) *QuestionBuffer
+  - Set maxAge to 45 * time.Second.
+  - Set minChunks to 2.
+  - Set classifyFn to classifier.IsQuestionComplete (the real Gemma function from gemma.go).
+  - Start an internal goroutine (the "failsafe watchdog") using a time.Ticker that fires
+    every 5 seconds. In the watchdog, if the buffer is non-empty AND time.Since(lastChunkAt)
+    > maxAge, call flush().
+
+METHOD: (b *QuestionBuffer) AddChunk(chunk string)
+  - Acquire lock. Append chunk to b.chunks. Update b.lastChunkAt to time.Now(). Release lock.
+  - If len(b.chunks) < b.minChunks, return immediately (not enough context for Gemma yet).
+  - Build the full aggregated text: strings.Join(b.chunks, " ").
+  - Call b.classifyFn(context.Background(), aggregatedText) in a NEW goroutine to avoid
+    blocking the audio pipeline. The goroutine should:
+      1. Call classifyFn with a 3-second context timeout.
+      2. If result is true → call b.flush().
+      3. If error → log it with [Buffer] prefix and continue (do NOT crash).
+
+METHOD: (b *QuestionBuffer) flush() (private)
+  - Acquire lock.
+  - If chunks is empty, return.
+  - Build fullText = strings.Join(b.chunks, " ").
+  - Reset b.chunks to empty slice.
+  - Release lock.
+  - Call b.onFlush(fullText) — this is the callback to trigger the Cloud LLM.
+
+METHOD: (b *QuestionBuffer) Reset()
+  - Acquire lock. Clear b.chunks. Release lock.
+  - Use this to clear the buffer when the user manually stops a session.
+
+METHOD: (b *QuestionBuffer) Stop()
+  - Signal the internal watchdog goroutine to stop (use a done channel).
+
+════════════════════════════════════════════════════════════════
+TESTING REQUIREMENTS (buffer_test.go)
+════════════════════════════════════════════════════════════════
+
+All tests MUST inject a mock classifyFn via a helper. Do NOT start real Gemma/llama-server.
+
+TestQuestionBuffer_FlushesOnTrueClassification:
+  - Create a buffer with a mock classifyFn that always returns (true, nil).
+  - Add 3 chunks: "Tell me", "about Redis", "caching please."
+  - Assert the onFlush callback is called exactly once with all 3 chunks joined.
+  - Assert the buffer is empty after flush.
+
+TestQuestionBuffer_DoesNotFlushOnFalse:
+  - Create a buffer with a mock classifyFn that always returns (false, nil).
+  - Add 3 chunks.
+  - Wait 200ms.
+  - Assert onFlush is NEVER called.
+  - Assert buffer still contains all 3 chunks.
+
+TestQuestionBuffer_MinChunksGuard:
+  - Create a buffer with minChunks=3 and a mock classifyFn that returns (true, nil).
+  - Add only 1 chunk.
+  - Assert classifyFn is NEVER called (not enough context yet).
+  - Assert onFlush is NEVER called.
+
+TestQuestionBuffer_FailsafeWatchdog:
+  - Create a buffer with maxAge set to 100ms (very short for testing) and a mock
+    classifyFn that always returns (false, nil) (so Gemma would never flush it).
+  - Add 3 chunks. Wait 300ms.
+  - Assert onFlush IS called by the watchdog failsafe.
+  - Assert buffer is empty after the failsafe flush.
+
+TestQuestionBuffer_Reset:
+  - Add 5 chunks. Call Reset(). Assert chunks is empty and onFlush was never called.
+
+TestQuestionBuffer_ClassifyError:
+  - Set classifyFn to return ("", fmt.Errorf("gemma down")).
+  - Add 3 chunks. Wait 200ms.
+  - Assert the app does NOT crash (no panic).
+  - Assert onFlush is NEVER called due to error.
+
+════════════════════════════════════════════════════════════════
+VERIFICATION
+════════════════════════════════════════════════════════════════
+- cd wails-app && go build ./... must succeed.
+- cd wails-app && go test ./backend/classifier/... -v must pass ALL tests including buffer tests.
+- go vet ./backend/classifier/... must return zero warnings.
+- No race conditions: go test -race ./backend/classifier/... must pass.

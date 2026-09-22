@@ -1,0 +1,188 @@
+MANDATORY RULES — VIOLATION = REJECTED PR:
+- NEVER stub, mock, or TODO existing implementation code. Write real, working code only.
+- Commit message must start with "jules: " prefix.
+- Use clean module design and idiomatic Go architecture. No spaghetti code.
+- NEVER hardcode secrets, API keys, or local paths — always read from environment variables or OS user-config dirs.
+- UNIT TESTS REQUIRED: For every Go file you create or modify, you MUST write an accompanying _test.go file with meaningful coverage.
+- ALWAYS UPDATE THE WIKI: If your task involves architectural changes, update the relevant markdown files in wiki/.
+
+Project: Local AI Assistant (BarnOwl AI)
+Tech stack: Go 1.25+, Wails v2, whisper.cpp, onnxruntime_go, Svelte 5 frontend
+Target: Cross-platform desktop (Linux / Windows / macOS), Dell XPS class hardware (no dedicated GPU required for this task).
+
+════════════════════════════════════════════════════════════════
+TASK: P67-T1 — llama-server Sidecar + Gemma 3 270M Runtime Download
+════════════════════════════════════════════════════════════════
+
+OBJECTIVE:
+Add a self-contained "System One" classifier engine to BarnOwl AI by:
+1. Downloading a pre-compiled `llama-server` binary at runtime (cross-platform).
+2. Downloading the Gemma 3 270M GGUF model file at first launch.
+3. Starting `llama-server` as a managed OS subprocess (sidecar) that listens on localhost:18080.
+4. Providing a Go client that queries it via the OpenAI-compatible /v1/chat/completions endpoint with a strict JSON grammar to force boolean output.
+
+This task is PURELY BACKEND (Go only). No frontend changes required.
+
+════════════════════════════════════════════════════════════════
+BACKGROUND / ARCHITECTURE CONTEXT
+════════════════════════════════════════════════════════════════
+
+The existing Nomic embedding model is already downloaded at runtime using the pattern in:
+  wails-app/backend/embeddings.go → ensureNomicModelFiles()
+  wails-app/backend/system/download.go → DownloadFileAtomic()
+
+You MUST follow the same exact pattern for downloading the Gemma model and llama-server binary.
+
+The existing filter/classifier.go uses Nomic ONNX embeddings to classify question TYPES
+(behavioral, coding, system_design, etc.) using cosine similarity of sentence vectors.
+
+Gemma 3 270M serves a completely DIFFERENT purpose: it is a lightweight "turn-detection"
+classifier that decides if the interviewer has FINISHED asking their question. This allows
+the system to know exactly WHEN to trigger the expensive Cloud LLM for generation.
+
+We do NOT run Gemma on the GPU. It runs CPU-only via llama-server subprocess.
+We do NOT bundle the model in the app binary — it is downloaded at first launch.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE
+════════════════════════════════════════════════════════════════
+
+[NEW] wails-app/backend/classifier/gemma.go
+[NEW] wails-app/backend/classifier/gemma_test.go
+[NEW] wails-app/backend/classifier/llama_server.go
+[NEW] wails-app/backend/classifier/llama_server_test.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── FILE: wails-app/backend/classifier/llama_server.go ──────────────────────────
+
+Package: classifier
+
+This file manages the lifecycle of the llama-server subprocess and the Gemma 3 GGUF model.
+
+1. CONSTANTS / VARS (all overridable for testing):
+
+var (
+    // Gemma 3 270M Q8_0 GGUF from unsloth on Hugging Face.
+    // Primary URL is GitHub Releases CDN, fallback is HuggingFace direct.
+    GemmaModelURL         = "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/gemma-3-270m-it-Q8_0.gguf"
+    GemmaModelFallbackURL = "https://huggingface.co/unsloth/gemma-3-270m-it-GGUF/resolve/main/gemma-3-270m-it-Q8_0.gguf"
+
+    // llama-server binaries. One URL per OS/Arch.
+    LlamaServerURLs = map[string]string{
+        "linux/amd64":   "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-linux-amd64",
+        "windows/amd64": "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-windows-amd64.exe",
+        "darwin/amd64":  "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-darwin-amd64",
+        "darwin/arm64":  "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-darwin-arm64",
+    }
+    LlamaServerPort = 18080
+)
+
+2. FUNCTION: EnsureGemmaModelFile() (string, error)
+   - Use os.UserCacheDir() to get the OS-appropriate cache folder.
+   - Store model at: <cacheDir>/barnowl-ai/models/gemma-3-270m-it-Q8_0.gguf
+   - If the file already exists on disk, return immediately (no re-download).
+   - Otherwise, download using the same system.DownloadFileAtomic() helper that
+     embeddings.go uses, with the fallback URL pattern.
+   - Log progress: [Classifier] Downloading Gemma 3 270M model (~500MB)...
+
+3. FUNCTION: EnsureLlamaServerBinary() (string, error)
+   - Use runtime.GOOS and runtime.GOARCH to pick the right URL from LlamaServerURLs.
+   - Store binary at: <cacheDir>/barnowl-ai/bin/llama-server (or .exe on Windows).
+   - If the file already exists, return its path immediately.
+   - After download, set executable bit on Linux/macOS: os.Chmod(path, 0755).
+   - Return the absolute path to the binary.
+
+4. STRUCT: LlamaServerProcess
+   Fields:
+     - cmd *exec.Cmd        (the running llama-server OS process)
+     - port int             (the port it is listening on, default 18080)
+     - modelPath string     (absolute path to the GGUF file)
+     - mu sync.Mutex
+     - started bool
+
+5. FUNCTION: (p *LlamaServerProcess) Start(ctx context.Context) error
+   - If already started, return nil immediately (idempotent).
+   - Ensure model file and binary exist (call EnsureGemmaModelFile and EnsureLlamaServerBinary).
+   - Launch the subprocess with these EXACT flags:
+       <binary> --model <modelPath> --port <port> --host 127.0.0.1 --ctx-size 2048 --threads 2 --no-mmap -ngl 0
+     NOTE: -ngl 0 forces CPU-only inference. --no-mmap is important for Windows compatibility.
+   - Redirect subprocess stdout/stderr to log.Writer() so output appears in the app log.
+   - After launching, poll http://127.0.0.1:<port>/health every 500ms for up to 30 seconds
+     until it returns HTTP 200. If it never responds, return an error.
+   - Set started = true.
+
+6. FUNCTION: (p *LlamaServerProcess) Stop()
+   - If cmd and cmd.Process are non-nil, call cmd.Process.Kill() and cmd.Wait().
+   - Set started = false.
+
+7. GLOBAL singleton:
+   var DefaultLlamaServer = &LlamaServerProcess{port: LlamaServerPort}
+
+─── FILE: wails-app/backend/classifier/gemma.go ─────────────────────────────────
+
+Package: classifier
+
+This file provides the high-level Go API for querying the local llama-server to make
+turn-detection decisions via the OpenAI-compatible /v1/chat/completions API.
+
+1. CONSTANT: The BNF JSON grammar to force llama.cpp to output ONLY {"result":true} or {"result":false}:
+
+const booleanGrammar = `
+root   ::= object
+object ::= "{" ws "\"result\"" ws ":" ws value ws "}"
+value  ::= "true" | "false"
+ws     ::= [ \t\n]*
+`
+
+2. STRUCT: GemmaRequest — the JSON body sent to llama-server:
+   {
+     "model": "gemma",
+     "messages": [{"role": "user", "content": "..."}],
+     "temperature": 0,
+     "max_tokens": 10,
+     "grammar": "<booleanGrammar>"
+   }
+
+3. STRUCT: GemmaResponse — parsed from llama-server response:
+   Parse the standard OpenAI choices[0].message.content field.
+   Then unmarshal the content string as {"result": true/false}.
+
+4. FUNCTION: IsQuestionComplete(ctx context.Context, transcriptBuffer string) (bool, error)
+   - Build the prompt using this EXACT system + user message structure:
+     System: "You are a turn-detection classifier. Respond ONLY with valid JSON."
+     User: "Interview transcript so far:\n\n<transcriptBuffer>\n\nHas the interviewer finished asking their complete question and is now waiting for the candidate to respond? Answer with {\"result\": true} if yes, {\"result\": false} if no."
+   - Send a POST request to http://127.0.0.1:<LlamaServerPort>/v1/chat/completions
+     with the GemmaRequest body (temperature=0, max_tokens=10, grammar=booleanGrammar).
+   - Set a 3-second HTTP timeout via context or http.Client timeout.
+   - Parse the response and return the boolean value from {"result": ...}.
+   - If the server is not running or returns an error, return false, err (do NOT panic).
+
+════════════════════════════════════════════════════════════════
+TESTING REQUIREMENTS
+════════════════════════════════════════════════════════════════
+
+wails-app/backend/classifier/llama_server_test.go:
+- TestEnsureGemmaModelFile_AlreadyExists: Pre-create the file, call EnsureGemmaModelFile(),
+  assert no download is triggered and path is correct.
+- TestEnsureLlamaServerBinary_AlreadyExists: Same pattern for the binary.
+- TestLlamaServerProcess_StartStop: Mock the HTTP health endpoint with httptest.NewServer.
+  Override the binary path to a simple shell script: #!/bin/sh\n sleep 30
+  Assert that Start() returns nil and Stop() kills the process cleanly.
+
+wails-app/backend/classifier/gemma_test.go:
+- TestIsQuestionComplete_True: Start an httptest.Server that returns a valid
+  /v1/chat/completions response with content: '{"result":true}'.
+  Override the port to the test server port. Call IsQuestionComplete() and assert true.
+- TestIsQuestionComplete_False: Same but content is '{"result":false}'. Assert false.
+- TestIsQuestionComplete_ServerDown: Call IsQuestionComplete() without starting any server.
+  Assert error is returned (not a panic).
+
+════════════════════════════════════════════════════════════════
+VERIFICATION
+════════════════════════════════════════════════════════════════
+- cd wails-app && go build ./... must succeed with zero errors.
+- cd wails-app && go test ./backend/classifier/... must pass all tests.
+- No CGO changes are needed for this task (llama-server is a subprocess, not a library).

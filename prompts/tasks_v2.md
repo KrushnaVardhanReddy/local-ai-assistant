@@ -70,3 +70,13 @@
 | P66-T2 ⚡ | `supabase/functions/paddle-webhook/index.ts` | **Webhook Reward Logic** — In `transaction.completed` handler, read `custom_data.referred_by`, look up the referrer, set `allowed_devices = 2` and stamp `referral_rewarded_at` (idempotent — never double-reward). | ⬜ | — |
 | P66-T3 ⚡ | `auth.svelte.ts`, `AuthModal.svelte`, `Settings.svelte` | **Frontend UI** — (A) Add `referralCode`, `allowedDevices`, `deviceLimitReached` to `authState`. (B) Add referral code input above "Buy a Lifetime License" in AuthModal — passes `referred_by` + `discountId` to Paddle. (C) Add "Refer a Friend" card in Settings showing the user's own code with a Copy button and device slot status. | ⬜ | — |
 
+## Phase 67 — Gemma "System One" Turn-Detection Engine 🧠
+
+> Strategy: Replace the current silence-timer LLM trigger with an intelligent rolling buffer powered by Gemma 3 270M (GGUF) running locally on the CPU via a llama-server subprocess. Model is downloaded at first launch (~500MB) — not bundled. This enables accurate end-of-turn detection even when interviewers pause mid-question, stutter, or ask multi-part questions with breaks.
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|-----|
+| P67-T1 | `wails-app/backend/classifier/gemma.go`, `llama_server.go` | **llama-server Sidecar + Gemma Download** — Runtime-download Gemma 3 270M GGUF and a pre-compiled llama-server binary (per OS/arch) using `os.UserCacheDir()`. Start llama-server as a managed subprocess on `localhost:18080`. Provide `IsQuestionComplete(ctx, text) (bool, error)` via the OpenAI-compat `/v1/chat/completions` endpoint with a BNF grammar that forces `{"result":true/false}` output. | ⬜ | — |
+| P67-T2 | `wails-app/backend/classifier/buffer.go` | **Rolling Question Buffer** — Implement `QuestionBuffer` that accumulates transcript chunks and calls `IsQuestionComplete()` after each chunk. Flushes the aggregated question text to the LLM callback only when Gemma returns true. Hard 45-second failsafe watchdog ensures the buffer always flushes eventually even if Gemma is unavailable. | ⬜ | — |
+| P67-T3 | `wails-app/backend/lib/engine/engine.go`, `manager.go` | **Engine Wiring** — Remove the existing silence/timer-based LLM trigger. Wire `QuestionBuffer.AddChunk()` into the transcript pipeline. Start/stop the `DefaultLlamaServer` alongside the engine lifecycle. Preserve ManualMode guard and ClearState buffer reset. Graceful degradation: if llama-server fails to start, the 45s watchdog keeps the app functional. | ⬜ | — |
+
