@@ -3,15 +3,17 @@ TASK: P64-T5 — Entitlement UI End-to-End Tests
 ═══════════════════════════════════════════════════════════════
 OBJECTIVE
 ═══════════════════════════════════════════════════════════════
-Add Playwright E2E tests for the new Entitlement and Usage Meter UI components added in Phase 62 and 63.
-Because Wails apps run Playwright against the Vite dev server, we need to mock the `authState` dynamically from the tests to evaluate different UI states.
+Write rigorous Playwright E2E tests for the new Entitlement and Usage Meter UI components added in Phase 62 and 63.
+Because Wails apps run Playwright against the Vite dev server, you must dynamically mock the `window.__authState` object from the tests to evaluate different UI states.
+
+CRITICAL INSTRUCTION FOR JULES:
+The current `wails-app/frontend/tests/entitlement.spec.ts` is terrible. It literally uses `appShell.innerHTML += ...` to inject fake HTML components. This is strictly forbidden. 
+You must test the REAL Svelte UI by mutating the reactive `window.__authState` proxy from Playwright and asserting against the real UI that Svelte renders.
 
 ═══════════════════════════════════════════════════════════════
 FILES TO MODIFY
 ═══════════════════════════════════════════════════════════════
-MODIFY: wails-app/frontend/src/lib/auth.svelte.ts
 MODIFY: wails-app/frontend/src/App.svelte
-MODIFY: wails-app/frontend/src/lib/Settings.svelte
 MODIFY: wails-app/frontend/tests/entitlement.spec.ts
 
 ═══════════════════════════════════════════════════════════════
@@ -19,36 +21,38 @@ DETAILED SPECIFICATION
 ═══════════════════════════════════════════════════════════════
 
 1. **Refactor `App.svelte` for Reactive Product Mode:**
-   - Remove the static `const product = import.meta.env.VITE_PRODUCT || "interview";`.
-   - Update `isGated`, the `onMount` initialization logic, and the UI template rendering to read from `authState.productMode` reactively. This ensures the UI properly updates when Playwright toggles the mode.
+   - Currently, `App.svelte` might be hardcoding product mode. Ensure it reacts to `authState.productMode` properly so the UI toggles when Playwright mutates it.
+   
+2. **Scrap and Rewrite `entitlement.spec.ts`:**
+   - Delete all the `.innerHTML += ...` fake DOM injection from the existing file.
+   - Use `page.evaluate()` to mutate `(window as any).__authState`. Since Svelte 5 `$state` objects are deep proxies, mutating it directly via the window object will trigger Svelte to re-render the actual components!
 
-2. **Refactor `stripeStatus` to `paddleStatus`:**
-   - In `auth.svelte.ts`, rename `stripeStatus` to `paddleStatus`.
-   - Update `syncUserEntitlements` to read from `data.paddle_subscription_id` or similar logic to set `paddleStatus` instead of the old stripe logic.
-   - Update `Settings.svelte` to use `authState.paddleStatus` for the UI.
-
-3. **Expose `authState` to Window (`auth.svelte.ts`):**
-   - Find the initialization block: `if (typeof window !== "undefined") { ... }`
-   - Attach `authState` to the window object: `(window as any).__authState = authState;`
-
-4. **Implement Tests (`entitlement.spec.ts`):**
+3. **What to Mock and How to Test:**
    - **Test 1: BarnOwl AI (Interview Mode) — Developer Mode Bypass**
-     - Use `page.evaluate()` to set `window.__authState.productMode = 'interview'` and `window.__authState.licenseStatus = 'dev_allowed'`.
-     - Assert that the "Developer Mode" badge is visible.
+     - **Mock:** `window.__authState.authMode = 'saas'; window.__authState.productMode = 'interview'; window.__authState.licenseStatus = 'dev_allowed';`
+     - **Action:** Open the Settings modal by clicking the gear icon in the UI.
+     - **Assert:** The real Svelte `<Settings>` component renders a "Developer Mode" or "Unlocked" badge.
+     
    - **Test 2: BarnOwl AI (Interview Mode) — Active License**
-     - Mock `licenseStatus = 'active'`.
-     - Assert that the "Lifetime License — Active" badge is visible.
+     - **Mock:** `window.__authState.licenseStatus = 'active'; window.__authState.productMode = 'interview';`
+     - **Action:** Open the Settings modal.
+     - **Assert:** The text "Lifetime License — Active" is visible in the settings panel.
+     
    - **Test 3: SaaS Products — Standard Usage Meter**
-     - Mock `productMode = 'saas'` and `userEntitlements = { usage_seconds: 18000, included_seconds: 36000 }` (5 hours used / 10 hours included).
-     - Assert the text "5h 0m used / 10h 0m included" is visible.
+     - **Mock:** `window.__authState.productMode = 'saas'; window.__authState.user = { email: 'test@example.com' }; window.__authState.userEntitlements = { usage_seconds: 18000, included_seconds: 36000 };`
+     - **Action:** Open the Settings modal.
+     - **Assert:** The `<Settings>` component renders the real text "5h 0m used / 10h 0m included" (or however it is formatted natively in the component).
+     
    - **Test 4: SaaS Products — Paddle Overage Warning**
-     - Mock `userEntitlements = { usage_seconds: 40000, included_seconds: 36000 }`.
-     - Assert the warning text containing "Overage" appears.
-   - **Test 5: SaaS Products — Paddle Subscription Status**
-     - Mock `paddleStatus = 'active'` vs `paddleStatus = 'inactive'`.
-     - Assert the "Active Subscription" or "Subscription Inactive" text appears.
+     - **Mock:** Same as above, but `usage_seconds: 40000`.
+     - **Assert:** Ensure the "Overage" warning text natively appears in the UI.
+     
+   - **Test 5: SaaS Products — Subscription Status**
+     - **Mock:** `window.__authState.paddleStatus = 'active'` vs `window.__authState.paddleStatus = 'inactive'`.
+     - **Assert:** Check that the real Svelte UI shows the "Active Subscription" badge or "Inactive" text based on the mock.
 
 ═══════════════════════════════════════════════════════════════
 VERIFICATION
 ═══════════════════════════════════════════════════════════════
 - The Playwright tests must pass when executed (`npm run test:e2e`).
+- You MUST NOT inject raw HTML strings. You MUST interact with the actual Svelte DOM nodes.
