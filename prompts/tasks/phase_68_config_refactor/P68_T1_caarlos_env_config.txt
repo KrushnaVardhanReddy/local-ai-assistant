@@ -1,0 +1,84 @@
+MANDATORY RULES — VIOLATION = REJECTED PR:
+- NEVER stub, mock, or TODO existing implementation code. Write real, working code only.
+- Commit message must start with "jules: " prefix.
+- Use clean module design and idiomatic Go architecture. No spaghetti code.
+- NEVER hardcode secrets, API keys, or local paths.
+- UNIT TESTS REQUIRED: For every Go file you create or modify, write an accompanying _test.go.
+- ALWAYS UPDATE THE WIKI: Update relevant markdown files in wiki/.
+
+Project: Local AI Assistant (BarnOwl AI)
+Tech stack: Go 1.25+, Wails v2, whisper.cpp, onnxruntime_go, Svelte 5 frontend
+
+════════════════════════════════════════════════════════════════
+TASK: P68-T1 — Environment Configuration Refactoring (caarlos0/env)
+════════════════════════════════════════════════════════════════
+
+OBJECTIVE:
+Refactor the codebase to eliminate scattered `os.Getenv` and ad-hoc helpers like `getEnvOrDefault` by introducing a central, strongly-typed `AppConfig` struct using the `caarlos0/env` library. This provides type-safety, centralized defaults, and allows the app to "fail fast" on missing required keys (like API keys) instead of throwing runtime errors.
+
+PREREQUISITE: None.
+
+════════════════════════════════════════════════════════════════
+BACKGROUND / ARCHITECTURE CONTEXT
+════════════════════════════════════════════════════════════════
+
+Read and understand these files before making any changes:
+
+1. wails-app/main.go & wails-app/app.go
+   - `godotenv.Load()` is called in `main.go` to load `.env.local` into the OS environment.
+   - You will need to parse the `AppConfig` struct immediately after this and pass it down into the core components (like the engine and LLM adapters).
+
+2. wails-app/backend/llm/openai.go
+   - Currently uses `os.Getenv` and `getEnvOrDefault` to fetch API keys, base URLs, and models.
+   - These need to be completely replaced with references to the injected `AppConfig`.
+
+3. Corresponding _test.go files (e.g. wails-app/backend/llm/openai_test.go)
+   - These tests currently rely on `os.Setenv`. They need to be updated to pass a mock `AppConfig` directly, stopping tests from polluting global environment state.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[NEW]    wails-app/backend/config/config.go
+[MODIFY] wails-app/main.go
+[MODIFY] wails-app/app.go
+[MODIFY] wails-app/backend/llm/openai.go
+[MODIFY] wails-app/backend/llm/openai_test.go
+[MODIFY] All other files that use os.Getenv for application config (e.g., STEALTH_MODE, RAG_ENABLED)
+[MODIFY] Corresponding _test.go files for each modified .go file
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── 1. NEW PACKAGE: wails-app/backend/config/config.go ─────────
+
+1. Create a new `config` package.
+2. Define a struct `AppConfig` that holds all system configurations:
+   - `LLMProvider` (env:"LLM_PROVIDER" envDefault:"openai")
+   - `LLMModel` (env:"LLM_MODEL" envDefault:"gpt-4o")
+   - `LLMBaseURL` (env:"LLM_BASE_URL" envDefault:"https://api.openai.com/v1")
+   - `OpenAIAPIKey` (env:"OPENAI_API_KEY")
+   - `GroqAPIKey` (env:"GROQ_API_KEY")
+   - `StealthMode` (env:"STEALTH_MODE" envDefault:"false")
+   - Include any other configurations found scattered around the app using `os.Getenv`.
+3. Create a function `LoadConfig() (*AppConfig, error)` that uses `env.Parse()` from `github.com/caarlos0/env/v11` to populate the struct.
+   - Implement custom validation: if `LLMProvider == "groq"` but `GroqAPIKey` is empty, return an explicit error.
+   - Same for "openai" and `OpenAIAPIKey`.
+
+─── 2. CHANGES TO wails-app/main.go and wails-app/app.go ───────
+
+1. In `main.go`, immediately after `godotenv.Load()`, call `config.LoadConfig()`.
+2. Implement a "fail-fast" Must pattern: if `LoadConfig()` returns an error, use `log.Fatalf` to exit the application immediately and print the error to the terminal.
+3. Pass the loaded `*AppConfig` down into `app.go` (`NewApp()` or similar) and subsequently into the Engine and Adapters as needed. Replace the inline `os.Getenv("STEALTH_MODE")` in `main.go`.
+
+─── 3. CHANGES TO wails-app/backend/llm/openai.go ──────────────
+
+1. Modify the `OpenAIAdapter` and functions like `StreamCompletionWithContext` and `StreamVisionCompletion` to accept `*config.AppConfig` (or extract these values at adapter initialization).
+2. Completely remove `getEnvOrDefault` and all `os.Getenv` calls.
+3. Use the strongly-typed `config.AppConfig` values (e.g. `cfg.LLMBaseURL`, `cfg.GroqAPIKey`) to assemble the request.
+
+─── 4. UPDATES TO TESTS ────────────────────────────────────────
+
+1. Update tests that previously used `os.Setenv` to instead initialize a mock `&config.AppConfig{...}` and pass it into the functions or adapters being tested.
+2. Ensure no test modifies global `os.Environ()` variables.
