@@ -142,6 +142,10 @@ export function SaveToken(arg1) {
   return window['go']['main']['App']['SaveToken'](arg1);
 }
 
+export function SendChat(arg1) {
+  return window['go']['main']['App']['SendChat'](arg1);
+}
+
 export function SetActiveDocument(arg1) {
   return window['go']['main']['App']['SetActiveDocument'](arg1);
 }

@@ -845,6 +845,14 @@ func (a *App) ExportSession() (string, error) {
 	return filePath, nil
 }
 
+// SendChat allows the frontend to manually submit a question or prompt
+func (a *App) SendChat(text string) error {
+	if a.engine != nil {
+		return a.engine.AskQuestion(text)
+	}
+	return nil
+}
+
 // SetManualMode enables or disables automatic LLM processing of transcripts.
 // When manualMode is true, transcripts will still be emitted to the frontend via
 // on_transcript events, but the engine will NOT automatically queue them for LLM processing.

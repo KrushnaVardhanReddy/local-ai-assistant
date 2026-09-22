@@ -75,6 +75,8 @@ export function RemoveIndexedPath(arg1:string):Promise<void>;
 
 export function SaveToken(arg1:Record<string, any>):Promise<void>;
 
+export function SendChat(arg1:string):Promise<void>;
+
 export function SetActiveDocument(arg1:string):Promise<void>;
 
 export function SetAudioDevice(arg1:number,arg2:boolean):Promise<void>;
