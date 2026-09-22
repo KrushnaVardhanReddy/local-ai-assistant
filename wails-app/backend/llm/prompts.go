@@ -1,6 +1,13 @@
 package llm
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+	"wails-app/backend/session"
+)
+
+const MaxContextTurns = 3
+const MaxContextTokensApprox = 400
 
 const DefaultSystemPrompt = "You are a stealth interview assistant. The user is in a live technical interview. " +
 	"You must provide medium-length, highly structured, and thorough solutions. " +
@@ -49,9 +56,65 @@ var CategoryPromptInjections = map[string]string{
 		"Speak in first person. Avoid vague phrases like 'it depends'.",
 }
 
+func BuildContextBlock(turns []session.Turn) string {
+	if len(turns) == 0 {
+		return ""
+	}
+
+	var validTurns []session.Turn
+	for _, t := range turns {
+		if t.InterviewerQuestion != "" || t.AISuggestion != "" {
+			validTurns = append(validTurns, t)
+		}
+	}
+
+	if len(validTurns) == 0 {
+		return ""
+	}
+
+	// We'll format all turns, and if the total length exceeds 2000,
+	// we will start dropping the oldest ones until it fits.
+	for {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("=== Recent Interview Context (last %d turns) ===\n", len(validTurns)))
+		for i, t := range validTurns {
+			qRunes := []rune(t.InterviewerQuestion)
+			q := t.InterviewerQuestion
+			if len(qRunes) > 120 {
+				q = string(qRunes[:120]) + "..."
+			}
+			aRunes := []rune(t.AISuggestion)
+			a := t.AISuggestion
+			if len(aRunes) > 200 {
+				a = string(aRunes[:200]) + "..."
+			}
+
+			sb.WriteString(fmt.Sprintf("[Turn %d] Interviewer: %q\n", i+1, q))
+			sb.WriteString(fmt.Sprintf("         AI Answer:   %q\n", a))
+		}
+		sb.WriteString("=== End Context ===")
+
+		result := sb.String()
+		if len(result) <= 2000 || len(validTurns) <= 1 {
+			return result
+		}
+		// trim the oldest turn and try again
+		validTurns = validTurns[1:]
+	}
+}
+
 func BuildSystemPrompt(category string) string {
 	if injection, ok := CategoryPromptInjections[strings.ToLower(category)]; ok && injection != "" {
 		return DefaultSystemPrompt + "\n\nFor this response: " + injection
 	}
 	return DefaultSystemPrompt
+}
+
+func BuildFullSystemPrompt(category string, turns []session.Turn) string {
+	basePrompt := BuildSystemPrompt(category)
+	contextBlock := BuildContextBlock(turns)
+	if contextBlock == "" {
+		return basePrompt
+	}
+	return basePrompt + "\n\n" + contextBlock
 }
