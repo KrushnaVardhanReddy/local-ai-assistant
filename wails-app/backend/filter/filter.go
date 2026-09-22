@@ -3,11 +3,31 @@ package filter
 import (
 	"log"
 	"math"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+
+	"wails-app/backend/config"
 )
+
+var (
+	pkgConfig   *config.AppConfig
+	pkgConfigMu sync.RWMutex
+)
+
+// SetConfig stores the application config for use by the filter.
+func SetConfig(cfg *config.AppConfig) {
+	pkgConfigMu.Lock()
+	defer pkgConfigMu.Unlock()
+	pkgConfig = cfg
+}
+
+func getCfg() *config.AppConfig {
+	pkgConfigMu.RLock()
+	defer pkgConfigMu.RUnlock()
+	return pkgConfig
+}
 
 type FilterResult struct {
 	ShouldSend bool
@@ -55,10 +75,9 @@ func cleanText(text string) string {
 
 func Check(text string, embedding []float32) FilterResult {
 	// Stage 1: MIN_WORDS
-	minWordsStr := os.Getenv("MIN_WORDS")
 	minWords := 3
-	if minWordsStr != "" {
-		if val, err := strconv.Atoi(minWordsStr); err == nil {
+	if cfg := getCfg(); cfg != nil && cfg.MinWords != "" {
+		if val, err := strconv.Atoi(cfg.MinWords); err == nil {
 			minWords = val
 		}
 	}

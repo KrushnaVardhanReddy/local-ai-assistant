@@ -10,17 +10,32 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
+
+	"wails-app/backend/config"
 )
 
 type StreamCallback func(token string)
 
-func getEnvOrDefault(key, defaultVal string) string {
-	if val, ok := os.LookupEnv(key); ok {
-		return val
-	}
-	return defaultVal
+// pkg-level config store — set once at startup via SetConfig.
+var (
+	pkgConfig     *config.AppConfig
+	pkgConfigOnce sync.Once
+	pkgConfigMu   sync.RWMutex
+)
+
+// SetConfig stores the application config for use by all LLM functions.
+// Must be called once during app initialisation before any LLM calls.
+func SetConfig(cfg *config.AppConfig) {
+	pkgConfigMu.Lock()
+	defer pkgConfigMu.Unlock()
+	pkgConfig = cfg
+}
+
+func getCfg() *config.AppConfig {
+	pkgConfigMu.RLock()
+	defer pkgConfigMu.RUnlock()
+	return pkgConfig
 }
 
 type ChatMessage struct {
@@ -91,22 +106,32 @@ type VisionChatRequest struct {
 
 func getProviderConfig() (baseURL string, apiKey string, err error) {
 	if proxyToken := GetProxyToken(); proxyToken != "" {
-		return getEnvOrDefault("SUPABASE_EDGE_URL", "https://api.barnowl.ai/v1/functions/llm-proxy"), proxyToken, nil
+		url := "https://api.barnowl.ai/v1/functions/llm-proxy"
+		if cfg := getCfg(); cfg != nil && cfg.SupabaseEdgeURL != "" {
+			url = cfg.SupabaseEdgeURL
+		}
+		return url, proxyToken, nil
 	}
 
-	if os.Getenv("LLM_PROVIDER") == "groq" {
-		key := os.Getenv("GROQ_API_KEY")
-		if key == "" {
+	cfg := getCfg()
+	if cfg != nil && cfg.LLMProvider == "groq" {
+		if cfg.GroqAPIKey == "" {
 			return "", "", fmt.Errorf("GROQ_API_KEY environment variable is not set")
 		}
-		return getEnvOrDefault("LLM_BASE_URL", "https://api.groq.com/openai/v1"), key, nil
+		baseURL := "https://api.groq.com/openai/v1"
+		if cfg.LLMBaseURL != "" && cfg.LLMBaseURL != "https://api.openai.com/v1" {
+			baseURL = cfg.LLMBaseURL
+		}
+		return baseURL, cfg.GroqAPIKey, nil
 	}
 
-	key := os.Getenv("OPENAI_API_KEY")
-	if key == "" {
-		return "", "", fmt.Errorf("OPENAI_API_KEY environment variable is not set")
+	if cfg != nil {
+		if cfg.OpenAIAPIKey == "" {
+			return "", "", fmt.Errorf("OPENAI_API_KEY environment variable is not set")
+		}
+		return cfg.LLMBaseURL, cfg.OpenAIAPIKey, nil
 	}
-	return getEnvOrDefault("LLM_BASE_URL", "https://api.openai.com/v1"), key, nil
+	return "", "", fmt.Errorf("LLM config not initialised — call llm.SetConfig at startup")
 }
 
 func StreamVisionCompletion(ctx context.Context, base64Image string, prompt string, onToken StreamCallback, onDone func()) error {
@@ -120,7 +145,10 @@ func StreamVisionCompletion(ctx context.Context, base64Image string, prompt stri
 	if err != nil {
 		return err
 	}
-	model := getEnvOrDefault("LLM_MODEL", "gpt-4o")
+	model := "gpt-4o"
+	if cfg := getCfg(); cfg != nil && cfg.LLMModel != "" {
+		model = cfg.LLMModel
+	}
 
 	if !strings.HasSuffix(baseURL, "/") {
 		baseURL += "/"
@@ -237,7 +265,10 @@ func StreamCompletionWithContext(ctx context.Context, question string, category 
 	if err != nil {
 		return err
 	}
-	model := getEnvOrDefault("LLM_MODEL", "gpt-4o")
+	model := "gpt-4o"
+	if cfg := getCfg(); cfg != nil && cfg.LLMModel != "" {
+		model = cfg.LLMModel
+	}
 
 	if !strings.HasSuffix(baseURL, "/") {
 		baseURL += "/"
