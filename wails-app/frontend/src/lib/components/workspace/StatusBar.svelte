@@ -7,6 +7,7 @@
     status?: IDEStatus;
   }>();
 
+  const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
 </script>
 
 <div class="status-bar">
@@ -39,7 +40,7 @@
         <span>{status.right.ragStatus}</span>
       </div>
     {/if}
-    {#if status.right.stealthStatus}
+    {#if stealthMode && status.right.stealthStatus}
       <div class="status-item stealth" title="Window Stealth Indicator">
         <span>{status.right.stealthStatus}</span>
       </div>

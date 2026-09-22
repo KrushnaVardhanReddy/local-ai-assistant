@@ -47,7 +47,6 @@
 | P64-T5 | `wails-app/frontend/src/lib/auth.svelte.ts`, `wails-app/frontend/tests/entitlement.spec.ts` | **Entitlement E2E Tests** — Expose `authState` to Playwright via `window.__authState` and write UI E2E tests for Developer Mode, Active License, Usage Meter calculations, Overage warnings, and Stripe subscription status. | 🔄 | — |
 | P64-T7 ⚡ | `wails-app/frontend/index.html`, `wails-app/frontend/src/lib/components/AuthModal.svelte` | **Frontend Paddle Checkout Integration** — Embed Paddle.js directly in the frontend HTML. Update AuthModal's "Buy Lifetime License" button to invoke `Paddle.Checkout.open()` and inject `customData: { user_id: authState.user.id }` so that webhook transactions can be tied to the correct user. | ✅ | — |
 
-
 ---
 | P64-T6 | `wails-app/main.go`, `wails-app/frontend/src/lib/components/AuthModal.svelte` | **Auth Window UX Redesign** — Modify Wails app to start with `AlwaysOnTop: false` and `BackgroundColour` set to a solid color when in Auth mode. Add a custom draggable HTML titlebar to `AuthModal.svelte` with minimize, maximize, and close buttons that call Wails runtime functions. Toggle `AlwaysOnTop` and background color dynamically when authentication succeeds. | ✅ | #228 |
 
@@ -57,4 +56,4 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|-----|
-| P65-T1 | `wails-app/frontend/src/lib/Assistant.svelte`, `InterviewHUD.svelte`, `ConvPanel.svelte`, `CopilotDrawer.svelte`, `StatusBar.svelte`, `Settings.svelte` | **Stealth Mode Feature Flag (Frontend)** — Conditionally hide stealth-related UI buttons/controls based on `VITE_STEALTH_MODE` env var. When false, hide Stealth button, clickthrough toggle, and stealth status indicator. Go backend already done. | 🔄 | — |
+| P65-T1 | `wails-app/frontend/src/lib/Assistant.svelte`, `InterviewHUD.svelte`, `ConvPanel.svelte`, `CopilotDrawer.svelte`, `StatusBar.svelte`, `Settings.svelte` | **Stealth Mode Feature Flag (Frontend)** — Conditionally hide stealth-related UI buttons/controls based on `VITE_STEALTH_MODE` env var. When false, hide Stealth button, clickthrough toggle, and stealth status indicator. Go backend already done. | ✅ | #230 |
