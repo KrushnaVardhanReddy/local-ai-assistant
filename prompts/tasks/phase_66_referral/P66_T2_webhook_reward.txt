@@ -1,0 +1,138 @@
+# P66-T2: Referral Engine — Paddle Webhook Reward Logic
+
+## Context
+
+We are adding a Multi-Device Referral Engine to BarnOwl AI.
+
+When a new user buys the Lifetime License using someone else's referral code:
+1. Paddle fires `transaction.completed` to our Supabase Edge Function.
+2. The Edge Function reads `customData.referred_by` from the webhook payload.
+3. It finds the referrer's row in `user_entitlements` using that code.
+4. It sets `allowed_devices = 2` on the referrer's row (their reward).
+5. It records `referral_rewarded_at = NOW()` to prevent double-rewarding on webhook retries.
+6. It sets `referred_by_code` on the NEW buyer's row so we know who referred them.
+
+**Prerequisite:** P66-T1 must be merged first. This task assumes the `allowed_devices`,
+`referral_code`, `referred_by_code`, and `referral_rewarded_at` columns already exist.
+
+---
+
+## File to Modify
+
+- **[MODIFY]** `supabase/functions/paddle-webhook/index.ts`
+
+---
+
+## Exact Change Required
+
+In the existing `case "transaction.completed":` block inside the `switch (eventType)` statement,
+add the referral reward logic **after** the existing entitlement update.
+
+The current `transaction.completed` block looks like this:
+
+```typescript
+case "transaction.completed": {
+  const items = data.items || [];
+  const productId = items[0]?.price?.product_id || items[0]?.price?.name || "unknown";
+
+  const { error } = await supabase
+    .from("user_entitlements")
+    .update({
+      paddle_customer_id: customerId,
+      plan_type: productId,
+    })
+    .eq("user_id", userId);
+
+  if (error) console.error("Transaction upsert error:", error);
+  break;
+}
+```
+
+Replace it with this expanded version:
+
+```typescript
+case "transaction.completed": {
+  const items = data.items || [];
+  const productId = items[0]?.price?.product_id || items[0]?.price?.name || "unknown";
+
+  // 1. Update the buyer's own entitlement row as before
+  const { error } = await supabase
+    .from("user_entitlements")
+    .update({
+      paddle_customer_id: customerId,
+      plan_type: productId,
+    })
+    .eq("user_id", userId);
+
+  if (error) console.error("Transaction upsert error:", error);
+
+  // 2. Referral Reward Logic
+  // The frontend injects referred_by into customData when user entered a code.
+  const referralCode: string | undefined = data.custom_data?.referred_by;
+
+  if (referralCode) {
+    // Record who referred the new buyer (for analytics/audit)
+    await supabase
+      .from("user_entitlements")
+      .update({ referred_by_code: referralCode })
+      .eq("user_id", userId);
+
+    // Find the referrer by their referral_code.
+    // Only grant reward if it hasn't been granted yet (idempotency guard).
+    const { data: referrer, error: referrerErr } = await supabase
+      .from("user_entitlements")
+      .select("user_id, allowed_devices, referral_rewarded_at")
+      .eq("referral_code", referralCode)
+      .maybeSingle();
+
+    if (referrerErr) {
+      console.error("Referrer lookup error:", referrerErr);
+    } else if (referrer && !referrer.referral_rewarded_at) {
+      // Grant reward: unlock 2nd device and stamp the timestamp.
+      const { error: rewardErr } = await supabase
+        .from("user_entitlements")
+        .update({
+          allowed_devices: 2,
+          referral_rewarded_at: new Date().toISOString(),
+        })
+        .eq("user_id", referrer.user_id);
+
+      if (rewardErr) {
+        console.error("Failed to grant referral reward:", rewardErr);
+      } else {
+        console.log(`✅ Referral reward granted to user ${referrer.user_id} — 2nd device unlocked.`);
+      }
+    } else if (referrer && referrer.referral_rewarded_at) {
+      console.log(`ℹ️ Referral reward already granted to ${referrer.user_id} at ${referrer.referral_rewarded_at}. Skipping.`);
+    } else {
+      console.warn(`⚠️ Referral code "${referralCode}" not found in user_entitlements.`);
+    }
+  }
+
+  break;
+}
+```
+
+---
+
+## Key Design Decisions
+
+- **Idempotency:** The `referral_rewarded_at IS NULL` guard ensures that even if Paddle
+  retries the webhook 3 times, the referrer only gets rewarded once.
+- **Max 2 devices:** We hardcode `allowed_devices: 2`. One referral = one extra device slot.
+  Even if someone refers 10 friends, they stay at 2 (not 11). This is intentional per spec.
+- **No trust of frontend:** The referral code flows through `customData` in the Paddle
+  checkout payload (encrypted by Paddle), and is validated server-side by looking up
+  `referral_code` in the database. Fake codes simply return no results and no reward is given.
+
+---
+
+## Verification
+
+Deploy this function locally with `supabase functions serve paddle-webhook` and test with
+`curl` sending a mock `transaction.completed` payload containing `custom_data.referred_by`.
+Verify that:
+1. If `referred_by` is a valid code and `referral_rewarded_at` is NULL → `allowed_devices` becomes 2 and `referral_rewarded_at` is stamped.
+2. If `referred_by` is a valid code and `referral_rewarded_at` is already set → nothing changes (idempotent).
+3. If `referred_by` is garbage/unknown → warning is logged, no reward given, transaction still succeeds.
+4. If `referred_by` is absent → normal transaction processing, no referral logic runs.

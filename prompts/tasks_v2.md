@@ -57,3 +57,16 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|-----|
 | P65-T1 | `wails-app/frontend/src/lib/Assistant.svelte`, `InterviewHUD.svelte`, `ConvPanel.svelte`, `CopilotDrawer.svelte`, `StatusBar.svelte`, `Settings.svelte` | **Stealth Mode Feature Flag (Frontend)** — Conditionally hide stealth-related UI buttons/controls based on `VITE_STEALTH_MODE` env var. When false, hide Stealth button, clickthrough toggle, and stealth status indicator. Go backend already done. | ✅ | #230 |
+
+---
+
+## Phase 66 — Multi-Device Referral Engine 🔗
+
+> Strategy: Lock the 2nd device slot behind 1 successful referral. The referrer gets their `allowed_devices` bumped from 1 → 2. The new buyer gets $10 off their Lifetime License via a Paddle discount coupon. No cash payouts — zero cost to fulfill.
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|-----|
+| P66-T1 | `supabase/migrations/20261000000000_add_referral_system.sql` | **DB Migration** — Add `referral_code` (auto-generated `BARN-XXXX` via trigger), `allowed_devices` (default 1), `referred_by_code`, `referral_rewarded_at` columns to `user_entitlements`. | ⬜ | — |
+| P66-T2 ⚡ | `supabase/functions/paddle-webhook/index.ts` | **Webhook Reward Logic** — In `transaction.completed` handler, read `custom_data.referred_by`, look up the referrer, set `allowed_devices = 2` and stamp `referral_rewarded_at` (idempotent — never double-reward). | ⬜ | — |
+| P66-T3 ⚡ | `auth.svelte.ts`, `AuthModal.svelte`, `Settings.svelte` | **Frontend UI** — (A) Add `referralCode`, `allowedDevices`, `deviceLimitReached` to `authState`. (B) Add referral code input above "Buy a Lifetime License" in AuthModal — passes `referred_by` + `discountId` to Paddle. (C) Add "Refer a Friend" card in Settings showing the user's own code with a Copy button and device slot status. | ⬜ | — |
+

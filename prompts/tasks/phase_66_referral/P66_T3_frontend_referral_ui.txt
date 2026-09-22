@@ -1,0 +1,329 @@
+# P66-T3: Referral Engine — Frontend Referral UI & Device Limit Enforcement
+
+## Context
+
+We are adding a Multi-Device Referral Engine to BarnOwl AI. This task covers ALL frontend
+changes. There are two distinct UI surfaces to build:
+
+**A. The "Refer a Friend" panel in Settings** — lets the user copy their unique referral code
+    and share it so they can earn a 2nd device slot.
+
+**B. The "Have a referral code?" input in AuthModal** — lets a new user enter a code before
+    purchasing so the $10 discount coupon is applied and the referrer gets their reward.
+
+**C. Device limit enforcement** — if a user has `allowed_devices = 1` and tries to login from
+    a 2nd machine, they see a lock screen instead of the app. If they have `allowed_devices = 2`,
+    the 2nd machine is allowed.
+
+**Prerequisite:** P66-T1 must be merged first (the DB columns must exist).
+
+---
+
+## Files to Modify
+
+- **[MODIFY]** `wails-app/frontend/src/lib/auth.svelte.ts`
+- **[MODIFY]** `wails-app/frontend/src/lib/components/AuthModal.svelte`
+- **[MODIFY]** `wails-app/frontend/src/lib/Settings.svelte`
+
+---
+
+## Detailed Specification
+
+---
+
+### PART A: `auth.svelte.ts` — State & Device Enforcement
+
+#### 1. Add new fields to `authState`
+
+Find the `export const authState = $state({...})` object and add these new fields:
+
+```typescript
+referralCode: null as string | null,        // The user's own shareable code
+allowedDevices: 1 as number,               // Max devices allowed (1 default, 2 if rewarded)
+deviceLimitReached: false as boolean,      // True if this machine is over the limit
+```
+
+#### 2. Update `syncUserEntitlements()` to read new fields
+
+In `syncUserEntitlements()`, after the existing block that sets `authState.demoExpiresAt`,
+`authState.paddleStatus`, `authState.planType`, `authState.userEntitlements`, also add:
+
+```typescript
+authState.referralCode = data.referral_code ?? null;
+authState.allowedDevices = data.allowed_devices ?? 1;
+```
+
+#### 3. Add Device Limit Enforcement
+
+After setting the above fields in `syncUserEntitlements()`, add this check:
+
+```typescript
+// Device limit enforcement:
+// Count how many distinct machine_ids are registered for this user_id.
+// If more machines than allowed, block this device.
+if (authState.allowedDevices < 2) {
+  const { data: deviceRows } = await supabase
+    .from("user_entitlements")
+    .select("machine_id")
+    .eq("user_id", authState.user.id);
+
+  const uniqueMachines = new Set((deviceRows ?? []).map((r: any) => r.machine_id).filter(Boolean));
+
+  // If this machine is already registered, it's fine (it's the primary device).
+  // If it's a brand new machine and we're at the limit, block it.
+  const currentMachineId: string = await (window as any).go.main.App.GetMachineId();
+  const alreadyRegistered = uniqueMachines.has(currentMachineId);
+  const overLimit = !alreadyRegistered && uniqueMachines.size >= authState.allowedDevices;
+
+  authState.deviceLimitReached = overLimit;
+} else {
+  authState.deviceLimitReached = false;
+}
+```
+
+---
+
+### PART B: `AuthModal.svelte` — Referral Code Input Before Purchase
+
+#### 1. Add local state for the referral code input
+
+At the top of the `<script>` block, add:
+```typescript
+let referralCodeInput = $state("");
+```
+
+#### 2. Add referral code input field to the "Buy a Lifetime License" section
+
+The current footer link for buying a license looks like:
+```html
+<div class="footer-link">
+  <a href="#" onclick={...}>Buy a Lifetime License</a>
+</div>
+```
+
+Replace it with this expanded version that adds a referral code input above the link:
+
+```html
+<div class="footer-link">
+  <div class="referral-input-group">
+    <input
+      id="referral-code-input"
+      type="text"
+      bind:value={referralCodeInput}
+      placeholder="Referral code (optional)"
+      maxlength="9"
+      autocomplete="off"
+    />
+  </div>
+  <a href="#" onclick={(e) => {
+    e.preventDefault();
+    if (typeof window !== "undefined" && (window as any).Paddle) {
+      const checkoutOptions: any = {
+        items: [{ priceId: 'pri_01m2zefm3t55p4pn424kmv9d5n', quantity: 1 }],
+        customData: {
+          user_id: authState.user?.id || 'unknown'
+        }
+      };
+      // If user entered a referral code, pass it as customData AND apply $10 discount.
+      const trimmedCode = referralCodeInput.trim().toUpperCase();
+      if (trimmedCode) {
+        checkoutOptions.customData.referred_by = trimmedCode;
+        // IMPORTANT: Replace 'dsc_YOUR_PADDLE_DISCOUNT_ID' with the real Paddle discount ID
+        // for the $10 off coupon. Create this in the Paddle dashboard as a flat $10 discount.
+        checkoutOptions.discountId = 'dsc_YOUR_PADDLE_DISCOUNT_ID';
+      }
+      (window as any).Paddle.Checkout.open(checkoutOptions);
+    }
+  }}>Buy a Lifetime License</a>
+</div>
+```
+
+#### 3. Add CSS for the referral input
+
+Inside the `<style>` block, add:
+```css
+.referral-input-group {
+  margin-bottom: 0.5rem;
+}
+
+.referral-input-group input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 0.85rem;
+  text-align: center;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  box-sizing: border-box;
+}
+
+.referral-input-group input:focus {
+  outline: none;
+  border-color: rgba(99, 179, 237, 0.4);
+  color: #e2e8f0;
+}
+
+.referral-input-group input::placeholder {
+  letter-spacing: 0;
+  text-transform: none;
+  color: #4a5568;
+}
+```
+
+---
+
+### PART C: `Settings.svelte` — "Refer a Friend" Panel
+
+#### 1. Locate the account info section in Settings.svelte
+
+Find the section in Settings that shows the user's email and license status. It likely
+contains elements like `authState.user?.email` and `authState.licenseStatus`.
+
+#### 2. Add a "Refer a Friend" card BELOW the existing account info
+
+Add this block of Svelte HTML right after the account section, but only for `interview` mode:
+
+```html
+{#if authState.productMode === "interview" && authState.referralCode}
+  <div class="referral-card">
+    <div class="referral-card-header">
+      <span class="referral-icon">🔗</span>
+      <div>
+        <p class="referral-title">Refer a Friend — Unlock 2nd Device</p>
+        <p class="referral-subtitle">
+          {#if authState.allowedDevices >= 2}
+            ✅ You've already unlocked a 2nd device!
+          {:else}
+            Give a friend $10 off. When they buy, you unlock a 2nd device slot — permanently.
+          {/if}
+        </p>
+      </div>
+    </div>
+    <div class="referral-code-row">
+      <span class="referral-code-display" id="referral-code-display">{authState.referralCode}</span>
+      <button
+        class="copy-btn"
+        id="copy-referral-code-btn"
+        onclick={() => {
+          navigator.clipboard.writeText(authState.referralCode ?? '');
+          // Brief visual feedback
+          const btn = document.getElementById('copy-referral-code-btn');
+          if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+        }}
+      >Copy</button>
+    </div>
+    <p class="referral-devices-label">
+      Devices: {authState.allowedDevices >= 2 ? '2 / 2' : '1 / 1'} registered
+      {#if authState.allowedDevices < 2}
+        · <em>Refer 1 friend to unlock 2nd slot</em>
+      {/if}
+    </p>
+  </div>
+{/if}
+
+{#if authState.deviceLimitReached}
+  <div class="device-limit-banner">
+    ⚠️ Device limit reached. You are already using BarnOwl AI on {authState.allowedDevices} device(s).
+    Refer a friend to unlock a 2nd device slot.
+  </div>
+{/if}
+```
+
+#### 3. Add CSS for the referral card in Settings.svelte `<style>` block
+
+```css
+.referral-card {
+  background: rgba(99, 179, 237, 0.05);
+  border: 1px solid rgba(99, 179, 237, 0.2);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.referral-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.referral-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.referral-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.referral-subtitle {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0.25rem 0 0;
+}
+
+.referral-code-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.referral-code-display {
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #63b3ed;
+  letter-spacing: 2px;
+  flex: 1;
+}
+
+.copy-btn {
+  background: rgba(99, 179, 237, 0.15);
+  border: 1px solid rgba(99, 179, 237, 0.3);
+  color: #63b3ed;
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.copy-btn:hover {
+  background: rgba(99, 179, 237, 0.25);
+}
+
+.referral-devices-label {
+  font-size: 0.75rem;
+  color: #718096;
+  margin: 0;
+}
+
+.device-limit-banner {
+  background: rgba(245, 101, 101, 0.1);
+  border: 1px solid rgba(245, 101, 101, 0.3);
+  color: #fc8181;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+}
+```
+
+---
+
+## Verification
+
+1. Log in with a test user account. Open Settings. Verify the referral code is displayed.
+2. Open the Auth modal (logged out). Verify the referral code input appears below the license key form.
+3. Type a fake referral code in the input and click "Buy a Lifetime License". Verify the `customData.referred_by` field appears in the Paddle checkout console logs.
+4. Mock `authState.deviceLimitReached = true` via browser console. Verify the device limit banner appears in Settings.
+5. Mock `authState.allowedDevices = 2`. Verify the "✅ You've already unlocked a 2nd device!" text appears.
