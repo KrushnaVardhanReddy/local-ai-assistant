@@ -74,7 +74,7 @@ func TestStreamCompletionWithContext(t *testing.T) {
 		{Role: "assistant", Content: "Previous answer"},
 	}
 
-	err := StreamCompletionWithContext(context.Background(), "Test question", "behavioral", history, func(token string) {
+	err := StreamCompletionWithContext(context.Background(), "Test question", BuildSystemPrompt("behavioral"), history, func(token string) {
 		tokens = append(tokens, token)
 	}, func() {
 		doneCalled = true

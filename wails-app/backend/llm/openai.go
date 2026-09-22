@@ -254,7 +254,7 @@ func StreamVisionCompletion(ctx context.Context, base64Image string, prompt stri
 	return nil
 }
 
-func StreamCompletionWithContext(ctx context.Context, question string, category string, history []ChatMessage, onToken StreamCallback, onDone func()) error {
+func StreamCompletionWithContext(ctx context.Context, question string, systemPrompt string, history []ChatMessage, onToken StreamCallback, onDone func()) error {
 	defer func() {
 		if onDone != nil {
 			onDone()
@@ -276,7 +276,10 @@ func StreamCompletionWithContext(ctx context.Context, question string, category 
 	endpoint := baseURL + "chat/completions"
 
 	messages := make([]ChatMessage, 0, len(history)+2)
-	messages = append(messages, ChatMessage{Role: "system", Content: BuildSystemPrompt(category)})
+	if systemPrompt == "" {
+		systemPrompt = DefaultSystemPrompt
+	}
+	messages = append(messages, ChatMessage{Role: "system", Content: systemPrompt})
 	messages = append(messages, history...)
 	messages = append(messages, ChatMessage{Role: "user", Content: question})
 
@@ -360,5 +363,5 @@ func StreamCompletionWithContext(ctx context.Context, question string, category 
 }
 
 func StreamCompletion(ctx context.Context, question string, onToken StreamCallback, onDone func()) error {
-	return StreamCompletionWithContext(ctx, question, "", nil, onToken, onDone)
+	return StreamCompletionWithContext(ctx, question, BuildSystemPrompt(""), nil, onToken, onDone)
 }
