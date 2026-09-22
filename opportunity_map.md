@@ -37,14 +37,12 @@ The previous version of this document had an internal contradiction: the scoreca
 | 🟢 Wave 1 | **1A 🎯 PRIMARY** | **BarnOwl AI** (Interview Copilot) | Job seekers / tech candidates | 🔴 Crowded but moat exists | 🟢 Strong — only 100% offline + IDE workspace | In Progress | $$$$ | Real competitors: Final Round AI, Cluely, LockedIn AI, Parakeet, Sensei — all cloud-based. Our wedge: fully local, no data breach risk, works in enterprise firewalled environments |
 | 🟢 Wave 1 | **1B ⏸️ PAUSED** | ~~StealthPresenter~~ | Creators / presenters | 🔴 Crowded / low-margin | 🟡 Moderate | Paused | $ | ShareSpeak at $14.99 lifetime kills the price ceiling. Market doesn't care about offline privacy. MVP preserved. |
 | 🟢 Wave 1 | **2nd** | **MentorGlass** | Coaches / consultants | 🟢 Very Low (confirmed) | 🟢 Strong | 4–5 weeks | $$$ | 1 prompt + skin swap from BarnOwl. Zero real-time HUD competitors. B2B SaaS $29–$49/mo. |
-| 🟡 Wave 2 | **3rd** | **TechSupport Copilot** | IT / Tech support agents | 🟡 Medium | 🟢 Very Strong — 100% offline respects strict enterprise IP/PII policies | 4-5 weeks | $$$$ | Agents handle sensitive PII on locked machines. Cloud AI is blocked. Offline RAG over KB docs + invisible HUD is a massive gap. |
-| 🟡 Wave 2 | **4th** | **Private Pro Copilot** | Executives / remote workers | 🟡 Medium | 🟢 Very Strong — zero cloud risk for confidential calls | 4-5 weeks | $$$ | Broad re-positioning of LangShadow concept. General-purpose invisible RAG/STT for high-stakes Zoom calls. |
-| 🟡 Wave 2 | **5th** | **DebateShield** | Students / debate teams | 🟡 Low-Medium (new entrant: FlowMaster, DebateCardAI) | 🟡 Moderate — offline AI is the wedge, not stealth | 3–4 weeks | $$ | FlowMaster now exists as a full debate round app. Pivot pitch to offline tournament-legal AI flowing + RAG |
-| 🟡 Wave 2 | **6th** | **GovBrief** | Govt / PR spokespeople | 🟢 Very Low (confirmed) | 🟢 Very Strong | 4–6 weeks | $$$$ | GovBrief.us exists but is a federal contracting platform — completely different. Real-time spokesperson HUD is still blue ocean. |
-| 🔵 Wave 3 | **7th** | **CounselDesk** | Solo / small firm attorneys | 🟡 Medium (Verbit Legal Visor, Filevine, Prevail CheckMate) | 🟢 Strong — local-only = no SOC2 required for small firms | 6–8 weeks | $$$$ | Verbit Legal Visor is cloud + ISO 27001/SOC2/HIPAA. Small firms can't afford it. Our $79–$149/mo local-first tool is the gap. Raise target price from $29 to $99–$149/mo. |
-| 🔵 Wave 3 | **8th** | **ClinicHUD** | Telehealth doctors | 🟡 Medium (Nuance DAX, Abridge, Suki, DeepScribe — all cloud) | 🟢 Very Strong — HIPAA by design | 6–8 weeks | $$$$ | Ambient AI scribing confirmed as highest-ROI clinical AI feature in 2026. All competitors cloud-based $300+/mo/seat. Our local-only = zero BAA complexity for solo practices. |
-| 🔵 Wave 3 | **9th** | **LangShadow** | Language learners | 🔴 Crowded (Duolingo Max Video Call, Langua, JotMe, Praktika) | 🟡 Moderate — live-call invisible HUD is unique | 5–6 weeks | $$ | Market is saturated at the app level. Unique angle is invisible overlay during real business calls / iTalki sessions — no competitor does that. Reframe pitch accordingly. |
-| 🔴 Wave 4 | **10th** | **AgentPrompt** | Call center agents | 🔴 High (Balto, Level AI, Glia) | 🟡 Moderate | 8–10 weeks | $$$$$ | Year 2. Requires SOC2, FINRA/TCPA, SIP integration, enterprise sales. IT policy on locked corporate machines is the real blocker. |
+| 🟡 Wave 2 | **3rd** | **DebateShield** | Students / debate teams | 🟡 Low-Medium (new entrant: FlowMaster, DebateCardAI) | 🟡 Moderate — offline AI is the wedge, not stealth | 3–4 weeks | $$ | FlowMaster now exists as a full debate round app. Pivot pitch to offline tournament-legal AI flowing + RAG |
+| 🟡 Wave 2 | **4th** | **GovBrief** | Govt / PR spokespeople | 🟢 Very Low (confirmed) | 🟢 Very Strong | 4–6 weeks | $$$$ | GovBrief.us exists but is a federal contracting platform — completely different. Real-time spokesperson HUD is still blue ocean. |
+| 🔵 Wave 3 | **5th** | **CounselDesk** | Solo / small firm attorneys | 🟡 Medium (Verbit Legal Visor, Filevine, Prevail CheckMate) | 🟢 Strong — local-only = no SOC2 required for small firms | 6–8 weeks | $$$$ | Verbit Legal Visor is cloud + ISO 27001/SOC2/HIPAA. Small firms can't afford it. Our $79–$149/mo local-first tool is the gap. Raise target price from $29 to $99–$149/mo. |
+| 🔵 Wave 3 | **6th** | **ClinicHUD** | Telehealth doctors | 🟡 Medium (Nuance DAX, Abridge, Suki, DeepScribe — all cloud) | 🟢 Very Strong — HIPAA by design | 6–8 weeks | $$$$ | Ambient AI scribing confirmed as highest-ROI clinical AI feature in 2026. All competitors cloud-based $300+/mo/seat. Our local-only = zero BAA complexity for solo practices. |
+| 🔵 Wave 3 | **7th** | **LangShadow** | Language learners | 🔴 Crowded (Duolingo Max Video Call, Langua, JotMe, Praktika) | 🟡 Moderate — live-call invisible HUD is unique | 5–6 weeks | $$ | Market is saturated at the app level. Unique angle is invisible overlay during real business calls / iTalki sessions — no competitor does that. Reframe pitch accordingly. |
+| 🔴 Wave 4 | **8th** | **AgentPrompt** | Call center agents | 🔴 High (Balto, Level AI, Glia) | 🟡 Moderate | 8–10 weeks | $$$$$ | Year 2. Requires SOC2, FINRA/TCPA, SIP integration, enterprise sales. IT policy on locked corporate machines is the real blocker. |
 | 🟣 Wave 5 🔭 | **Future** | **StreamerHUD** | Twitch/YouTube streamers | 🟡 Medium (StreamElements, Streamlabs, OBS plugins — none are invisible-to-capture) | 🟢 Strong — invisible to OBS capture is genuinely novel | 3–4 weeks | $$$ | No competitor does OS-level capture exclusion for streamers. Viral demo potential. Pull forward if BarnOwl gets early traction. |
 | 🟣 Wave 5 🔭 | **Future** | **TabletopDM** | D&D / TTRPG DMs | 🟢 Very Low | 🟢 Strong | 4–5 weeks | $$ | Passionate community, zero software competition, LLM panic button angle is compelling |
 | 🟣 Wave 5 🔭 | **Future** | **LyricsHUD** | Live singers / performers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $$ | No STT needed. Foot-pedal scroll. Niche but zero competition. |
@@ -221,23 +219,13 @@ WAVE 1 (Now → Month 3) — Ship BarnOwl, Validate Engine
 WAVE 2 (Month 3–6) — Fast Niches, Build Credibility
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  3. TechSupport Copilot (IT / support agents)
-     → Wedge: 100% offline respects strict enterprise IP/PII policies
-     → Cloud AI is blocked on these locked machines
-     → Offline RAG over KB docs + invisible HUD is a massive gap
-     
-  4. Private Pro Copilot (Executives / remote workers)
-     → Broad re-positioning of LangShadow concept
-     → General-purpose invisible RAG/STT for high-stakes Zoom calls
-     → Zero cloud risk for confidential calls
-
-  5. DebateShield (students / debate teams)
+  3. DebateShield (students / debate teams)
      → Tournament-legal offline AI flowing is the pitch
      → New competitor FlowMaster exists but is cloud-based — use that
      → Distribution: NSDA subreddit, college debate coaches Facebook groups
      → Revenue: $9/mo student, $49/mo coach tier
 
-  6. GovBrief → rename to PressBrief or BriefingDesk
+  4. GovBrief → rename to PressBrief or BriefingDesk
      → GovBrief.us is a live domain (federal contracting platform)
      → Zero real software competitors in live spokesperson support
      → "White House press secretary" demo video = viral marketing hook
@@ -248,20 +236,20 @@ WAVE 3 (Month 6–12) — High-Value Professionals
   (Requires: testimonials, proven track record, 6+ months live)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  7. CounselDesk (solo / small firm attorneys)
+  5. CounselDesk (solo / small firm attorneys)
      → Wedge: local-only, no cloud risk, no SOC2 overhead
      → Correct pricing: $99–$149/month (not $29)
      → Wait for testimonials — attorney trust requires peer referrals
      → Competitors Verbit Legal Visor / Filevine are enterprise-grade;
        our moat is the SMB / solo firm gap
 
-  8. ClinicHUD (telehealth doctors)
+  6. ClinicHUD (telehealth doctors)
      → Ambient scribing confirmed as #1 ROI clinical AI feature
      → All cloud competitors $300+/mo; our local-only is $49–$99/mo
      → HIPAA moat by design — no BAA required for local-only tools
      → Requires: basic EHR context loading (FHIR export support), SOAP note output
 
-  9. LangShadow (repositioned — non-native business professionals)
+  7. LangShadow (repositioned — non-native business professionals)
      → NOT a learning app — a real-time business call assistant
      → No competitor sits invisibly on a live Zoom call for non-native speakers
      → Revenue: $14–$19/mo, viral in immigrant professional communities
@@ -270,7 +258,7 @@ WAVE 3 (Month 6–12) — High-Value Professionals
 WAVE 4 (Year 2) — Enterprise Play
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  10. AgentPrompt (call center — banking / insurance)
+  8. AgentPrompt (call center — banking / insurance)
      → Highest revenue ceiling ($10M+ ARR potential)
      → Real blocker: locked corporate laptops, IT policy, not telephony API
      → Requires: SOC2 Type II, FINRA/TCPA certification, channel partner

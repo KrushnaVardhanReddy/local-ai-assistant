@@ -3,6 +3,8 @@
   import { apiFetch, getApiUrl } from "$lib/api";
   import { onMount, onDestroy } from "svelte";
 
+  const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
+
   let {
     showHotkeys = false,
     onToggleHotkeys
@@ -249,10 +251,12 @@
             <span>Scroll Answer Down / Up</span>
             <kbd>Ctrl+Shift+↓/↑</kbd>
           </div>
-          <div class="hotkey-row">
-            <span>Toggle Stealth Click-through</span>
-            <kbd>Ctrl+Alt+M</kbd>
-          </div>
+          {#if stealthMode}
+            <div class="hotkey-row">
+              <span>Toggle Stealth Click-through</span>
+              <kbd>Ctrl+Alt+M</kbd>
+            </div>
+          {/if}
           <div class="hotkey-row">
             <span>Session Report</span>
             <kbd>Ctrl+Shift+E</kbd>

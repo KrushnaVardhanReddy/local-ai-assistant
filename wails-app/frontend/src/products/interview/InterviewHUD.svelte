@@ -19,6 +19,8 @@
   import type { FileNode } from "$lib/components/workspace/types";
   import type { HeaderAction } from "$lib/types";
 
+  const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
+
   // Wails App methods
   let App: any;
   let statePollInterval: any;
@@ -365,10 +367,12 @@
         <span class="material-symbols-outlined">mop</span>
         <span class="tool-label">Clear</span>
       </button>
-      <button class="tool-btn" class:text-primary={clickthrough} onclick={toggleStealthMode} title="Stealth Mode (Clickthrough)">
-        <span class="material-symbols-outlined">{clickthrough ? 'mouse' : 'back_hand'}</span>
-        <span class="tool-label">Stealth</span>
-      </button>
+      {#if stealthMode}
+        <button class="tool-btn" class:text-primary={clickthrough} onclick={toggleStealthMode} title="Stealth Mode (Clickthrough)">
+          <span class="material-symbols-outlined">{clickthrough ? 'mouse' : 'back_hand'}</span>
+          <span class="tool-label">Stealth</span>
+        </button>
+      {/if}
     </div>
   </div>
 

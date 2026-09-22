@@ -9,6 +9,7 @@
 
 
   const isCloudBuild = import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
+  const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
 
 
   let { embedded = false } = $props<{ embedded?: boolean }>();
@@ -454,12 +455,14 @@
             <hr class="divider" style="margin-top: 0;" />
           {/if}
 
-          <div class="checkbox-group">
-            <label>
-              <input type="checkbox" bind:checked={isDevModeChecked} data-testid="dev-mode-toggle" />
-              Dev Mode: Disable Stealth (E2E Visibility)
-            </label>
-          </div>
+          {#if stealthMode}
+            <div class="checkbox-group">
+              <label>
+                <input type="checkbox" bind:checked={isDevModeChecked} data-testid="dev-mode-toggle" />
+                Dev Mode: Disable Stealth (E2E Visibility)
+              </label>
+            </div>
+          {/if}
 
           <div class="checkbox-group">
             <label>

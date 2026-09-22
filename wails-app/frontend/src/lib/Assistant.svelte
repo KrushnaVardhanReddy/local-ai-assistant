@@ -13,6 +13,8 @@
   let isAuthModalOpen = $state(false);
   import { CaptureScreen, AnalyzeVision, ClearState, ClearCache, SetClickthrough } from "../../wailsjs/go/main/App";
 
+  const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
+
   let showSessionReport = $state(false);
   let starPrimed = $state(false);
   let starPrimedTimer: ReturnType<typeof setTimeout> | null = null;
@@ -599,15 +601,17 @@
         <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Clear</span>
       </button>
       <!-- Click-through toggle -->
-      <button
-        aria-label="Toggle Click-Through"
-        title="Toggle Stealth Mode (Ctrl+Alt+M)"
-        class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {clickthrough ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
-        onclick={toggleClickthrough}
-      >
-        <span class="material-symbols-outlined text-[18px]">{clickthrough ? 'mouse' : 'back_hand'}</span>
-        <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Stealth</span>
-      </button>
+      {#if stealthMode}
+        <button
+          aria-label="Toggle Click-Through"
+          title="Toggle Stealth Mode (Ctrl+Alt+M)"
+          class="flex-shrink-0 h-10 w-10 flex flex-col items-center justify-center rounded-xl transition-colors pointer-events-auto {clickthrough ? 'bg-primary/20 text-primary ring-1 ring-primary/40' : 'hover:bg-white/10 text-on-surface-variant hover:text-primary'}"
+          onclick={toggleClickthrough}
+        >
+          <span class="material-symbols-outlined text-[18px]">{clickthrough ? 'mouse' : 'back_hand'}</span>
+          <span class="text-[8px] font-bold tracking-wider uppercase mt-0.5">Stealth</span>
+        </button>
+      {/if}
       <!-- Separator -->
       <div class="flex-shrink-0 w-px h-5 bg-white/10 mx-1"></div>
       <!-- Hide window (Ctrl+Shift+Space to restore) -->

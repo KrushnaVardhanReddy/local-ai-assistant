@@ -2,6 +2,8 @@
   import { wsState, toggleManualMode } from '$lib/ws.svelte';
   import type { HeaderAction } from '$lib/types';
 
+  const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
+
   let {
     transcriptHistory = [],
     pendingTranscripts = [],
@@ -171,10 +173,12 @@
           <span>Scroll Answer Down / Up</span>
           <kbd>Ctrl+Shift+↓/↑</kbd>
         </div>
-        <div class="hotkey-row">
-          <span>Toggle Stealth Click-through</span>
-          <kbd>Ctrl+Alt+M</kbd>
-        </div>
+        {#if stealthMode}
+          <div class="hotkey-row">
+            <span>Toggle Stealth Click-through</span>
+            <kbd>Ctrl+Alt+M</kbd>
+          </div>
+        {/if}
         <div class="hotkey-row">
           <span>Session Report</span>
           <kbd>Ctrl+Shift+E</kbd>

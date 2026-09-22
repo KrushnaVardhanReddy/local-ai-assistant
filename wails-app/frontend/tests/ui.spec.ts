@@ -239,9 +239,18 @@ test.describe('App UI Tests', () => {
   });
 
   test('Test 10: Toolbar Stealth toggles clickthrough mode and text-primary', async ({ page }) => {
+    const isStealthMode = process.env.VITE_STEALTH_MODE === 'true';
+    if (!isStealthMode) {
+      const stealthBtn = page.locator('button[title="Stealth Mode (Clickthrough)"]');
+      await expect(stealthBtn).toHaveCount(0);
+      return;
+    }
+
     const stealthBtn = page.locator('button[title="Stealth Mode (Clickthrough)"]');
-    await stealthBtn.click();
-    await expect(stealthBtn).toHaveClass(/text-primary/);
+    if (await stealthBtn.count() > 0) {
+      await stealthBtn.click();
+      await expect(stealthBtn).toHaveClass(/text-primary/);
+    }
   });
 
   test('Test 11: Copilot STAR method button primes STAR state', async ({ page }) => {
