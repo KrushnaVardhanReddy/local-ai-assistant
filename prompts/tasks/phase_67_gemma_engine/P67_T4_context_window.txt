@@ -1,0 +1,187 @@
+MANDATORY RULES — VIOLATION = REJECTED PR:
+- NEVER stub, mock, or TODO existing implementation code. Write real, working code only.
+- Commit message must start with "jules: " prefix.
+- Use clean module design and idiomatic Go architecture. No spaghetti code.
+- NEVER hardcode secrets, API keys, or local paths.
+- UNIT TESTS REQUIRED: For every Go file you create or modify, write an accompanying _test.go.
+- ALWAYS UPDATE THE WIKI: Update relevant markdown files in wiki/.
+
+Project: Local AI Assistant (BarnOwl AI)
+Tech stack: Go 1.25+, Wails v2, whisper.cpp, onnxruntime_go, Svelte 5 frontend
+
+════════════════════════════════════════════════════════════════
+TASK: P67-T4 — Conversational Context Window (Rolling Turn Memory)
+════════════════════════════════════════════════════════════════
+
+OBJECTIVE:
+Fix a critical UX failure in BarnOwl AI: when an interviewer asks a follow-up question
+like "Why?", "Explain that further", or "Give me an example of that", the AI currently
+has NO memory of the previous question or answer. It responds incorrectly because it has
+zero context about what "that" or "why" refers to.
+
+This task adds a Conversational Context Window to the LLM prompt builder. It reads the
+last 3 completed turns from the existing SessionManager, formats them as a compact
+context block, and prepends that block to every outgoing LLM prompt. This is a pure
+backend change — no frontend changes required.
+
+PREREQUISITE: None. This task is INDEPENDENT of P67-T1, T2, T3 and can run in parallel.
+
+════════════════════════════════════════════════════════════════
+BACKGROUND / ARCHITECTURE CONTEXT
+════════════════════════════════════════════════════════════════
+
+Read and understand these files before making any changes:
+
+1. wails-app/backend/llm/prompts.go
+   - Contains DefaultSystemPrompt and BuildSystemPrompt(category string) string.
+   - BuildSystemPrompt() is called by the LLM engine to construct the system prompt.
+   - You will ADD a new function here: BuildContextBlock(turns []session.Turn) string
+
+2. wails-app/backend/session/session.go
+   - SessionManager already has GetRecentTurns(n int) []Turn — use this, do NOT modify it.
+   - Each Turn has: InterviewerQuestion, AISuggestion, CandidateResponse, TurnIndex fields.
+
+3. Locate where the LLM streaming call is made (search for StreamCompletion or similar in
+   wails-app/backend/lib/ or app.go). Find the exact point where BuildSystemPrompt() is
+   called and the user message is assembled. You will modify this call site to inject
+   the context block.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/backend/llm/prompts.go
+[MODIFY] The call site where BuildSystemPrompt() is invoked and the LLM request is assembled
+         (find this by searching the codebase — do NOT hardcode a path here without verifying)
+[MODIFY] Corresponding _test.go files for each modified .go file
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── CHANGES TO wails-app/backend/llm/prompts.go ────────────────────────────────
+
+1. Add import for "wails-app/backend/session" and "fmt" and "strings" if not already present.
+
+2. Add constant:
+   const MaxContextTurns = 3
+   const MaxContextTokensApprox = 400  // ~400 words, safe for all supported cloud models
+
+3. Add new function: BuildContextBlock(turns []session.Turn) string
+   - If len(turns) == 0, return "" (empty string — no context to inject).
+   - Build a formatted string representing the last N completed turns.
+   - Use this EXACT format for each turn (very compact, token-efficient):
+   
+     [Turn N] Interviewer: "<InterviewerQuestion truncated to 120 chars>"
+              AI Answer:   "<AISuggestion truncated to 200 chars>"
+   
+   - Truncation rule: if a field exceeds its character limit, slice it and append "..."
+   - Wrap the block like this:
+   
+     === Recent Interview Context (last N turns) ===
+     [Turn 1] Interviewer: "..."
+              AI Answer:   "..."
+     [Turn 2] ...
+     === End Context ===
+   
+   - After building the block, count its total characters. If it exceeds 2000 characters
+     (a proxy for ~400 tokens), trim turns from the oldest end until it fits.
+   - Return the final formatted block string.
+
+4. MODIFY BuildSystemPrompt(category string) string → rename to BuildSystemPrompt and
+   keep its current signature. DO NOT change its existing logic.
+
+5. ADD new function: BuildFullSystemPrompt(category string, turns []session.Turn) string
+   - Calls BuildSystemPrompt(category) to get the base prompt.
+   - Calls BuildContextBlock(turns) to get the context block.
+   - If contextBlock is empty, return the base prompt unchanged.
+   - If contextBlock is non-empty, return:
+     basePrompt + "\n\n" + contextBlock
+   This is the function the LLM call site will use instead of BuildSystemPrompt directly.
+
+─── CHANGES TO THE LLM CALL SITE ────────────────────────────────────────────────
+
+Find the exact location in the codebase where:
+  a) BuildSystemPrompt(category) is called, AND
+  b) The LLM request (StreamCompletion or equivalent) is initiated with a question string.
+
+At that call site:
+  1. Get the SessionManager (it is already stored in the engine struct — find it).
+  2. Call: recentTurns := sessionManager.GetRecentTurns(MaxContextTurns)
+  3. Replace: llm.BuildSystemPrompt(category)
+     With:    llm.BuildFullSystemPrompt(category, recentTurns)
+
+That is the ONLY change required at the call site. All the formatting logic lives in prompts.go.
+
+════════════════════════════════════════════════════════════════
+EXAMPLE — What the LLM Now Receives
+════════════════════════════════════════════════════════════════
+
+BEFORE this change (LLM System Prompt):
+  "You are a stealth interview assistant... [DefaultSystemPrompt]
+   For this response: This is a conceptual question... [CategoryInjection]"
+
+AFTER this change (LLM System Prompt):
+  "You are a stealth interview assistant... [DefaultSystemPrompt]
+   For this response: This is a conceptual question... [CategoryInjection]
+
+   === Recent Interview Context (last 2 turns) ===
+   [Turn 1] Interviewer: "Tell me about yourself"
+            AI Answer:   "10+ years in distributed systems. Led the migration of a..."
+   [Turn 2] Interviewer: "Tell me more about the Redis caching you mentioned"
+            AI Answer:   "Used LRU eviction policy with a 3-node Redis cluster..."
+   === End Context ==="
+
+USER MESSAGE sent to LLM:
+  "Why did you choose LRU over LFU?"
+
+RESULT: The LLM now correctly understands "why" refers to the LRU eviction decision
+from Turn 2 and gives a surgically accurate, contextually grounded answer.
+
+════════════════════════════════════════════════════════════════
+TESTING REQUIREMENTS
+════════════════════════════════════════════════════════════════
+
+MODIFY: wails-app/backend/llm/prompts_test.go
+
+TestBuildContextBlock_Empty:
+  - Pass []session.Turn{} to BuildContextBlock.
+  - Assert the returned string is "".
+
+TestBuildContextBlock_SingleTurn:
+  - Pass one Turn with known InterviewerQuestion and AISuggestion.
+  - Assert the output contains "[Turn 1]", the question text, and the answer text.
+  - Assert it starts with "=== Recent Interview Context" and ends with "=== End Context ===".
+
+TestBuildContextBlock_ThreeTurns:
+  - Pass 3 turns. Assert [Turn 1], [Turn 2], [Turn 3] all appear.
+
+TestBuildContextBlock_Truncation:
+  - Pass a Turn where InterviewerQuestion is 200 characters long (exceeds 120-char limit).
+  - Assert the output for that question ends with "..." and is at most 123 chars long.
+
+TestBuildContextBlock_OverallSizeLimit:
+  - Pass 3 turns, each with very long AISuggestion (500+ chars).
+  - Assert the final context block is less than or equal to 2000 characters.
+
+TestBuildFullSystemPrompt_WithContext:
+  - Pass a category "behavioral" and 2 populated turns.
+  - Assert the result contains the DefaultSystemPrompt content.
+  - Assert the result contains "=== Recent Interview Context".
+  - Assert the result contains both turn questions.
+
+TestBuildFullSystemPrompt_EmptyTurns:
+  - Pass a category "coding" and []session.Turn{}.
+  - Assert the result is IDENTICAL to what BuildSystemPrompt("coding") returns.
+  - This proves zero-context behavior is backwards-compatible.
+
+════════════════════════════════════════════════════════════════
+VERIFICATION
+════════════════════════════════════════════════════════════════
+- cd wails-app && go build ./... must succeed with zero errors.
+- cd wails-app && go test ./backend/llm/... -v must pass all tests.
+- go vet ./backend/llm/... must return zero warnings.
+- Manual check: After building, start an interview session and ask 2 questions.
+  On the 3rd question, check the Go application log for the system prompt being sent.
+  It should now contain the "=== Recent Interview Context ===" block with the
+  previous 2 turns visible.
