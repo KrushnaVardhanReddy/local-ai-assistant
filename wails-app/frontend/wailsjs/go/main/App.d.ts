@@ -103,4 +103,6 @@ export function ToggleClickthroughMode():Promise<boolean>;
 
 export function ToggleMic():Promise<boolean>;
 
+export function ToggleMockInterviewMode(arg1:boolean):Promise<void>;
+
 export function ToggleStealth(arg1:Record<string, any>):Promise<void>;

@@ -16,6 +16,7 @@ import (
 	"wails-app/backend/config"
 	"wails-app/backend/parser"
 	"wails-app/backend/stt"
+	"wails-app/backend/tts"
 	"wails-app/core/engine"
 	"wails-app/core/ports/driven"
 	"wails-app/core/ports/driving"
@@ -116,6 +117,7 @@ func NewPresenterApp(cfg *config.AppConfig) *PresenterApp {
 		llmAdapter,
 		cacheAdapter,
 		&eventsadapter.NoopEventAdapter{}, // replaced in startup()
+		tts.NewEdgeTTSAdapter(),
 	)
 
 	app = &PresenterApp{

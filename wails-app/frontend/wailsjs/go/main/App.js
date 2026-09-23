@@ -198,6 +198,10 @@ export function ToggleMic() {
   return window['go']['main']['App']['ToggleMic']();
 }
 
+export function ToggleMockInterviewMode(arg1) {
+  return window['go']['main']['App']['ToggleMockInterviewMode'](arg1);
+}
+
 export function ToggleStealth(arg1) {
   return window['go']['main']['App']['ToggleStealth'](arg1);
 }
