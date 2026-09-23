@@ -1,0 +1,9 @@
+<<<<<<< SEARCH
+  let cacheStats = $state<{ hits: number; sizeMB: number } | null>(null);
+
+  async function fetchItems() {
+=======
+  let cacheStats = $state<any>(null);
+
+  async function fetchItems() {
+>>>>>>> REPLACE

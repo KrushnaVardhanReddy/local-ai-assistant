@@ -11,9 +11,17 @@
   let selectedIds = $state<Set<string>>(new Set());
   let selectedDocPaths = $state<Set<string>>(new Set());
   let isLoading = $state(false);
+  let cacheStats = $state<{ hits: number; sizeMB: number } | null>(null);
 
   async function fetchItems() {
     isLoading = true;
+    try {
+      if ((window as any).go?.backend?.App?.GetCacheStats) {
+        cacheStats = await (window as any).go.backend.App.GetCacheStats();
+      }
+    } catch (e) {
+      console.error("Failed to fetch cache stats:", e);
+    }
     try {
       if (activeTab === 'qa' && (window as any).go?.main?.App?.GetCacheItems) {
         const fetched = await (window as any).go.main.App.GetCacheItems();
@@ -125,6 +133,12 @@
       </div>
 
       <div class="modal-actions">
+        <div class="stats-info" style="display: flex; gap: 16px; align-items: center; margin-right: auto; color: rgba(255, 255, 255, 0.7); font-size: 0.9em;">
+          {#if cacheStats}
+            <span class="stat-hits">Hits: {cacheStats.hits}</span>
+            <span class="stat-size">Size: {cacheStats.sizeMB}MB</span>
+          {/if}
+        </div>
         <button class="btn btn-danger" onclick={handleDeleteSelected} disabled={(activeTab === 'qa' && selectedIds.size === 0) || (activeTab === 'docs' && selectedDocPaths.size === 0)}>
           Delete Selected ({(activeTab === 'qa' ? selectedIds.size : selectedDocPaths.size)})
         </button>

@@ -13,6 +13,7 @@
   ];
 
   const bottomActions = [
+    { id: 'cache', icon: 'mop', label: 'Cache' },
     { id: 'settings', icon: 'settings', label: 'Settings' }
   ];
 
