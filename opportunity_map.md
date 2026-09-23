@@ -241,31 +241,36 @@ The previous version of this document had an internal contradiction: the scoreca
 
 ---
 
-### 9. 🎙️ ClearTalk — Speech Articulation Trainer *(New Entry, Wave 5)*
+### 9. 🧊 ClearTalk Cube — Offline Speech-Practice Hardware *(New Entry, Wave 5)*
 
-**The idea:** A desktop app that uses the existing Whisper STT + LLM pipeline to give real-time articulation coaching. The user reads a target sentence aloud; the app transcribes it, diffs what was said vs. what should have been said, and gives structured feedback — substitutions, omissions, filler words, pacing.
+**The Concept:**
+A screen-free, dedicated hardware device (Raspberry Pi/ARM based) that gives children with speech delays real-time, spoken correction on their articulation — fully offline, with clinical-grade accuracy on speech patterns that consumer voice AI wasn't built to understand.
 
-**Who this helps:**
-- Kids with speech delays (the primary beneficiary — **free tier, always**)
-- Adults recovering from strokes or neurological events
-- Non-native speakers wanting cleaner English delivery
-- Podcasters, presenters, and YouTubers wanting to cut filler words
-- Parents who can't afford $150–$300/session weekly speech therapy
+**The Real Market Gap (Competitive Landscape):**
 
-**Why the gap exists:**
+| Category | Examples | Two-way interactive? | Offline/On-device? | Clinical focus? | Price |
+|---|---|---|---|---|---|
+| **Passive audio players** | Yoto, Toniebox | No mic | N/A | No | ~$70–100 |
+| **Cloud AI companion toys** | MyWonder, Wippi, Curio/Grok, MIKO Mini | Yes | No — cloud-connected | No | ~$99 |
+| **General cloud assistants** | Amazon Echo Dot Kids | Yes | No | No, and poor on disordered speech | ~$50–60 |
+| **Clinical speech apps (phone/tablet)** | SpeechLP, ArticAI, Sara Speech, Otsimo | Yes | Several claim on-device | Yes | $0–20/mo, no hardware cost |
+| **Prior offline kids-voice-AI attempts** | KidSense.ai (2018) | Yes | Yes (edge voice AI) | No | N/A (didn't reach market) |
+| **ClearTalk Cube (proposed)** | — | **Yes** | **Yes, fully offline** | **Yes** | **$99–149 + $49/mo B2B** |
 
-**Why the gap exists (Competitive Landscape):**
+The uncontested white space is the bottom-right corner: hardware + fully offline + clinical-grade recognition. Everyone else is missing at least one of those three.
 
-*Kid-facing practice apps:*
-| Competitor | Gap / Differentiator |
-|---|---|
-| **SpeechLP** | Closest competitor. Claims on-device phoneme screener & COPPA compliance. ClearTalk must beat them on true 100% offline (no sync option) and UI simplicity. |
-| Sara: Articulation | Freemium, parent-only currently. Not advertised as offline. |
-| Minimal Pairs Arcade | Clinician-facing only, no independent AI home practice. |
-| Speech Blubs | Mostly video-modeling/repetition, weak real-time AI scoring. |
+**The Solution & Differentiators:**
+- **Purpose-built practice partner, not a toy or an assistant.** No open-ended chat, no story library to compete with — one job: listen, detect the target sound, and coach correction.
+- **Constrained-vocabulary recognition tuned for disordered speech.** Built and validated against child speech-error data (lisps, substitutions, distortions) rather than adapted from general-purpose consumer models tuned on typical adult speech.
+- **Fully offline, hardware-enforced.** No Wi-Fi radio active during practice sessions; recordings never leave the device. This is a stronger privacy claim than "on-device processing" software apps make, since those still run on a general-purpose phone with other connected apps and OS-level data flows.
+- **Built for the SLP relationship, not against it.** Positioned as the carryover tool a therapist assigns and monitors — not a self-diagnosis tool competing with therapy.
 
-*SLP-side caseload tools (what we compete against for the $49/mo):*
-SLP Now, SLP Toolkit, and Speekly already own the paperwork/caseload market. ClearTalk’s dashboard doesn't need to replace them—it needs to plug the gap they don't cover: *structured at-home carryover practice with objective data feeding back into the SLP's existing workflow*.
+**Why Hardware Wins (The Honest Strategic Risk):**
+The primary risk to manage is that a $0–20/month app (like SpeechLP) on a device parents already own is a lower-friction purchase than a $99–149 dedicated object. 
+*   **The "Screen-Time" War:** iPads are distraction machines (YouTube/Roblox). The Cube guarantees 100% focus with zero behavioral friction.
+*   **Independence & Safety:** A $99 durable plastic cube can live permanently in a 5-year-old's bedroom; a $1,000 iPad Pro cannot.
+*   **Gift-ability:** Grandparents love physical educational gifts. You cannot wrap a $10/mo App Store subscription.
+*   **Clinician Trust:** A dedicated medical/educational device carries more clinical weight than an iOS app competing with TikTok for attention.
 
 **The core feature loop:**
 1. App displays a target sentence or exercise set
