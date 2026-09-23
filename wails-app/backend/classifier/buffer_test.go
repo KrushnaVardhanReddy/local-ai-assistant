@@ -23,9 +23,8 @@ func TestQuestionBuffer_FlushesOnTrueClassification(t *testing.T) {
 	b := NewQuestionBuffer(onFlush)
 	b.maxAge = 45 * time.Second
 	b.watchdogInterval = 5 * time.Second
-	b.Start(); defer b.Stop()
-
-
+	b.Start()
+	defer b.Stop()
 
 	// Use a lock in the mock to delay return until we added all chunks
 	var startClassify sync.WaitGroup
@@ -75,10 +74,10 @@ func TestQuestionBuffer_DoesNotFlushOnFalse(t *testing.T) {
 
 	b := NewQuestionBuffer(onFlush)
 
-
 	b.maxAge = 45 * time.Second
 	b.watchdogInterval = 5 * time.Second
-	b.Start(); defer b.Stop()
+	b.Start()
+	defer b.Stop()
 
 	b.classifyFn = func(ctx context.Context, text string) (bool, error) {
 		return false, nil
@@ -117,11 +116,11 @@ func TestQuestionBuffer_MinChunksGuard(t *testing.T) {
 
 	b := NewQuestionBuffer(onFlush)
 
-
 	b.minChunks = 3
 	b.maxAge = 45 * time.Second
 	b.watchdogInterval = 5 * time.Second
-	b.Start(); defer b.Stop()
+	b.Start()
+	defer b.Stop()
 
 	b.classifyFn = func(ctx context.Context, text string) (bool, error) {
 		mu.Lock()
@@ -157,10 +156,10 @@ func TestQuestionBuffer_FailsafeWatchdog(t *testing.T) {
 
 	b := NewQuestionBuffer(onFlush)
 
-
 	b.maxAge = 100 * time.Millisecond
 	b.watchdogInterval = 50 * time.Millisecond // check more often in tests
-	b.Start(); defer b.Stop()
+	b.Start()
+	defer b.Stop()
 
 	b.classifyFn = func(ctx context.Context, text string) (bool, error) {
 		return false, nil
@@ -199,7 +198,8 @@ func TestQuestionBuffer_Reset(t *testing.T) {
 	b := NewQuestionBuffer(onFlush)
 	b.maxAge = 45 * time.Second
 	b.watchdogInterval = 5 * time.Second
-	b.Start(); defer b.Stop()
+	b.Start()
+	defer b.Stop()
 
 	b.classifyFn = func(ctx context.Context, text string) (bool, error) {
 		return false, nil
@@ -240,7 +240,8 @@ func TestQuestionBuffer_ClassifyError(t *testing.T) {
 	b := NewQuestionBuffer(onFlush)
 	b.maxAge = 45 * time.Second
 	b.watchdogInterval = 5 * time.Second
-	b.Start(); defer b.Stop()
+	b.Start()
+	defer b.Stop()
 
 	b.classifyFn = func(ctx context.Context, text string) (bool, error) {
 		return false, fmt.Errorf("gemma down")

@@ -1,12 +1,12 @@
 package driving
 
 type FileNode struct {
-	ID        string      `json:"id"`        // Unique clean path or UUID
-	Name      string      `json:"name"`      // Display name
-	Path      string      `json:"path"`      // Absolute path on disk
-	IsDir     bool        `json:"isDir"`     // True if folder
-	Extension string      `json:"extension"` // e.g. ".md", ".pdf", ".txt", ".pptx"
-	Size      int64       `json:"size"`      // File size in bytes
+	ID        string      `json:"id"`                 // Unique clean path or UUID
+	Name      string      `json:"name"`               // Display name
+	Path      string      `json:"path"`               // Absolute path on disk
+	IsDir     bool        `json:"isDir"`              // True if folder
+	Extension string      `json:"extension"`          // e.g. ".md", ".pdf", ".txt", ".pptx"
+	Size      int64       `json:"size"`               // File size in bytes
 	Children  []*FileNode `json:"children,omitempty"` // Child nodes if folder
 }
 

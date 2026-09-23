@@ -171,9 +171,14 @@
   }
 
   // Mock mode toggle wrapper
-  function handleMockModeToggle() {
+  async function handleMockModeToggle() {
     const isNowEnabled = !wsState.isMockMode;
     toggleMockMode(isNowEnabled);
+
+    if ((window as any).go?.main?.App?.ToggleMockInterviewMode) {
+      await (window as any).go.main.App.ToggleMockInterviewMode(isNowEnabled);
+    }
+
     if (isNowEnabled) {
       apiFetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
     } else {
@@ -366,6 +371,10 @@
     </div>
 
     <div class="toolbar-actions" style="--wails-draggable: no-drag">
+      <button class="tool-btn" onclick={handleMockModeToggle} class:active={wsState.isMockMode} title="Mock Mode">
+        <span class="material-symbols-outlined">psychology</span>
+        <span class="tool-label">Mock</span>
+      </button>
       <button class="tool-btn" onclick={handleSnip} title="Vision Snip">
         <span class="material-symbols-outlined">screenshot_monitor</span>
         <span class="tool-label">Snip</span>

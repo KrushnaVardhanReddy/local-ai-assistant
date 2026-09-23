@@ -245,7 +245,6 @@ func TestStealthEngine_Workspace(t *testing.T) {
 		}
 	})
 
-
 	t.Run("OpenFile - Standalone Append to Tree", func(t *testing.T) {
 		// Standalone file not in initial workspace tree
 		standalonePath := filepath.Join(tempDir, "standalone.txt")

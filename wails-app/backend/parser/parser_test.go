@@ -2,12 +2,12 @@ package parser
 
 import (
 	"archive/zip"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"io"
-	"errors"
 )
 
 func TestTextParser(t *testing.T) {
@@ -68,7 +68,6 @@ func TestPPTXParser(t *testing.T) {
 		t.Fatalf("failed to create dummy pptx: %v", err)
 	}
 	defer zipFile.Close()
-
 
 	slideXML := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -289,6 +288,7 @@ func TestPPTXParserSlideOpenError(t *testing.T) {
 type failingReader struct {
 	io.Reader
 }
+
 func (f *failingReader) Read(p []byte) (n int, err error) {
 	return 0, errors.New("read error")
 }

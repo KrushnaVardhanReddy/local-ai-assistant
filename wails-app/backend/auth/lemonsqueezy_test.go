@@ -1,10 +1,10 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"fmt"
 )
 
 func TestLemonSqueezyDecodeErrors(t *testing.T) {
@@ -57,6 +57,7 @@ func TestLemonSqueezyRequestErrors(t *testing.T) {
 
 // Add coverage for ReadAll error
 type errReader int
+
 func (errReader) Read(p []byte) (n int, err error) {
 	return 0, fmt.Errorf("test error")
 }

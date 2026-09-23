@@ -1,15 +1,14 @@
 package auth
 
 import (
-
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
 	"testing"
-	"context"
 	"time"
 
 	"github.com/zalando/go-keyring"

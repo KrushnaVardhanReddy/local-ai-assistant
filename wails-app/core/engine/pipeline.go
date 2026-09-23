@@ -229,7 +229,15 @@ func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 			}
 		}
 
+		e.mu.RLock()
+		isMockMode := e.isMockMode
+		e.mu.RUnlock()
+
 		sysPrompt := e.cfg.SystemPrompt
+		if isMockMode {
+			sysPrompt = "You are a technical interviewer. Ask the candidate a question based on their resume. Wait for their response. Evaluate their response briefly, then ask the next question."
+		}
+
 		if activeDocBlock != "" {
 			sysPrompt += activeDocBlock
 		}
@@ -289,6 +297,15 @@ func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 				}
 			}
 			log.Printf("[LLM] Stream complete. Stored in cache.")
+
+			if isMockMode && e.ttsAdapter != nil {
+				go func(text string) {
+					log.Printf("🔊 [TTS] Speaking response...")
+					if err := e.ttsAdapter.Speak(text); err != nil {
+						log.Printf("❌ [TTS] Failed to speak: %v", err)
+					}
+				}(finalAns)
+			}
 		}
 	}(cleanTranscript, llmQuestion, ctx, cancel)
 }

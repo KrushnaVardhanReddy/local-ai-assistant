@@ -10,12 +10,16 @@ import (
 type NoopCacheAdapter struct{}
 
 func (n *NoopCacheAdapter) Search(_ []float32, _ float64) (string, bool) { return "", false }
-func (n *NoopCacheAdapter) Store(_, _ string) error                       { return nil }
-func (n *NoopCacheAdapter) Count() int                                    { return 0 }
-func (n *NoopCacheAdapter) GetAllItems() ([]backend.CacheItem, error)     { return nil, nil }
-func (n *NoopCacheAdapter) IndexDocumentChunk(path, text string, embedding []float32) error { return nil }
-func (n *NoopCacheAdapter) GetIndexedPaths() ([]string, error) { return nil, nil }
+func (n *NoopCacheAdapter) Store(_, _ string) error                      { return nil }
+func (n *NoopCacheAdapter) Count() int                                   { return 0 }
+func (n *NoopCacheAdapter) GetAllItems() ([]backend.CacheItem, error)    { return nil, nil }
+func (n *NoopCacheAdapter) IndexDocumentChunk(path, text string, embedding []float32) error {
+	return nil
+}
+func (n *NoopCacheAdapter) GetIndexedPaths() ([]string, error)  { return nil, nil }
 func (n *NoopCacheAdapter) RemoveIndexedPath(path string) error { return nil }
-func (n *NoopCacheAdapter) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) { return nil, nil }
+func (n *NoopCacheAdapter) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) {
+	return nil, nil
+}
 
 var _ driven.CachePort = (*NoopCacheAdapter)(nil)

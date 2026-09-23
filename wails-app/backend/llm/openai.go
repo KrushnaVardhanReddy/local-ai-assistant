@@ -67,7 +67,7 @@ var (
 )
 
 var (
-	DemoProxyToken string
+	DemoProxyToken  string
 	proxyTokenMutex sync.RWMutex
 )
 
@@ -298,7 +298,7 @@ func StreamCompletionWithContext(ctx context.Context, question string, systemPro
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	log.Printf("[LLM] Making request to endpoint: %s", endpoint)
 
 	req.Header.Set("Content-Type", "application/json")

@@ -44,13 +44,15 @@ func (m *mockLLM) StreamVision(ctx context.Context, base64Image string, prompt s
 
 type mockCache struct{}
 
-func (m *mockCache) Search(embedding []float32, threshold float64) (string, bool) { return "", false }
-func (m *mockCache) Store(question, answer string) error                          { return nil }
-func (m *mockCache) Count() int                                                   { return 0 }
+func (m *mockCache) Search(embedding []float32, threshold float64) (string, bool)    { return "", false }
+func (m *mockCache) Store(question, answer string) error                             { return nil }
+func (m *mockCache) Count() int                                                      { return 0 }
 func (m *mockCache) IndexDocumentChunk(path, text string, embedding []float32) error { return nil }
-func (m *mockCache) GetIndexedPaths() ([]string, error) { return []string{}, nil }
-func (m *mockCache) RemoveIndexedPath(path string) error { return nil }
-func (m *mockCache) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) { return []string{}, nil }
+func (m *mockCache) GetIndexedPaths() ([]string, error)                              { return []string{}, nil }
+func (m *mockCache) RemoveIndexedPath(path string) error                             { return nil }
+func (m *mockCache) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) {
+	return []string{}, nil
+}
 
 type mockEvent struct{}
 

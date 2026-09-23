@@ -150,6 +150,7 @@ func TestApp_ExportSession(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	sessMgr := app.engine.GetSessionManager()
@@ -177,6 +178,7 @@ func TestApp_ExportSession(t *testing.T) {
 	// Test 0 turns
 	app.engine = engine.New(
 		engine.Config{},
+		nil,
 		nil,
 		nil,
 		nil,

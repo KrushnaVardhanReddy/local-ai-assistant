@@ -94,3 +94,9 @@ The UI surfaces for the referral engine include:
 ## Supabase Deployment
 Supabase production setup is fully automated. The SQL migrations (e.g., creating `dev_allowlist` and `user_entitlements` tables) and Edge Functions (`llm-proxy`) can be automatically deployed using the included bash script.
 Run `scripts/deploy_supabase.sh` to link your Supabase project, push all schema migrations, deploy Edge Functions, and set required secrets.
+
+### Phase 70: Mock Interview Mode (Go Port)
+- **TTS Adapter**: Implemented `wails-app/backend/tts` with `EdgeTTSAdapter` using `edge-tts` and `ffplay`/`afplay`.
+- **Engine State**: `StealthEngine` tracks `isMockMode` and updates `SystemPrompt` dynamically to an interviewer persona when active.
+- **Audio Output**: Final LLM answers are streamed to the TTS adapter when Mock Mode is active.
+- **UI Toggle**: Added a Mock Mode toggle to the frontend header in `InterviewHUD.svelte` that issues Wails IPC calls to update backend state.
