@@ -204,6 +204,10 @@ func (a *App) GetSystemStatus() map[string]string {
 // GetState is polled by the frontend every 200ms to get the latest transcript/response state.
 func (a *App) GetState() map[string]interface{} {
 	s := a.engine.GetState()
+	isListening := false
+	if a.audioCapture != nil {
+		isListening = a.audioCapture.IsCapturing()
+	}
 	return map[string]interface{}{
 		"transcript":             s.Transcript,
 		"response":               s.Response,

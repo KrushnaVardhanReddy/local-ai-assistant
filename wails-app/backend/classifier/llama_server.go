@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"wails-app/backend/system"
+	"wails-app/core/ports/driven"
 )
 
 var (
@@ -38,7 +39,7 @@ var (
 	LlamaServerPort = 18080
 )
 
-func EnsureGemmaModelFile(ctx context.Context) (string, error) {
+func EnsureGemmaModelFile(ctx context.Context, events driven.EventPort) (string, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user cache dir: %w", err)
@@ -54,10 +55,24 @@ func EnsureGemmaModelFile(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to create directories for model: %w", err)
 	}
 
+	var lastProgress int
+	callback := func(progress float32) {
+		current := int(progress)
+		if current > lastProgress {
+			lastProgress = current
+			if events != nil {
+				events.Emit("on_download_progress", map[string]interface{}{
+					"component": "Gemma 3 270M Model",
+					"progress":  progress,
+				})
+			}
+		}
+	}
+
 	log.Printf("[Classifier] Downloading Gemma 3 270M model (~500MB)...")
-	if err := system.DownloadFileAtomic(ctx, GemmaModelURL, modelPath, nil); err != nil {
+	if err := system.DownloadFileAtomic(ctx, GemmaModelURL, modelPath, callback); err != nil {
 		log.Printf("[Classifier] Primary download failed (%v), trying fallback...", err)
-		if err := system.DownloadFileAtomic(ctx, GemmaModelFallbackURL, modelPath, nil); err != nil {
+		if err := system.DownloadFileAtomic(ctx, GemmaModelFallbackURL, modelPath, callback); err != nil {
 			return "", fmt.Errorf("failed to download Gemma model: %w", err)
 		}
 	}
@@ -65,7 +80,7 @@ func EnsureGemmaModelFile(ctx context.Context) (string, error) {
 	return modelPath, nil
 }
 
-func EnsureLlamaServerBinary(ctx context.Context) (string, error) {
+func EnsureLlamaServerBinary(ctx context.Context, events driven.EventPort) (string, error) {
 	key := runtime.GOOS + "/" + runtime.GOARCH
 	url, ok := LlamaServerURLs[key]
 	if !ok {
@@ -91,11 +106,25 @@ func EnsureLlamaServerBinary(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to create directories for binary: %w", err)
 	}
 
+	var lastProgress int
+	callback := func(progress float32) {
+		current := int(progress)
+		if current > lastProgress {
+			lastProgress = current
+			if events != nil {
+				events.Emit("on_download_progress", map[string]interface{}{
+					"component": "llama-server",
+					"progress":  progress,
+				})
+			}
+		}
+	}
+
 	log.Printf("[Classifier] Downloading llama-server binary for %s...", key)
-	if err := system.DownloadFileAtomic(ctx, url, binPath, nil); err != nil {
+	if err := system.DownloadFileAtomic(ctx, url, binPath, callback); err != nil {
 		log.Printf("[Classifier] Primary binary download failed (%v), trying fallback...", err)
 		fallbackURL := LlamaServerFallbackURLs[key]
-		if err := system.DownloadFileAtomic(ctx, fallbackURL, binPath, nil); err != nil {
+		if err := system.DownloadFileAtomic(ctx, fallbackURL, binPath, callback); err != nil {
 			return "", fmt.Errorf("failed to download llama-server binary from both primary and fallback: %w", err)
 		}
 	}
@@ -119,7 +148,7 @@ type LlamaServerProcess struct {
 
 var DefaultLlamaServer = &LlamaServerProcess{port: LlamaServerPort}
 
-func (p *LlamaServerProcess) Start(ctx context.Context) error {
+func (p *LlamaServerProcess) Start(ctx context.Context, events driven.EventPort) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -127,13 +156,13 @@ func (p *LlamaServerProcess) Start(ctx context.Context) error {
 		return nil
 	}
 
-	modelPath, err := EnsureGemmaModelFile(ctx)
+	modelPath, err := EnsureGemmaModelFile(ctx, events)
 	if err != nil {
 		return err
 	}
 	p.modelPath = modelPath
 
-	binPath, err := EnsureLlamaServerBinary(ctx)
+	binPath, err := EnsureLlamaServerBinary(ctx, events)
 	if err != nil {
 		return err
 	}
