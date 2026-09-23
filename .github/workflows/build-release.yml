@@ -45,13 +45,23 @@ jobs:
         if: ${{ matrix.should_run == true || matrix.should_run == 'true' }}
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22' # Update if your project uses a different version
+          go-version: '1.23.x' # Update if your project uses a different version
 
       - name: Setup Node.js
         if: ${{ matrix.should_run == true || matrix.should_run == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+
+      - name: Setup MSYS2
+        if: ${{ (matrix.should_run == true || matrix.should_run == 'true') && runner.os == 'Windows' }}
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkgconf
 
       - name: Install Wails
         if: ${{ matrix.should_run == true || matrix.should_run == 'true' }}
@@ -66,9 +76,26 @@ jobs:
       # TODO: macOS Code Signing & Notarization steps would go here
       # Needs APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_DEVELOPER_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD
 
-      - name: Build Wails App
-        if: ${{ matrix.should_run == true || matrix.should_run == 'true' }}
+
+      - name: Build Wails App (Linux/macOS)
+        if: ${{ (matrix.should_run == true || matrix.should_run == 'true') && runner.os != 'Windows' }}
         working-directory: wails-app
+        env:
+          C_INCLUDE_PATH: ${{ github.workspace }}/wails-app/backend/lib
+          LIBRARY_PATH: ${{ github.workspace }}/wails-app/backend/lib
+          CGO_CFLAGS: "-I${{ github.workspace }}/wails-app/backend/lib"
+          CGO_LDFLAGS: "-L${{ github.workspace }}/wails-app/backend/lib -lwhisper -lstdc++ -lm"
+        run: wails build -platform ${{ matrix.platform }} -clean
+
+      - name: Build Wails App (Windows)
+        if: ${{ (matrix.should_run == true || matrix.should_run == 'true') && runner.os == 'Windows' }}
+        working-directory: wails-app
+        shell: msys2 {0}
+        env:
+          C_INCLUDE_PATH: ${{ github.workspace }}/wails-app/backend/lib
+          LIBRARY_PATH: ${{ github.workspace }}/wails-app/backend/lib
+          CGO_CFLAGS: "-I${{ github.workspace }}/wails-app/backend/lib"
+          CGO_LDFLAGS: "-L${{ github.workspace }}/wails-app/backend/lib -lwhisper -lstdc++ -lm"
         run: wails build -platform ${{ matrix.platform }} -clean
 
       - name: Upload Artifact
