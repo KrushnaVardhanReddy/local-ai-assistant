@@ -67,6 +67,10 @@
     }
   }
 
+  export function openCacheModal() {
+    isCacheModalOpen = true;
+  }
+
   // Dynamic markdown rendering
   let renderMarkdown: any;
   let markdownTimeout: ReturnType<typeof setTimeout>;

@@ -196,6 +196,8 @@
       toggleMockMode(!wsState.isMockMode);
     } else if (action === 'settings') {
       activeAction = activeAction === 'settings' ? '' : 'settings';
+    } else if (action === 'cache') {
+      answerPanelRef?.openCacheModal();
     } else {
       activeAction = action;
     }
