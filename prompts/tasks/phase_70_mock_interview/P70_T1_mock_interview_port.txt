@@ -1,0 +1,36 @@
+You are Jules, an AI coding agent. Complete the following task to port the Mock Interview Mode to the new Go/Wails architecture.
+
+─── CONTEXT & GOAL ─────────────────────────────────────────────
+
+In the old Python backend (Phase 21), we had a "Mock Interview Mode" that flipped the LLM from an "Answerer" to an "Interviewer". It used `edge-tts` to speak questions aloud to the user, and then evaluated their microphone answers.
+
+We are porting this to the new Go/Wails architecture (Hexagonal Engine).
+
+─── 1. CREATE TTS ADAPTER (wails-app/backend/tts/) ─────────────
+
+1. Create a new package `tts` with an interface `Engine` containing a method `Speak(text string) error`.
+2. Implement an `EdgeTTSAdapter` that wraps the `edge-tts` CLI binary. 
+   - Use `os/exec` to run `edge-tts --text "<text>" --write-media temp.mp3`.
+   - Use a lightweight Go audio library (like github.com/hajimehoshi/go-mp3 and github.com/hajimehoshi/oto/v2, or similar, or just shell out to `ffplay` or `afplay` for simplicity) to play the generated MP3.
+   - If `edge-tts` is not installed, log a clear warning instead of crashing.
+
+─── 2. UPDATE BACKEND ENGINE (wails-app/backend/engine.go) ──────
+
+1. Add a boolean state to the Engine: `IsMockMode bool`.
+2. Add a Wails-bound method `ToggleMockInterviewMode(enabled bool)` to `App` that updates this state.
+3. When `IsMockMode` is true, the core `SystemPrompt` sent to the LLM should change from the default copilot prompt to an Interviewer prompt:
+   - "You are a technical interviewer. Ask the candidate a question based on their resume. Wait for their response. Evaluate their response briefly, then ask the next question."
+4. When the LLM generates a response in Mock Mode, pass the final response text to the TTS Adapter to speak it aloud.
+
+─── 3. UPDATE FRONTEND (wails-app/frontend/src/products/interview/IDEShell.svelte) ─
+
+1. Add a UI toggle button in the IDEShell header (or near the Live Ears toggle) labeled "Mock Mode: OFF" / "Mock Mode: ON".
+2. Bind this toggle to call `window.go.main.App.ToggleMockInterviewMode(enabled)`.
+3. Add a visual indicator (like a pulsing border or badge) when Mock Interview mode is active.
+
+─── ACCEPTANCE CRITERIA ────────────────────────────────────────
+
+1. Backend successfully compiles.
+2. Toggling the UI button updates the Go backend state.
+3. In Mock Mode, the LLM asks questions instead of providing cheatsheet answers.
+4. The Go backend successfully generates and plays audio using TTS.

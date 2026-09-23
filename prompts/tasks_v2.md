@@ -38,3 +38,11 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|-----|
 | P69-T1 | `wails-app/backend/classifier/gemma.go` | **Evaluate Apertus Mini 0.5B** — Test the Apertus Mini 0.5B (Swiss AI) model as an alternative to `gemma-3-270m` for the VAD turn-detection sidecar. Compare RAM usage, battery drain, and accuracy in detecting end-of-turn for non-English speakers and heavy accents. | ⬜ | — |
+
+---
+
+## Phase 70 — Mock Interview Mode (Go Port) 🎤
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|-----|
+| P70-T1 | `backend/tts/`, `backend/engine.go`, `frontend/` | **Port Mock Interview Mode to Go:** Re-implement the Phase 21 Mock Interview feature in the Go/Wails architecture. Add a TTS adapter (wrapping edge-tts), flip the LLM prompt to "Interviewer", and add the UI toggle in IDEShell. | ⬜ | — |
