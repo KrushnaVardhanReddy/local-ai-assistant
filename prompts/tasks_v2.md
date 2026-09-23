@@ -45,4 +45,4 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|-----|
-| P70-T1 | `backend/tts/`, `backend/engine.go`, `frontend/` | **Port Mock Interview Mode to Go:** Re-implement the Phase 21 Mock Interview feature in the Go/Wails architecture. Add a TTS adapter (wrapping edge-tts), flip the LLM prompt to "Interviewer", and add the UI toggle in IDEShell. | ✅ | — |
+| P70-T1 | `backend/tts/`, `backend/engine.go`, `frontend/` | **Port Mock Interview Mode to Go:** Re-implement the Phase 21 Mock Interview feature in the Go/Wails architecture. Add a TTS adapter (wrapping edge-tts), flip the LLM prompt to "Interviewer", and add the UI toggle in IDEShell. | ✅ | #240 |
