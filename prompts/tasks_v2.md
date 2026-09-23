@@ -51,7 +51,7 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P71-T1 | `.github/workflows/*` | **Fix CGO Compilation in CI:** Add C++ toolchains to Windows runners and inject Whisper CGO flags into all build steps. | ⬜ | — |
+| P71-T1 | `.github/workflows/*` | **Fix CGO Compilation in CI:** Add C++ toolchains to Windows runners and inject Whisper CGO flags into all build steps. | ✅ | #241 |
 
 ## Phase 64-E2E — Full Application Test Suite Split 🧪
 
