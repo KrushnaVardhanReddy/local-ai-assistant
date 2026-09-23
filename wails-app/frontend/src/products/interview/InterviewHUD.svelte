@@ -56,6 +56,7 @@
       icon: 'star',
       label: 'STAR',
       onClick: handleStarMethod,
+      get active() { return starPrimed; }
     },
     {
       icon: 'history',

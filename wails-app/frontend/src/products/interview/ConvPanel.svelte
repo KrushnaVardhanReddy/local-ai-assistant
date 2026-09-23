@@ -137,6 +137,7 @@
           <button
             class="header-action-btn"
             class:active={action.active}
+            class:star-primed={action.active && action.icon === 'star'}
             onclick={action.onClick}
           >
             <span class="material-symbols-outlined">
