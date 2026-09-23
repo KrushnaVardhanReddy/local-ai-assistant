@@ -87,3 +87,9 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|-----|
 | P68-T1 | `wails-app/backend/config/config.go`, `main.go`, `openai.go` | **Environment Configuration Refactoring** — Introduce `caarlos0/env` to parse environment variables into a strongly-typed `AppConfig` struct. Implement a fail-fast Must pattern on startup. Replace scattered `os.Getenv` and `getEnvOrDefault` calls across the codebase, injecting `AppConfig` instead. | ✅ | — |
+
+## Phase 69 — Alternative Local Models (Research & Evaluation) 🔬
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|-----|
+| P69-T1 | `wails-app/backend/classifier/gemma.go` | **Evaluate Apertus Mini 0.5B** — Test the Apertus Mini 0.5B (Swiss AI) model as an alternative to `gemma-3-270m` for the VAD turn-detection sidecar. Compare RAM usage, battery drain, and accuracy in detecting end-of-turn for non-English speakers and heavy accents. | ⬜ | — |
