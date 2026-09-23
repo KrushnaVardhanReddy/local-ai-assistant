@@ -50,6 +50,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
     await expect(settingsBtn).toBeVisible({ timeout: 10000 });
     await settingsBtn.click();
 
+    console.log("ENTITLEMENT UI DUMP", await page.content()); await page.waitForSelector('.settings-overlay', { state: 'visible', timeout: 5000 });
     await page.locator('button').filter({ hasText: 'Account' }).click();
 
     await expect(page.locator('.account-info').filter({ hasText: 'Developer Mode' })).toBeVisible({ timeout: 10000 });
@@ -72,6 +73,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
     const settingsBtn = page.locator('button[data-testid="activity-bar-settings"]');
     await expect(settingsBtn).toBeVisible({ timeout: 10000 });
     await settingsBtn.click();
+    console.log("ENTITLEMENT UI DUMP", await page.content()); await page.waitForSelector('.settings-overlay', { state: 'visible', timeout: 5000 });
     await page.locator('button').filter({ hasText: 'Account' }).click();
 
     await expect(page.locator('.account-info')).toContainText('Lifetime License', { timeout: 10000 });
@@ -97,6 +99,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
     const settingsBtn = page.locator('button[data-testid="activity-bar-settings"]');
     await expect(settingsBtn).toBeVisible({ timeout: 10000 });
     await settingsBtn.click();
+    console.log("ENTITLEMENT UI DUMP", await page.content()); await page.waitForSelector('.settings-overlay', { state: 'visible', timeout: 5000 });
     await page.locator('button').filter({ hasText: 'Account' }).click();
 
     await expect(page.locator('.usage-stats').filter({ hasText: '5h 0m used / 10h 0m included' })).toBeVisible({ timeout: 10000 });
@@ -121,6 +124,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
     const settingsBtn = page.locator('button[data-testid="activity-bar-settings"]');
     await expect(settingsBtn).toBeVisible({ timeout: 10000 });
     await settingsBtn.click();
+    console.log("ENTITLEMENT UI DUMP", await page.content()); await page.waitForSelector('.settings-overlay', { state: 'visible', timeout: 5000 });
     await page.locator('button').filter({ hasText: 'Account' }).click();
 
     await expect(page.locator('.overage-warning')).toContainText('Overage', { timeout: 10000 });
@@ -144,6 +148,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
     const settingsBtn = page.locator('button[data-testid="activity-bar-settings"]');
     await expect(settingsBtn).toBeVisible({ timeout: 10000 });
     await settingsBtn.click();
+    console.log("ENTITLEMENT UI DUMP", await page.content()); await page.waitForSelector('.settings-overlay', { state: 'visible', timeout: 5000 });
     await page.locator('button').filter({ hasText: 'Account' }).click();
 
     await expect(page.locator('.plan-badge').filter({ hasText: 'Active Subscription' })).toBeVisible({ timeout: 10000 });

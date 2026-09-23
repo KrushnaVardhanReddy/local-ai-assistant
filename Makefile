@@ -13,6 +13,10 @@ dev-barnowl:
 build: build-barnowl
 dev: dev-barnowl
 
+# E2E Tests
+test-e2e:
+	cd wails-app/frontend && npm run test:e2e
+
 # ==========================================
 # Environment Setup & Database Migrations
 # ==========================================

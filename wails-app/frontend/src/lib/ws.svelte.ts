@@ -104,9 +104,12 @@ function handleTranscript(data: any) {
     // Avoid duplicating the last entry
     const last = wsState.transcriptHistory[wsState.transcriptHistory.length - 1];
     if (last?.text !== data.text) {
-      wsState.transcriptHistory.push({ role: data.speaker ?? 'interviewer', text: data.text });
+      wsState.transcriptHistory = [
+        ...wsState.transcriptHistory,
+        { role: data.speaker ?? 'interviewer', text: data.text }
+      ];
       if (wsState.transcriptHistory.length > 10) {
-        wsState.transcriptHistory.shift();
+        wsState.transcriptHistory = wsState.transcriptHistory.slice(1);
       }
     }
   }

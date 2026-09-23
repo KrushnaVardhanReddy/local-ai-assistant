@@ -106,7 +106,7 @@ test.describe.serial('Mock Interview Mode Tests', () => {
     });
 
     const interviewerBubble = page.locator('.bubble-interviewer').first();
-    await expect(interviewerBubble).toBeVisible({ timeout: 5000 });
+    console.log(await page.content()); await expect(interviewerBubble).toBeVisible({ timeout: 5000 });
 
     const transcriptText = page.locator('text="Can you explain your experience with React?"').first();
     await expect(transcriptText).toBeVisible();

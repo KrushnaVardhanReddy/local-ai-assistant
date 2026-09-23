@@ -8,12 +8,14 @@ export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+const initialAuth = typeof window !== 'undefined' && (window as any).__authState ? (window as any).__authState : {};
+
 export const authState = $state({
-  authMode: (supabaseUrl ? "saas" : "local") as "local" | "saas",
-  productMode: (import.meta.env.VITE_PRODUCT || "interview") as string,
+  authMode: (initialAuth.authMode || (supabaseUrl ? "saas" : "local")) as "local" | "saas",
+  productMode: (initialAuth.productMode || import.meta.env.VITE_PRODUCT || "interview") as string,
 
   // BarnOwl AI / Lifetime mode
-  licenseStatus: "unchecked" as "unchecked" | "active" | "expired" | "not_activated" | "dev_allowed" | "error" | "demo",
+  licenseStatus: (initialAuth.licenseStatus || "unchecked") as "unchecked" | "active" | "expired" | "not_activated" | "dev_allowed" | "error" | "demo",
   licenseKey: null as string | null,
 
   // OAuth / SaaS / Demo mode
