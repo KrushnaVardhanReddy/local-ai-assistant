@@ -319,11 +319,11 @@ Unlike BarnOwl (open-vocabulary), ClearTalk knows exactly what the user is *supp
 - ASHA (American Speech-Language-Hearing Association) forums and Facebook groups are tight-knit — one advocate drives hundreds of signups
 - The free tier is the marketing. The professional tier is the revenue.
 
-**The "Hub & Satellite" Architecture (Ease of Use vs Power):**
-To get the instant-on, weeks-long battery life of an ESP32 toy, combined with the 100% offline privacy of a heavy Raspberry Pi, we use a hybrid model:
-1. **The ClearTalk Cube (ESP32):** The physical toy the child holds. Battery-powered, durable, and instant-on. It acts purely as a Bluetooth (BLE) microphone/speaker.
-2. **The Offline Hub (Raspberry Pi):** A dedicated box plugged into the wall in the living room running the Go backend, STT, LLM, and TTS offline. The ESP32 streams audio to it via local BLE.
-3. **The Backup Hub (Capacitor App):** If on the go (in the car), the parent opens the Svelte Capacitor app on their phone. The ESP32 connects to the phone via BLE, and the phone acts as the hub (using Cloud APIs since it has cellular data). No Go or Rust needed on mobile.
+**The "Bring Your Own Hub" Architecture (Maximize Margin, Minimize Risk):**
+To get the instant-on, weeks-long battery life of an ESP32 toy without destroying profit margins with expensive Raspberry Pi compute boards, we use a "Bring Your Own Hub" model:
+1. **The ClearTalk Cube (ESP32):** The only physical hardware sold ($69 retail, $15 BOM). Battery-powered, durable, and instant-on. It acts purely as a Bluetooth (BLE) microphone/speaker.
+2. **The Parent's iPad (The Hub):** The parent downloads the ClearTalk Svelte/Capacitor App on an old iPad or phone and leaves it plugged in on the kitchen counter. The $69 ESP32 Cube connects via BLE directly to the iPad. 
+3. **The App Store Trojan Horse:** Because the heavy AI processing (WebAssembly STT/LLM or Cloud API) is offloaded to a device the parent already owns, hardware risk is zero. Forcing parents to download the Hub App creates a direct, captive channel to up-sell them on the $49/mo "Premium Therapy Tracking" subscription or new digital Expansion Packs.
 
 **The 4 Voice-to-Voice Modes (One Engine, 4 Prompts):**
 To ensure the device is highly engaging and warrants the hardware cost, it ships with 4 distinct functionalities powered by swapping the LLM System Prompt:
