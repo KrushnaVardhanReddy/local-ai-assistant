@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 
 test.describe.serial('Copilot UI Tests', () => {
   test.beforeEach(async ({ page }) => {
@@ -114,13 +116,6 @@ test.describe.serial('Copilot UI Tests', () => {
   });
 
   test('Stealth mode toggles clickthrough classes', async ({ page }) => {
-    const isStealthMode = process.env.VITE_STEALTH_MODE === 'true';
-    if (!isStealthMode) {
-      const stealthBtn = page.locator('button[title="Stealth Mode (Clickthrough)"]');
-      await expect(stealthBtn).toHaveCount(0);
-      return;
-    }
-
     const stealthBtn = page.locator('button[title="Stealth Mode (Clickthrough)"]');
     await stealthBtn.waitFor({ state: 'visible', timeout: 5000 });
 
