@@ -46,3 +46,19 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|-----|
 | P70-T1 | `backend/tts/`, `backend/engine.go`, `frontend/` | **Port Mock Interview Mode to Go:** Re-implement the Phase 21 Mock Interview feature in the Go/Wails architecture. Add a TTS adapter (wrapping edge-tts), flip the LLM prompt to "Interviewer", and add the UI toggle in IDEShell. | ✅ | #240 |
+
+## Phase 71 — CI/CD Pipeline Fixes 🛠️
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P71-T1 | `.github/workflows/*` | **Fix CGO Compilation in CI:** Add C++ toolchains to Windows runners and inject Whisper CGO flags into all build steps. | ⬜ | — |
+
+## Phase 64-E2E — Full Application Test Suite Split 🧪
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P64-T5a | `workspace.spec.ts` | **Core IDE E2E:** Test file tree, code editor, and tabs. | ⬜ | — |
+| P64-T5b | `copilot.spec.ts` | **Assistant UI E2E:** Test STAR method presets and drawer. | ⬜ | — |
+| P64-T5c | `cache.spec.ts` | **Cache E2E:** Test cache manager and RAG stats. | ⬜ | — |
+| P64-T5d | `mock_interview.spec.ts` | **Mock Interview E2E:** Test persona switch and UI update. | ⬜ | — |
+| P64-T5e | `entitlement.spec.ts` | **Billing E2E:** Test dev mode, lifetime, and SaaS states. | ⬜ | — |

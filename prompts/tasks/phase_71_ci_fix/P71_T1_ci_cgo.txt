@@ -1,0 +1,16 @@
+MANDATORY RULES — VIOLATION = REJECTED PR:
+1. NEVER comment out, stub, or mock existing implementation code.
+2. Every file you modify MUST still be valid YAML.
+3. Commit message must start with "jules: " prefix.
+
+Task: Fix GitHub Actions workflows for CGO/Whisper Compilation
+Files to modify:
+- .github/workflows/build-release.yml
+- .github/workflows/build-windows.yml
+- .github/workflows/build-windows-cloud.yml
+
+Instructions:
+1. The project now uses `whisper.cpp` which requires CGO and C++ compilers to build. Standard `wails build` commands in the CI currently crash.
+2. Standardize the Go version in all three workflow files to `'1.23.x'`.
+3. Update all Windows jobs (`windows-latest`) to install MSYS2 and `mingw-w64-x86_64-gcc` using `msys2/setup-msys2@v2` so it has a C compiler.
+4. Replace all instances of `wails build` with the proper compilation commands that inject `C_INCLUDE_PATH`, `LIBRARY_PATH`, `CGO_CFLAGS`, and `CGO_LDFLAGS` for `wails-app/backend/lib` (you can reference the `Makefile` for the exact flags). For Windows jobs, you must use the `msys2 {0}` shell to ensure the paths resolve correctly and CGO builds.
