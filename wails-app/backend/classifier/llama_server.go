@@ -22,20 +22,9 @@ var (
 	GemmaModelURL         = "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/gemma-3-270m-it-Q8_0.gguf"
 	GemmaModelFallbackURL = "https://huggingface.co/unsloth/gemma-3-270m-it-GGUF/resolve/main/gemma-3-270m-it-Q8_0.gguf"
 
-	// llama-server binaries. One URL per OS/Arch.
-	LlamaServerURLs = map[string]string{
-		"linux/amd64":   "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-linux-amd64",
-		"windows/amd64": "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-windows-amd64.exe",
-		"darwin/amd64":  "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-darwin-amd64",
-		"darwin/arm64":  "https://github.com/KrushnaVardhanReddy/local-ai-assistant/releases/download/v1.0-models/llama-server-darwin-arm64",
-	}
+	// llamafile binary (Cosmopolitan Libc single-file executable). One URL for ALL platforms.
+	LlamafileURL = "https://github.com/mozilla-Ocho/llamafile/releases/download/0.10.6/llamafile-0.10.6"
 
-	LlamaServerFallbackURLs = map[string]string{
-		"linux/amd64":   "https://huggingface.co/datasets/KrushnaVardhanReddy/barnowl-binaries/resolve/main/llama-server-linux-amd64",
-		"windows/amd64": "https://huggingface.co/datasets/KrushnaVardhanReddy/barnowl-binaries/resolve/main/llama-server-windows-amd64.exe",
-		"darwin/amd64":  "https://huggingface.co/datasets/KrushnaVardhanReddy/barnowl-binaries/resolve/main/llama-server-darwin-amd64",
-		"darwin/arm64":  "https://huggingface.co/datasets/KrushnaVardhanReddy/barnowl-binaries/resolve/main/llama-server-darwin-arm64",
-	}
 	LlamaServerPort = 18080
 )
 
@@ -81,18 +70,13 @@ func EnsureGemmaModelFile(ctx context.Context, events driven.EventPort) (string,
 }
 
 func EnsureLlamaServerBinary(ctx context.Context, events driven.EventPort) (string, error) {
-	key := runtime.GOOS + "/" + runtime.GOARCH
-	url, ok := LlamaServerURLs[key]
-	if !ok {
-		return "", fmt.Errorf("unsupported OS/Arch for llama-server: %s", key)
-	}
-
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user cache dir: %w", err)
 	}
 
-	binName := "llama-server"
+	// Llamafile is a polyglot binary. Windows expects a .exe extension to run it properly.
+	binName := "llamafile"
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
@@ -120,13 +104,9 @@ func EnsureLlamaServerBinary(ctx context.Context, events driven.EventPort) (stri
 		}
 	}
 
-	log.Printf("[Classifier] Downloading llama-server binary for %s...", key)
-	if err := system.DownloadFileAtomic(ctx, url, binPath, callback); err != nil {
-		log.Printf("[Classifier] Primary binary download failed (%v), trying fallback...", err)
-		fallbackURL := LlamaServerFallbackURLs[key]
-		if err := system.DownloadFileAtomic(ctx, fallbackURL, binPath, callback); err != nil {
-			return "", fmt.Errorf("failed to download llama-server binary from both primary and fallback: %w", err)
-		}
+	log.Printf("[Classifier] Downloading llamafile binary (cross-platform)...")
+	if err := system.DownloadFileAtomic(ctx, LlamafileURL, binPath, callback); err != nil {
+		return "", fmt.Errorf("failed to download llamafile binary: %w", err)
 	}
 
 	if runtime.GOOS != "windows" {
