@@ -27,7 +27,8 @@ export const wsState = $state({
   transcriptHistory: [] as Array<{ role: string; text: string; answer?: string }>,
   pollCount: 0,
   pollError: "none",
-  cacheStats: { cached_pairs: 0, estimated_tokens_saved: 0 }
+  cacheStats: { cached_pairs: 0, estimated_tokens_saved: 0 },
+  downloadTask: null as { component: string, progress: number } | null
 });
 
 export async function toggleManualMode(): Promise<void> {
@@ -84,6 +85,9 @@ if (!isCloud) {
             cached_pairs: state.cached_pairs,
             estimated_tokens_saved: state.estimated_tokens_saved ?? state.cached_pairs * 250
           };
+        }
+        if (typeof state.is_listening === 'boolean') {
+          wsState.isListening = state.is_listening;
         }
       }
     } catch (err: any) {
@@ -198,6 +202,14 @@ function initListeners() {
 
   onEvent("on_summary_end", (data: any) => {
     wsState.isSummarizing[data.id] = false;
+  });
+
+  onEvent("on_download_progress", (data: any) => {
+    if (data.progress >= 100) {
+      wsState.downloadTask = null;
+    } else {
+      wsState.downloadTask = { component: data.component, progress: data.progress };
+    }
   });
 
   onEvent("on_response_end", () => {

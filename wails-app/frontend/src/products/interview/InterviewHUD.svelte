@@ -335,6 +335,17 @@
 
   <!-- Header ToolBar -->
   <div class="header-toolbar">
+    {#if wsState.downloadTask}
+      <div class="absolute top-16 right-4 z-50 bg-surface/90 border border-primary/30 p-3 rounded-lg shadow-lg flex flex-col gap-2 min-w-[250px] backdrop-blur-md">
+        <div class="flex justify-between items-center text-xs font-bold text-on-surface">
+          <span>Downloading {wsState.downloadTask.component}...</span>
+          <span>{Math.round(wsState.downloadTask.progress)}%</span>
+        </div>
+        <div class="w-full bg-background rounded-full h-1.5 overflow-hidden">
+          <div class="bg-primary h-full transition-all duration-300" style="width: {wsState.downloadTask.progress}%"></div>
+        </div>
+      </div>
+    {/if}
     <div class="branding">
       <span class="font-bold text-primary tracking-wider">BarnOwl AI</span>
       {#if wsState.isMockMode}

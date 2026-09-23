@@ -50,6 +50,9 @@ The frontend serves purely as a dumb terminal/display layer for the backend's AI
 - **Svelte 5**: Provides a reactive, lightweight UI using the new runes reactivity system.
 - **Wails v2 (Desktop)**: Provides a pure native desktop application shell using Go, completely replacing older web/Tauri concepts, consuming around 10-30MB of RAM (compared to Electron's 150MB+ footprint).
 
+### Download Progress Synchronization
+For heavy models (such as the Gemma turn-detection sidecar and llama-server binary), the backend utilizes an atomic downloader system. The downloader natively supports a progress callback that pushes `on_download_progress` events to the UI via Wails events. Svelte components (like the `InterviewHUD`) intercept these events to display real-time download bars for seamless user feedback during initial local-mode startup.
+
 ## Product Skins (`wails-app/products/`)
 Because the `StealthEngine` is completely generic, we can create multiple distinct applications that share the same backend. A product (like **StealthPresenter** or **MentorGlass**) simply defines:
 1. Which Svelte UI component to load.

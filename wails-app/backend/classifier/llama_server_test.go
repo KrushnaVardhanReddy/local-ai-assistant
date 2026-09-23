@@ -13,6 +13,10 @@ import (
 	"testing"
 )
 
+type mockEventPort struct{}
+
+func (m *mockEventPort) Emit(event string, payload any) {}
+
 func TestEnsureGemmaModelFile_AlreadyExists(t *testing.T) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -37,7 +41,7 @@ func TestEnsureGemmaModelFile_AlreadyExists(t *testing.T) {
 	GemmaModelURL = "http://invalid-url-should-not-be-called"
 	defer func() { GemmaModelURL = origURL }()
 
-	gotPath, err := EnsureGemmaModelFile(context.Background())
+	gotPath, err := EnsureGemmaModelFile(context.Background(), &mockEventPort{})
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
@@ -75,7 +79,7 @@ func TestEnsureLlamaServerBinary_AlreadyExists(t *testing.T) {
 	}
 	defer func() { LlamaServerURLs = origURLs }()
 
-	gotPath, err := EnsureLlamaServerBinary(context.Background())
+	gotPath, err := EnsureLlamaServerBinary(context.Background(), &mockEventPort{})
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
@@ -182,7 +186,7 @@ func main() { time.Sleep(30 * time.Second) }`
 	}
 
 	p := &LlamaServerProcess{port: port}
-	err = p.Start(context.Background())
+	err = p.Start(context.Background(), &mockEventPort{})
 	if err != nil {
 		t.Fatalf("Failed to start process: %v", err)
 	}
@@ -192,7 +196,7 @@ func main() { time.Sleep(30 * time.Second) }`
 	}
 
 	// Test idempotency
-	err = p.Start(context.Background())
+	err = p.Start(context.Background(), &mockEventPort{})
 	if err != nil {
 		t.Fatalf("Expected no error on second start, got: %v", err)
 	}
