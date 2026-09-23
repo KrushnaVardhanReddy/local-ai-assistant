@@ -273,7 +273,9 @@ The primary risk to manage is that a $0–20/month app (like SpeechLP) on a devi
 *   **Clinician Trust:** A dedicated medical/educational device carries more clinical weight than an iOS app competing with TikTok for attention.
 
 **The core feature loop:**
-1. App displays a target sentence or exercise set
+1. **Screen-Free Prompting (Two Modes):**
+   - *Call & Response:* The Cube uses TTS to say "Can you say: The Red Rabbit?"
+   - *NFC Flashcards:* The child taps a physical picture card (e.g., a rabbit) to the top of the Cube. The internal RFID reader detects the tag and loads the target word.
 2. User reads aloud; STT captures exact output (every "um", mispronunciation, substitution)
 3. Word diff (algorithmic) — finds substitutions, omissions, insertions vs. target
 4. LLM gives qualitative feedback: "You said 'wabbit' — try placing your tongue behind your upper teeth"
@@ -316,6 +318,19 @@ Unlike BarnOwl (open-vocabulary), ClearTalk knows exactly what the user is *supp
 - One SLP adopting it exposes their entire 20–30 patient caseload → families → word of mouth
 - ASHA (American Speech-Language-Hearing Association) forums and Facebook groups are tight-knit — one advocate drives hundreds of signups
 - The free tier is the marketing. The professional tier is the revenue.
+
+**The "Hub & Satellite" Architecture (Ease of Use vs Power):**
+To get the instant-on, weeks-long battery life of an ESP32 toy, combined with the 100% offline privacy of a heavy Raspberry Pi, we use a hybrid model:
+1. **The ClearTalk Cube (ESP32):** The physical toy the child holds. Battery-powered, durable, and instant-on. It acts purely as a Bluetooth (BLE) microphone/speaker.
+2. **The Offline Hub (Raspberry Pi):** A dedicated box plugged into the wall in the living room running the Go backend, STT, LLM, and TTS offline. The ESP32 streams audio to it via local BLE.
+3. **The Backup Hub (Capacitor App):** If on the go (in the car), the parent opens the Svelte Capacitor app on their phone. The ESP32 connects to the phone via BLE, and the phone acts as the hub (using Cloud APIs since it has cellular data). No Go or Rust needed on mobile.
+
+**The 4 Voice-to-Voice Modes (One Engine, 4 Prompts):**
+To ensure the device is highly engaging and warrants the hardware cost, it ships with 4 distinct functionalities powered by swapping the LLM System Prompt:
+1. **The Speech Tutor:** "Can you say: The Red Rabbit?" (Clinical articulation carryover).
+2. **Interactive Storyteller:** "Choose Your Own Adventure" generated dynamically offline.
+3. **The Language Teacher:** "How do you say 'Dog' in Spanish?" (Expands market beyond speech delays).
+4. **Safe Homework Helper:** Answering math/science questions safely with zero internet access or screens.
 
 **Build delta from existing engine:**
 - Whisper STT (Groq + local tiny) ✅ already built
