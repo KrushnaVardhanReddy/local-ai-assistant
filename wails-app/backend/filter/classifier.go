@@ -93,6 +93,15 @@ var dataset = map[string][]string{
 		"Sure, I understand.",
 		"Let me think for a second.",
 	},
+	"intro": {
+		"Hi, I'm ready for interview.",
+		"Let's begin the interview.",
+		"I am ready to start.",
+		"Hello, let's start.",
+		"Ready for my interview.",
+		"Start the interview.",
+		"Let's get started.",
+	},
 }
 
 func initCentroids() {
