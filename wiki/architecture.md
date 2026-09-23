@@ -32,7 +32,7 @@ The Local AI Assistant operates on a **Hexagonal Architecture** (Ports and Adapt
 
 ## 1. The Core Domain (`wails-app/core/engine/`)
 The `StealthEngine` is the brain. It is responsible for:
-- Orchestrating native system audio loopback capture, Voice Activity Detection (VAD), and routing to STT (via Groq or local Whisper bindings).
+- Orchestrating native system audio loopback capture, Voice Activity Detection (VAD), and routing to STT (via Groq or local `whisperfile` Cosmopolitan binary).
 - Constructing prompts and routing them to the LLM. Includes injecting a **Conversational Context Window** (rolling turn memory, default 3 turns) into the system prompt to allow the LLM to understand contextual follow-up questions.
 - Handling local semantic caching to save on API costs.
 - **Rule:** The engine cannot import *any* external libraries or Wails packages. It only communicates through interface definitions located in `core/ports/`.
@@ -40,7 +40,7 @@ The `StealthEngine` is the brain. It is responsible for:
 
 ## 2. Infrastructure Adapters (`wails-app/adapters/`)
 Adapters plug into the core engine.
-- **LLM Adapter**: Implements `driven.LLMPort`. We support a hybrid approach: local models (via Ollama/llama.cpp) or cloud models (Groq, Gemini, OpenRouter, Cloudflare Workers AI) configurable via `wails-app/backend/config` (`AppConfig`) loaded from `.env.local`.
+- **LLM Adapter**: Implements `driven.LLMPort`. We support a hybrid approach: local models (via single-file `llamafile` / Ollama) or cloud models (Groq, Gemini, OpenRouter, Cloudflare Workers AI) configurable via `wails-app/backend/config` (`AppConfig`) loaded from `.env.local`.
 - **Cache Adapter**: Implements `driven.CachePort`. Uses `sqlite-vec` to store embeddings locally for instant semantic Q&A lookup, as well as holding workspace RAG documents like resumes and job descriptions.
 - **Events Adapter**: Implements `driven.EventsPort`. Usually powered by the Wails event bus, streaming updates to the frontend UI.
 - **Window Adapter**: Implements `driven.WindowPort`. Uses OS-specific syscalls (like `SetCaptureExcluded`) to make the UI completely invisible to screen sharing.

@@ -21,13 +21,13 @@ Other apps use basic window transparency. If you accidentally share your "Entire
 StealthPresenter uses native OS APIs to redact the window at the driver level. **It is completely invisible to screen capture tools.** 
 
 ### 2. Voice-Tracked Auto-Scroller & Native Parser
-Forget manual scrolling. StealthPresenter natively parses your `.pptx`, `.pdf`, or `.md` files without uploading them to a cloud server. The local Whisper STT engine listens to your voice and flawlessly auto-scrolls your script as you speak.
+Forget manual scrolling. StealthPresenter natively parses your `.pptx`, `.pdf`, or `.md` files without uploading them to a cloud server. The local STT engine (powered by single-file `whisperfile`) listens to your voice and flawlessly auto-scrolls your script as you speak.
 
 ### 3. The Real-Time LLM Audience Copilot
 StealthPresenter doesn't just listen to you—it listens to your audience. If an interviewer asks a complex question, the Copilot instantly intercepts it, RAG-searches your loaded battlecards/script, and pops the perfect answer into your invisible HUD.
 
 ### 4. 100% Offline Privacy
-Because StealthPresenter uses local Whisper (STT) and local LLMs (via Ollama/SmolLM), **no data ever hits a server**. Perfect for enterprise compliance and confidential IP.
+Because StealthPresenter uses local STT (via `whisperfile`) and local LLMs (via `llamafile` / SmolLM / Gemma), **no data ever hits a server**. Perfect for enterprise compliance and confidential IP.
 
 ---
 
@@ -41,7 +41,7 @@ StealthPresenter is built on top of the **StealthEngine**, a pure-Go Hexagonal A
 2. **StealthEngine (Backend):** 
    - Pure Go, completely decoupled from the UI.
    - **Core Ports:** `driving.PipelinePort`, `driven.LLMPort`, `driven.CachePort`, `driven.EventsPort`.
-   - Captures microphone audio using native bindings and pipes it to local STT (`whisper.cpp`).
+   - Captures microphone audio using native bindings and pipes it to local STT (`whisperfile` Cosmopolitan binary).
 3. **Data Layer (SQLite + ChromaDB):**
    - SQLite handles local caching and vector embeddings for instant document retrieval.
 
@@ -61,7 +61,7 @@ cd local-ai-assistant
 ```
 
 ### 2. Configure Environment
-Copy `.env.example` to `.env.local` and configure any necessary paths for local models (e.g., ONNX embedding models, Whisper models).
+Copy `.env.example` to `.env.local` and configure any necessary paths for local models (e.g., ONNX embedding models, `llamafile` binaries, or `whisperfile` STT models).
 
 ### 3. Launch the Application
 ```bash
