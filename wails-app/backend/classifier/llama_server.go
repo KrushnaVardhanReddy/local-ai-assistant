@@ -148,19 +148,21 @@ func (p *LlamaServerProcess) Start(ctx context.Context, events driven.EventPort)
 		return err
 	}
 
-	cmdArgs := []string{"--server", "--model", p.modelPath, "--port", fmt.Sprintf("%d", p.port), "--host", "127.0.0.1", "--ctx-size", "2048", "--threads", "2", "--no-mmap", "-ngl", "0"}
+	cmdArgs := []string{"--server", "--model", p.modelPath, "--port", fmt.Sprintf("%d", p.port), "--host", "127.0.0.1", "--ctx-size", "2048", "--threads", "2", "--no-mmap", "-ngl", "0", "--chat-template", "gemma"}
 
 	if runtime.GOOS == "linux" {
 		// Workaround for Cosmopolitan APE on Linux (exec format error).
 		// By passing the binary to /bin/sh, the polyglot shell script header
 		// intercepts execution instead of the kernel misinterpreting the MZ header.
-		shCmd := fmt.Sprintf("'%s' %s", binPath, strings.Join(cmdArgs, " "))
+		shCmd := fmt.Sprintf("exec '%s' %s", binPath, strings.Join(cmdArgs, " "))
 		p.cmd = exec.CommandContext(ctx, "/bin/sh", "-c", shCmd)
 	} else {
 		p.cmd = exec.CommandContext(ctx, binPath, cmdArgs...)
 	}
 	p.cmd.Stdout = log.Writer()
 	p.cmd.Stderr = log.Writer()
+
+	setProcessGroup(p.cmd)
 
 	if err := p.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start llama-server: %w", err)
@@ -186,7 +188,7 @@ func (p *LlamaServerProcess) Start(ctx context.Context, events driven.EventPort)
 	if !ready {
 		// Cannot call p.Stop() here while holding the lock because Stop() also tries to acquire it.
 		if p.cmd != nil && p.cmd.Process != nil {
-			p.cmd.Process.Kill()
+			killProcessGroup(p.cmd)
 			p.cmd.Wait()
 		}
 		return fmt.Errorf("llama-server failed to become ready within 30 seconds")
@@ -201,7 +203,7 @@ func (p *LlamaServerProcess) Stop() {
 	defer p.mu.Unlock()
 
 	if p.cmd != nil && p.cmd.Process != nil {
-		p.cmd.Process.Kill()
+		killProcessGroup(p.cmd)
 		p.cmd.Wait()
 	}
 	p.started = false

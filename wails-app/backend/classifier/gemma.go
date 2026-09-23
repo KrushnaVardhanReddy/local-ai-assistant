@@ -10,10 +10,8 @@ import (
 )
 
 const booleanGrammar = `
-root   ::= object
-object ::= "{" ws "\"result\"" ws ":" ws value ws "}"
+root   ::= "{\"result\":" value "}"
 value  ::= "true" | "false"
-ws     ::= [ \t\n]*
 `
 
 type GemmaMessage struct {
@@ -47,7 +45,7 @@ func IsQuestionComplete(ctx context.Context, transcriptBuffer string) (bool, err
 		Messages: []GemmaMessage{
 			{
 				Role:    "system",
-				Content: "You are a turn-detection classifier. Respond ONLY with valid JSON.",
+				Content: "You are a turn-detection classifier. Respond ONLY with valid JSON with absolutely NO extra whitespace or linebreaks.\n\nExample 1:\nTranscript: \"What are the advantages of python\"\nOutput: {\"result\": false}\n\nExample 2:\nTranscript: \"What are the advantages of python over golang?\"\nOutput: {\"result\": true}",
 			},
 			{
 				Role:    "user",
@@ -55,7 +53,7 @@ func IsQuestionComplete(ctx context.Context, transcriptBuffer string) (bool, err
 			},
 		},
 		Temperature: 0,
-		MaxTokens:   10,
+		MaxTokens:   100,
 		Grammar:     booleanGrammar,
 	}
 
