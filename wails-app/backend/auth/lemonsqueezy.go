@@ -14,9 +14,9 @@ var (
 )
 
 type licenseResponse struct {
-	Activated    bool   `json:"activated"`
-	Error        string `json:"error"`
-	Instance     *struct {
+	Activated bool   `json:"activated"`
+	Error     string `json:"error"`
+	Instance  *struct {
 		ID string `json:"id"`
 	} `json:"instance"`
 	Meta *struct {
@@ -25,7 +25,7 @@ type licenseResponse struct {
 }
 
 type validateResponse struct {
-	Valid bool `json:"valid"`
+	Valid bool   `json:"valid"`
 	Error string `json:"error"`
 	Meta  *struct {
 		StoreID int `json:"store_id"`

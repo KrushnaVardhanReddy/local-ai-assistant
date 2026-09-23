@@ -8,6 +8,7 @@ import (
 	"sync"
 	"wails-app/backend/session"
 	"wails-app/backend/stt"
+	"wails-app/backend/tts"
 	"wails-app/core/ports/driven"
 	"wails-app/core/ports/driving"
 	"wails-app/backend/classifier"
@@ -29,6 +30,7 @@ type StealthEngine struct {
 	llm        driven.LLMPort
 	cache      driven.CachePort
 	events     driven.EventPort
+	ttsAdapter tts.Engine
 
 	sessionMgr *session.SessionManager
 
@@ -55,6 +57,7 @@ type StealthEngine struct {
 	inFlightCtx    context.Context
 	manualMode     bool
 	rawMode        bool
+	isMockMode     bool
 }
 
 func New(
@@ -63,6 +66,7 @@ func New(
 	llm driven.LLMPort,
 	cache driven.CachePort,
 	events driven.EventPort,
+	ttsAdapter tts.Engine,
 ) *StealthEngine {
 	e := &StealthEngine{
 		cfg:              cfg,
@@ -70,12 +74,20 @@ func New(
 		llm:              llm,
 		cache:            cache,
 		events:           events,
+		ttsAdapter:       ttsAdapter,
 		sessionMgr:       session.NewSessionManager(),
 		openDocuments:    make(map[string]*driving.WorkspaceDocument),
 		includeActiveDoc: true,
 	}
 	e.questionBuffer = classifier.NewQuestionBuffer(e.triggerLLMWithQuestion)
 	return e
+}
+
+func (e *StealthEngine) ToggleMockInterviewMode(enabled bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.isMockMode = enabled
+	log.Printf("[Engine] Mock Interview Mode set to: %v\n", enabled)
 }
 
 // SetEventsAdapter sets the events port.

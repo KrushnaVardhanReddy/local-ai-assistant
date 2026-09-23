@@ -1,10 +1,10 @@
 package config_test
 
 import (
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"wails-app/backend/config"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadConfig(t *testing.T) {

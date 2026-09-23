@@ -29,6 +29,7 @@ import (
 	"wails-app/backend/session"
 	"wails-app/backend/stt"
 	"wails-app/backend/system"
+	"wails-app/backend/tts"
 	"wails-app/backend/window"
 	"wails-app/core/engine"
 	"wails-app/core/ports/driving"
@@ -113,12 +114,15 @@ func NewApp(cfg *config.AppConfig) *App {
 
 	sessMgr := session.NewSessionManager()
 
+	ttsAdapter := tts.NewEdgeTTSAdapter()
+
 	eng := engine.New(
 		engine.Config{SystemPrompt: llm.DefaultSystemPrompt},
 		stt.NewSTTManager(initialEngine),
 		llmadapter.NewOpenAIAdapter(),
 		cacheadapter.NewSQLiteVecAdapter(db),
 		nil,
+		ttsAdapter,
 	)
 
 	return &App{
@@ -594,6 +598,12 @@ func (a *App) SetClickthrough(enable bool) {
 
 func (a *App) ToggleStealth(opts map[string]interface{}) {
 	a.ToggleClickthroughMode()
+}
+
+func (a *App) ToggleMockInterviewMode(enabled bool) {
+	if a.engine != nil {
+		a.engine.ToggleMockInterviewMode(enabled)
+	}
 }
 
 func (a *App) EndSession() (map[string]interface{}, error) {
