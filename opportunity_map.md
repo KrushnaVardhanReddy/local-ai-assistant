@@ -49,6 +49,7 @@ The previous version of this document had an internal contradiction: the scoreca
 | 🟣 Wave 5 🔭 | **Future** | **TabletopDM** | D&D / TTRPG DMs | 🟢 Very Low | 🟢 Strong | 4–5 weeks | $$ | Passionate community, zero software competition, LLM panic button angle is compelling |
 | 🟣 Wave 5 🔭 | **Future** | **LyricsHUD** | Live singers / performers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $$ | No STT needed. Foot-pedal scroll. Niche but zero competition. |
 | 🟣 Wave 5 🔭 | **Future** | **RTS Co-Pilot** | Competitive RTS gamers | 🟢 Very Low | 🟡 Moderate | 3–4 weeks | $ | Very niche, price-sensitive. Low priority. |
+| 🟣 Wave 5 🔭 | **Future** | **ClearTalk** | Kids with speech delays + SLPs + parents | 🟢 Very Low (no AI articulation competitor) | 🟢 Very Strong — STT + LLM scoring pipeline already built; constrained vocab unlocks Whisper tiny (39MB) for offline mode | 4–6 weeks | $$$ | **Free for families. Paid for professionals.** Kids use free forever. SLPs / schools pay $29–$49/mo for professional dashboard. Default: Groq Whisper (cloud, best quality). Offline mode: Whisper tiny + initial_prompt trick — 39MB, runs on any machine. ASHA community is the distribution channel. |
 
 ---
 
@@ -240,6 +241,91 @@ The previous version of this document had an internal contradiction: the scoreca
 
 ---
 
+### 9. 🎙️ ClearTalk — Speech Articulation Trainer *(New Entry, Wave 5)*
+
+**The idea:** A desktop app that uses the existing Whisper STT + LLM pipeline to give real-time articulation coaching. The user reads a target sentence aloud; the app transcribes it, diffs what was said vs. what should have been said, and gives structured feedback — substitutions, omissions, filler words, pacing.
+
+**Who this helps:**
+- Kids with speech delays (the primary beneficiary — **free tier, always**)
+- Adults recovering from strokes or neurological events
+- Non-native speakers wanting cleaner English delivery
+- Podcasters, presenters, and YouTubers wanting to cut filler words
+- Parents who can't afford $150–$300/session weekly speech therapy
+
+**Why the gap exists:**
+
+**Why the gap exists (Competitive Landscape):**
+
+*Kid-facing practice apps:*
+| Competitor | Gap / Differentiator |
+|---|---|
+| **SpeechLP** | Closest competitor. Claims on-device phoneme screener & COPPA compliance. ClearTalk must beat them on true 100% offline (no sync option) and UI simplicity. |
+| Sara: Articulation | Freemium, parent-only currently. Not advertised as offline. |
+| Minimal Pairs Arcade | Clinician-facing only, no independent AI home practice. |
+| Speech Blubs | Mostly video-modeling/repetition, weak real-time AI scoring. |
+
+*SLP-side caseload tools (what we compete against for the $49/mo):*
+SLP Now, SLP Toolkit, and Speekly already own the paperwork/caseload market. ClearTalk’s dashboard doesn't need to replace them—it needs to plug the gap they don't cover: *structured at-home carryover practice with objective data feeding back into the SLP's existing workflow*.
+
+**The core feature loop:**
+1. App displays a target sentence or exercise set
+2. User reads aloud; STT captures exact output (every "um", mispronunciation, substitution)
+3. Word diff (algorithmic) — finds substitutions, omissions, insertions vs. target
+4. LLM gives qualitative feedback: "You said 'wabbit' — try placing your tongue behind your upper teeth"
+5. Scores session: clarity %, pace, filler count
+6. Progress tracked over time — streaks, before/after recordings
+
+**The viral moment:** A before/after audio comparison. Record Day 1, practice daily, play Day 30. The improvement is audible and deeply shareable. This is the marketing asset.
+
+**STT Architecture & The Technical Risk (Transcription vs. Pronunciation Assessment):**
+
+Unlike BarnOwl (open-vocabulary), ClearTalk knows exactly what the user is *supposed* to say. 
+
+| Mode | Engine | Size | Accuracy | When used |
+|---|---|---|---|---|
+| **Cloud (default)** | Groq Whisper API | 0MB local | 🟢 Excellent | Internet available |
+| **Offline** | Whisper tiny + `initial_prompt` | **39MB** | 🟢 Good enough | No internet |
+
+> **⚠️ R&D Risk - The Hallucination Bias:** 
+> While the `initial_prompt` trick dramatically improves tiny model accuracy, it introduces a clinical risk: Whisper is a *transcription* model, not a *phoneme scoring* model. If we prompt it to expect "rabbit," and the child says "wabbit," Whisper is highly biased to hallucinate the correct word ("rabbit") because it fits the language model better. 
+> 
+> A simple Levenshtein word-diff will yield false positives. To actually provide clinical "sound-by-sound" feedback, we must validate whether Whisper's confidence scores/word-level timestamps are granular enough to catch mispronunciations, or if we need a dedicated on-device phoneme classifier (e.g., Kaldi GOP or Wav2vec2) instead of generic ASR.
+
+**The Validation Plan (Before Building):**
+1. Build a lean prototype testing Whisper tiny + `initial_prompt`.
+2. Test it on *real* disordered child speech (not clear adult speech).
+3. If Whisper hallucinates over mispronunciations, pivot the STT architecture to a lightweight acoustic phoneme model.
+
+**Pricing model — Free for families, paid for professionals:**
+
+> We believe kids and families should never pay for a tool that helps children communicate. The professional tier makes this sustainable.
+
+| Tier | Who | Price | What they get |
+|---|---|---|---|
+| **Family** | Kids, parents, self-learners | **Free, always** | Unlimited practice sessions, progress tracking, all exercise sets |
+| **Professional** | SLPs, speech therapists, schools | **$29–$49/mo** | Multi-patient dashboard, custom exercise sets, progress export (PDF), bulk session notes |
+| **School/Clinic** | Districts, clinics | **$199–$499/mo** | Unlimited professional seats, admin dashboard, FERPA-ready local deployment |
+
+**Why this model works:**
+- SLPs already pay for tools — this adds AI-graded between-session practice without replacing anything
+- One SLP adopting it exposes their entire 20–30 patient caseload → families → word of mouth
+- ASHA (American Speech-Language-Hearing Association) forums and Facebook groups are tight-knit — one advocate drives hundreds of signups
+- The free tier is the marketing. The professional tier is the revenue.
+
+**Build delta from existing engine:**
+- Whisper STT (Groq + local tiny) ✅ already built
+- Turn detection / VAD ✅ already built
+- LLM scoring pipeline ✅ already built
+- **New:** `initial_prompt` integration in Whisper tiny mode
+- **New:** Levenshtein word diff scoring (algorithmic, no LLM call)
+- **New:** exercise library (target sentences by difficulty / sound category)
+- **New:** professional dashboard UI for SLPs (separate product skin)
+- **No stealth required** — this is a standard visible desktop UI
+
+**Estimated build:** 4–6 weeks (1 week STT mode + diff logic, 2 weeks family UI, 2 weeks professional dashboard)
+
+---
+
 ## 🗺️ Planned Build Order (Revised & Validated)
 
 ```
@@ -325,6 +411,9 @@ WAVE 5 (Explorers — Pull Forward if Early Traction)
   TabletopDM  — Passionate community, near-zero build effort
   LyricsHUD   — Niche, but genuinely zero competition
   RTS Co-Pilot — Lowest priority
+  ClearTalk   — Speech articulation trainer. Free for kids/families, $29–$49/mo for SLPs.
+               No stealth required. 90% engine reuse. Pull forward if a clinical/education
+               partnership opportunity appears. ASHA community is the distribution channel.
 ```
 
 ---
@@ -362,3 +451,5 @@ Per-product variables:
 - [ ] **LinguaOwl viral demo** — record a 30s clip of the overlay appearing during a Spanish Netflix scene. This is the marketing asset, not the product.
 - [ ] **Add platform story** — single pricing page showing all skins under one "Stealth HUD Platform" umbrella for future bundling
 - [ ] **Clarify platform priority** — confirm Windows-first given enterprise buyer profile (legal, medical, gov buyers are predominantly Windows)
+- [ ] **ClearTalk: find one SLP beta tester** — reach out to 5 speech-language pathologists on LinkedIn or ASHA forums. Offer free 3-month professional access. Their patient feedback will shape the exercise library and scoring rubric before public launch.
+- [ ] **ClearTalk: phoneme diff logic** — research whether Whisper's word-level timestamps are granular enough for phoneme-level articulation scoring, or whether a dedicated phoneme recognizer (e.g. wav2vec2) is needed as a preprocessing step.
