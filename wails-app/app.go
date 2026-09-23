@@ -214,6 +214,7 @@ func (a *App) GetState() map[string]interface{} {
 		"thinking":               s.Thinking,
 		"cached_pairs":           s.CachedPairs,
 		"estimated_tokens_saved": s.CachedPairs * 250,
+		"is_listening":           isListening,
 	}
 }
 
