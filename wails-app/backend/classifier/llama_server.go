@@ -148,7 +148,7 @@ func (p *LlamaServerProcess) Start(ctx context.Context, events driven.EventPort)
 		return err
 	}
 
-	cmdArgs := []string{"--server", "--model", p.modelPath, "--port", fmt.Sprintf("%d", p.port), "--host", "127.0.0.1", "--ctx-size", "2048", "--threads", "2", "--no-mmap", "-ngl", "0", "--chat-template", "gemma"}
+	cmdArgs := []string{"--server", "--model", p.modelPath, "--port", fmt.Sprintf("%d", p.port), "--host", "127.0.0.1", "--ctx-size", "2048", "--threads", "2", "--no-mmap", "-ngl", "0"}
 
 	if runtime.GOOS == "linux" {
 		// Workaround for Cosmopolitan APE on Linux (exec format error).
