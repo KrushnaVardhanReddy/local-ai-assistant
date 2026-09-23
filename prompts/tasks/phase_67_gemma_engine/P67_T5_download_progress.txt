@@ -1,0 +1,70 @@
+MANDATORY RULES — VIOLATION = REJECTED PR:
+- NEVER stub, mock, or TODO existing implementation code. Write real, working code only.
+- Commit message must start with "jules: " prefix.
+- Use clean module design and idiomatic Go architecture. No spaghetti code.
+- NEVER hardcode secrets, API keys, or local paths.
+- UNIT TESTS REQUIRED: For every Go file you create or modify, write an accompanying _test.go.
+- ALWAYS UPDATE THE WIKI: Update relevant markdown files in wiki/.
+
+Project: Local AI Assistant (BarnOwl AI)
+Tech stack: Go 1.25+, Wails v2, whisper.cpp, onnxruntime_go, Svelte 5 frontend
+
+════════════════════════════════════════════════════════════════
+TASK: P67-T5 — LIVE Status Sync & Download Progress UI
+════════════════════════════════════════════════════════════════
+
+OBJECTIVE:
+Improve the startup experience by fixing the "LIVE" microphone status sync bug and adding real-time download progress indicators to the UI. Users currently do not know when large models (like the Gemma sidecar) are being downloaded, and the LIVE microphone badge often incorrectly shows "disabled" on startup in local mode.
+
+PREREQUISITE: None.
+
+════════════════════════════════════════════════════════════════
+BACKGROUND / ARCHITECTURE CONTEXT
+════════════════════════════════════════════════════════════════
+
+1. **LIVE Status Sync**:
+   - `ws.svelte.ts` polls `GetState()` from Wails (`app.go`) every 200ms.
+   - `GetState()` delegates to `engine.GetState()` but currently does *not* expose the actual microphone recording state (`is_listening`).
+   - Svelte's `wsState.isListening` initializes to `true` locally, but often gets wiped or doesn't reflect the true hardware state. We need `engine.GetState()` to return a boolean derived from `sttManager.IsListening()` (or similar) and sync it to Svelte in the poll loop.
+
+2. **Download Progress Bar**:
+   - `system.DownloadFileAtomic` supports a `progressCallback func(float32)` parameter.
+   - `classifier.DefaultLlamaServer.Start(ctx)` is called in `engine.go:270` during `StealthEngine.Start()`.
+   - The downloader blocks the thread without emitting progress to Wails. We need to pass the `EventPort` down to `llama_server.go` so it can emit `on_download_progress` events.
+
+════════════════════════════════════════════════════════════════
+IMPLEMENTATION STEPS
+════════════════════════════════════════════════════════════════
+
+─── 1. EXPOSE is_listening IN ENGINE STATE ──────────────
+
+1. In `wails-app/core/engine/engine.go` (and wherever `EngineState` is defined), add an `IsListening bool` field.
+2. In the `GetState()` method, populate this field by checking if the STT Manager is actively listening.
+3. In `wails-app/app.go`, update `GetState()` to include `"is_listening": s.IsListening` in the returned map.
+4. In `wails-app/frontend/src/lib/ws.svelte.ts`, update the 200ms polling loop to read `state.is_listening` and assign it to `wsState.isListening`.
+
+─── 2. EMIT DOWNLOAD PROGRESS EVENTS ──────────────
+
+1. Modify `Start(ctx context.Context)` in `wails-app/backend/classifier/llama_server.go` to accept an `EventPort` (e.g., `Start(ctx context.Context, events driven.EventPort) error`).
+2. Update the caller in `wails-app/core/engine/engine.go:270` to pass `e.events`.
+3. In `EnsureGemmaModelFile` and `EnsureLlamaServerBinary`, accept the `EventPort`.
+4. When calling `system.DownloadFileAtomic`, pass a callback function that emits an event to Wails. For example:
+   ```go
+   events.Emit("on_download_progress", map[string]interface{}{
+       "component": "Gemma 3 270M Model",
+       "progress":  progressPercentage, // float32
+   })
+   ```
+
+─── 3. FRONTEND PROGRESS UI ──────────────
+
+1. In `wails-app/frontend/src/lib/ws.svelte.ts`, add a listener for `on_download_progress`. Store the progress and component name in `wsState` (e.g., `downloadTask: { component: string, progress: number } | null`).
+2. Add a non-intrusive UI overlay or toast in Svelte (e.g., in `InterviewHUD.svelte` or `ConvPanel.svelte`) that displays this progress bar when `wsState.downloadTask` is not null. Hide it when the progress hits 100 or when the task is complete.
+
+─── 4. UPDATES TO TESTS ────────────────────────────────────────
+
+1. Update any engine or classifier tests broken by the signature change to `Start()`. Pass a mock `EventPort`.
+
+─── 5. SPECIFIC ADVICE & TROUBLESHOOTING ──────────────
+
+1. **Throttling**: The download callback might fire hundreds of times per second. Throttle the `events.Emit` calls in Go to only emit when the progress percentage changes by at least 1% (e.g., `if int(current) > int(last) { ... }`) to avoid flooding the Wails IPC bridge.
