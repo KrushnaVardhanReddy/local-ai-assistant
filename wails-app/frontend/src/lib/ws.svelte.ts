@@ -40,6 +40,16 @@ export async function toggleManualMode(): Promise<void> {
   }
 }
 
+export async function toggleRawMode(): Promise<void> {
+  wsState.rawMode = !wsState.rawMode;
+  try {
+    await (window as any).go.main.App.SetRawMode(wsState.rawMode);
+  } catch (e) {
+    console.error('Failed to set raw mode:', e);
+    wsState.rawMode = !wsState.rawMode; // Rollback on error
+  }
+}
+
 let ws: WebSocket | null = null;
 let chipIdCounter = 0;
 let listenersInitialized = false;

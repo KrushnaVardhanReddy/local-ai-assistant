@@ -54,6 +54,7 @@ type StealthEngine struct {
 	cancelInFlight context.CancelFunc
 	inFlightCtx    context.Context
 	manualMode     bool
+	rawMode        bool
 }
 
 func New(
@@ -174,6 +175,12 @@ func (e *StealthEngine) SetManualMode(enabled bool) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.manualMode = enabled
+}
+
+func (e *StealthEngine) SetRawMode(enabled bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.rawMode = enabled
 }
 
 // SummaryRequest holds the configuration for a single summary template.

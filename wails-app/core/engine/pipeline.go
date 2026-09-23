@@ -48,9 +48,17 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 	cleanTranscript := strings.TrimSpace(raw)
 	emb := backend.GenerateEmbedding(cleanTranscript)
 
-	filterRes := filter.Check(cleanTranscript, emb)
-	if !filterRes.ShouldSend {
-		return
+	e.mu.RLock()
+	rawMode := e.rawMode
+	e.mu.RUnlock()
+
+	if !rawMode {
+		filterRes := filter.Check(cleanTranscript, emb)
+		if !filterRes.ShouldSend {
+			return
+		}
+	} else {
+		log.Printf("[RAW MODE] Bypassed filter for: %q", cleanTranscript)
 	}
 
 	log.Printf("🎤 STT OUTPUT: %q\n", cleanTranscript)

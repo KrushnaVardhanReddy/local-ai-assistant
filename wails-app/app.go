@@ -866,6 +866,15 @@ func (a *App) SetManualMode(enabled bool) {
 	}
 }
 
+// SetRawMode enables or disables the smart filter in the engine.
+// When rawMode is true, noise and filler transcripts are no longer dropped.
+func (a *App) SetRawMode(enabled bool) {
+	if a.engine != nil {
+		a.engine.SetRawMode(enabled)
+		log.Printf("🎛️ Raw mode set to: %v", enabled)
+	}
+}
+
 // SummarizeSession uses the LLM to summarize the entire interview session
 // using predefined templates.
 func (a *App) SummarizeSession(requests []engine.SummaryRequest) error {

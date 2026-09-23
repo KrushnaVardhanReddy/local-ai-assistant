@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { wsState, toggleManualMode } from '$lib/ws.svelte';
+  import { wsState, toggleManualMode, toggleRawMode } from '$lib/ws.svelte';
   import type { HeaderAction } from '$lib/types';
 
   const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
@@ -114,7 +114,7 @@
       <button
         class="header-action-btn"
         class:active={wsState.rawMode}
-        onclick={() => wsState.rawMode = !wsState.rawMode}
+        onclick={toggleRawMode}
       >
         <span class="material-symbols-outlined">
           {wsState.rawMode ? 'hearing_disabled' : 'hearing'}
