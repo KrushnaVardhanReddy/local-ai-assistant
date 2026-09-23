@@ -170,6 +170,10 @@ export function SetProxyToken(arg1) {
   return window['go']['main']['App']['SetProxyToken'](arg1);
 }
 
+export function SetRawMode(arg1) {
+  return window['go']['main']['App']['SetRawMode'](arg1);
+}
+
 export function StartBackend() {
   return window['go']['main']['App']['StartBackend']();
 }

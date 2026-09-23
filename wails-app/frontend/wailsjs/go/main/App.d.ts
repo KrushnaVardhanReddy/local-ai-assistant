@@ -89,6 +89,8 @@ export function SetManualMode(arg1:boolean):Promise<void>;
 
 export function SetProxyToken(arg1:string):Promise<void>;
 
+export function SetRawMode(arg1:boolean):Promise<void>;
+
 export function StartBackend():Promise<void>;
 
 export function StartOAuthFlow(arg1:string):Promise<void>;

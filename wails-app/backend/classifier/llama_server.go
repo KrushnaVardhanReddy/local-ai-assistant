@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -147,7 +148,17 @@ func (p *LlamaServerProcess) Start(ctx context.Context, events driven.EventPort)
 		return err
 	}
 
-	p.cmd = exec.CommandContext(ctx, binPath, "--model", p.modelPath, "--port", fmt.Sprintf("%d", p.port), "--host", "127.0.0.1", "--ctx-size", "2048", "--threads", "2", "--no-mmap", "-ngl", "0")
+	cmdArgs := []string{"--model", p.modelPath, "--port", fmt.Sprintf("%d", p.port), "--host", "127.0.0.1", "--ctx-size", "2048", "--threads", "2", "--no-mmap", "-ngl", "0"}
+
+	if runtime.GOOS == "linux" {
+		// Workaround for Cosmopolitan APE on Linux (exec format error).
+		// By passing the binary to /bin/sh, the polyglot shell script header
+		// intercepts execution instead of the kernel misinterpreting the MZ header.
+		shCmd := fmt.Sprintf("'%s' %s", binPath, strings.Join(cmdArgs, " "))
+		p.cmd = exec.CommandContext(ctx, "/bin/sh", "-c", shCmd)
+	} else {
+		p.cmd = exec.CommandContext(ctx, binPath, cmdArgs...)
+	}
 	p.cmd.Stdout = log.Writer()
 	p.cmd.Stderr = log.Writer()
 
