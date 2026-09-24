@@ -24,6 +24,16 @@ const DefaultSystemPrompt = "You are a stealth interview assistant. The user is 
 
 const DefaultVisionPrompt = "Extract any coding problems, technical questions, or architecture diagrams from this screenshot. Provide a structured approach, pseudocode, and edge cases. Do not write the full code."
 
+const TranscriptSummaryPrompt = `You are a professional meeting note-taker.
+The user will provide you with a full transcript of a conversation tagged by speaker.
+Your job is to produce:
+1. A brief TL;DR (2-3 sentences)
+2. Key Discussion Points (bullet list)
+3. Action Items (bullet list, if any)
+4. Any open questions or follow-ups
+
+Be concise and use professional language.`
+
 var CategoryPromptInjections = map[string]string{
 	"behavioral": "This is a behavioral interview question. Use the STAR format strictly:\n" +
 		"• Situation (1-2 sentences): Set the scene — team size, company stage, or project context.\n" +

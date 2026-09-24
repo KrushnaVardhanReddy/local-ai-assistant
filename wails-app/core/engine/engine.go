@@ -62,6 +62,9 @@ type StealthEngine struct {
 	isMockMode       bool
 	isMockTTS        bool
 	isTTSPlaying     bool
+
+	transcriptLogMu sync.Mutex
+	transcriptLog   []string
 }
 
 func New(
@@ -317,4 +320,24 @@ func (e *StealthEngine) Stop() {
 
 func (e *StealthEngine) GetQuestionBuffer() *classifier.QuestionBuffer {
 	return e.questionBuffer
+}
+
+// AppendTranscriptLog appends a new tagged transcript line to the running log.
+func (e *StealthEngine) AppendTranscriptLog(line string) {
+	e.transcriptLogMu.Lock()
+	defer e.transcriptLogMu.Unlock()
+	e.transcriptLog = append(e.transcriptLog, line)
+}
+
+// FlushTranscriptLog returns the current transcript log and resets it.
+func (e *StealthEngine) FlushTranscriptLog() []string {
+	e.transcriptLogMu.Lock()
+	defer e.transcriptLogMu.Unlock()
+
+	logCopy := make([]string, len(e.transcriptLog))
+	copy(logCopy, e.transcriptLog)
+
+	e.transcriptLog = make([]string, 0)
+
+	return logCopy
 }
