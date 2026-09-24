@@ -3,6 +3,8 @@ package audio
 import (
 	"errors"
 	"fmt"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/gen2brain/malgo"
@@ -140,7 +142,7 @@ func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback fun
 	deviceConfig.Capture.Channels = 1
 	deviceConfig.SampleRate = 16000
 
-	if isLoopback {
+	if isLoopback && runtime.GOOS != "linux" {
 		deviceConfig = malgo.DefaultDeviceConfig(malgo.Loopback)
 		deviceConfig.Capture.Format = malgo.FormatS16
 		deviceConfig.Capture.Channels = 1
@@ -151,9 +153,22 @@ func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback fun
 	if deviceID < -1 || deviceID >= len(c.deviceList) {
 		return fmt.Errorf("invalid device ID: %d (max: %d)", deviceID, len(c.deviceList)-1)
 	}
-	if deviceID >= 0 {
+	
+	if isLoopback && runtime.GOOS == "linux" && deviceID == -1 {
+		// PulseAudio/Linux does not support malgo.Loopback. 
+		// We must find a "Monitor" device from the Capture list instead.
+		caps, err := c.ctx.Devices(malgo.Capture)
+		if err == nil {
+			for _, cap := range caps {
+				if strings.Contains(cap.Name(), "Monitor of") || strings.Contains(cap.Name(), ".monitor") {
+					deviceConfig.Capture.DeviceID = cap.ID.Pointer()
+					break
+				}
+			}
+		}
+	} else if deviceID >= 0 {
 		info := c.deviceList[deviceID]
-		if isLoopback {
+		if isLoopback && runtime.GOOS != "linux" {
 			deviceConfig.Playback.DeviceID = info.ID.Pointer()
 		} else {
 			deviceConfig.Capture.DeviceID = info.ID.Pointer()

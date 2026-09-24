@@ -3,6 +3,8 @@ package audio
 import (
 	"errors"
 	"fmt"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/gen2brain/malgo"
@@ -36,11 +38,24 @@ func (d *DualCaptureEngine) Start(loopbackDeviceID int, micDeviceID int, loopbac
 
 	// Initialize Loopback
 	loopbackConfig := malgo.DefaultDeviceConfig(malgo.Loopback)
+	if runtime.GOOS == "linux" {
+		loopbackConfig = malgo.DefaultDeviceConfig(malgo.Capture)
+	}
 	loopbackConfig.Capture.Format = malgo.FormatS16
 	loopbackConfig.Capture.Channels = 1
 	loopbackConfig.SampleRate = 16000
 
-	if loopbackDeviceID >= 0 {
+	if runtime.GOOS == "linux" && loopbackDeviceID == -1 {
+		caps, err := d.ctx.Devices(malgo.Capture)
+		if err == nil {
+			for _, cap := range caps {
+				if strings.Contains(cap.Name(), "Monitor of") || strings.Contains(cap.Name(), ".monitor") {
+					loopbackConfig.Capture.DeviceID = cap.ID.Pointer()
+					break
+				}
+			}
+		}
+	} else if loopbackDeviceID >= 0 {
 		// In a real implementation we would look up the device ID from the list,
 		// but since CaptureEngine.GetDevices() sets its internal deviceList,
 		// we'll need to figure out how to pass the pointer. Wait, the spec says
