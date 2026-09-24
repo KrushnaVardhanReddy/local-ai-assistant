@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	cacheadapter "wails-app/adapters/cache"
 	"wails-app/backend"
 	"wails-app/core/engine"
-	cacheadapter "wails-app/adapters/cache"
 )
 
 // In a real environment with working CGO, these would run.
@@ -19,9 +19,9 @@ func TestApp_Indexing(t *testing.T) {
 		t.Skip("Skipping DB test - memory sqlite unsupported in this test env", err)
 	}
 	defer db.Close()
-	
+
 	cacheAdapter := cacheadapter.NewSQLiteVecAdapter(db)
-	
+
 	// Stub engine with just cache adapter
 	eng := engine.New(
 		engine.Config{},
@@ -30,7 +30,7 @@ func TestApp_Indexing(t *testing.T) {
 		cacheAdapter,
 		nil,
 	)
-	
+
 	// Minimal app instance
 	app := &App{
 		engine: eng,
@@ -68,7 +68,7 @@ func TestApp_Indexing(t *testing.T) {
 	if err != nil {
 		t.Errorf("RemoveIndexedPath failed: %v", err)
 	}
-	
+
 	paths = app.GetIndexedPaths()
 	for _, p := range paths {
 		if p == txtFile {
@@ -85,7 +85,7 @@ func TestApp_Indexing_CacheNil(t *testing.T) {
 		nil,
 		nil,
 	)
-	
+
 	app := &App{
 		engine: eng,
 	}

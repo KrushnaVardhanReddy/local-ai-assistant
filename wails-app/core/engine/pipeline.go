@@ -95,7 +95,6 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		e.events.Emit("on_transcript", map[string]interface{}{"text": cleanTranscript, "is_noise": isNoise})
 	}
 
-
 	e.mu.RLock()
 	manual := e.manualMode
 	e.mu.RUnlock()
@@ -109,9 +108,20 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		})
 	}
 
+	e.mu.RLock()
+	isMockMode := e.isMockMode
+	e.mu.RUnlock()
+
 	if isAuto {
 		if manual {
 			log.Printf("🎛️ [Manual Mode] Transcript accepted but LLM call bypassed: %q", cleanTranscript)
+			return
+		}
+		if isMockMode {
+			log.Printf("🎭 [Mock Mode] Transcript accepted but auto-submit bypassed: %q", cleanTranscript)
+			if e.questionBuffer != nil {
+				e.questionBuffer.AddChunk(cleanTranscript)
+			}
 			return
 		}
 		if e.questionBuffer != nil {
@@ -122,7 +132,6 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		e.triggerLLMWithQuestion(cleanTranscript)
 	}
 }
-
 
 func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 	emb := backend.GenerateEmbedding(cleanTranscript)

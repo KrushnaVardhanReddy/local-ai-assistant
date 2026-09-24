@@ -1,17 +1,17 @@
 package engine
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"strings"
-	"fmt"
-	"context"
 	"sync"
+	"wails-app/backend/classifier"
 	"wails-app/backend/session"
 	"wails-app/backend/stt"
 	"wails-app/backend/tts"
 	"wails-app/core/ports/driven"
 	"wails-app/core/ports/driving"
-	"wails-app/backend/classifier"
 )
 
 // Config holds product-specific configuration injected at startup.
@@ -51,13 +51,13 @@ type StealthEngine struct {
 	transcriptBuffer []string // rolling window of last 5 accepted transcripts
 	response         string
 	thinking         bool
-	llmBusy        sync.Mutex
-	inFlightMu     sync.Mutex
-	cancelInFlight context.CancelFunc
-	inFlightCtx    context.Context
-	manualMode     bool
-	rawMode        bool
-	isMockMode     bool
+	llmBusy          sync.Mutex
+	inFlightMu       sync.Mutex
+	cancelInFlight   context.CancelFunc
+	inFlightCtx      context.Context
+	manualMode       bool
+	rawMode          bool
+	isMockMode       bool
 }
 
 func New(
@@ -273,7 +273,6 @@ func (e *StealthEngine) SummarizeSession(requests []SummaryRequest) error {
 
 	return nil
 }
-
 
 func (e *StealthEngine) Start(ctx context.Context) {
 	if e.questionBuffer != nil {

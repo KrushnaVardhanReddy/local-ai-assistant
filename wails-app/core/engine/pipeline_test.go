@@ -199,3 +199,16 @@ func TestPipeline_RollingTranscriptBuffer(t *testing.T) {
 		t.Errorf("Missing entry 4. Got: %s", capturedQuestion)
 	}
 }
+
+func TestPipeline_MockMode(t *testing.T) {
+	events := &MockEvents{Emitted: make(map[string]int)}
+	eng := New(Config{}, nil, nil, nil, events, nil)
+	eng.ToggleMockInterviewMode(true)
+
+	// In mock mode, handleTranscript with isAuto=true should add to buffer but bypass auto-submit
+	eng.handleTranscript("Hello mock mode", true)
+
+	if len(eng.GetQuestionBuffer().GetChunks()) == 0 {
+		t.Fatalf("Expected transcript to be added to buffer in mock mode")
+	}
+}

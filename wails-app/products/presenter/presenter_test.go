@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"wails-app/backend/config"
 	"time"
+	"wails-app/backend/config"
 
 	cacheadapter "wails-app/adapters/cache"
 	eventsadapter "wails-app/adapters/events"

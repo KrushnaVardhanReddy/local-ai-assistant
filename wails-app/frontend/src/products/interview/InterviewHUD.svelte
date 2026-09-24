@@ -465,6 +465,11 @@
         onAddBufferChip={addBufferChip}
         onDismissChip={dismissChip}
         onClearChips={clearAllChips}
+        onFlushBuffer={() => {
+          if (typeof (window as any).go?.main?.App?.FlushQuestionBuffer === 'function') {
+            (window as any).go.main.App.FlushQuestionBuffer();
+          }
+        }}
         onSelectTranscript={(text: string, answer?: string) => {
           if (answerPanelRef) {
             if (answer && answerPanelRef.showLocalAnswer) {

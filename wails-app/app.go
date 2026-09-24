@@ -278,21 +278,21 @@ func (a *App) IndexFile(path string) error {
 	if idx >= 0 {
 		ext = strings.ToLower(path[idx:])
 	}
-	
+
 	validExts := map[string]bool{".txt": true, ".md": true, ".pdf": true, ".go": true, ".ts": true, ".svelte": true}
 	if !validExts[ext] {
 		return fmt.Errorf("unsupported file extension for indexing: %s", ext)
 	}
 
 	content := string(b)
-	
+
 	// Quick hack to chunk text since pdf isn't properly supported without a parser anyway.
 	// Actually we should probably just chunk by 2000 chars
 	// (Real world app would have better parsing/chunking)
 	var chunks []string
 	chunkSize := 2000
 	runes := []rune(content)
-	
+
 	for i := 0; i < len(runes); i += chunkSize {
 		end := i + chunkSize
 		if end > len(runes) {
@@ -312,7 +312,7 @@ func (a *App) IndexFile(path string) error {
 			log.Printf("Failed to generate embedding for chunk of %s", path)
 		}
 	}
-	
+
 	log.Printf("Indexed file: %s", path)
 	return nil
 }
@@ -328,7 +328,7 @@ func (a *App) IndexFolder(dir string) error {
 		if strings.HasPrefix(name, ".") {
 			continue // Skip hidden files/directories
 		}
-		
+
 		fullPath := dir + "/" + name // Basic join, a bit naive but works for paths
 		if entry.IsDir() {
 			_ = a.IndexFolder(fullPath)
@@ -428,14 +428,14 @@ func (a *App) StartOAuthFlow(provider string) error {
 	} else {
 		log.Printf("✅ [Auth] Token saved successfully!")
 	}
-	
+
 	log.Printf("📡 [Auth] Emitting on_auth_complete event to frontend...")
 	wailsruntime.EventsEmit(a.ctx, "on_auth_complete", access+":"+refresh)
-	
+
 	// Force window to foreground from the backend
 	wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
 	wailsruntime.WindowShow(a.ctx)
-	
+
 	return nil
 }
 
@@ -877,6 +877,22 @@ func (a *App) AppendToBuffer(text string) error {
 		buf := a.engine.GetQuestionBuffer()
 		if buf != nil {
 			buf.AddChunk(text)
+		}
+	}
+	return nil
+}
+
+// FlushQuestionBuffer flushes the current question buffer to the LLM immediately
+func (a *App) FlushQuestionBuffer() error {
+	if a.engine != nil {
+		buf := a.engine.GetQuestionBuffer()
+		if buf != nil {
+			chunks := buf.GetChunks()
+			if len(chunks) > 0 {
+				fullText := strings.Join(chunks, " ")
+				buf.Reset()
+				return a.engine.AskQuestion(fullText)
+			}
 		}
 	}
 	return nil

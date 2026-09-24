@@ -546,7 +546,9 @@ func TestEngine_ManualMode_SkipsBuffer(t *testing.T) {
 	}
 }
 
-func (m *MockCache) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) { return nil, nil }
+func (m *MockCache) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) {
+	return nil, nil
+}
 func (m *MockCache) IndexDocumentChunk(path, text string, embedding []float32) error { return nil }
-func (m *MockCache) GetIndexedPaths() ([]string, error) { return nil, nil }
-func (m *MockCache) RemoveIndexedPath(path string) error { return nil }
+func (m *MockCache) GetIndexedPaths() ([]string, error)                              { return nil, nil }
+func (m *MockCache) RemoveIndexedPath(path string) error                             { return nil }

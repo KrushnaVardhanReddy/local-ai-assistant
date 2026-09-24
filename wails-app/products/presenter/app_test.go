@@ -14,13 +14,16 @@ import (
 
 // Define dummy cache adapter so we don't import the one that needs CGO
 type DummyCache struct{}
-func (d *DummyCache) Search(embedding []float32, threshold float64) (string, bool) { return "", false }
-func (d *DummyCache) Store(question, answer string) error { return nil }
-func (d *DummyCache) Count() int                                   { return 0 }
+
+func (d *DummyCache) Search(embedding []float32, threshold float64) (string, bool)    { return "", false }
+func (d *DummyCache) Store(question, answer string) error                             { return nil }
+func (d *DummyCache) Count() int                                                      { return 0 }
 func (d *DummyCache) IndexDocumentChunk(path, text string, embedding []float32) error { return nil }
-func (d *DummyCache) GetIndexedPaths() ([]string, error) { return nil, nil }
-func (d *DummyCache) RemoveIndexedPath(path string) error { return nil }
-func (d *DummyCache) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) { return nil, nil }
+func (d *DummyCache) GetIndexedPaths() ([]string, error)                              { return nil, nil }
+func (d *DummyCache) RemoveIndexedPath(path string) error                             { return nil }
+func (d *DummyCache) SemanticSearch(embedding []float32, limit int, threshold float64) ([]string, error) {
+	return nil, nil
+}
 func (d *DummyCache) Close() error { return nil }
 
 func TestPresenterAppLoadDocument(t *testing.T) {
