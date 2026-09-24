@@ -1,0 +1,86 @@
+You are tasked with implementing the Transcript Mode Summarization (Granolah) for BarnOwl AI (P73-T3).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+P73-T1 added the dual audio capture backend and a `transcriptLog []string` slice
+on the engine that accumulates speaker-tagged transcripts in Transcript Mode.
+P73-T2 added a "Summarize Session" button to the UI.
+
+This task wires up the summarization: when the user clicks "Summarize Session",
+the full `transcriptLog` is sent to the main LLM (e.g., Cloudflare AI or local
+llamafile) with a Meeting Summary prompt, and the output is streamed back to the UI.
+
+No overlap with T1 (audio capture) or T2 (ActivityBar UI only).
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/core/engine/engine.go
+[MODIFY] wails-app/core/engine/pipeline.go
+[MODIFY] wails-app/app.go
+[MODIFY] wails-app/backend/llm/prompts.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── MODIFY wails-app/backend/llm/prompts.go ────────────────────────────────
+
+Add a new constant for the summarization system prompt:
+
+const TranscriptSummaryPrompt = `You are a professional meeting note-taker.
+The user will provide you with a full transcript of a conversation tagged by speaker.
+Your job is to produce:
+1. A brief TL;DR (2-3 sentences)
+2. Key Discussion Points (bullet list)
+3. Action Items (bullet list, if any)
+4. Any open questions or follow-ups
+
+Be concise and use professional language.`
+
+─── MODIFY wails-app/core/engine/engine.go ────────────────────────────────
+
+1. Add a `transcriptLog []string` field to the `StealthEngine` struct.
+2. Add a method to append to it:
+   func (e *StealthEngine) AppendTranscriptLog(line string)
+3. Add a method to retrieve and reset it:
+   func (e *StealthEngine) FlushTranscriptLog() []string
+
+─── MODIFY wails-app/core/engine/pipeline.go ────────────────────────────────
+
+1. In `ProcessAudioTagged` (from T1), when the engine is in Transcript Mode
+   (autoFlush == false), instead of routing to QuestionBuffer, call
+   `e.AppendTranscriptLog(taggedTranscript)` and emit an `on_transcript_log` event
+   so the UI can show a live running log of the meeting.
+
+2. Add a new method `SummarizeTranscript()`:
+   func (e *StealthEngine) SummarizeTranscript() error
+   - Calls `e.FlushTranscriptLog()` to get the accumulated log.
+   - Joins all lines with newline.
+   - Calls `e.triggerLLMWithCustomPrompt(llm.TranscriptSummaryPrompt, fullTranscript)`.
+   - The LLM streams the summary back through the existing `on_llm_token` and `on_response_end`
+     events, so the UI displays it in the existing ConvPanel without any extra frontend changes.
+
+─── MODIFY wails-app/app.go ────────────────────────────────
+
+Add a new Wails binding:
+  func (a *App) SummarizeTranscript() error {
+      if a.engine == nil {
+          return fmt.Errorf("engine not initialized")
+      }
+      return a.engine.SummarizeTranscript()
+  }
+
+This is the backend endpoint that the T2 "Summarize Session" button calls.
+
+─── NOTES ────────────────────────────────
+
+- The summarization uses the SAME LLM pipeline as normal questions — no new HTTP
+  clients or new dependencies required.
+- The `transcriptLog` is cleared after `FlushTranscriptLog()` is called so subsequent
+  summaries only cover new material.
+- Speaker tags must be preserved in the summary prompt so the LLM understands
+  who said what (e.g., "[Interviewer]: Tell me about yourself\n[Candidate]: Sure...").

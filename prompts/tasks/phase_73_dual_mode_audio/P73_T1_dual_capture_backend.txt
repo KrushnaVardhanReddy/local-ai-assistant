@@ -1,0 +1,91 @@
+You are tasked with implementing a Dual-Mode Audio Pipeline (Interview Mode vs Transcript Mode) for BarnOwl AI (P73-T1).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+The app currently only supports a single audio capture stream at a time (one device → STT → LLM).
+We need to introduce two clearly-separated runtime modes:
+
+1. INTERVIEW MODE: Capture only the LOOPBACK (system output) device. This means only the
+   interviewer's voice (coming through Zoom/Teams/Meet) reaches the STT pipeline. The
+   candidate's physical microphone is completely ignored. The LLM auto-triggers on
+   complete questions.
+
+2. TRANSCRIPT MODE: Capture TWO streams simultaneously:
+   - Loopback (labelled [Interviewer])
+   - Physical Microphone (labelled [Candidate])
+   Both streams flow into a shared transcript log. The Gemma auto-flush/auto-LLM-trigger
+   is DISABLED. The app acts as a passive note-taker, not an answer generator.
+
+This task covers ONLY the Go backend changes needed to support dual-capture.
+The UI changes are in T2. The session/summarization changes are in T3.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/backend/audio/capture.go
+[CREATE] wails-app/backend/audio/dual_capture.go
+[MODIFY] wails-app/app.go
+[MODIFY] wails-app/core/engine/engine.go
+[MODIFY] wails-app/core/engine/pipeline.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── CREATE wails-app/backend/audio/dual_capture.go ────────────────────────────
+
+Create a new `DualCaptureEngine` struct that wraps TWO independent `malgo.Device`
+instances side by side (one Loopback, one Capture).
+
+It must expose:
+  func NewDualCaptureEngine(ctx *malgo.AllocatedContext) *DualCaptureEngine
+  func (d *DualCaptureEngine) Start(loopbackDeviceID int, micDeviceID int,
+      loopbackCallback func([]float32), micCallback func([]float32)) error
+  func (d *DualCaptureEngine) Stop() error
+
+The loopbackCallback and micCallback are independent — each fires independently
+with samples from their respective hardware device.
+
+─── MODIFY wails-app/app.go ────────────────────────────────
+
+1. Add an `AppMode` type (string enum):
+   const (
+       AppModeInterview  AppMode = "interview"
+       AppModeTranscript AppMode = "transcript"
+   )
+
+2. Add an `appMode AppMode` field to the `App` struct. Default: `AppModeInterview`.
+
+3. Add a new Wails binding:
+   func (a *App) SetAppMode(mode string) error
+   - If mode == "interview":
+       Stop any dual capture. Start Loopback-only capture (existing SetAudioDevice behavior).
+       Enable Gemma auto-flush on the QuestionBuffer.
+   - If mode == "transcript":
+       Stop any current single capture.
+       Start DualCaptureEngine with the default loopback + default mic.
+       Loopback callback → engine.ProcessAudio with speaker tag "[Interviewer]"
+       Mic callback → engine.ProcessAudio with speaker tag "[Candidate]"
+       Disable Gemma auto-flush on the QuestionBuffer.
+
+─── MODIFY wails-app/core/engine/pipeline.go ────────────────────────────────
+
+1. Modify `ProcessAudio` to accept an optional `speaker` tag:
+   func (e *StealthEngine) ProcessAudio(samples []float32) error  ← keep for compat
+   func (e *StealthEngine) ProcessAudioTagged(samples []float32, speaker string) error  ← new
+
+2. Inside `handleTranscript`, if a speaker tag is provided, prefix the transcript:
+   e.g., "[Interviewer]: What is a goroutine?" before routing to QuestionBuffer.
+
+3. In Transcript Mode (when `isMockMode == false && autoFlush == false`), after
+   prefixing, route ALL tagged transcripts to a new `transcriptLog []string` slice
+   in the engine instead of the QuestionBuffer.
+
+─── NOTES ────────────────────────────────
+
+- Thread safety: DualCaptureEngine must use sync.Mutex to protect both device handles.
+- The malgo AllocatedContext is shared between both devices (one context can host multiple devices).
+- The existing `CaptureEngine` (single device) is unchanged and still used in Interview Mode.

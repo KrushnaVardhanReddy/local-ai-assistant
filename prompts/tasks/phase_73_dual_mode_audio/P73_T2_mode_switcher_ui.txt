@@ -1,0 +1,61 @@
+You are tasked with adding a Mode Switcher to the BarnOwl AI UI (P73-T2).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+P73-T1 added the Go backend for dual audio capture and AppMode switching.
+This task wires up the UI so the user can switch between Interview Mode and
+Transcript Mode from the sidebar. This is a FRONTEND-ONLY task with no Go
+backend changes.
+
+No overlap with T1 (Go only) or T3 (session/summarization logic only).
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/frontend/src/products/interview/InterviewHUD.svelte
+[MODIFY] wails-app/frontend/src/lib/ws.svelte.ts
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── MODIFY ws.svelte.ts ────────────────────────────────
+
+1. Add a new reactive state field to `wsState`:
+   appMode: 'interview' | 'transcript' = 'interview'
+
+2. Add a new exported function:
+   export async function setAppMode(mode: 'interview' | 'transcript') {
+     wsState.appMode = mode;
+     if ((window as any).go?.main?.App?.SetAppMode) {
+       await (window as any).go.main.App.SetAppMode(mode);
+     }
+   }
+
+─── MODIFY InterviewHUD.svelte ────────────────────────────────
+
+1. Add a Mode Toggle to the ActivityBar (the left sidebar icon column).
+   - Use two icons from Material Symbols:
+     - 'support_agent' for Interview Mode (assisting the candidate)
+     - 'summarize' for Transcript Mode (passive note-taking)
+   - Clicking the icon calls setAppMode() and switches between the two modes.
+   - The active mode icon should be highlighted (use the existing `active` class pattern).
+
+2. When `wsState.appMode === 'transcript'`:
+   - Show a subtle banner or badge at the top of the ConvPanel: "📝 Transcript Mode — Passive Listening"
+   - Hide the "Submit Answer" button (it is irrelevant in transcript mode).
+   - Show a new "Summarize Session" button at the bottom of the ConvPanel that calls
+     a placeholder function `handleSummarize()` (to be wired up in T3).
+
+3. When `wsState.appMode === 'interview'`:
+   - Restore all normal UI controls (Submit Answer, TTS toggles, etc.).
+
+─── DESIGN NOTES ────────────────────────────────
+
+- Keep the toggle minimal. This should feel like switching between two clean profiles,
+  not a buried settings option. The ActivityBar icon is the primary affordance.
+- The mode should persist to localStorage so it survives page refreshes.
+  Key: 'barnowl_app_mode'
