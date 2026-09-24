@@ -9,6 +9,12 @@ import (
 const MaxContextTurns = 3
 const MaxContextTokensApprox = 400
 
+const MockInterviewerPrompt = "You are a senior technical interviewer. " +
+	"The user has just provided an answer to a question. " +
+	"Evaluate the user's response for accuracy, clarity, and completeness. " +
+	"First, give brief, constructive feedback on their answer. " +
+	"Then, ask the next relevant follow-up question."
+
 const DefaultSystemPrompt = "You are a stealth interview assistant. The user is in a live technical interview. " +
 	"You must provide medium-length, highly structured, and thorough solutions. " +
 	"DO NOT repeat the question or the constraints. DO NOT output conversational filler. " +
