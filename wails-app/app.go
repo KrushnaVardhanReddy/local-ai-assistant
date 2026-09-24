@@ -206,14 +206,33 @@ func (a *App) Greet(name string) string {
 }
 
 // GetSystemStatus returns diagnostic information about the configured models and engines
-func (a *App) GetSystemStatus() map[string]string {
-	return map[string]string{
+func (a *App) GetSystemStatus() map[string]interface{} {
+	a.cmdMutex.Lock()
+	defer a.cmdMutex.Unlock()
+
+	status := map[string]interface{}{
 		"llm_provider":     a.cfg.LLMProvider,
 		"llm_model":        a.cfg.LLMModel,
 		"stt_provider":     a.cfg.STTProvider,
 		"stt_model":        a.cfg.STTModel,
 		"local_stt_engine": a.cfg.LocalSTTEngine,
+		"audio_mode":       a.appMode,
 	}
+
+	if a.appMode == AppModeInterview {
+		if a.audioCapture != nil {
+			status["audio_isCapturing"] = a.audioCapture.IsCapturing()
+			id, isLoopback := a.audioCapture.GetActiveDevice()
+			status["audio_deviceID"] = id
+			status["audio_isLoopback"] = isLoopback
+		} else {
+			status["audio_isCapturing"] = false
+		}
+	} else if a.appMode == AppModeTranscript {
+		status["audio_isCapturing"] = (a.dualCapture != nil)
+	}
+
+	return status
 }
 
 // GetState is polled by the frontend every 200ms to get the latest transcript/response state.
@@ -712,31 +731,6 @@ func (a *App) GetAudioDevices() []audio.AudioDevice {
 		return []audio.AudioDevice{}
 	}
 	return devices
-}
-
-func (a *App) GetAudioStatus() map[string]interface{} {
-	a.cmdMutex.Lock()
-	defer a.cmdMutex.Unlock()
-
-	status := map[string]interface{}{
-		"mode": a.appMode,
-	}
-
-	if a.appMode == AppModeInterview {
-		if a.audioCapture != nil {
-			status["isCapturing"] = a.audioCapture.IsCapturing()
-			id, isLoopback := a.audioCapture.GetActiveDevice()
-			status["deviceID"] = id
-			status["isLoopback"] = isLoopback
-		} else {
-			status["isCapturing"] = false
-		}
-	} else if a.appMode == AppModeTranscript {
-		status["isCapturing"] = (a.dualCapture != nil)
-		// Transcript always uses dual capture defaults for now
-	}
-
-	return status
 }
 
 func (a *App) SetAudioDevice(id int, isLoopback bool) error {
