@@ -100,3 +100,12 @@ Run `scripts/deploy_supabase.sh` to link your Supabase project, push all schema 
 - **Engine State**: `StealthEngine` tracks `isMockMode` and updates `SystemPrompt` dynamically to an interviewer persona when active. Uses `llm.MockInterviewerPrompt` which instructs the LLM to act as a senior technical interviewer, evaluate the response, give brief constructive feedback, and ask a relevant follow-up question.
 - **Audio Output**: Final LLM answers are sent to the frontend's Web Speech API when Mock Mode is active.
 - **UI Toggle**: Added a Mock Mode toggle to the frontend header in `InterviewHUD.svelte` that issues Wails IPC calls to update backend state.
+
+### App Modes and Dual-Mode Audio Capture
+
+The application supports two distinct audio capture paradigms, represented by the `AppMode` enum:
+
+- **Interview Mode (`AppModeInterview`)**: Uses the standard `CaptureEngine` to capture a single Loopback channel (e.g., Zoom/Teams audio) representing the interviewer. Auto-detection triggers via Gemma are active to recognize complete questions and route to the LLM.
+- **Transcript Mode (`AppModeTranscript`)**: Utilizes the `DualCaptureEngine` to concurrently capture the default Loopback hardware AND the default Microphone hardware. Both streams are independently fed into the transcription pipeline (`StealthEngine.ProcessAudioTagged`) with their respective tags (`[Interviewer]` and `[Candidate]`). In this mode, auto-LLM triggering is disabled, turning the engine into a passive, concurrent logging system.
+
+The `DualCaptureEngine` achieves concurrency by allocating two independent `malgo.Device` instances tied to a single shared `malgo.AllocatedContext` (extracted from the dormant `CaptureEngine`).

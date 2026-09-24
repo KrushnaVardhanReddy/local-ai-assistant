@@ -16,13 +16,18 @@ import (
 // audio → STT transcription → smart filter → (cache lookup) → LLM stream.
 // All results are delivered via the EventPort asynchronously.
 func (e *StealthEngine) ProcessAudio(samples []float32) error {
+	return e.ProcessAudioTagged(samples, "")
+}
+
+// ProcessAudioTagged processes audio and associates the transcript with a speaker tag.
+func (e *StealthEngine) ProcessAudioTagged(samples []float32, speaker string) error {
 	ch, err := e.sttManager.TranscribeStream(samples)
 	if err != nil {
 		return fmt.Errorf("STT error: %w", err)
 	}
 	go func() {
 		for transcript := range ch {
-			e.handleTranscript(transcript, true)
+			e.handleTranscriptTagged(transcript, true, speaker)
 		}
 	}()
 	return nil
@@ -30,13 +35,13 @@ func (e *StealthEngine) ProcessAudio(samples []float32) error {
 
 // AskQuestion bypasses audio and sends a typed question to the LLM pipeline.
 func (e *StealthEngine) AskQuestion(question string) error {
-	e.handleTranscript(question, false)
+	e.handleTranscriptTagged(question, false, "")
 	return nil
 }
 
-// handleTranscript contains the core pipeline: filter → cache → LLM.
+// handleTranscriptTagged contains the core pipeline: filter → cache → LLM.
 // This is the logic extracted from app.go SetAudioDevice (lines 444–551).
-func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
+func (e *StealthEngine) handleTranscriptTagged(raw string, isAuto bool, speaker string) {
 	if raw == "" ||
 		raw == "[BLANK_AUDIO]" ||
 		raw == " [BLANK_AUDIO]" ||
@@ -46,6 +51,10 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 	}
 
 	cleanTranscript := strings.TrimSpace(raw)
+	if speaker != "" {
+		cleanTranscript = fmt.Sprintf("%s: %s", speaker, cleanTranscript)
+	}
+
 	emb := backend.GenerateEmbedding(cleanTranscript)
 
 	e.mu.RLock()

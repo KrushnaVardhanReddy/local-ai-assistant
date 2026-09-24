@@ -216,3 +216,10 @@ func (c *CaptureEngine) stopCaptureInternal() error {
 	}
 	return nil
 }
+
+// GetContext returns the malgo context for sharing with other engines.
+func (c *CaptureEngine) GetContext() *malgo.AllocatedContext {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.ctx
+}

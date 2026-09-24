@@ -38,6 +38,14 @@ import (
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+// AppMode defines the runtime capture and interaction mode.
+type AppMode string
+
+const (
+	AppModeInterview  AppMode = "interview"
+	AppModeTranscript AppMode = "transcript"
+)
+
 // App struct
 type App struct {
 	remoteServer *remote.Server
@@ -48,6 +56,8 @@ type App struct {
 
 	sttManager   *stt.STTManager
 	audioCapture *audio.CaptureEngine
+	dualCapture  *audio.DualCaptureEngine
+	appMode      AppMode
 
 	engine *engine.StealthEngine
 	cfg    *config.AppConfig
@@ -129,6 +139,7 @@ func NewApp(cfg *config.AppConfig) *App {
 		remoteServer: remote.NewServer(http.FS(assets), sessMgr),
 		sttManager:   stt.NewSTTManager(initialEngine),
 		audioCapture: captureEngine,
+		appMode:      AppModeInterview,
 		engine:       eng,
 		cfg:          cfg,
 	}
@@ -644,6 +655,54 @@ func (a *App) HideFromTaskbar() {
 	if err := window.HideFromTaskbar(a.ctx); err != nil {
 		log.Printf("Failed to hide from taskbar: %v\n", err)
 	}
+}
+
+func (a *App) SetAppMode(mode string) error {
+	a.cmdMutex.Lock()
+	defer a.cmdMutex.Unlock()
+
+	if mode == string(AppModeInterview) {
+		a.appMode = AppModeInterview
+		if a.dualCapture != nil {
+			a.dualCapture.Stop()
+			a.dualCapture = nil
+		}
+		a.engine.SetTranscriptMode(false)
+		if a.engine.GetQuestionBuffer() != nil {
+			a.engine.GetQuestionBuffer().SetAutoFlush(true)
+		}
+		// Fallback to loopback
+		return a.SetAudioDevice(-1, true)
+	} else if mode == string(AppModeTranscript) {
+		a.appMode = AppModeTranscript
+		if a.audioCapture != nil {
+			a.audioCapture.StopCapture()
+		}
+
+		ctx := a.audioCapture.GetContext()
+		if ctx == nil {
+			return fmt.Errorf("audio capture context not initialized")
+		}
+
+		a.dualCapture = audio.NewDualCaptureEngine(ctx)
+		err := a.dualCapture.Start(-1, -1, func(samples []float32) {
+			_ = a.engine.ProcessAudioTagged(samples, "[Interviewer]")
+		}, func(samples []float32) {
+			_ = a.engine.ProcessAudioTagged(samples, "[Candidate]")
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to start dual capture: %w", err)
+		}
+
+		a.engine.SetTranscriptMode(true)
+		if a.engine.GetQuestionBuffer() != nil {
+			a.engine.GetQuestionBuffer().SetAutoFlush(false)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("unknown mode: %s", mode)
 }
 
 func (a *App) GetAudioDevices() []audio.AudioDevice {

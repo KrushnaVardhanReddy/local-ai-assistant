@@ -250,3 +250,27 @@ func TestPipeline_MockMode(t *testing.T) {
 		t.Fatalf("Expected transcript to be added to buffer in mock mode")
 	}
 }
+
+func TestProcessAudioTagged_TranscriptMode(t *testing.T) {
+	events := &MockEvents{Emitted: make(map[string]int)}
+	eng := New(Config{}, nil, nil, nil, events, nil)
+
+	eng.SetTranscriptMode(true)
+
+	eng.handleTranscriptTagged("How does this work?", true, "[Interviewer]")
+	eng.handleTranscriptTagged("It works like this.", true, "[Candidate]")
+
+	eng.mu.RLock()
+	logLen := len(eng.transcriptLog)
+	if logLen != 2 {
+		t.Errorf("Expected 2 logs, got %d", logLen)
+	} else {
+		if eng.transcriptLog[0] != "[Interviewer]: How does this work?" {
+			t.Errorf("Unexpected log content: %s", eng.transcriptLog[0])
+		}
+		if eng.transcriptLog[1] != "[Candidate]: It works like this." {
+			t.Errorf("Unexpected log content: %s", eng.transcriptLog[1])
+		}
+	}
+	eng.mu.RUnlock()
+}

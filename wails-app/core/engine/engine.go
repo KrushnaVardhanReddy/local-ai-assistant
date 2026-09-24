@@ -49,6 +49,8 @@ type StealthEngine struct {
 	mu               sync.RWMutex
 	transcript       string
 	transcriptBuffer []string // rolling window of last 5 accepted transcripts
+	transcriptLog    []string
+	isTranscriptMode bool
 	response         string
 	thinking         bool
 	llmBusy          sync.Mutex
@@ -207,6 +209,12 @@ func (e *StealthEngine) SetRawMode(enabled bool) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.rawMode = enabled
+}
+
+func (e *StealthEngine) SetTranscriptMode(enabled bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.isTranscriptMode = enabled
 }
 
 // SummaryRequest holds the configuration for a single summary template.
