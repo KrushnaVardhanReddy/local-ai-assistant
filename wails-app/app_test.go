@@ -140,7 +140,6 @@ func TestApp_ToggleMic(t *testing.T) {
 	app.ToggleMic()
 }
 
-
 func TestApp_ExportSession(t *testing.T) {
 	app := NewApp(&config.AppConfig{})
 
@@ -211,5 +210,29 @@ func TestSetProxyToken(t *testing.T) {
 	// Or we can assume it works based on the lack of panic
 	if app == nil {
 		t.Errorf("App is nil")
+	}
+}
+
+func TestApp_FlushQuestionBuffer(t *testing.T) {
+	app := NewApp(&config.AppConfig{})
+
+	// Create engine with mocked ports
+	events := &engine.MockEvents{Emitted: make(map[string]int)}
+	eng := engine.New(engine.Config{}, nil, nil, nil, events, nil)
+	app.engine = eng
+
+	app.AppendToBuffer("hello")
+
+	if len(eng.GetQuestionBuffer().GetChunks()) == 0 {
+		t.Fatalf("Expected chunks in buffer")
+	}
+
+	err := app.FlushQuestionBuffer()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if len(eng.GetQuestionBuffer().GetChunks()) != 0 {
+		t.Errorf("Expected buffer to be empty after flush")
 	}
 }

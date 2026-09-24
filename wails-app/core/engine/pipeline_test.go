@@ -210,7 +210,7 @@ func TestPipeline_MockModePrompt(t *testing.T) {
 		blockCh: blockCh,
 	}
 	events := &MockEvents{Emitted: make(map[string]int)}
-	eng := New(Config{SystemPrompt: "Base Prompt"}, nil, llm, nil, events)
+	eng := New(Config{SystemPrompt: "Base Prompt"}, nil, llm, nil, events, nil)
 
 	// Default mode
 	eng.AskQuestion("Question 1")
@@ -235,5 +235,18 @@ func TestPipeline_MockModePrompt(t *testing.T) {
 	// Ensure the llm package is imported in pipeline.go, so we can hardcode the string here or import llm
 	if !strings.Contains(llm.sysPrompts[1], "senior technical interviewer") {
 		t.Errorf("Expected mock prompt, got: %s", llm.sysPrompts[1])
+	}
+}
+
+func TestPipeline_MockMode(t *testing.T) {
+	events := &MockEvents{Emitted: make(map[string]int)}
+	eng := New(Config{}, nil, nil, nil, events, nil)
+	eng.ToggleMockInterviewMode(true)
+
+	// In mock mode, handleTranscript with isAuto=true should add to buffer but bypass auto-submit
+	eng.handleTranscript("Hello mock mode", true)
+
+	if len(eng.GetQuestionBuffer().GetChunks()) == 0 {
+		t.Fatalf("Expected transcript to be added to buffer in mock mode")
 	}
 }

@@ -41,6 +41,7 @@
     onAddBufferChip?: (chip: { id: string; text: string }) => void;
     onDismissChip?: (chipId: string) => void;
     onClearChips?: () => void;
+    onFlushBuffer?: () => void;
     onSelectTranscript?: (text: string, answer?: string) => void;
     onToggleMic?: () => void;
   }>();
@@ -71,6 +72,12 @@
     if (text && onSendChat) {
       onSendChat(text);
       chatText = "";
+    }
+  }
+
+  function handleFlushBuffer() {
+    if (onFlushBuffer) {
+      onFlushBuffer();
     }
   }
 
@@ -286,6 +293,13 @@
   {/if}
 
   <!-- Footer Input -->
+  {#if isMockMode && !showHotkeys}
+    <div class="px-2 pb-2">
+      <button class="w-full py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors" onclick={handleFlushBuffer}>
+        Submit Answer
+      </button>
+    </div>
+  {/if}
   {#if !showHotkeys}
     <div class="footer">
       <textarea
