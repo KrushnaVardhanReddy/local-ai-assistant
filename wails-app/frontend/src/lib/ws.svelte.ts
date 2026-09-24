@@ -20,6 +20,7 @@ export const wsState = $state({
   pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null; is_noise?: boolean }>,
   plan: "unknown",
   isMockMode: false,
+  mockTTS: typeof localStorage !== 'undefined' ? localStorage.getItem("mock_tts") === "true" : false,
   summaryResults: {} as Record<string, string>,
   isSummarizing: {} as Record<string, boolean>,
   rawMode: false,
@@ -221,6 +222,12 @@ function initListeners() {
   onEvent("on_response_end", () => {
     console.log('[WS] on_response_end fired. Final response length:', wsState.response.length);
     wsState.isThinking = false;
+
+    if (wsState.isMockMode && wsState.mockTTS && wsState.response) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(wsState.response);
+      window.speechSynthesis.speak(utterance);
+    }
 
     // Store the completed answer against the most recent unanswered transcript
     if (wsState.response) {
@@ -457,6 +464,15 @@ export function toggleMockMode(enabled: boolean): void {
   }
 }
 
+export function toggleMockTTS(enabled: boolean): void {
+  wsState.mockTTS = enabled;
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem("mock_tts", enabled ? "true" : "false");
+  }
+  if (!enabled) {
+    window.speechSynthesis.cancel();
+  }
+}
 
 export function sendChip(chip: { id: number; text: string; speaker?: "interviewer" | "candidate" | null }): void {
   sendChat(chip.text);

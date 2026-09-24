@@ -96,7 +96,7 @@ Supabase production setup is fully automated. The SQL migrations (e.g., creating
 Run `scripts/deploy_supabase.sh` to link your Supabase project, push all schema migrations, deploy Edge Functions, and set required secrets.
 
 ### Phase 70: Mock Interview Mode (Go Port)
-- **TTS Adapter**: Implemented `wails-app/backend/tts` with `EdgeTTSAdapter` using `edge-tts` and `ffplay`/`afplay`.
+- **TTS**: Migrated from a backend adapter (`edge-tts`) to native frontend Web Speech API (`window.speechSynthesis`) for cross-platform reliability without CLI dependencies.
 - **Engine State**: `StealthEngine` tracks `isMockMode` and updates `SystemPrompt` dynamically to an interviewer persona when active. Uses `llm.MockInterviewerPrompt` which instructs the LLM to act as a senior technical interviewer, evaluate the response, give brief constructive feedback, and ask a relevant follow-up question.
-- **Audio Output**: Final LLM answers are streamed to the TTS adapter when Mock Mode is active.
+- **Audio Output**: Final LLM answers are sent to the frontend's Web Speech API when Mock Mode is active.
 - **UI Toggle**: Added a Mock Mode toggle to the frontend header in `InterviewHUD.svelte` that issues Wails IPC calls to update backend state.
