@@ -1,28 +1,53 @@
-Task: Implement Dynamic Reading Cooldown for Live Mode Auto-Submit
+You are tasked with implementing a Dynamic Reading Cooldown for Live Mode Auto-Submit in BarnOwl AI (P72-T5).
 
-Context:
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
 In Live Mode, the STT pipeline automatically feeds transcript chunks to the `QuestionBuffer`. Once the Llama classifier (Gemma) identifies a complete question, it auto-flushes and triggers the LLM. 
+
 The problem: After the LLM generates a response, the user needs time to read it. If the interviewer speaks immediately, the microphone picks it up, the buffer classifies it, and it triggers the LLM again instantly — wiping the user's screen before they finish reading.
 
-Goal:
-Implement a dynamic "Reading Cooldown" that pauses auto-triggering *without* dropping the interviewer's audio.
+Additionally, the Gemma classification step currently has a strict 3-second context timeout, which frequently results in "context deadline exceeded" errors when the local machine is under load.
 
-Requirements:
-1. Dynamic Cooldown Calculation:
-   - When the main LLM stream completes in `pipeline.go` (`triggerLLMWithQuestion`), count the number of words generated in the final answer.
-   - Calculate a cooldown duration: e.g., `wordCount * 300ms`.
-   - Clamp the duration between a minimum (e.g., 3 seconds) and a maximum (e.g., 20 seconds).
-   - Set a timestamp (`e.lastResponseAt`) in the `StealthEngine` struct.
+Your goal is to implement a dynamic "Reading Cooldown" that pauses auto-triggering *without* dropping the interviewer's audio, and to fix the classification timeout.
 
-2. Pause Auto-Flush, Do Not Drop Transcripts:
-   - During the cooldown window, transcripts should STILL be routed to `QuestionBuffer.AddChunk`. We do not want to miss what the interviewer is saying.
-   - Modify the `QuestionBuffer` so that its internal watchdog (or its `AddChunk` flush trigger) is paused or suppressed while the cooldown is active.
-   - The buffer should accumulate chunks during the cooldown. Once the cooldown expires, the watchdog should naturally process the accumulated text and flush if it's a complete question.
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
 
-3. Immediate Manual Override:
-   - If the user clicks "Submit Answer" (which calls `FlushQuestionBuffer`), or types a manual chat follow-up, it should bypass the cooldown immediately and trigger the LLM.
-   - The cooldown should immediately be cleared or ignored in these cases.
+[MODIFY] wails-app/core/engine/engine.go
+[MODIFY] wails-app/core/engine/pipeline.go
+[MODIFY] wails-app/backend/classifier/buffer.go
 
-Implementation Notes:
-- Consider adding `PauseUntil(time.Time)` to `QuestionBuffer`, or letting the Engine enforce the cooldown by checking `time.Since(e.lastResponseAt)` inside the watchdog loop if you expose the timestamp to the buffer.
-- Be careful with thread safety (mutexes) when accessing/setting timestamps across the pipeline goroutines.
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── CHANGES TO wails-app/core/engine/engine.go ────────────────────────────────
+
+1. Add a `lastResponseAt time.Time` field to the `StealthEngine` struct.
+2. We do not need a hardcoded duration field since we will calculate the cooldown dynamically.
+
+─── CHANGES TO wails-app/core/engine/pipeline.go ────────────────────────────────
+
+1. Locate the `triggerLLMWithQuestion` function. At the very end of the successful LLM stream (where it stores the response in the cache), count the number of words generated in `finalAns`.
+2. Calculate a dynamic cooldown: `wordCount * 300 * time.Millisecond`.
+3. Clamp this cooldown duration so it is never less than `3 * time.Second` and never more than `20 * time.Second`.
+4. Stamp `e.lastResponseAt = time.Now().Add(cooldown)` immediately after calculating it. Be sure to lock the mutex `e.mu` when writing to `e.lastResponseAt`.
+
+─── CHANGES TO wails-app/backend/classifier/buffer.go ────────────────────────────────
+
+1. We need to pause the auto-flush while the cooldown is active. Add a `IsCooldownActive func() bool` callback to the `QuestionBuffer` struct, or expose a method to let the engine pause it. 
+   - Alternatively, you can just check the engine's `lastResponseAt` inside `pipeline.go` before routing the chunk to the buffer, but we MUST STILL buffer the transcript without flushing.
+   - The cleanest approach: In `pipeline.go`'s `handleTranscript` function, if `time.Now().Before(e.lastResponseAt)` is true, you can route the `cleanTranscript` into `e.questionBuffer.AddChunk(cleanTranscript)`, BUT you must ensure the buffer *does not trigger the classifier or auto-flush*. 
+   - To achieve this, modify `QuestionBuffer.AddChunk` in `buffer.go` to accept an `ignoreClassifier bool` parameter, or create a `AddChunkSilently` method that only appends to the internal `b.chunks` slice without triggering the `b.classifyFn` goroutine.
+
+2. Increase Context Timeout:
+   - In `buffer.go`, locate the `ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)` call inside `AddChunk` (or wherever the classification is triggered).
+   - Change `3 * time.Second` to `10 * time.Second` to prevent "context deadline exceeded" errors when Gemma is slow.
+
+─── MANUAL OVERRIDE LOGIC ────────────────────────────────
+
+1. If the user clicks "Submit Answer" (which calls `FlushQuestionBuffer`), or types a manual chat follow-up, it should bypass any active cooldown immediately and trigger the LLM.
+2. Ensure `e.lastResponseAt` is zeroed out or ignored when manual triggers occur.
