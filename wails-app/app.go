@@ -987,6 +987,13 @@ func (a *App) SetRawMode(enabled bool) {
 
 // SummarizeSession uses the LLM to summarize the entire interview session
 // using predefined templates.
+
+func (a *App) SummarizeTranscript() error {
+	if a.engine == nil {
+		return fmt.Errorf("engine not initialized")
+	}
+	return a.engine.SummarizeTranscript()
+}
 func (a *App) SummarizeSession(requests []engine.SummaryRequest) error {
 	return a.engine.SummarizeSession(requests)
 }

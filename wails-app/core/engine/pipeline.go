@@ -27,7 +27,33 @@ func (e *StealthEngine) ProcessAudioTagged(samples []float32, speaker string) er
 	}
 	go func() {
 		for transcript := range ch {
-			e.handleTranscriptTagged(transcript, true, speaker)
+			e.mu.RLock()
+			isTranscriptMode := e.isTranscriptMode
+			e.mu.RUnlock()
+
+			if isTranscriptMode {
+				cleanTranscript := strings.TrimSpace(transcript)
+				if cleanTranscript == "" ||
+					cleanTranscript == "[BLANK_AUDIO]" ||
+					cleanTranscript == " [BLANK_AUDIO]" ||
+					strings.Contains(cleanTranscript, "[MUSIC]") ||
+					strings.Contains(cleanTranscript, "[INAUDIBLE]") {
+					continue
+				}
+
+				taggedLine := cleanTranscript
+				if speaker != "" {
+					taggedLine = fmt.Sprintf("%s: %s", speaker, cleanTranscript)
+				}
+
+				e.AppendTranscriptLog(taggedLine)
+
+				if e.events != nil {
+					e.events.Emit("on_transcript_log", map[string]interface{}{"text": taggedLine})
+				}
+			} else {
+				e.handleTranscriptTagged(transcript, true, speaker)
+			}
 		}
 	}()
 	return nil
@@ -364,4 +390,45 @@ func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 			}
 		}
 	}(cleanTranscript, llmQuestion, ctx, cancel)
+}
+
+func (e *StealthEngine) triggerLLMWithCustomPrompt(prompt string, input string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if e.events != nil {
+		e.events.Emit("on_response_start", nil)
+	}
+
+	var answerBuilder strings.Builder
+
+	err := e.llm.StreamCompletion(ctx, input, prompt, nil, func(token string) {
+		answerBuilder.WriteString(token)
+		if e.events != nil {
+			e.events.Emit("on_response_token", map[string]interface{}{"text": token})
+		}
+	}, func() {
+		if e.events != nil {
+			e.events.Emit("on_response_end", nil)
+		}
+	})
+
+	if err != nil {
+		log.Printf("Custom LLM streaming failed: %v", err)
+	} else {
+		log.Printf("[LLM] Custom stream complete.")
+	}
+}
+
+func (e *StealthEngine) SummarizeTranscript() error {
+	lines := e.FlushTranscriptLog()
+	if len(lines) == 0 {
+		return fmt.Errorf("no transcript to summarize")
+	}
+
+	fullTranscript := strings.Join(lines, "\n")
+
+	go e.triggerLLMWithCustomPrompt(llm.TranscriptSummaryPrompt, fullTranscript)
+
+	return nil
 }

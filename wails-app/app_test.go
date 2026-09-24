@@ -236,3 +236,15 @@ func TestApp_FlushQuestionBuffer(t *testing.T) {
 		t.Errorf("Expected buffer to be empty after flush")
 	}
 }
+
+func TestApp_SummarizeTranscript(t *testing.T) {
+	app := NewApp()
+	err := app.SummarizeTranscript()
+	if err == nil || err.Error() != "engine not initialized" {
+		t.Errorf("Expected 'engine not initialized', got %v", err)
+	}
+
+	// We could initialize mock engine but it would require CGO dependencies.
+	// This covers the error case for coverage.
+	// Wails bindings are tested this way.
+}

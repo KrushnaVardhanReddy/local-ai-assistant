@@ -318,3 +318,18 @@ func (e *StealthEngine) Stop() {
 func (e *StealthEngine) GetQuestionBuffer() *classifier.QuestionBuffer {
 	return e.questionBuffer
 }
+
+func (e *StealthEngine) AppendTranscriptLog(line string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.transcriptLog = append(e.transcriptLog, line)
+}
+
+func (e *StealthEngine) FlushTranscriptLog() []string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	logCopy := make([]string, len(e.transcriptLog))
+	copy(logCopy, e.transcriptLog)
+	e.transcriptLog = nil
+	return logCopy
+}

@@ -552,3 +552,26 @@ func (m *MockCache) SemanticSearch(embedding []float32, limit int, threshold flo
 func (m *MockCache) IndexDocumentChunk(path, text string, embedding []float32) error { return nil }
 func (m *MockCache) GetIndexedPaths() ([]string, error)                              { return nil, nil }
 func (m *MockCache) RemoveIndexedPath(path string) error                             { return nil }
+
+func TestStealthEngine_TranscriptLog(t *testing.T) {
+	e := &StealthEngine{}
+
+	e.AppendTranscriptLog("User: Hello")
+	e.AppendTranscriptLog("Agent: Hi")
+
+	if len(e.transcriptLog) != 2 {
+		t.Errorf("Expected 2 lines, got %d", len(e.transcriptLog))
+	}
+
+	flushed := e.FlushTranscriptLog()
+	if len(flushed) != 2 {
+		t.Errorf("Expected flushed length 2, got %d", len(flushed))
+	}
+	if flushed[0] != "User: Hello" || flushed[1] != "Agent: Hi" {
+		t.Errorf("Flushed items don't match")
+	}
+
+	if len(e.transcriptLog) != 0 {
+		t.Errorf("Expected transcriptLog to be empty after flush, got %d", len(e.transcriptLog))
+	}
+}

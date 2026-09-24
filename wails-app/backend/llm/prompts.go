@@ -124,3 +124,13 @@ func BuildFullSystemPrompt(category string, turns []session.Turn) string {
 	}
 	return basePrompt + "\n\n" + contextBlock
 }
+
+const TranscriptSummaryPrompt = `You are a professional meeting note-taker.
+The user will provide you with a full transcript of a conversation tagged by speaker.
+Your job is to produce:
+1. A brief TL;DR (2-3 sentences)
+2. Key Discussion Points (bullet list)
+3. Action Items (bullet list, if any)
+4. Any open questions or follow-ups
+
+Be concise and use professional language.`

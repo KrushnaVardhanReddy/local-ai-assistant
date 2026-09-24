@@ -10,10 +10,10 @@ import (
 
 // DualCaptureEngine manages simultaneous audio capture from a loopback and a mic device.
 type DualCaptureEngine struct {
-	mu            sync.Mutex
-	ctx           *malgo.AllocatedContext
-	loopbackDev   *malgo.Device
-	micDev        *malgo.Device
+	mu          sync.Mutex
+	ctx         *malgo.AllocatedContext
+	loopbackDev *malgo.Device
+	micDev      *malgo.Device
 }
 
 // NewDualCaptureEngine creates a new DualCaptureEngine sharing an existing malgo context.

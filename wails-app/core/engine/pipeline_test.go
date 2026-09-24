@@ -274,3 +274,35 @@ func TestProcessAudioTagged_TranscriptMode(t *testing.T) {
 	}
 	eng.mu.RUnlock()
 }
+
+
+func TestSummarizeTranscript(t *testing.T) {
+	mockLLM := &mockLLM{}
+	e := &StealthEngine{
+		llm: mockLLM,
+	}
+
+	// Test empty log
+	err := e.SummarizeTranscript()
+	if err == nil {
+		t.Errorf("Expected error when summarizing empty transcript")
+	}
+
+	e.AppendTranscriptLog("User: Hello")
+	e.AppendTranscriptLog("Agent: Hi")
+
+	err = e.SummarizeTranscript()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	// Sleep to allow goroutine to run
+	time.Sleep(50 * time.Millisecond)
+
+	if !strings.Contains(mockLLM.lastPrompt, llm.TranscriptSummaryPrompt) {
+		t.Errorf("LLM was not called with the correct prompt")
+	}
+	if !strings.Contains(mockLLM.lastInput, "User: Hello") {
+		t.Errorf("LLM was not called with the transcript")
+	}
+}
