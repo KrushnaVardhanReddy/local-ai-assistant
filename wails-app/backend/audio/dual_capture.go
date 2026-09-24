@@ -41,7 +41,6 @@ func (d *DualCaptureEngine) Start(loopbackDeviceID int, micDeviceID int, loopbac
 	loopbackConfig.SampleRate = 16000
 
 	if loopbackDeviceID >= 0 {
-		var id malgo.DeviceID
 		// In a real implementation we would look up the device ID from the list,
 		// but since CaptureEngine.GetDevices() sets its internal deviceList,
 		// we'll need to figure out how to pass the pointer. Wait, the spec says
