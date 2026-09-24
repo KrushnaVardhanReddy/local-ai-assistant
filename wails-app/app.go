@@ -184,18 +184,18 @@ func (a *App) startup(ctx context.Context) {
 		})
 	}
 
-	// Auto-start default microphone capture
+	// Auto-start default microphone/loopback capture
 	go func() {
 		if a.sttManager == nil || a.audioCapture == nil {
 			log.Println("⚠️  STT manager or audio capture not ready, skipping auto-start")
 			return
 		}
-		log.Println("🎙️ Auto-starting default microphone capture...")
-		err := a.SetAudioDevice(-1, false)
+		log.Println("🎙️ Auto-starting default audio capture...")
+		err := a.SetAudioDevice(-1, true) // Start loopback by default
 		if err != nil {
-			log.Printf("❌ Failed to auto-start microphone: %v\n", err)
+			log.Printf("❌ Failed to auto-start audio: %v\n", err)
 		} else {
-			log.Println("✅ Microphone auto-started successfully!")
+			log.Println("✅ Audio auto-started successfully!")
 		}
 	}()
 }
@@ -889,16 +889,24 @@ func (a *App) GetIDEState() map[string]interface{} {
 // ToggleMic toggles the microphone capturing state.
 // Returns true if the microphone was started, false if it was stopped.
 func (a *App) ToggleMic() bool {
-	if a.audioCapture == nil {
+	if a.audioCapture == nil && a.dualCapture == nil {
 		return false
 	}
-	if a.audioCapture.IsCapturing() {
-		a.audioCapture.StopCapture()
-		return false
-	} else {
-		a.SetAudioDevice(-1, false)
-		return true
+	
+	if a.appMode == AppModeInterview {
+		if a.audioCapture != nil && a.audioCapture.IsCapturing() {
+			a.audioCapture.StopCapture()
+			return false
+		} else {
+			a.SetAudioDevice(-1, true) // Interview Mode defaults to loopback
+			return true
+		}
+	} else if a.appMode == AppModeTranscript {
+		// Can't easily toggle dual capture right now, just return true if running
+		return a.dualCapture != nil
 	}
+	
+	return false
 }
 
 // ExportSession exports all cached Q&A pairs from this session to a markdown file.
