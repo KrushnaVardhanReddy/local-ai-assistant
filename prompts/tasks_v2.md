@@ -67,6 +67,6 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P72-T1 ⚡ | `wails-app/frontend/src/products/interview/ConvPanel.svelte`, `wails-app/frontend/src/products/interview/InterviewHUD.svelte` | **Mock Mode Submit Button:** Disable VAD-based auto-submission in mock mode. Add a "Submit Answer" button so the user controls when the response is evaluated. | 🔄 | — |
-| P72-T2 ⚡ | `wails-app/backend/llm/prompts.go`, `wails-app/core/engine/pipeline.go` | **Mock Interview Persona:** Create a distinct system prompt for Mock Mode where the LLM evaluates the user's response, gives brief constructive feedback, and asks the next relevant follow-up question. | 🔄 | — |
+| P72-T1 ⚡ | `wails-app/frontend/src/products/interview/ConvPanel.svelte`, `wails-app/frontend/src/products/interview/InterviewHUD.svelte` | **Mock Mode Submit Button:** Disable VAD-based auto-submission in mock mode. Add a "Submit Answer" button so the user controls when the response is evaluated. | ✅ | #248 |
+| P72-T2 ⚡ | `wails-app/backend/llm/prompts.go`, `wails-app/core/engine/pipeline.go` | **Mock Interview Persona:** Create a distinct system prompt for Mock Mode where the LLM evaluates the user's response, gives brief constructive feedback, and asks the next relevant follow-up question. | ✅ | #247 |
 | P72-T3 ⚡ | `wails-app/backend/tts/`, `wails-app/frontend/src/` | **Interactive Audio TTS:** Integrate TTS (Text-to-Speech) so the mock interviewer reads its questions out loud, making the experience more immersive. | ⬜ | — |
