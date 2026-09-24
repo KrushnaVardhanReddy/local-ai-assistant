@@ -57,11 +57,11 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P64-T5a | `workspace.spec.ts` | **Core IDE E2E:** Test file tree, code editor, and tabs. | ⬜ | — |
-| P64-T5b | `copilot.spec.ts` | **Assistant UI E2E:** Test STAR method presets and drawer. | ⬜ | — |
-| P64-T5c | `cache.spec.ts` | **Cache E2E:** Test cache manager and RAG stats. | ⬜ | — |
-| P64-T5d | `mock_interview.spec.ts` | **Mock Interview E2E:** Test persona switch and UI update. | ⬜ | — |
-| P64-T5e | `entitlement.spec.ts` | **Billing E2E:** Test dev mode, lifetime, and SaaS states. | ⬜ | — |
+| P64-T5a | `workspace.spec.ts` | **Core IDE E2E:** Test file tree, code editor, and tabs. | ✅ | — |
+| P64-T5b | `copilot.spec.ts` | **Assistant UI E2E:** Test STAR method presets and drawer. | ✅ | — |
+| P64-T5c | `cache.spec.ts` | **Cache E2E:** Test cache manager and RAG stats. | ✅ | — |
+| P64-T5d | `mock_interview.spec.ts` | **Mock Interview E2E:** Test persona switch and UI update. | ✅ | — |
+| P64-T5e | `entitlement.spec.ts` | **Billing E2E:** Test dev mode, lifetime, and SaaS states. | ✅ | — |
 
 ## Phase 72 — Mock Interview Polish 🎤
 
