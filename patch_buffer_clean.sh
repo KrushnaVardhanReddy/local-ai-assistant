@@ -1,3 +1,5 @@
+#!/bin/bash
+cat << 'INNEREOF' > temp.go
 package classifier
 
 import (
@@ -142,3 +144,5 @@ func (b *QuestionBuffer) GetChunks() []string {
 	copy(chunks, b.chunks)
 	return chunks
 }
+INNEREOF
+mv temp.go wails-app/backend/classifier/buffer.go

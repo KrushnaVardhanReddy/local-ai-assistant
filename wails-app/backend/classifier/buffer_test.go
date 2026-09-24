@@ -35,9 +35,9 @@ func TestQuestionBuffer_FlushesOnTrueClassification(t *testing.T) {
 		return true, nil
 	}
 
-	b.AddChunk("Tell me")
-	b.AddChunk("about Redis")
-	b.AddChunk("caching please.")
+	b.AddChunk("Tell me", false)
+	b.AddChunk("about Redis", false)
+	b.AddChunk("caching please.", false)
 
 	startClassify.Done()
 
@@ -83,9 +83,9 @@ func TestQuestionBuffer_DoesNotFlushOnFalse(t *testing.T) {
 		return false, nil
 	}
 
-	b.AddChunk("chunk1")
-	b.AddChunk("chunk2")
-	b.AddChunk("chunk3")
+	b.AddChunk("chunk1", false)
+	b.AddChunk("chunk2", false)
+	b.AddChunk("chunk3", false)
 
 	time.Sleep(200 * time.Millisecond)
 
@@ -129,7 +129,7 @@ func TestQuestionBuffer_MinChunksGuard(t *testing.T) {
 		return true, nil
 	}
 
-	b.AddChunk("chunk1")
+	b.AddChunk("chunk1", false)
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -165,9 +165,9 @@ func TestQuestionBuffer_FailsafeWatchdog(t *testing.T) {
 		return false, nil
 	}
 
-	b.AddChunk("chunk1")
-	b.AddChunk("chunk2")
-	b.AddChunk("chunk3")
+	b.AddChunk("chunk1", false)
+	b.AddChunk("chunk2", false)
+	b.AddChunk("chunk3", false)
 
 	time.Sleep(300 * time.Millisecond)
 
@@ -206,7 +206,7 @@ func TestQuestionBuffer_Reset(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		b.AddChunk(fmt.Sprintf("chunk%d", i))
+		b.AddChunk(fmt.Sprintf("chunk%d", i), false)
 	}
 
 	b.Reset()
@@ -247,9 +247,9 @@ func TestQuestionBuffer_ClassifyError(t *testing.T) {
 		return false, fmt.Errorf("gemma down")
 	}
 
-	b.AddChunk("chunk1")
-	b.AddChunk("chunk2")
-	b.AddChunk("chunk3")
+	b.AddChunk("chunk1", false)
+	b.AddChunk("chunk2", false)
+	b.AddChunk("chunk3", false)
 
 	// The error in classifyFn should not crash the app, and should not flush.
 	time.Sleep(200 * time.Millisecond)

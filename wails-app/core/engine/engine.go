@@ -60,6 +60,7 @@ type StealthEngine struct {
 	isMockMode       bool
 	isMockTTS        bool
 	isTTSPlaying     bool
+	lastResponseAt   time.Time
 }
 
 func New(

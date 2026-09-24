@@ -30,6 +30,9 @@ func (e *StealthEngine) ProcessAudio(samples []float32) error {
 
 // AskQuestion bypasses audio and sends a typed question to the LLM pipeline.
 func (e *StealthEngine) AskQuestion(question string) error {
+	e.mu.Lock()
+	e.lastResponseAt = time.Time{}
+	e.mu.Unlock()
 	e.handleTranscript(question, false)
 	return nil
 }
@@ -126,12 +129,14 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 		if isMockMode {
 			log.Printf("🎭 [Mock Mode] Transcript accepted but auto-submit bypassed: %q", cleanTranscript)
 			if e.questionBuffer != nil {
-				e.questionBuffer.AddChunk(cleanTranscript)
+				ignoreClassifier := time.Now().Before(e.lastResponseAt)
+				e.questionBuffer.AddChunk(cleanTranscript, ignoreClassifier)
 			}
 			return
 		}
 		if e.questionBuffer != nil {
-			e.questionBuffer.AddChunk(cleanTranscript)
+			ignoreClassifier := time.Now().Before(e.lastResponseAt)
+			e.questionBuffer.AddChunk(cleanTranscript, ignoreClassifier)
 		}
 	} else {
 		// Manual query bypassing buffer
@@ -321,6 +326,16 @@ func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 			log.Printf("LLM streaming failed: %v", err)
 		} else {
 			finalAns := answerBuilder.String()
+			wordCount := len(strings.Fields(finalAns))
+			cooldown := time.Duration(wordCount) * 300 * time.Millisecond
+			if cooldown < 3*time.Second {
+				cooldown = 3 * time.Second
+			} else if cooldown > 20*time.Second {
+				cooldown = 20 * time.Second
+			}
+			e.mu.Lock()
+			e.lastResponseAt = time.Now().Add(cooldown)
+			e.mu.Unlock()
 			if e.cache != nil && len(finalAns) > 0 {
 				if storeErr := e.cache.Store(q, finalAns); storeErr != nil {
 					log.Printf("[Cache] Error storing Q&A pair: %v", storeErr)

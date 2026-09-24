@@ -61,7 +61,7 @@ func TestEnsureLlamaServerBinary_AlreadyExists(t *testing.T) {
 		t.Fatalf("Failed to create dir: %v", err)
 	}
 
-	binName := "llama-server"
+	binName := "llamafile"
 	if runtime.GOOS == "windows" {
 		binName += ".exe"
 	}
@@ -73,11 +73,9 @@ func TestEnsureLlamaServerBinary_AlreadyExists(t *testing.T) {
 	defer os.Remove(binPath)
 
 	// Mock URLs to ensure we don't download
-	origURLs := LlamaServerURLs
-	LlamaServerURLs = map[string]string{
-		runtime.GOOS + "/" + runtime.GOARCH: "http://invalid-url-should-not-be-called",
-	}
-	defer func() { LlamaServerURLs = origURLs }()
+	origURLs := GemmaModelURL
+	GemmaModelURL = "http://invalid-url-should-not-be-called"
+	defer func() { GemmaModelURL = origURLs }()
 
 	gotPath, err := EnsureLlamaServerBinary(context.Background(), &mockEventPort{})
 	if err != nil {
@@ -103,7 +101,7 @@ func TestLlamaServerProcess_StartStop(t *testing.T) {
 	// Create a dummy shell script (or bat on Windows) to act as the binary
 	binDir := filepath.Join(cacheDir, "barnowl-ai", "bin")
 	os.MkdirAll(binDir, 0755)
-	binName := "llama-server"
+	binName := "llamafile"
 	var scriptContent string
 	if runtime.GOOS == "windows" {
 		binName += ".bat"
@@ -122,7 +120,7 @@ func TestLlamaServerProcess_StartStop(t *testing.T) {
 	GemmaModelURL = "http://invalid"
 	defer func() { GemmaModelURL = origGemmaModelURL }()
 
-	origURLs := LlamaServerURLs
+	origURLs := GemmaModelURL
 	// We need EnsureLlamaServerBinary to look for our dummy bin name.
 	// EnsureLlamaServerBinary explicitly adds ".exe" on Windows, but our script is ".bat".
 	// To fix this test for Windows, we will just rename it to .exe and let it be treated as an executable.
@@ -159,10 +157,8 @@ func main() { time.Sleep(30 * time.Second) }`
 		os.Remove(srcPath)
 	}
 
-	LlamaServerURLs = map[string]string{
-		runtime.GOOS + "/" + runtime.GOARCH: "http://invalid",
-	}
-	defer func() { LlamaServerURLs = origURLs }()
+	GemmaModelURL = "http://invalid-url-should-not-be-called"
+	defer func() { GemmaModelURL = origURLs }()
 
 	// Start a mock HTTP server for the health check
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

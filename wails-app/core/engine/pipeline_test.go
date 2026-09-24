@@ -47,7 +47,7 @@ func TestPipeline_PreemptionOnInterruption(t *testing.T) {
 		blockCh: blockCh,
 	}
 	events := &MockEvents{Emitted: make(map[string]int)}
-	eng := New(Config{}, nil, llm, nil, events)
+	eng := New(Config{}, nil, llm, nil, events, nil)
 
 	// Send Q1
 	eng.AskQuestion("How do you pass data between the go routines?")
@@ -76,7 +76,7 @@ func TestPipeline_ClearStateCancelsInFlight(t *testing.T) {
 		tokens:  []string{"A", "B"},
 		blockCh: blockCh,
 	}
-	eng := New(Config{}, nil, llm, nil, nil)
+	eng := New(Config{}, nil, llm, nil, nil, nil)
 
 	eng.AskQuestion("How do you handle context cancellation properly in Go?")
 	time.Sleep(50 * time.Millisecond) // Stream is blocking on blockCh
@@ -98,7 +98,7 @@ func TestPipeline_ClearStateCancelsInFlight(t *testing.T) {
 func TestPipeline_CacheBypassWhenActive(t *testing.T) {
 	cache := &MockCache{Hit: true, Answer: "Cached"}
 	llm := &mockPreemptLLM{}
-	eng := New(Config{}, nil, llm, cache, nil)
+	eng := New(Config{}, nil, llm, cache, nil, nil)
 
 	eng.AskQuestion("What is the difference between a mutex and a channel?")
 	time.Sleep(50 * time.Millisecond)
@@ -146,7 +146,7 @@ func (m *MockCache) Count() int                          { return 1 }
 
 func TestPipeline_ManualMode(t *testing.T) {
 	events := &MockEvents{Emitted: make(map[string]int)}
-	eng := New(Config{}, nil, nil, nil, events)
+	eng := New(Config{}, nil, nil, nil, events, nil)
 	eng.SetManualMode(true)
 
 	// In manual mode, AskQuestion should bypass LLM call and return immediately if isAuto is true
@@ -166,7 +166,7 @@ func TestPipeline_RollingTranscriptBuffer(t *testing.T) {
 		blockCh: blockCh,
 	}
 	events := &MockEvents{Emitted: make(map[string]int)}
-	eng := New(Config{}, nil, llm, nil, events)
+	eng := New(Config{}, nil, llm, nil, events, nil)
 
 	// Pre-populate buffer with 3 strings
 	eng.mu.Lock()
@@ -248,5 +248,40 @@ func TestPipeline_MockMode(t *testing.T) {
 
 	if len(eng.GetQuestionBuffer().GetChunks()) == 0 {
 		t.Fatalf("Expected transcript to be added to buffer in mock mode")
+	}
+}
+
+func TestPipeline_DynamicCooldown(t *testing.T) {
+	blockCh := make(chan struct{})
+	close(blockCh) // unblocked immediately
+	llm := &mockPreemptLLM{
+		tokens:  []string{"Word1", " ", "Word2", " ", "Word3"}, // 3 words, 3*300ms = 900ms -> clamped to 3s
+		blockCh: blockCh,
+	}
+	eng := New(Config{}, nil, llm, nil, nil, nil)
+
+	eng.triggerLLMWithQuestion("What is the meaning of life?")
+	time.Sleep(100 * time.Millisecond) // Give time for goroutine to start and call LLM and set cooldown
+
+	eng.mu.RLock()
+	lastResp := eng.lastResponseAt
+	eng.mu.RUnlock()
+
+	if lastResp.IsZero() {
+		t.Fatalf("Expected lastResponseAt to be set")
+	}
+
+	diff := time.Until(lastResp)
+	if diff < 2*time.Second || diff > 4*time.Second {
+		t.Errorf("Expected cooldown to be clamped to ~3s, got diff %v", diff)
+	}
+
+	eng.AskQuestion("manual trigger")
+	eng.mu.RLock()
+	lastResp2 := eng.lastResponseAt
+	eng.mu.RUnlock()
+
+	if !lastResp2.IsZero() {
+		t.Errorf("Expected lastResponseAt to be zeroed out by manual AskQuestion")
 	}
 }
