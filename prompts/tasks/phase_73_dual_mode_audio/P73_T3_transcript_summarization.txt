@@ -43,26 +43,27 @@ Be concise and use professional language.`
 
 ─── MODIFY wails-app/core/engine/engine.go ────────────────────────────────
 
-1. Add a `transcriptLog []string` field to the `StealthEngine` struct.
-2. Add a method to append to it:
+1. Note: `transcriptLog []string`, `transcriptLogMu sync.Mutex`, and `isTranscriptMode bool` are already in `StealthEngine` (from T1).
+2. Add a method to append to it safely using a lock:
    func (e *StealthEngine) AppendTranscriptLog(line string)
-3. Add a method to retrieve and reset it:
+3. Add a method to retrieve and reset it safely using a lock:
    func (e *StealthEngine) FlushTranscriptLog() []string
 
 ─── MODIFY wails-app/core/engine/pipeline.go ────────────────────────────────
 
-1. In `ProcessAudioTagged` (from T1), when the engine is in Transcript Mode
-   (autoFlush == false), instead of routing to QuestionBuffer, call
-   `e.AppendTranscriptLog(taggedTranscript)` and emit an `on_transcript_log` event
-   so the UI can show a live running log of the meeting.
+1. Update `ProcessAudioTagged` to check if `e.isTranscriptMode` is true. If it is true, instead of calling `e.handleTranscriptTagged(transcript, true, speaker)`, it should:
+   - Check if transcript is blank or noise (like `[BLANK_AUDIO]`, `[MUSIC]`, etc). If so, ignore it.
+   - Prefix the transcript with the speaker tag: `taggedLine := fmt.Sprintf("%s: %s", speaker, cleanTranscript)`
+   - Call `e.AppendTranscriptLog(taggedLine)`
+   - Emit an `on_transcript_log` event with `map[string]interface{}{"text": taggedLine}` so the UI can show a live running log of the meeting.
+   If `e.isTranscriptMode` is false, it MUST STILL call `e.handleTranscriptTagged(transcript, true, speaker)`. DO NOT modify or remove `handleTranscriptTagged`.
 
 2. Add a new method `SummarizeTranscript()`:
    func (e *StealthEngine) SummarizeTranscript() error
    - Calls `e.FlushTranscriptLog()` to get the accumulated log.
    - Joins all lines with newline.
    - Calls `e.triggerLLMWithCustomPrompt(llm.TranscriptSummaryPrompt, fullTranscript)`.
-   - The LLM streams the summary back through the existing `on_llm_token` and `on_response_end`
-     events, so the UI displays it in the existing ConvPanel without any extra frontend changes.
+   (Note: `triggerLLMWithCustomPrompt` does not exist yet. You must create it. It should be identical to `triggerLLMWithQuestion`, but instead of generating an embedding, checking cache, and using the default system prompt, it should stream `input` to the LLM using the provided `prompt` without saving to cache).
 
 ─── MODIFY wails-app/app.go ────────────────────────────────
 
