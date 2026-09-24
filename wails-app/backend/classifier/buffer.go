@@ -88,12 +88,13 @@ func (b *QuestionBuffer) AddChunk(chunk string) {
 	}
 
 	go func(text string) {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		isComplete, err := b.classifyFn(ctx, text)
 		if err != nil {
-			log.Printf("[Buffer] Classification error: %v", err)
+			log.Printf("[Buffer] Classification error: %v. Clearing stuck buffer.", err)
+			b.Reset()
 			return
 		}
 
