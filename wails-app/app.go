@@ -606,6 +606,12 @@ func (a *App) ToggleMockInterviewMode(enabled bool) {
 	}
 }
 
+func (a *App) ToggleMockTTS(enabled bool) {
+	if a.engine != nil {
+		a.engine.ToggleMockTTS(enabled)
+	}
+}
+
 func (a *App) EndSession() (map[string]interface{}, error) {
 	if a.engine.GetSessionManager() == nil {
 		return nil, fmt.Errorf("session manager not configured")

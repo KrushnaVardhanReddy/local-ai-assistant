@@ -58,6 +58,7 @@ type StealthEngine struct {
 	manualMode       bool
 	rawMode          bool
 	isMockMode       bool
+	isMockTTS        bool
 }
 
 func New(
@@ -88,6 +89,13 @@ func (e *StealthEngine) ToggleMockInterviewMode(enabled bool) {
 	defer e.mu.Unlock()
 	e.isMockMode = enabled
 	log.Printf("[Engine] Mock Interview Mode set to: %v\n", enabled)
+}
+
+func (e *StealthEngine) ToggleMockTTS(enabled bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.isMockTTS = enabled
+	log.Printf("[Engine] Mock TTS Mode set to: %v\n", enabled)
 }
 
 // SetEventsAdapter sets the events port.

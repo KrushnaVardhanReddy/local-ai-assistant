@@ -324,8 +324,19 @@ func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 			}
 			log.Printf("[LLM] Stream complete. Stored in cache.")
 
-			// Note: TTS functionality has been migrated to the frontend using the
-			// native Web Speech API to avoid CLI dependencies and ensure cross-platform compatibility.
+			e.mu.RLock()
+			mockActive := e.isMockMode
+			ttsActive := e.isMockTTS
+			e.mu.RUnlock()
+
+			if mockActive && ttsActive && e.ttsAdapter != nil {
+				go func(text string) {
+					log.Printf("🔊 [TTS] Speaking response...")
+					if err := e.ttsAdapter.Speak(text); err != nil {
+						log.Printf("❌ [TTS] Failed to speak: %v", err)
+					}
+				}(finalAns)
+			}
 		}
 	}(cleanTranscript, llmQuestion, ctx, cancel)
 }

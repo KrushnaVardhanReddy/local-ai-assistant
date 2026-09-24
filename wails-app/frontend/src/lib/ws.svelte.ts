@@ -224,10 +224,7 @@ function initListeners() {
     wsState.isThinking = false;
 
     if (wsState.isMockMode && wsState.mockTTS && wsState.response) {
-      console.log('[WS] Mock mode + TTS active. Triggering speech synthesis...');
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(wsState.response);
-      window.speechSynthesis.speak(utterance);
+      console.log('[WS] Mock mode + TTS active. Backend will handle audio.');
     }
 
     // Store the completed answer against the most recent unanswered transcript
@@ -252,6 +249,17 @@ export function connect(url?: string): void {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
+  }
+
+  // Sync initial state to backend
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "mock_mode_toggle", enabled: wsState.isMockMode }));
+  }
+  if (typeof (window as any).go?.main?.App?.ToggleMockInterviewMode === 'function') {
+    (window as any).go.main.App.ToggleMockInterviewMode(wsState.isMockMode);
+  }
+  if (wsState.mockTTS && typeof (window as any).go?.main?.App?.ToggleMockTTS === 'function') {
+    (window as any).go.main.App.ToggleMockTTS(true);
   }
 
   // Idempotent: don't reconnect if we are already connected to the same URL or opening
@@ -460,6 +468,9 @@ export function sendChat(text: string): void {
 
 export function toggleMockMode(enabled: boolean): void {
   wsState.isMockMode = enabled;
+  if (typeof (window as any).go?.main?.App?.ToggleMockInterviewMode === 'function') {
+    (window as any).go.main.App.ToggleMockInterviewMode(enabled);
+  }
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: "mock_mode_toggle", enabled }));
   }
@@ -471,8 +482,8 @@ export function toggleMockTTS(enabled: boolean): void {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem("mock_tts", enabled ? "true" : "false");
   }
-  if (!enabled) {
-    window.speechSynthesis.cancel();
+  if (typeof (window as any).go?.main?.App?.ToggleMockTTS === 'function') {
+    (window as any).go.main.App.ToggleMockTTS(enabled);
   }
 }
 

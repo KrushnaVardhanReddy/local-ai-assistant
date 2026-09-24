@@ -210,6 +210,10 @@ export function ToggleMockInterviewMode(arg1) {
   return window['go']['main']['App']['ToggleMockInterviewMode'](arg1);
 }
 
+export function ToggleMockTTS(arg1) {
+  return window['go']['main']['App']['ToggleMockTTS'](arg1);
+}
+
 export function ToggleStealth(arg1) {
   return window['go']['main']['App']['ToggleStealth'](arg1);
 }
