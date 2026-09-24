@@ -254,6 +254,12 @@
     );
   }
 
+  import { addChipToBuffer } from '../../lib/ws.svelte';
+
+  function addBufferChip(chip: { id: string; text: string }) {
+    addChipToBuffer(chip as any);
+  }
+
   function dismissChip(chipId: string) {
     wsState.pendingTranscripts = wsState.pendingTranscripts.filter((c: any) => c.id !== chipId);
   }
@@ -374,24 +380,24 @@
     </div>
 
     <div class="toolbar-actions" style="--wails-draggable: no-drag">
-      <button class="tool-btn" onclick={handleMockModeToggle} class:active={wsState.isMockMode} title="Mock Mode">
+      <button class="tool-btn" onclick={handleMockModeToggle} class:active={wsState.isMockMode}>
         <span class="material-symbols-outlined">psychology</span>
         <span class="tool-label">Mock</span>
       </button>
-      <button class="tool-btn" onclick={handleSnip} title="Vision Snip">
+      <button class="tool-btn" onclick={handleSnip}>
         <span class="material-symbols-outlined">screenshot_monitor</span>
         <span class="tool-label">Snip</span>
       </button>
-      <button class="tool-btn" onclick={() => showSessionReport = true} title="Session Report">
+      <button class="tool-btn" onclick={() => showSessionReport = true}>
         <span class="material-symbols-outlined">analytics</span>
         <span class="tool-label">Report</span>
       </button>
-      <button class="tool-btn" onclick={handleClearContext} title="Clear Context">
+      <button class="tool-btn" onclick={handleClearContext}>
         <span class="material-symbols-outlined">mop</span>
         <span class="tool-label">Clear</span>
       </button>
       {#if stealthMode}
-        <button class="tool-btn" class:text-primary={clickthrough} onclick={toggleStealthMode} title="Stealth Mode (Clickthrough)">
+        <button class="tool-btn" class:text-primary={clickthrough} onclick={toggleStealthMode}>
           <span class="material-symbols-outlined">{clickthrough ? 'mouse' : 'back_hand'}</span>
           <span class="tool-label">Stealth</span>
         </button>
@@ -456,6 +462,7 @@
         showHotkeys={showConvHotkeys}
         onSendChat={sendChat}
         onSendChip={sendChip}
+        onAddBufferChip={addBufferChip}
         onDismissChip={dismissChip}
         onClearChips={clearAllChips}
         onSelectTranscript={(text: string, answer?: string) => {

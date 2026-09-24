@@ -52,13 +52,29 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 	rawMode := e.rawMode
 	e.mu.RUnlock()
 
-	if !rawMode {
-		filterRes := filter.Check(cleanTranscript, emb)
-		if !filterRes.ShouldSend {
-			return
+	var isNoise bool
+	filterRes := filter.Check(cleanTranscript, emb)
+	if !filterRes.ShouldSend {
+		isNoise = true
+		if rawMode {
+			log.Printf("[RAW MODE] Would have filtered, but bypassing for: %q", cleanTranscript)
+			// In raw mode we process it anyway, so we don't treat it as dropped for logic flow,
+			// though we might still want to tag it. We'll keep isNoise true so the UI can style it,
+			// but we won't return early.
 		}
-	} else {
-		log.Printf("[RAW MODE] Bypassed filter for: %q", cleanTranscript)
+	}
+
+	if isNoise && !rawMode && isAuto {
+		log.Printf("🎤 STT OUTPUT (FILTERED): %q\n", cleanTranscript)
+		if e.events != nil {
+			e.events.Emit("on_transcript", map[string]interface{}{"text": cleanTranscript, "is_noise": true})
+			e.events.Emit("on_chip", map[string]interface{}{
+				"id":       fmt.Sprintf("%d", time.Now().UnixNano()),
+				"text":     cleanTranscript,
+				"is_noise": true,
+			})
+		}
+		return
 	}
 
 	log.Printf("🎤 STT OUTPUT: %q\n", cleanTranscript)
@@ -76,7 +92,7 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 
 	// Also emit via EventsEmit (belt-and-suspenders)
 	if e.events != nil {
-		e.events.Emit("on_transcript", map[string]interface{}{"text": cleanTranscript})
+		e.events.Emit("on_transcript", map[string]interface{}{"text": cleanTranscript, "is_noise": isNoise})
 	}
 
 
@@ -87,8 +103,9 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 	// Always emit suggestion chip for accepted transcripts
 	if e.events != nil {
 		e.events.Emit("on_chip", map[string]interface{}{
-			"id":   fmt.Sprintf("%d", time.Now().UnixNano()),
-			"text": cleanTranscript,
+			"id":       fmt.Sprintf("%d", time.Now().UnixNano()),
+			"text":     cleanTranscript,
+			"is_noise": isNoise,
 		})
 	}
 

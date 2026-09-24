@@ -9,6 +9,8 @@ export function ActivateLicense(arg1:string):Promise<void>;
 
 export function AnalyzeVision(arg1:string,arg2:string):Promise<void>;
 
+export function AppendToBuffer(arg1:string):Promise<void>;
+
 export function CaptureScreen():Promise<string>;
 
 export function CheckLicense():Promise<string>;

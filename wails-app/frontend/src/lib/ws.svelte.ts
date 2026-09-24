@@ -17,7 +17,7 @@ export const wsState = $state({
   ragSources: [] as string[],
   isPTTHeld: false,
   pttMode: false,
-  pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null }>,
+  pendingTranscripts: [] as Array<{ id: number; text: string; speaker?: "interviewer" | "candidate" | null; is_noise?: boolean }>,
   plan: "unknown",
   isMockMode: false,
   summaryResults: {} as Record<string, string>,
@@ -100,7 +100,8 @@ function handleTranscript(data: any) {
   wsState.transcript = data.text;
 
   // Accumulate rolling transcript history (max 10 entries)
-  if (data.text && (wsState.rawMode || data.text.trim().length > 3)) {
+  const shouldAddHistory = wsState.rawMode || (!data.is_noise && data.text.trim().length > 3);
+  if (data.text && shouldAddHistory) {
     // Avoid duplicating the last entry
     const last = wsState.transcriptHistory[wsState.transcriptHistory.length - 1];
     if (last?.text !== data.text) {
@@ -123,13 +124,15 @@ function handleTranscript(data: any) {
     wsState.pendingTranscripts[existingIdx] = {
       id: wsState.pendingTranscripts[existingIdx].id,
       text: data.text,
-      speaker: data.speaker ?? null
+      speaker: data.speaker ?? null,
+      is_noise: data.is_noise ?? false
     };
   } else {
     wsState.pendingTranscripts.push({
       id: chipIdCounter++,
       text: data.text,
-      speaker: data.speaker ?? null
+      speaker: data.speaker ?? null,
+      is_noise: data.is_noise ?? false
     });
     // Keep max 6 chips — drop oldest
     if (wsState.pendingTranscripts.length > 6) {
@@ -457,6 +460,22 @@ export function toggleMockMode(enabled: boolean): void {
 
 export function sendChip(chip: { id: number; text: string; speaker?: "interviewer" | "candidate" | null }): void {
   sendChat(chip.text);
+  wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
+    (c) => c.id !== chip.id
+  );
+}
+
+export function addChipToBuffer(chip: { id: number; text: string; speaker?: "interviewer" | "candidate" | null }): void {
+  if (typeof (window as any).go?.main?.App?.AppendToBuffer === 'function') {
+    (window as any).go.main.App.AppendToBuffer(chip.text);
+  }
+
+  // Add it to transcript history so it shows up in the UI
+  wsState.transcriptHistory = [
+    ...wsState.transcriptHistory,
+    { role: chip.speaker ?? 'interviewer', text: chip.text }
+  ];
+
   wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
     (c) => c.id !== chip.id
   );

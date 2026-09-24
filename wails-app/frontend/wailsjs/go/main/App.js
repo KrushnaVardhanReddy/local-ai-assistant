@@ -10,6 +10,10 @@ export function AnalyzeVision(arg1, arg2) {
   return window['go']['main']['App']['AnalyzeVision'](arg1, arg2);
 }
 
+export function AppendToBuffer(arg1) {
+  return window['go']['main']['App']['AppendToBuffer'](arg1);
+}
+
 export function CaptureScreen() {
   return window['go']['main']['App']['CaptureScreen']();
 }

@@ -871,6 +871,17 @@ func (a *App) SendChat(text string) error {
 	return nil
 }
 
+// AppendToBuffer allows the frontend to manually append text to the question buffer without triggering LLM
+func (a *App) AppendToBuffer(text string) error {
+	if a.engine != nil {
+		buf := a.engine.GetQuestionBuffer()
+		if buf != nil {
+			buf.AddChunk(text)
+		}
+	}
+	return nil
+}
+
 // SetManualMode enables or disables automatic LLM processing of transcripts.
 // When manualMode is true, transcripts will still be emitted to the frontend via
 // on_transcript events, but the engine will NOT automatically queue them for LLM processing.

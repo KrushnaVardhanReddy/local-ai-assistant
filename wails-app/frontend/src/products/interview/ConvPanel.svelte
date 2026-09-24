@@ -19,6 +19,7 @@
 
     onSendChat,
     onSendChip,
+    onAddBufferChip,
     onDismissChip,
     onClearChips,
     onSelectTranscript,
@@ -37,6 +38,7 @@
     showHotkeys?: boolean;
     onSendChat?: (text: string) => void;
     onSendChip?: (chip: { id: string; text: string }) => void;
+    onAddBufferChip?: (chip: { id: string; text: string }) => void;
     onDismissChip?: (chipId: string) => void;
     onClearChips?: () => void;
     onSelectTranscript?: (text: string, answer?: string) => void;
@@ -261,10 +263,15 @@
   {#if pendingTranscripts.length > 0 && !showHotkeys}
     <div class="chips-row hide-scrollbar">
       {#each pendingTranscripts as chip (chip.id)}
-        <div class="chip">
-          <button class="chip-text" onclick={() => onSendChip?.(chip)} title={chip.text}>
+        <div class="chip" class:is-noise={chip.is_noise}>
+          <button class="chip-text" onclick={() => !chip.is_noise && onSendChip?.(chip)}>
             {truncateText(chip.text)}
           </button>
+          {#if chip.is_noise}
+            <button class="chip-add" onclick={() => onAddBufferChip?.(chip)}>
+              <span class="material-symbols-outlined" style="font-size: 14px;">add</span>
+            </button>
+          {/if}
           <button class="chip-close" onclick={() => onDismissChip?.(chip.id)}>
             <span class="material-symbols-outlined" style="font-size: 14px;">close</span>
           </button>
@@ -622,6 +629,15 @@
     color: rgba(255, 255, 255, 0.85);
   }
 
+  .chip.is-noise {
+    opacity: 0.6;
+  }
+
+  .chip.is-noise .chip-text {
+    text-decoration: line-through;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
   .chip-text {
     cursor: pointer;
     overflow: hidden;
@@ -653,6 +669,24 @@
 
   .chip-close:hover {
     color: #ef4444;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .chip-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.5);
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .chip-add:hover {
+    color: #4ade80;
     background: rgba(255, 255, 255, 0.1);
   }
 
