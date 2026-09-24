@@ -110,7 +110,13 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 
 	e.mu.RLock()
 	isMockMode := e.isMockMode
+	isTTSPlaying := e.isTTSPlaying
 	e.mu.RUnlock()
+
+	if isTTSPlaying {
+		log.Printf("🔇 [STT] Ignoring transcript because TTS is playing: %q", cleanTranscript)
+		return
+	}
 
 	if isAuto {
 		if manual {
@@ -332,6 +338,16 @@ func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 			if mockActive && ttsActive && e.ttsAdapter != nil {
 				go func(text string) {
 					log.Printf("🔊 [TTS] Speaking response...")
+					e.mu.Lock()
+					e.isTTSPlaying = true
+					e.mu.Unlock()
+
+					defer func() {
+						e.mu.Lock()
+						e.isTTSPlaying = false
+						e.mu.Unlock()
+					}()
+
 					if err := e.ttsAdapter.Speak(text); err != nil {
 						log.Printf("❌ [TTS] Failed to speak: %v", err)
 					}

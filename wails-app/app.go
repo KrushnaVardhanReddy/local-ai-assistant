@@ -676,6 +676,9 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.remoteServer != nil {
 		_ = a.remoteServer.Stop(ctx)
 	}
+	if a.engine != nil {
+		a.engine.Stop()
+	}
 }
 
 // PromptOpenDirectory opens a native folder dialog and loads it as a workspace

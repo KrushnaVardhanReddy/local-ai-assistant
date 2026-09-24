@@ -19,6 +19,7 @@ type QuestionBuffer struct {
 
 	stopCh           chan struct{}
 	watchdogInterval time.Duration
+	autoFlush        bool
 }
 
 func NewQuestionBuffer(onFlush func(string)) *QuestionBuffer {
@@ -31,6 +32,7 @@ func NewQuestionBuffer(onFlush func(string)) *QuestionBuffer {
 		classifyFn:       IsQuestionComplete,
 		stopCh:           make(chan struct{}),
 		watchdogInterval: 5 * time.Second,
+		autoFlush:        true,
 	}
 
 	return b
@@ -51,7 +53,7 @@ func (b *QuestionBuffer) watchdog() {
 			return
 		case <-ticker.C:
 			b.mu.Lock()
-			shouldFlush := len(b.chunks) > 0 && time.Since(b.lastChunkAt) > b.maxAge
+			shouldFlush := b.autoFlush && len(b.chunks) > 0 && time.Since(b.lastChunkAt) > b.maxAge
 			b.mu.Unlock()
 
 			if shouldFlush {
@@ -59,6 +61,12 @@ func (b *QuestionBuffer) watchdog() {
 			}
 		}
 	}
+}
+
+func (b *QuestionBuffer) SetAutoFlush(enabled bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.autoFlush = enabled
 }
 
 func (b *QuestionBuffer) AddChunk(chunk string) {
@@ -72,7 +80,12 @@ func (b *QuestionBuffer) AddChunk(chunk string) {
 	}
 
 	fullText := strings.Join(b.chunks, " ")
+	autoFlush := b.autoFlush
 	b.mu.Unlock()
+
+	if !autoFlush {
+		return
+	}
 
 	go func(text string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

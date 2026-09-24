@@ -59,6 +59,7 @@ type StealthEngine struct {
 	rawMode          bool
 	isMockMode       bool
 	isMockTTS        bool
+	isTTSPlaying     bool
 }
 
 func New(
@@ -86,8 +87,13 @@ func New(
 
 func (e *StealthEngine) ToggleMockInterviewMode(enabled bool) {
 	e.mu.Lock()
-	defer e.mu.Unlock()
 	e.isMockMode = enabled
+	e.mu.Unlock()
+
+	if e.questionBuffer != nil {
+		e.questionBuffer.SetAutoFlush(!enabled)
+	}
+
 	log.Printf("[Engine] Mock Interview Mode set to: %v\n", enabled)
 }
 
@@ -296,6 +302,9 @@ func (e *StealthEngine) Stop() {
 		e.questionBuffer.Stop()
 	}
 	classifier.DefaultLlamaServer.Stop()
+	if e.ttsAdapter != nil {
+		e.ttsAdapter.Stop()
+	}
 }
 
 func (e *StealthEngine) GetQuestionBuffer() *classifier.QuestionBuffer {
