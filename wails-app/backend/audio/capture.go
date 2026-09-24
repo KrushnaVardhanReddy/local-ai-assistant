@@ -18,11 +18,13 @@ type AudioDevice struct {
 
 // CaptureEngine manages audio capture using malgo.
 type CaptureEngine struct {
-	mu            sync.Mutex
-	ctx           *malgo.AllocatedContext
-	device        *malgo.Device
-	isInitialized bool
-	deviceList    []malgo.DeviceInfo
+	mu               sync.Mutex
+	ctx              *malgo.AllocatedContext
+	device           *malgo.Device
+	isInitialized    bool
+	deviceList       []malgo.DeviceInfo
+	activeDeviceID   int
+	isLoopbackActive bool
 }
 
 // NewCaptureEngine creates a new uninitialized capture engine.
@@ -179,7 +181,16 @@ func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback fun
 	}
 
 	c.device = device
+	c.activeDeviceID = deviceID
+	c.isLoopbackActive = isLoopback
 	return nil
+}
+
+// GetActiveDevice returns the active device ID and whether it's loopback
+func (c *CaptureEngine) GetActiveDevice() (int, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.activeDeviceID, c.isLoopbackActive
 }
 
 // StopCapture stops the current audio capture.

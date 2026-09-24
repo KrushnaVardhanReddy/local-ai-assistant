@@ -714,6 +714,31 @@ func (a *App) GetAudioDevices() []audio.AudioDevice {
 	return devices
 }
 
+func (a *App) GetAudioStatus() map[string]interface{} {
+	a.cmdMutex.Lock()
+	defer a.cmdMutex.Unlock()
+
+	status := map[string]interface{}{
+		"mode": a.appMode,
+	}
+
+	if a.appMode == AppModeInterview {
+		if a.audioCapture != nil {
+			status["isCapturing"] = a.audioCapture.IsCapturing()
+			id, isLoopback := a.audioCapture.GetActiveDevice()
+			status["deviceID"] = id
+			status["isLoopback"] = isLoopback
+		} else {
+			status["isCapturing"] = false
+		}
+	} else if a.appMode == AppModeTranscript {
+		status["isCapturing"] = (a.dualCapture != nil)
+		// Transcript always uses dual capture defaults for now
+	}
+
+	return status
+}
+
 func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 	err := a.audioCapture.StartCapture(id, isLoopback, func(samples []float32) {
 		_ = a.engine.ProcessAudio(samples)
