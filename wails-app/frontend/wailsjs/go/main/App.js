@@ -54,6 +54,10 @@ export function ExportSession() {
   return window['go']['main']['App']['ExportSession']();
 }
 
+export function FlushQuestionBuffer() {
+  return window['go']['main']['App']['FlushQuestionBuffer']();
+}
+
 export function GetActiveDocument() {
   return window['go']['main']['App']['GetActiveDocument']();
 }

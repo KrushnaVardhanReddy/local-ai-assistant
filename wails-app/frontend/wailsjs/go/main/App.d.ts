@@ -31,6 +31,8 @@ export function EndSession():Promise<Record<string, any>>;
 
 export function ExportSession():Promise<string>;
 
+export function FlushQuestionBuffer():Promise<void>;
+
 export function GetActiveDocument():Promise<driving.WorkspaceDocument>;
 
 export function GetAudioDevices():Promise<Array<audio.AudioDevice>>;

@@ -224,6 +224,7 @@ function initListeners() {
     wsState.isThinking = false;
 
     if (wsState.isMockMode && wsState.mockTTS && wsState.response) {
+      console.log('[WS] Mock mode + TTS active. Triggering speech synthesis...');
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(wsState.response);
       window.speechSynthesis.speak(utterance);
@@ -465,6 +466,7 @@ export function toggleMockMode(enabled: boolean): void {
 }
 
 export function toggleMockTTS(enabled: boolean): void {
+  console.log('[WS] toggleMockTTS called with:', enabled);
   wsState.mockTTS = enabled;
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem("mock_tts", enabled ? "true" : "false");

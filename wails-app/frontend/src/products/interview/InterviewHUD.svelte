@@ -385,7 +385,7 @@
         <span class="tool-label">Mock</span>
       </button>
       {#if wsState.isMockMode}
-        <button class="tool-btn" onclick={() => toggleMockTTS(!wsState.mockTTS)} class:active={wsState.mockTTS} title="Toggle TTS for Mock Mode">
+        <button class="tool-btn" onclick={() => toggleMockTTS(!wsState.mockTTS)} class:active={wsState.mockTTS}>
           <span class="material-symbols-outlined">volume_up</span>
           <span class="tool-label">TTS</span>
         </button>
