@@ -1,0 +1,33 @@
+You are tasked with fixing the Golang test suite for BarnOwl AI (P72-T4).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+Over the course of recent architectural refactors, several unit tests in the Go backend (`wails-app/...`) have fallen out of sync with the actual function signatures (e.g., passing 5 arguments instead of 6 to constructor functions like `engine.New`), or they fail to compile due to CGO dependencies (like the `whisper.h` missing headers).
+
+Your goal is to get `go test ./...` passing cleanly (or at least compiling and passing the core logic tests) in the `wails-app` directory.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/**/*_test.go (Any test files with compilation or runtime failures)
+[MODIFY] Optional: Add build tags (e.g., `//go:build !cgo`) if specific tests must be skipped when CGO is unavailable.
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+1. Run `cd wails-app && go test ./...` to identify failing tests.
+2. Fix signature mismatches (e.g., update `engine.New()` calls in `pipeline_test.go` and `engine_test.go` to include the new `ttsAdapter` argument, usually by passing `nil` or a mock).
+3. Fix issues related to CGO dependencies. If a package (like `whisper`) cannot be tested without CGO, isolate it via interface mocking, or add `//go:build !cgo` build constraints to tests that fundamentally require CGO so they are skipped in pure Go environments.
+4. Ensure `llama_server_test.go` and other recently modified tests compile and pass.
+
+════════════════════════════════════════════════════════════════
+VERIFICATION & TESTING
+════════════════════════════════════════════════════════════════
+
+1. Run `go test ./...` inside `wails-app/`.
+2. Ensure there are no compilation errors for test files.
+3. Ensure all executed tests report `PASS`.
