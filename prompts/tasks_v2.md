@@ -71,3 +71,12 @@
 | P72-T2 ⚡ | `wails-app/backend/llm/prompts.go`, `wails-app/core/engine/pipeline.go` | **Mock Interview Persona:** Create a distinct system prompt for Mock Mode where the LLM evaluates the user's response, gives brief constructive feedback, and asks the next relevant follow-up question. | ✅ | #247 |
 | P72-T3 ⚡ | `wails-app/backend/tts/`, `wails-app/frontend/src/` | **Interactive Audio TTS:** Integrate TTS (Text-to-Speech) so the mock interviewer reads its questions out loud, making the experience more immersive. | ✅ | #249 |
 | P72-T4 | `wails-app/**/*_test.go` | **Fix Golang Unit Tests:** Resolve all compilation and runtime errors across the Golang test suite. Address CGO dependency issues (like whisper.h) by using build tags or proper interface mocking. | 🔄 | — |
+| P72-T5 | `wails-app/backend/classifier/buffer.go` | **Fix Context Timeout:** Resolve the `context deadline exceeded` error by increasing the Gemma classification timeout to 10s and clearing the buffer on failure. (Completed locally) | ✅ | — |
+
+## Phase 73 — Dual Mode Audio (Interview vs Granolah Mode) 🎙️
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P73-T1 ⚡ | `backend/audio/dual_capture.go`, `app.go`, `pipeline.go` | **Dual Capture Backend:** Create a new `AppMode` system. In Interview Mode, default to single loopback capture. In Transcript Mode, spin up a `DualCaptureEngine` that captures both Loopback and Mic simultaneously and tags transcripts with `[Interviewer]` and `[Candidate]`. | 🔄 | — |
+| P73-T2 ⚡ | `frontend/.../InterviewHUD.svelte`, `ws.svelte.ts` | **Mode Switcher UI:** Add a frontend toggle in the ActivityBar to switch between Interview Mode and Transcript Mode. In Transcript mode, hide the auto-submit controls and display a "Summarize Session" button. | 🔄 | — |
+| P73-T3 ⚡ | `engine.go`, `pipeline.go`, `app.go` | **Transcript Summarization:** Route tagged dual-audio transcripts into a dedicated `transcriptLog`. Wire the "Summarize Session" button to flush this log to the LLM with a Granolah-style meeting summary system prompt, streaming the notes back to the UI. | 🔄 | — |
