@@ -29,7 +29,8 @@ export const wsState = $state({
   pollCount: 0,
   pollError: "none",
   cacheStats: { cached_pairs: 0, estimated_tokens_saved: 0 },
-  downloadTask: null as { component: string, progress: number } | null
+  downloadTask: null as { component: string, progress: number } | null,
+  appMode: (typeof localStorage !== 'undefined' ? (localStorage.getItem('barnowl_app_mode') as 'interview' | 'transcript' | null) || 'interview' : 'interview') as 'interview' | 'transcript'
 });
 
 export async function toggleManualMode(): Promise<void> {
@@ -518,4 +519,14 @@ export function dismissChip(chipId: number): void {
 
 export function clearAllChips(): void {
   wsState.pendingTranscripts = [];
+}
+
+export async function setAppMode(mode: 'interview' | 'transcript') {
+  wsState.appMode = mode;
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem("barnowl_app_mode", mode);
+  }
+  if ((window as any).go?.main?.App?.SetAppMode) {
+    await (window as any).go.main.App.SetAppMode(mode);
+  }
 }

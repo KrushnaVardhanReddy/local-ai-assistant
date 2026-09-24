@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { wsState, toggleMockMode, toggleMockTTS } from "$lib/ws.svelte";
+  import { wsState, toggleMockMode, toggleMockTTS, setAppMode } from "$lib/ws.svelte";
   import { getApiUrl, apiFetch } from "$lib/api";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
   import { authState } from "$lib/auth.svelte";
@@ -75,6 +75,14 @@
   let showSessionReport = $state(false);
   let showSummaryModal = $state(false);
   let activeAction = $state<string | null>(null);
+
+  const topActions = $derived([
+    { id: 'explorer', icon: 'folder', label: 'Folder' },
+    { id: 'mock', icon: 'record_voice_over', label: 'Mock' },
+    { id: 'mode_interview', icon: 'support_agent', label: 'Interview', isActive: wsState.appMode === 'interview' },
+    { id: 'mode_transcript', icon: 'summarize', label: 'Transcript', isActive: wsState.appMode === 'transcript' }
+  ]);
+
 
   let answerPanelRef = $state<any>();
 
@@ -195,6 +203,10 @@
       activeAction = activeAction === 'explorer' ? '' : 'explorer';
     } else if (action === 'mock') {
       toggleMockMode(!wsState.isMockMode);
+    } else if (action === 'mode_interview') {
+      setAppMode('interview');
+    } else if (action === 'mode_transcript') {
+      setAppMode('transcript');
     } else if (action === 'settings') {
       activeAction = activeAction === 'settings' ? '' : 'settings';
     } else if (action === 'cache') {
@@ -384,7 +396,7 @@
         <span class="material-symbols-outlined">psychology</span>
         <span class="tool-label">Mock</span>
       </button>
-      {#if wsState.isMockMode}
+      {#if wsState.isMockMode && wsState.appMode === 'interview'}
         <button class="tool-btn" onclick={() => toggleMockTTS(!wsState.mockTTS)} class:active={wsState.mockTTS}>
           <span class="material-symbols-outlined">volume_up</span>
           <span class="tool-label">TTS</span>
@@ -413,7 +425,7 @@
 
     <div class="main-content-area">
     <!-- ActivityBar always visible -->
-    <ActivityBar {activeAction} onAction={handleAction} />
+    <ActivityBar {activeAction} {topActions} onAction={handleAction} />
 
     <!-- IDE Mode: File tree sidebar (only when explorer is active) -->
     {#if activeAction === 'explorer'}

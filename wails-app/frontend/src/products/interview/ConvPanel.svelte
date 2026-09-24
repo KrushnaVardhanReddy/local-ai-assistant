@@ -87,6 +87,11 @@
     }
     return text;
   }
+
+  function handleSummarize() {
+    console.log("handleSummarize placeholder called");
+    // To be wired up in T3
+  }
 </script>
 
 <div class="conv-panel">
@@ -158,6 +163,12 @@
       {/if}
     </div>
   </div>
+
+    {#if wsState.appMode === 'transcript'}
+    <div class="transcript-banner bg-amber-500/10 text-amber-500 text-xs px-4 py-2 border-b border-amber-500/20 flex items-center justify-center">
+      📝 Transcript Mode — Passive Listening
+    </div>
+  {/if}
 
   <!-- Body -->
   <div class="body-scroll hide-scrollbar" bind:this={scrollEl}>
@@ -293,14 +304,14 @@
   {/if}
 
   <!-- Footer Input -->
-  {#if isMockMode && !showHotkeys}
-    <div class="px-2 pb-2">
-      <button class="w-full py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors" onclick={handleFlushBuffer}>
-        Submit Answer
-      </button>
-    </div>
-  {/if}
   {#if !showHotkeys}
+    {#if isMockMode && wsState.appMode !== 'transcript'}
+      <div class="px-2 pb-2">
+        <button class="w-full py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors" onclick={handleFlushBuffer}>
+          Submit Answer
+        </button>
+      </div>
+    {/if}
     <div class="footer">
       <textarea
         bind:value={chatText}
@@ -317,6 +328,13 @@
         <span class="material-symbols-outlined" style="font-size: 16px;">send</span>
       </button>
     </div>
+    {#if wsState.appMode === 'transcript'}
+      <div class="p-2 border-t border-white/10">
+        <button class="w-full py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-bold transition-colors" onclick={handleSummarize}>
+          Summarize Session
+        </button>
+      </div>
+    {/if}
   {/if}
 </div>
 

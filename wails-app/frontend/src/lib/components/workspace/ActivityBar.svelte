@@ -1,21 +1,23 @@
 <script lang="ts">
+  type ActionDef = { id: string; icon: string; label: string; isActive?: boolean };
+
   let {
     activeAction = '',
-    onAction
+    onAction,
+    topActions = [
+      { id: 'explorer', icon: 'folder', label: 'Folder' },
+      { id: 'mock', icon: 'record_voice_over', label: 'Mock' }
+    ],
+    bottomActions = [
+      { id: 'cache', icon: 'mop', label: 'Cache' },
+      { id: 'settings', icon: 'settings', label: 'Settings' }
+    ]
   } = $props<{
     activeAction?: string;
     onAction: (action: string) => void;
+    topActions?: ActionDef[];
+    bottomActions?: ActionDef[];
   }>();
-
-  const topActions = [
-    { id: 'explorer', icon: 'folder', label: 'Folder' },
-    { id: 'mock', icon: 'record_voice_over', label: 'Mock' }
-  ];
-
-  const bottomActions = [
-    { id: 'cache', icon: 'mop', label: 'Cache' },
-    { id: 'settings', icon: 'settings', label: 'Settings' }
-  ];
 
   function handleAction(id: string) {
     onAction(id);
@@ -27,7 +29,7 @@
     {#each topActions as action}
       <button
         class="action-btn"
-        class:active={activeAction === action.id}
+        class:active={action.isActive !== undefined ? action.isActive : activeAction === action.id}
         onclick={() => handleAction(action.id)}
         aria-label={action.label}
         data-testid="activity-bar-{action.id}"
@@ -42,7 +44,7 @@
     {#each bottomActions as action}
       <button
         class="action-btn"
-        class:active={activeAction === action.id}
+        class:active={action.isActive !== undefined ? action.isActive : activeAction === action.id}
         onclick={() => handleAction(action.id)}
         aria-label={action.label}
         data-testid="activity-bar-{action.id}"
