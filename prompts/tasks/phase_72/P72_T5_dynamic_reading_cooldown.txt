@@ -1,0 +1,28 @@
+Task: Implement Dynamic Reading Cooldown for Live Mode Auto-Submit
+
+Context:
+In Live Mode, the STT pipeline automatically feeds transcript chunks to the `QuestionBuffer`. Once the Llama classifier (Gemma) identifies a complete question, it auto-flushes and triggers the LLM. 
+The problem: After the LLM generates a response, the user needs time to read it. If the interviewer speaks immediately, the microphone picks it up, the buffer classifies it, and it triggers the LLM again instantly — wiping the user's screen before they finish reading.
+
+Goal:
+Implement a dynamic "Reading Cooldown" that pauses auto-triggering *without* dropping the interviewer's audio.
+
+Requirements:
+1. Dynamic Cooldown Calculation:
+   - When the main LLM stream completes in `pipeline.go` (`triggerLLMWithQuestion`), count the number of words generated in the final answer.
+   - Calculate a cooldown duration: e.g., `wordCount * 300ms`.
+   - Clamp the duration between a minimum (e.g., 3 seconds) and a maximum (e.g., 20 seconds).
+   - Set a timestamp (`e.lastResponseAt`) in the `StealthEngine` struct.
+
+2. Pause Auto-Flush, Do Not Drop Transcripts:
+   - During the cooldown window, transcripts should STILL be routed to `QuestionBuffer.AddChunk`. We do not want to miss what the interviewer is saying.
+   - Modify the `QuestionBuffer` so that its internal watchdog (or its `AddChunk` flush trigger) is paused or suppressed while the cooldown is active.
+   - The buffer should accumulate chunks during the cooldown. Once the cooldown expires, the watchdog should naturally process the accumulated text and flush if it's a complete question.
+
+3. Immediate Manual Override:
+   - If the user clicks "Submit Answer" (which calls `FlushQuestionBuffer`), or types a manual chat follow-up, it should bypass the cooldown immediately and trigger the LLM.
+   - The cooldown should immediately be cleared or ignored in these cases.
+
+Implementation Notes:
+- Consider adding `PauseUntil(time.Time)` to `QuestionBuffer`, or letting the Engine enforce the cooldown by checking `time.Since(e.lastResponseAt)` inside the watchdog loop if you expose the timestamp to the buffer.
+- Be careful with thread safety (mutexes) when accessing/setting timestamps across the pipeline goroutines.

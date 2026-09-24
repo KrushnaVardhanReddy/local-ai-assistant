@@ -134,7 +134,7 @@ func (e *StealthEngine) handleTranscript(raw string, isAuto bool) {
 			e.questionBuffer.AddChunk(cleanTranscript)
 		}
 	} else {
-		// Manual query bypassing buffer
+		// Manual query bypassing buffer (typed follow-up or chip submit — always allowed)
 		e.triggerLLMWithQuestion(cleanTranscript)
 	}
 }
