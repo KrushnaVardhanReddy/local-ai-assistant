@@ -78,5 +78,5 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
 | P73-T1 ⚡ | `backend/audio/dual_capture.go`, `app.go`, `pipeline.go` | **Dual Capture Backend:** Create a new `AppMode` system. In Interview Mode, default to single loopback capture. In Transcript Mode, spin up a `DualCaptureEngine` that captures both Loopback and Mic simultaneously and tags transcripts with `[Interviewer]` and `[Candidate]`. | ✅ | #251 |
-| P73-T2 ⚡ | `frontend/.../InterviewHUD.svelte`, `ws.svelte.ts` | **Mode Switcher UI:** Add a frontend toggle in the ActivityBar to switch between Interview Mode and Transcript Mode. In Transcript mode, hide the auto-submit controls and display a "Summarize Session" button. | 🔄 | — |
+| P73-T2 ⚡ | `frontend/.../InterviewHUD.svelte`, `ws.svelte.ts` | **Mode Switcher UI:** Add a frontend toggle in the ActivityBar to switch between Interview Mode and Transcript Mode. In Transcript mode, hide the auto-submit controls and display a "Summarize Session" button. | ✅ | #253 |
 | P73-T3 ⚡ | `engine.go`, `pipeline.go`, `app.go` | **Transcript Summarization:** Route tagged dual-audio transcripts into a dedicated `transcriptLog`. Wire the "Summarize Session" button to flush this log to the LLM with a Granolah-style meeting summary system prompt, streaming the notes back to the UI. | 🔄 | — |
