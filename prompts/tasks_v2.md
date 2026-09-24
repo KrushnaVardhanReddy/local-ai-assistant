@@ -62,3 +62,11 @@
 | P64-T5c | `cache.spec.ts` | **Cache E2E:** Test cache manager and RAG stats. | ⬜ | — |
 | P64-T5d | `mock_interview.spec.ts` | **Mock Interview E2E:** Test persona switch and UI update. | ⬜ | — |
 | P64-T5e | `entitlement.spec.ts` | **Billing E2E:** Test dev mode, lifetime, and SaaS states. | ⬜ | — |
+
+## Phase 72 — Mock Interview Polish 🎤
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P72-T1 ⚡ | `wails-app/frontend/src/products/interview/ConvPanel.svelte`, `wails-app/frontend/src/products/interview/InterviewHUD.svelte` | **Mock Mode Submit Button:** Disable VAD-based auto-submission in mock mode. Add a "Submit Answer" button so the user controls when the response is evaluated. | ⬜ | — |
+| P72-T2 ⚡ | `wails-app/backend/llm/prompts.go`, `wails-app/core/engine/pipeline.go` | **Mock Interview Persona:** Create a distinct system prompt for Mock Mode where the LLM evaluates the user's response, gives brief constructive feedback, and asks the next relevant follow-up question. | ⬜ | — |
+| P72-T3 ⚡ | `wails-app/backend/tts/`, `wails-app/frontend/src/` | **Interactive Audio TTS:** Integrate TTS (Text-to-Speech) so the mock interviewer reads its questions out loud, making the experience more immersive. | ⬜ | — |

@@ -1,0 +1,42 @@
+You are tasked with implementing the "Mock Mode Submit Button" feature (P72-T1) for BarnOwl AI.
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+Currently, the Voice Activity Detection (VAD) automatically submits the user's speech buffer to the LLM after a short pause. In "Mock Interview Mode", the user needs time to think and formulate their answer, so the auto-submission is frustrating. 
+
+Your goal is to:
+1. Prevent the auto-submission of the context buffer when `isMockMode` is true.
+2. Provide a "Submit Answer" button in the frontend that the user can manually click to evaluate their answer.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/frontend/src/products/interview/ConvPanel.svelte
+[MODIFY] wails-app/frontend/src/products/interview/InterviewHUD.svelte
+[MODIFY] wails-app/core/engine/pipeline.go (or similar where auto-submit is triggered)
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── CHANGES TO wails-app/core/engine/pipeline.go ────────────────────────────────
+
+1. Locate where the VAD timeout triggers the LLM (likely in `handleTranscript` or a related buffer timeout mechanism).
+2. Add a check: if `isMockMode` is true, do NOT automatically trigger the LLM call. Instead, let the transcript buffer accumulate.
+3. Ensure there is a way (e.g. an exported API method) for the frontend to explicitly trigger the LLM call with the accumulated buffer when in Mock Mode.
+
+─── CHANGES TO FRONTEND ────────────────────────────────
+
+1. In `ConvPanel.svelte` (or `InterviewHUD.svelte`), add a "Submit Answer" button that is ONLY visible when `isMockMode` is active.
+2. Clicking this button should trigger the API method to flush the current question buffer and evaluate the answer.
+
+════════════════════════════════════════════════════════════════
+VERIFICATION & TESTING
+════════════════════════════════════════════════════════════════
+
+1. Ensure the app builds without errors.
+2. Verify that in Live/Stealth mode, the auto-submit still works exactly as before.
+3. Verify that in Mock mode, pausing does not trigger the LLM, and clicking "Submit Answer" successfully evaluates the accumulated text.

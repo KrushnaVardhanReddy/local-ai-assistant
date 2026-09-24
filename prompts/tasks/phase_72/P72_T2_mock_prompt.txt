@@ -1,0 +1,40 @@
+You are tasked with implementing the "Mock Interview Persona" feature (P72-T2) for BarnOwl AI.
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+Currently, the LLM acts as a copilot answering the interviewer's questions in both Live and Mock mode. In Mock mode, the LLM should act as the Interviewer. It needs to evaluate the user's spoken answer, give brief constructive feedback, and then ask the next relevant follow-up question.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/backend/llm/prompts.go (or where system prompts are defined)
+[MODIFY] wails-app/core/engine/pipeline.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── CHANGES TO SYSTEM PROMPTS ────────────────────────────────
+
+1. Define a new system prompt constant `MockInterviewerPrompt`.
+2. The prompt should instruct the LLM:
+   - "You are a senior technical interviewer."
+   - "The user has just provided an answer to a question."
+   - "Evaluate the user's response for accuracy, clarity, and completeness."
+   - "First, give brief, constructive feedback on their answer."
+   - "Then, ask the next relevant follow-up question."
+
+─── CHANGES TO ENGINE PIPELINE ────────────────────────────────
+
+1. In the backend, when `triggerLLMWithQuestion` (or equivalent) is called, check if `isMockMode` is true.
+2. If true, inject the `MockInterviewerPrompt` as the system prompt instead of the standard stealth copilot prompt.
+
+════════════════════════════════════════════════════════════════
+VERIFICATION & TESTING
+════════════════════════════════════════════════════════════════
+
+1. Verify that when Mock Mode is disabled, the system prompt remains the original stealth copilot prompt.
+2. Verify that when Mock Mode is enabled, the LLM evaluates the user's input and asks a follow-up question.

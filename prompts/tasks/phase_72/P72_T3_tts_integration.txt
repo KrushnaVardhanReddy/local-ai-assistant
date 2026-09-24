@@ -1,0 +1,30 @@
+You are tasked with implementing the "Interactive Audio TTS" feature (P72-T3) for BarnOwl AI.
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+To make the Mock Interview Mode more immersive, the mock interviewer should read its questions and feedback out loud to the user using Text-to-Speech (TTS).
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/frontend/src/ (where audio playback/Web Speech API logic is appropriate)
+[MODIFY] wails-app/backend/tts/ (if using a backend TTS engine)
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+1. When the LLM streams its response in Mock Mode, the frontend or backend should capture the text.
+2. Integrate a Text-to-Speech engine. This can be the browser's native `window.speechSynthesis` (Web Speech API) via the frontend, OR a backend service (e.g., calling OpenAI TTS, Piper, or edge-tts).
+3. Play the audio aloud so the user can hear the interviewer.
+4. Provide a toggle in the UI (e.g., in `InterviewHUD.svelte` or Settings) to enable/disable TTS in Mock Mode.
+
+════════════════════════════════════════════════════════════════
+VERIFICATION & TESTING
+════════════════════════════════════════════════════════════════
+
+1. Ensure TTS does NOT trigger during Live/Stealth mode (to avoid playing audio loudly during a real interview).
+2. Ensure TTS works gracefully with streaming LLM text (either waiting for sentences to complete or waiting for full response).
