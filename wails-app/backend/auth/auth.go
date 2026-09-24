@@ -11,7 +11,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -49,48 +51,108 @@ var (
 	keyringDelete = keyring.Delete
 )
 
-// SaveToken saves the session token to the keyring.
-func SaveToken(token string) error {
-	return keyringSet(KeyringService, KeyringTokenUser, token)
+func getFallbackPath() string {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		configDir = os.TempDir()
+	}
+	dir := filepath.Join(configDir, "barnowl-ai")
+	os.MkdirAll(dir, 0700)
+	return filepath.Join(dir, "auth.json")
 }
 
-// LoadToken loads the session token from the keyring.
-func LoadToken() (string, error) {
-	token, err := keyringGet(KeyringService, KeyringTokenUser)
+func readFallback(key string) (string, error) {
+	data, err := os.ReadFile(getFallbackPath())
 	if err != nil {
-		if err == keyring.ErrNotFound {
+		if os.IsNotExist(err) {
 			return "", nil
 		}
 		return "", err
 	}
+	var m map[string]string
+	if err := json.Unmarshal(data, &m); err != nil {
+		return "", err
+	}
+	val, ok := m[key]
+	if !ok {
+		return "", nil
+	}
+	return val, nil
+}
+
+func writeFallback(key, value string) error {
+	path := getFallbackPath()
+	var m map[string]string
+	data, err := os.ReadFile(path)
+	if err == nil {
+		json.Unmarshal(data, &m)
+	}
+	if m == nil {
+		m = make(map[string]string)
+	}
+	if value == "" {
+		delete(m, key)
+	} else {
+		m[key] = value
+	}
+	data, err = json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0600)
+}
+
+// SaveToken saves the session token to the keyring, or falls back to a file.
+func SaveToken(token string) error {
+	err := keyringSet(KeyringService, KeyringTokenUser, token)
+	if err != nil {
+		log.Printf("[Auth] Keyring failed, falling back to file: %v", err)
+		return writeFallback(KeyringTokenUser, token)
+	}
+	return nil
+}
+
+// LoadToken loads the session token from the keyring, or falls back.
+func LoadToken() (string, error) {
+	token, err := keyringGet(KeyringService, KeyringTokenUser)
+	if err != nil {
+		if err == keyring.ErrNotFound {
+			// Keyring doesn't have it, maybe fallback file does
+			return readFallback(KeyringTokenUser)
+		}
+		log.Printf("[Auth] Keyring get failed, trying fallback: %v", err)
+		return readFallback(KeyringTokenUser)
+	}
 	return token, nil
 }
 
-// DeleteToken deletes the session token from the keyring.
+// DeleteToken deletes the session token.
 func DeleteToken() error {
+	_ = writeFallback(KeyringTokenUser, "")
 	err := keyringDelete(KeyringService, KeyringTokenUser)
-	if err != nil {
-		if err == keyring.ErrNotFound {
-			return nil
-		}
+	if err != nil && err != keyring.ErrNotFound {
 		return err
 	}
 	return nil
 }
 
-// SaveLicenseKey saves the license key to the keyring.
+// SaveLicenseKey saves the license key to the keyring, or fallback.
 func SaveLicenseKey(key string) error {
-	return keyringSet(KeyringService, KeyringLicenseUser, key)
+	err := keyringSet(KeyringService, KeyringLicenseUser, key)
+	if err != nil {
+		return writeFallback(KeyringLicenseUser, key)
+	}
+	return nil
 }
 
-// LoadLicenseKey loads the license key from the keyring.
+// LoadLicenseKey loads the license key from the keyring, or fallback.
 func LoadLicenseKey() (string, error) {
 	key, err := keyringGet(KeyringService, KeyringLicenseUser)
 	if err != nil {
 		if err == keyring.ErrNotFound {
-			return "", nil
+			return readFallback(KeyringLicenseUser)
 		}
-		return "", err
+		return readFallback(KeyringLicenseUser)
 	}
 	return key, nil
 }
@@ -102,11 +164,9 @@ var runtimeGOOS = runtime.GOOS
 
 // DeleteLicenseKey deletes the license key from the keyring.
 func DeleteLicenseKey() error {
+	_ = writeFallback(KeyringLicenseUser, "")
 	err := keyringDelete(KeyringService, KeyringLicenseUser)
-	if err != nil {
-		if err == keyring.ErrNotFound {
-			return nil
-		}
+	if err != nil && err != keyring.ErrNotFound {
 		return err
 	}
 	return nil
