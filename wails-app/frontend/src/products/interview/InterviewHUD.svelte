@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { wsState, toggleMockMode } from "$lib/ws.svelte";
+  import { wsState, toggleMockMode, toggleMockTTS } from "$lib/ws.svelte";
   import { getApiUrl, apiFetch } from "$lib/api";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
   import { authState } from "$lib/auth.svelte";
@@ -384,6 +384,12 @@
         <span class="material-symbols-outlined">psychology</span>
         <span class="tool-label">Mock</span>
       </button>
+      {#if wsState.isMockMode}
+        <button class="tool-btn" onclick={() => toggleMockTTS(!wsState.mockTTS)} class:active={wsState.mockTTS} title="Toggle TTS for Mock Mode">
+          <span class="material-symbols-outlined">volume_up</span>
+          <span class="tool-label">TTS</span>
+        </button>
+      {/if}
       <button class="tool-btn" onclick={handleSnip}>
         <span class="material-symbols-outlined">screenshot_monitor</span>
         <span class="tool-label">Snip</span>
