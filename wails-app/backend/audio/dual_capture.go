@@ -49,7 +49,10 @@ func (d *DualCaptureEngine) Start(loopbackDeviceID int, micDeviceID int, loopbac
 		caps, err := d.ctx.Devices(malgo.Capture)
 		if err == nil {
 			for _, cap := range caps {
-				if strings.Contains(cap.Name(), "Monitor of") || strings.Contains(cap.Name(), ".monitor") {
+				name := cap.Name()
+				isMonitor := strings.Contains(name, "Monitor of") || strings.Contains(name, ".monitor")
+				isHDMI := strings.Contains(name, "HDMI") || strings.Contains(name, "DisplayPort")
+				if isMonitor && !isHDMI {
 					loopbackConfig.Capture.DeviceID = cap.ID.Pointer()
 					break
 				}
