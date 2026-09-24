@@ -64,7 +64,6 @@ type StealthEngine struct {
 	isTTSPlaying     bool
 
 	transcriptLogMu sync.Mutex
-	transcriptLog   []string
 }
 
 func New(
