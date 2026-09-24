@@ -9,13 +9,15 @@ import (
 )
 
 type mockPreemptLLM struct {
-	tokens  []string
-	blockCh chan struct{}
-	calls   []string
+	tokens     []string
+	blockCh    chan struct{}
+	calls      []string
+	sysPrompts []string
 }
 
 func (m *mockPreemptLLM) StreamCompletion(ctx context.Context, q string, sp string, hist []driven.ChatMessage, onToken driven.StreamCallback, onDone func()) error {
 	m.calls = append(m.calls, q)
+	m.sysPrompts = append(m.sysPrompts, sp)
 
 	for _, t := range m.tokens {
 		select {
@@ -197,5 +199,41 @@ func TestPipeline_RollingTranscriptBuffer(t *testing.T) {
 	}
 	if !strings.Contains(capturedQuestion, "[4] \"at scale.\"") {
 		t.Errorf("Missing entry 4. Got: %s", capturedQuestion)
+	}
+}
+
+func TestPipeline_MockModePrompt(t *testing.T) {
+	blockCh := make(chan struct{})
+	close(blockCh)
+	llm := &mockPreemptLLM{
+		tokens:  []string{"A"},
+		blockCh: blockCh,
+	}
+	events := &MockEvents{Emitted: make(map[string]int)}
+	eng := New(Config{SystemPrompt: "Base Prompt"}, nil, llm, nil, events)
+
+	// Default mode
+	eng.AskQuestion("Question 1")
+	time.Sleep(50 * time.Millisecond)
+
+	if len(llm.sysPrompts) != 1 {
+		t.Fatalf("Expected 1 call to LLM, got %d", len(llm.sysPrompts))
+	}
+	if !strings.Contains(llm.sysPrompts[0], "Base Prompt") {
+		t.Errorf("Expected default prompt to contain 'Base Prompt', got: %s", llm.sysPrompts[0])
+	}
+
+	// Mock mode enabled
+	eng.ToggleMockInterviewMode(true)
+	eng.AskQuestion("Question 2")
+	time.Sleep(50 * time.Millisecond)
+
+	if len(llm.sysPrompts) != 2 {
+		t.Fatalf("Expected 2 calls to LLM, got %d", len(llm.sysPrompts))
+	}
+
+	// Ensure the llm package is imported in pipeline.go, so we can hardcode the string here or import llm
+	if !strings.Contains(llm.sysPrompts[1], "senior technical interviewer") {
+		t.Errorf("Expected mock prompt, got: %s", llm.sysPrompts[1])
 	}
 }

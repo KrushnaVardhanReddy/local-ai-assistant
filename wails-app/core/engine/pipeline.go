@@ -252,7 +252,7 @@ func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 
 		sysPrompt := e.cfg.SystemPrompt
 		if isMockMode {
-			sysPrompt = "You are a technical interviewer. Ask the candidate a question based on their resume. Wait for their response. Evaluate their response briefly, then ask the next question."
+			sysPrompt = llm.MockInterviewerPrompt
 		}
 
 		if activeDocBlock != "" {

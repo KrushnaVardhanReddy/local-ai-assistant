@@ -97,6 +97,6 @@ Run `scripts/deploy_supabase.sh` to link your Supabase project, push all schema 
 
 ### Phase 70: Mock Interview Mode (Go Port)
 - **TTS Adapter**: Implemented `wails-app/backend/tts` with `EdgeTTSAdapter` using `edge-tts` and `ffplay`/`afplay`.
-- **Engine State**: `StealthEngine` tracks `isMockMode` and updates `SystemPrompt` dynamically to an interviewer persona when active.
+- **Engine State**: `StealthEngine` tracks `isMockMode` and updates `SystemPrompt` dynamically to an interviewer persona when active. Uses `llm.MockInterviewerPrompt` which instructs the LLM to act as a senior technical interviewer, evaluate the response, give brief constructive feedback, and ask a relevant follow-up question.
 - **Audio Output**: Final LLM answers are streamed to the TTS adapter when Mock Mode is active.
 - **UI Toggle**: Added a Mock Mode toggle to the frontend header in `InterviewHUD.svelte` that issues Wails IPC calls to update backend state.

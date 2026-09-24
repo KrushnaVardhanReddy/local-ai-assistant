@@ -186,3 +186,15 @@ func TestBuildSystemPrompt(t *testing.T) {
 		})
 	}
 }
+
+func TestMockInterviewerPrompt(t *testing.T) {
+	expected := "You are a senior technical interviewer. " +
+		"The user has just provided an answer to a question. " +
+		"Evaluate the user's response for accuracy, clarity, and completeness. " +
+		"First, give brief, constructive feedback on their answer. " +
+		"Then, ask the next relevant follow-up question."
+
+	if MockInterviewerPrompt != expected {
+		t.Errorf("MockInterviewerPrompt mismatch.\nExpected: %q\nGot:      %q", expected, MockInterviewerPrompt)
+	}
+}
