@@ -69,6 +69,12 @@ func (b *QuestionBuffer) SetAutoFlush(enabled bool) {
 	b.autoFlush = enabled
 }
 
+func (b *QuestionBuffer) GetAutoFlush() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.autoFlush
+}
+
 func (b *QuestionBuffer) AddChunk(chunk string) {
 	b.mu.Lock()
 	b.chunks = append(b.chunks, chunk)

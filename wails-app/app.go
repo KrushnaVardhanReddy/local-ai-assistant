@@ -932,6 +932,13 @@ func (a *App) SummarizeSession(requests []engine.SummaryRequest) error {
 	return a.engine.SummarizeSession(requests)
 }
 
+func (a *App) SummarizeTranscript() error {
+	if a.engine == nil {
+		return fmt.Errorf("engine not initialized")
+	}
+	return a.engine.SummarizeTranscript()
+}
+
 func (a *App) SetProxyToken(token string) {
 	llm.SetProxyToken(token)
 }

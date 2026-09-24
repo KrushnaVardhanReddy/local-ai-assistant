@@ -356,3 +356,87 @@ func (e *StealthEngine) triggerLLMWithQuestion(cleanTranscript string) {
 		}
 	}(cleanTranscript, llmQuestion, ctx, cancel)
 }
+
+func (e *StealthEngine) triggerLLMWithCustomPrompt(prompt string, input string) {
+	e.inFlightMu.Lock()
+	if e.cancelInFlight != nil {
+		log.Printf("[PREEMPT] Interrupting active LLM stream for custom prompt")
+		e.cancelInFlight()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	e.cancelInFlight = cancel
+	e.inFlightCtx = ctx
+	e.inFlightMu.Unlock()
+
+	e.mu.Lock()
+	e.thinking = true
+	e.response = ""
+	e.mu.Unlock()
+	if e.events != nil {
+		e.events.Emit("on_response_start", nil)
+	}
+
+	go func(streamCtx context.Context, streamCancel context.CancelFunc) {
+		e.llmBusy.Lock()
+		defer e.llmBusy.Unlock()
+
+		defer func() {
+			e.inFlightMu.Lock()
+			if e.inFlightCtx == streamCtx {
+				e.cancelInFlight = nil
+				e.inFlightCtx = nil
+			}
+			e.inFlightMu.Unlock()
+			streamCancel()
+		}()
+
+		if streamCtx.Err() != nil {
+			return
+		}
+
+		var answerBuilder strings.Builder
+
+		err := e.llm.StreamCompletion(streamCtx, input, prompt, nil, func(token string) {
+			answerBuilder.WriteString(token)
+			e.mu.Lock()
+			e.response = answerBuilder.String()
+			e.thinking = true
+			e.mu.Unlock()
+
+			if e.events != nil {
+				e.events.Emit("on_response_token", map[string]interface{}{"text": token})
+			}
+		}, func() {
+			e.mu.Lock()
+			e.thinking = false
+			e.mu.Unlock()
+
+			if e.events != nil {
+				e.events.Emit("on_response_end", nil)
+			}
+		})
+
+		if streamCtx.Err() != nil {
+			log.Printf("[PREEMPT] LLM streaming aborted for custom prompt")
+			return
+		}
+
+		if err != nil {
+			log.Printf("LLM streaming failed: %v", err)
+		} else {
+			log.Printf("[LLM] Stream complete for custom prompt.")
+		}
+	}(ctx, cancel)
+}
+
+func (e *StealthEngine) SummarizeTranscript() error {
+	lines := e.FlushTranscriptLog()
+	if len(lines) == 0 {
+		return fmt.Errorf("transcript log is empty")
+	}
+
+	fullTranscript := strings.Join(lines, "\n")
+	e.triggerLLMWithCustomPrompt(llm.TranscriptSummaryPrompt, fullTranscript)
+
+	return nil
+}

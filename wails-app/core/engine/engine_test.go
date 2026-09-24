@@ -552,3 +552,83 @@ func (m *MockCache) SemanticSearch(embedding []float32, limit int, threshold flo
 func (m *MockCache) IndexDocumentChunk(path, text string, embedding []float32) error { return nil }
 func (m *MockCache) GetIndexedPaths() ([]string, error)                              { return nil, nil }
 func (m *MockCache) RemoveIndexedPath(path string) error                             { return nil }
+
+func TestAppendTranscriptLog(t *testing.T) {
+	eng := setupTestEngine(t, []string{}, nil, false, false, nil)
+	eng.AppendTranscriptLog("[User]: Hello")
+	eng.AppendTranscriptLog("[AI]: Hi")
+
+	lines := eng.FlushTranscriptLog()
+	if len(lines) != 2 {
+		t.Errorf("expected 2 lines, got %d", len(lines))
+	}
+	if lines[0] != "[User]: Hello" {
+		t.Errorf("unexpected first line: %s", lines[0])
+	}
+
+	// Flush should reset
+	lines2 := eng.FlushTranscriptLog()
+	if len(lines2) != 0 {
+		t.Errorf("expected 0 lines after flush, got %d", len(lines2))
+	}
+}
+
+func TestProcessAudioTagged_TranscriptMode(t *testing.T) {
+	eng := setupTestEngine(t, []string{"tagged text"}, nil, false, false, nil)
+
+	// Mock autoFlush behavior by forcing it false
+	eng.GetQuestionBuffer().SetAutoFlush(false)
+
+	eng.ProcessAudioTagged([]float32{0.1}, "Speaker1")
+
+	time.Sleep(100 * time.Millisecond) // Let goroutine process
+
+	lines := eng.FlushTranscriptLog()
+	if len(lines) != 1 {
+		t.Errorf("expected 1 line in transcript log, got %d", len(lines))
+	} else if lines[0] != "[Speaker1]: tagged text" {
+		t.Errorf("unexpected log format: %s", lines[0])
+	}
+}
+
+func TestProcessAudioTagged_NormalMode(t *testing.T) {
+	eng := setupTestEngine(t, []string{"tagged text"}, nil, false, false, nil)
+
+	// Default is true
+	eng.GetQuestionBuffer().SetAutoFlush(true)
+
+	eng.ProcessAudioTagged([]float32{0.1}, "Speaker1")
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Should not be in transcript log
+	lines := eng.FlushTranscriptLog()
+	if len(lines) != 0 {
+		t.Errorf("expected 0 lines in normal mode, got %d", len(lines))
+	}
+}
+
+func TestSummarizeTranscript(t *testing.T) {
+	mockLLM := &MockLLM{Answer: "Summary"}
+	eng := setupTestEngine(t, []string{}, mockLLM, false, false, nil)
+
+	err := eng.SummarizeTranscript()
+	if err == nil {
+		t.Errorf("expected error on empty log, got nil")
+	}
+
+	eng.AppendTranscriptLog("[S1]: line 1")
+	eng.AppendTranscriptLog("[S2]: line 2")
+
+	err = eng.SummarizeTranscript()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	state := eng.GetState()
+	if state.Response != "Summary" {
+		t.Errorf("expected response 'Summary', got '%s'", state.Response)
+	}
+}
