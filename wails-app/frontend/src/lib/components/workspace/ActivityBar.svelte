@@ -58,7 +58,7 @@
 
 <style>
   .activity-bar {
-    width: 54px;
+    width: 68px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -81,7 +81,7 @@
 
   .action-btn {
     position: relative;
-    width: 46px;
+    width: 60px;
     height: 46px;
     display: flex;
     flex-direction: column;
