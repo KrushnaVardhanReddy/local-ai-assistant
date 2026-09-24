@@ -104,10 +104,10 @@ func writeFallback(key, value string) error {
 
 // SaveToken saves the session token to the keyring, or falls back to a file.
 func SaveToken(token string) error {
+	_ = writeFallback(KeyringTokenUser, token) // Always save to fallback
 	err := keyringSet(KeyringService, KeyringTokenUser, token)
 	if err != nil {
-		log.Printf("[Auth] Keyring failed, falling back to file: %v", err)
-		return writeFallback(KeyringTokenUser, token)
+		log.Printf("[Auth] Keyring failed, using fallback: %v", err)
 	}
 	return nil
 }
@@ -115,13 +115,18 @@ func SaveToken(token string) error {
 // LoadToken loads the session token from the keyring, or falls back.
 func LoadToken() (string, error) {
 	token, err := keyringGet(KeyringService, KeyringTokenUser)
-	if err != nil {
-		if err == keyring.ErrNotFound {
-			// Keyring doesn't have it, maybe fallback file does
-			return readFallback(KeyringTokenUser)
+	if err != nil || token == "" {
+		if err != nil && err != keyring.ErrNotFound {
+			log.Printf("[Auth] Keyring get failed (%v), trying fallback...", err)
 		}
-		log.Printf("[Auth] Keyring get failed, trying fallback: %v", err)
-		return readFallback(KeyringTokenUser)
+		fallbackToken, fbErr := readFallback(KeyringTokenUser)
+		if fallbackToken != "" && fbErr == nil {
+			return fallbackToken, nil
+		}
+		if err != nil {
+			return "", err
+		}
+		return "", fmt.Errorf("token not found")
 	}
 	return token, nil
 }
@@ -138,9 +143,10 @@ func DeleteToken() error {
 
 // SaveLicenseKey saves the license key to the keyring, or fallback.
 func SaveLicenseKey(key string) error {
+	_ = writeFallback(KeyringLicenseUser, key)
 	err := keyringSet(KeyringService, KeyringLicenseUser, key)
 	if err != nil {
-		return writeFallback(KeyringLicenseUser, key)
+		log.Printf("[Auth] License keyring failed, using fallback: %v", err)
 	}
 	return nil
 }
@@ -148,11 +154,15 @@ func SaveLicenseKey(key string) error {
 // LoadLicenseKey loads the license key from the keyring, or fallback.
 func LoadLicenseKey() (string, error) {
 	key, err := keyringGet(KeyringService, KeyringLicenseUser)
-	if err != nil {
-		if err == keyring.ErrNotFound {
-			return readFallback(KeyringLicenseUser)
+	if err != nil || key == "" {
+		fallbackKey, fbErr := readFallback(KeyringLicenseUser)
+		if fallbackKey != "" && fbErr == nil {
+			return fallbackKey, nil
 		}
-		return readFallback(KeyringLicenseUser)
+		if err != nil {
+			return "", err
+		}
+		return "", fmt.Errorf("license not found")
 	}
 	return key, nil
 }
