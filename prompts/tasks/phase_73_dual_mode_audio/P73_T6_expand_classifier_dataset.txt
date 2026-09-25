@@ -1,0 +1,68 @@
+You are tasked with expanding the embedded centroids dataset for the turn-detection classifier to make it much more robust (P73-T6).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+In P73-T5, we successfully embedded `centroids.json` directly into the binary using `//go:embed`. This gives us O(1) startup time. However, the current dataset used to generate those centroids was very small and highly biased toward React and Frontend.
+
+We need you to write a Python script that contains a massive, hardcoded dictionary of highly curated interview questions, generate embeddings for them using `nomic-ai/nomic-embed-text-v1.5`, and overwrite `wails-app/backend/filter/centroids.json` with the new data.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[CREATE] scripts/generate_centroids.py (Temporary script, delete after running)
+[MODIFY] wails-app/backend/filter/centroids.json
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Write the Python Script ────────────────────────────
+
+Write a Python script `scripts/generate_centroids.py` that does the following:
+
+1. Imports `sentence_transformers` and `json` and `numpy`.
+2. Hardcodes a massive dictionary named `dataset`. It must contain the exact following keys:
+   `"behavioral"`, `"coding"`, `"system_design"`, `"conceptual"`, `"opinion"`, `"noise"`, `"intro"`
+3. For EACH of these 7 keys, use your internal LLM knowledge to generate exactly 50 highly diverse, realistic examples.
+   - For `coding` and `conceptual`, include questions across Go, Rust, C++, Java, Python, SQL, React, Node, DevOps, and OS fundamentals.
+   - For `noise`, include conversational stumbles: "uh huh", "wait, let me think", "could you repeat that?", "I guess", "yeah totally", "hmm okay", etc.
+4. Load the embedding model:
+   ```python
+   from sentence_transformers import SentenceTransformer
+   import numpy as np
+   import json
+   model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
+   ```
+5. Loop over the dictionary, encode the strings, calculate the mean across axis 0, and save it to `wails-app/backend/filter/centroids.json`.
+   ```python
+   centroids = {}
+   for category, examples in dataset.items():
+       embeddings = model.encode(examples)
+       centroid = np.mean(embeddings, axis=0)
+       centroids[category] = centroid.tolist()
+   with open("wails-app/backend/filter/centroids.json", "w") as f:
+       json.dump(centroids, f, indent=2)
+   ```
+
+─── STEP 2: Execute the Script ─────────────────────────────────
+
+Run the script you just wrote:
+```bash
+pip install sentence-transformers einops
+python scripts/generate_centroids.py
+```
+This will download the ONNX model, embed all 350 examples, and overwrite `centroids.json`.
+
+─── STEP 3: Cleanup ────────────────────────────────────────────
+
+Delete `scripts/generate_centroids.py`. The ONLY file that should be in your Pull Request is the modified `wails-app/backend/filter/centroids.json`.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Verify `centroids.json` exists and contains 7 keys.
+- Verify each key maps to an array of exactly 768 floats.
