@@ -51,7 +51,7 @@ export function GetOpenDocuments():Promise<Array<driving.WorkspaceDocument>>;
 
 export function GetState():Promise<Record<string, any>>;
 
-export function GetSystemStatus():Promise<Record<string, string>>;
+export function GetSystemStatus():Promise<Record<string, any>>;
 
 export function GetWorkspaceTree():Promise<Array<driving.FileNode>>;
 
@@ -83,6 +83,8 @@ export function SendChat(arg1:string):Promise<void>;
 
 export function SetActiveDocument(arg1:string):Promise<void>;
 
+export function SetAppMode(arg1:string):Promise<void>;
+
 export function SetAudioDevice(arg1:number,arg2:boolean):Promise<void>;
 
 export function SetClickthrough(arg1:boolean):Promise<void>;
@@ -102,6 +104,8 @@ export function StartOAuthFlow(arg1:string):Promise<void>;
 export function StopBackend():Promise<void>;
 
 export function SummarizeSession(arg1:Array<engine.SummaryRequest>):Promise<void>;
+
+export function SummarizeTranscript():Promise<void>;
 
 export function ToggleClickthroughMode():Promise<boolean>;
 

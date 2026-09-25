@@ -158,6 +158,10 @@ export function SetActiveDocument(arg1) {
   return window['go']['main']['App']['SetActiveDocument'](arg1);
 }
 
+export function SetAppMode(arg1) {
+  return window['go']['main']['App']['SetAppMode'](arg1);
+}
+
 export function SetAudioDevice(arg1, arg2) {
   return window['go']['main']['App']['SetAudioDevice'](arg1, arg2);
 }
@@ -196,6 +200,10 @@ export function StopBackend() {
 
 export function SummarizeSession(arg1) {
   return window['go']['main']['App']['SummarizeSession'](arg1);
+}
+
+export function SummarizeTranscript() {
+  return window['go']['main']['App']['SummarizeTranscript']();
 }
 
 export function ToggleClickthroughMode() {

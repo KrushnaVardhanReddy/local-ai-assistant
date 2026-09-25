@@ -1,0 +1,127 @@
+You are tasked with removing the Gemma/llamafile local LLM classifier from BarnOwl AI (P73-T4).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+The app currently uses a local llamafile binary running Gemma-3-270m-it-Q8_0 as a
+"turn-detection" classifier. After every STT transcript chunk passes the ONNX noise
+filter, the app sends it to Gemma via HTTP and asks: "Is this a complete question?"
+before triggering the main Cloudflare LLM call.
+
+This causes two critical issues in production:
+1. Gemma takes 2–10 seconds on CPU to return a single true/false value.
+2. The classifier and the main LLM compete for the same 2 CPU threads, causing
+   the classifier HTTP request to time out while the main LLM is mid-stream.
+   Result: `context deadline exceeded` → buffer cleared → question DROPPED.
+
+Root cause analysis: Gemma adds ZERO value because:
+- The ONNX embedding classifier in `wails-app/backend/filter/classifier.go` already
+  separates noise from real interview questions using cosine similarity.
+- Session history (`sessionMgr.GetRecentTurns()`) in `pipeline.go` already handles
+  multi-turn follow-up context ("Explain more" becomes meaningful because of history).
+- The main answer LLM is Cloudflare AI (remote), NOT the local llamafile.
+  llamafile is ONLY used for Gemma classification — nothing else.
+
+Decision: Replace Gemma with an instant always-true classifier. Any transcript that
+survives the ONNX noise filter is treated as a complete, actionable question.
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/backend/classifier/buffer.go
+[MODIFY] wails-app/core/engine/engine.go
+[DELETE] wails-app/backend/classifier/gemma.go
+[DELETE] wails-app/backend/classifier/gemma_test.go
+[DELETE] wails-app/backend/classifier/llama_server.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── MODIFY wails-app/backend/classifier/buffer.go ──────────────
+
+In the `NewQuestionBuffer()` constructor function, find the field:
+    classifyFn: IsQuestionComplete,
+
+Replace it with an inline anonymous function that always returns true:
+    classifyFn: func(_ context.Context, _ string) (bool, error) { return true, nil },
+
+This is the ONLY change to buffer.go. Do NOT modify anything else in this file.
+
+The effect: the buffer flushes and triggers the LLM immediately the moment any
+transcript chunk arrives (after passing the ONNX filter upstream). Zero latency.
+
+─── MODIFY wails-app/core/engine/engine.go ─────────────────────
+
+In the `Start(ctx context.Context)` method, locate and REMOVE these 3 lines:
+    if err := classifier.DefaultLlamaServer.Start(ctx, e.events); err != nil {
+        log.Printf("[Engine] Gemma sidecar unavailable (turn-detection disabled): %v\n", err)
+    }
+
+In the `Stop()` method, locate and REMOVE this 1 line:
+    classifier.DefaultLlamaServer.Stop()
+
+After removing these lines, check if the `classifier` package import in engine.go
+is still used by other symbols (e.g., `classifier.QuestionBuffer`, `classifier.NewQuestionBuffer`).
+If yes, keep the import. If `classifier.DefaultLlamaServer` was the ONLY usage of the
+import, remove the import entirely to avoid a compilation error.
+
+─── DELETE wails-app/backend/classifier/gemma.go ───────────────
+
+Delete this file entirely. It contains only: `IsQuestionComplete()`, `GemmaRequest`,
+`GemmaResponse`, `GemmaResult`, `GemmaMessage`, and `booleanGrammar`. None of these
+will be referenced anywhere after this task is complete.
+
+─── DELETE wails-app/backend/classifier/gemma_test.go ──────────
+
+Delete this file entirely. It contains tests for `IsQuestionComplete` which no
+longer exists.
+
+─── DELETE wails-app/backend/classifier/llama_server.go ────────
+
+Delete this file entirely. It contains: `LlamaServerProcess`, `DefaultLlamaServer`,
+`LlamaServerPort`, `LlamafileURL`, and the download/start/stop logic.
+
+BEFORE DELETING: Verify no other file references these symbols by running:
+    grep -rn "DefaultLlamaServer\|LlamaServerPort\|LlamafileURL\|LlamaServerProcess" wails-app/
+
+The ONLY expected references are:
+  - engine.go (which we are removing above)
+  - gemma.go (which we are deleting above)
+  - gemma_test.go (which we are deleting above)
+
+If any OTHER file references these symbols, fix those files first before deleting.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+After all changes, run the following and verify each passes:
+
+1. Compile check:
+   cd wails-app && go build ./...
+   → Must produce ZERO errors and ZERO "imported and not used" warnings.
+
+2. Unit tests:
+   cd wails-app && go test ./backend/classifier/... -v
+   → The only remaining test file is buffer_test.go (if it exists). All tests must pass.
+   → gemma_test.go is deleted, so no Gemma tests should appear.
+
+3. Sanity grep — confirm no dangling references:
+   grep -rn "IsQuestionComplete\|DefaultLlamaServer\|LlamaServerPort\|llamafile" wails-app/
+   → Must return ZERO results.
+
+════════════════════════════════════════════════════════════════
+DO NOT CHANGE
+════════════════════════════════════════════════════════════════
+
+- wails-app/backend/filter/classifier.go — This is the ONNX embedding classifier.
+  It is a completely separate system and must NOT be touched.
+- wails-app/backend/classifier/buffer.go — Only change the `classifyFn` field.
+  All other logic (watchdog, SetAutoFlush, AddChunk, flush, Reset) must remain intact.
+- wails-app/core/engine/pipeline.go — No changes needed here.
+- wails-app/backend/llm/ — No changes. Cloudflare AI remains the main LLM.
+- The Makefile — No changes. There are no llamafile references there.
+- Any kill_linux.go / kill_darwin.go / kill_unix.go files in backend/classifier/ — Keep as-is.
