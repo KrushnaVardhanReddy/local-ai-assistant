@@ -83,3 +83,9 @@
 | P73-T4 | `backend/classifier/buffer.go`, `core/engine/engine.go` | **Remove Gemma Classifier:** Remove the llamafile/Gemma-3 local LLM sidecar entirely. Replace `IsQuestionComplete` with an instant always-true function. Delete `gemma.go`, `gemma_test.go`, and `llama_server.go`. Eliminates 5-8s startup, ~600MB RAM, and CPU contention that caused `context deadline exceeded` and dropped questions. | ✅ | #256 |
 | P73-T5 | `backend/filter/classifier.go`, `centroids.json` | **O(1) Centroid Embedding:** Shift ONNX centroid calculation to compile-time. Remove the hardcoded dataset map and runtime embedding generation from `initCentroids`. Instead, load pre-calculated 768-dim float arrays instantly via `//go:embed centroids.json`. This allows using massive HuggingFace datasets (10,000+ questions) for training without any startup penalty. | ✅ | #257 |
 | P73-T6 | `centroids.json` | **Expand Classifier Dataset:** Use Jules to dynamically write a python script containing ~350 highly diverse interview questions and conversational noise, calculate the embeddings via `nomic-embed-text-v1.5`, and overwrite `centroids.json`. Ensures robust accuracy across all programming languages. | 🔄 | — |
+
+## Phase 74 — Screen-Share Invisibility (OS Level) 👻
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P74-T1 | `backend/window/`, `adapters/window/`, `app.go` | **OS-Level Screen-Share Exclusion:** Implement true OS-level screen capture invisibility using `SetWindowDisplayAffinity` (Windows), `NSWindowSharingNone` (macOS), and X11 compositor hints (Linux) so the app remains invisible during accidental screen shares. | ⬜ | — |

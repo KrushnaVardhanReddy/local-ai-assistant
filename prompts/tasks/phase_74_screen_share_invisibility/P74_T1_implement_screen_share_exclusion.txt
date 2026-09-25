@@ -1,0 +1,246 @@
+You are tasked with implementing OS-level screen-share invisibility (Stealth Mode) for the Wails app (P74-T1).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+BarnOwl AI is a stealth interview assistant. Currently, the application:
+1. Uses `WindowSetAlwaysOnTop(true)` to float above other windows.
+2. Uses `HideFromTaskbar()` to remove itself from the OS taskbar.
+3. Supports "Stealth / Clickthrough Mode" via `ToggleClickthroughMode()` in `app.go`, which calls `window.SetIgnoreMouseEvents()` to allow clicks to pass through the BarnOwl window.
+
+However, none of these protect against accidental screen sharing. If the user shares their entire screen in Zoom, Teams, or Google Meet, BarnOwl will be fully visible to the interviewer. We need to add true OS-level screen capture exclusion.
+
+════════════════════════════════════════════════════════════════
+CURRENT ARCHITECTURE (READ CAREFULLY)
+════════════════════════════════════════════════════════════════
+
+The window backend is a well-structured, 3-layer system:
+
+─── Layer 1: Interface Definition ─────────────────────────────
+
+`wails-app/backend/window/window.go`:
+  - Defines the `WindowModifier` interface with two methods:
+    `SetIgnoreMouseEvents(ctx context.Context, ignore bool) error`
+    `HideFromTaskbar(ctx context.Context) error`
+  - Holds a `defaultModifier` global that is set via `init()` in each OS-specific file.
+  - Exposes package-level functions `SetIgnoreMouseEvents()` and `HideFromTaskbar()` that delegate to `defaultModifier`.
+
+─── Layer 2: OS-Specific Backends (already exist) ─────────────
+
+- `window_linux.go` — Uses X11/XFixes + GTK via CGO. Already has `get_window_by_pid()` and `set_window_clickthrough()`.
+  CGO flags: `#cgo pkg-config: gtk+-3.0 x11 xfixes`
+  
+- `window_darwin.go` — Uses Objective-C/Cocoa via CGO to enumerate `[NSApplication windows]`.
+  CGO flags: `#cgo CFLAGS: -x objective-c` and `#cgo LDFLAGS: -framework Cocoa`
+  
+- `window_windows.go` — Uses Win32 `syscall` (no CGO). Gets HWND via `FindWindowW("BarnOwl AI")`.
+  Uses `GetWindowLongW` / `SetWindowLongW` with `GWL_EXSTYLE`.
+
+─── Layer 3: Adapter & App Wiring ─────────────────────────────
+
+- `wails-app/adapters/window/wails_adapter.go`: Implements `driven.WindowPort`. Its `SetCaptureExcluded()` is currently a NO-OP stub.
+- `wails-app/app.go`: `ToggleStealth(opts)` is currently just an alias for `ToggleClickthroughMode()` — it does NOT call `SetCaptureExcluded`.
+
+─── Layer 4: Tests ─────────────────────────────────────────────
+
+- `window_test.go` uses `build tag: test` to skip OS-specific CGO implementations.
+- `window_mock_test.go` provides a `mockModifier` struct that implements `WindowModifier`.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/backend/window/window.go
+[MODIFY] wails-app/backend/window/window_linux.go
+[MODIFY] wails-app/backend/window/window_darwin.go
+[MODIFY] wails-app/backend/window/window_windows.go
+[MODIFY] wails-app/backend/window/window_mock_test.go
+[MODIFY] wails-app/backend/window/window_test.go
+[MODIFY] wails-app/adapters/window/wails_adapter.go
+[MODIFY] wails-app/app.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Extend the WindowModifier Interface ────────────────
+
+Modify `wails-app/backend/window/window.go`:
+
+1. Add `SetCaptureExcluded(ctx context.Context, excluded bool) error` to the `WindowModifier` interface.
+2. Add a corresponding package-level function:
+   ```go
+   func SetCaptureExcluded(ctx context.Context, excluded bool) error {
+       if defaultModifier == nil {
+           return nil
+       }
+       return defaultModifier.SetCaptureExcluded(ctx, excluded)
+   }
+   ```
+
+─── STEP 2: Implement Windows Screen Capture Exclusion ─────────
+
+Modify `wails-app/backend/window/window_windows.go`:
+
+1. Add `SetWindowDisplayAffinity` proc to the existing `user32` lazy DLL:
+   ```go
+   setWindowDisplayAffinity = user32.NewProc("SetWindowDisplayAffinity")
+   ```
+2. Add the constant:
+   ```go
+   WDA_EXCLUDEFROMCAPTURE = 0x00000011
+   ```
+3. Implement the method using the existing `FindWindowW` pattern to get the HWND:
+   ```go
+   func (w *windowsModifier) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+       titlePtr, _ := syscall.UTF16PtrFromString("BarnOwl AI")
+       hwnd, _, _ := findWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+       if hwnd == 0 {
+           return fmt.Errorf("could not find window by title")
+       }
+       affinity := uintptr(0)
+       if excluded {
+           affinity = WDA_EXCLUDEFROMCAPTURE
+       }
+       setWindowDisplayAffinity.Call(hwnd, affinity)
+       return nil
+   }
+   ```
+   NOTE: `SetWindowDisplayAffinity` with `WDA_EXCLUDEFROMCAPTURE` requires Windows 10 2004 or later.
+
+─── STEP 3: Implement macOS Screen Capture Exclusion ───────────
+
+Modify `wails-app/backend/window/window_darwin.go`:
+
+1. Add a new Objective-C helper function in the CGO block:
+   ```objc
+   void mac_set_capture_excluded(int excluded) {
+       dispatch_async(dispatch_get_main_queue(), ^{
+           NSApplication *app = [NSApplication sharedApplication];
+           for (NSWindow *window in [app windows]) {
+               if (excluded) {
+                   [window setSharingType:NSWindowSharingNone];
+               } else {
+                   [window setSharingType:NSWindowSharingReadWrite];
+               }
+           }
+       });
+   }
+   ```
+2. Implement the Go method:
+   ```go
+   func (d *darwinModifier) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+       enable := 0
+       if excluded {
+           enable = 1
+       }
+       C.mac_set_capture_excluded(C.int(enable))
+       return nil
+   }
+   ```
+
+─── STEP 4: Implement Linux Screen Capture Exclusion ───────────
+
+Modify `wails-app/backend/window/window_linux.go`:
+
+Linux does not have a universal API for screen capture exclusion. However, we can do a best-effort approach using X11 compositor hints that some compositors (like KWin and mutter) respect.
+
+1. Add a new C helper function `do_set_capture_excluded` and `set_window_capture_excluded` in the CGO block, following the SAME pattern as `set_window_clickthrough` (using `ClickthroughData` struct, `get_window_by_pid`, and `g_idle_add` for thread-safety). The function should set the `_NET_WM_BYPASS_COMPOSITOR` atom to hint to the compositor:
+   ```c
+   // Best-effort: set _NET_WM_BYPASS_COMPOSITOR and attempt gamma correction.
+   // True capture exclusion is not standardized on Linux.
+   gboolean do_set_capture_excluded(gpointer data) {
+       struct ClickthroughData *cdata = (struct ClickthroughData *)data;
+       Window wid = cdata->wid;
+       int excluded = cdata->enable;
+       free(cdata);
+
+       if (wid != 0) {
+           Display *display = XOpenDisplay(NULL);
+           if (display != NULL) {
+               Atom bypass = XInternAtom(display, "_NET_WM_BYPASS_COMPOSITOR", False);
+               long val = excluded ? 1 : 0;
+               XChangeProperty(display, wid, bypass, XA_CARDINAL, 32,
+                               PropModeReplace, (unsigned char *)&val, 1);
+               XFlush(display);
+               XCloseDisplay(display);
+           }
+       }
+       return G_SOURCE_REMOVE;
+   }
+
+   void set_window_capture_excluded(Window wid, int excluded) {
+       struct ClickthroughData *cdata = (struct ClickthroughData *)malloc(sizeof(struct ClickthroughData));
+       cdata->wid = wid;
+       cdata->enable = excluded;
+       g_idle_add(do_set_capture_excluded, cdata);
+   }
+   ```
+
+2. Implement the Go method using the existing `get_window_by_pid` helper:
+   ```go
+   func (l *linuxModifier) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+       go func() {
+           var wid C.Window
+           for i := 0; i < 10; i++ {
+               wid = C.get_window_by_pid(C.pid_t(os.Getpid()))
+               if wid != 0 {
+                   break
+               }
+               time.Sleep(200 * time.Millisecond)
+           }
+           if wid != 0 {
+               enable := 0
+               if excluded {
+                   enable = 1
+               }
+               C.set_window_capture_excluded(wid, C.int(enable))
+           } else {
+               fmt.Println("SetCaptureExcluded: could not find window ID via X11")
+           }
+       }()
+       return nil
+   }
+   ```
+
+─── STEP 5: Update Mock and Tests ──────────────────────────────
+
+1. Modify `window_mock_test.go` to add the new method to `mockModifier`:
+   ```go
+   func (m *mockModifier) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+       return nil
+   }
+   ```
+
+2. Modify `window_test.go` to add a test for `SetCaptureExcluded` following the existing test pattern (nil modifier, then mock modifier).
+
+─── STEP 6: Wire up the Adapter ────────────────────────────────
+
+Modify `wails-app/adapters/window/wails_adapter.go`. Replace the stub with a real implementation:
+```go
+func (w *WailsWindowAdapter) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+    return window.SetCaptureExcluded(ctx, excluded)
+}
+```
+
+─── STEP 7: Wire into ToggleStealth ────────────────────────────
+
+Modify `wails-app/app.go`. Update `ToggleStealth` to toggle BOTH clickthrough AND capture exclusion together:
+```go
+func (a *App) ToggleStealth(opts map[string]interface{}) {
+    isNowStealth := a.ToggleClickthroughMode()
+    if err := window.SetCaptureExcluded(a.ctx, isNowStealth); err != nil {
+        log.Printf("❌ SetCaptureExcluded error: %v\n", err)
+    }
+}
+```
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Verify the code compiles without errors on Windows, macOS, and Linux (`make build-barnowl`).
+- Verify that the `window` package tests pass with the test build tag (`go test -tags test ./backend/window/...`).
+- Verify the `mockModifier` struct satisfies the full updated `WindowModifier` interface.
+- Verify `ToggleStealth` in `app.go` now calls both `ToggleClickthroughMode()` and `SetCaptureExcluded()`.
