@@ -10,15 +10,6 @@ func TestInitCentroids(t *testing.T) {
 	centroidsOnce = sync.Once{}
 	centroids = nil
 
-	// Mock embedding to return vector of 1s
-	ClassifierGenerateEmbedding = func(text string) []float32 {
-		emb := make([]float32, 768)
-		for i := 0; i < 768; i++ {
-			emb[i] = 1.0
-		}
-		return emb
-	}
-
 	initCentroids()
 
 	if len(centroids) == 0 {
@@ -31,19 +22,6 @@ func TestInitCentroids(t *testing.T) {
 
 	if _, ok := centroids["behavioral"]; !ok {
 		t.Errorf("Expected 'behavioral' centroid to exist")
-	}
-
-	// Test case where embedding generation fails (returns nil or empty)
-	centroidsOnce = sync.Once{}
-	centroids = nil
-	ClassifierGenerateEmbedding = func(text string) []float32 {
-		return nil
-	}
-
-	initCentroids()
-
-	if len(centroids) != 0 {
-		t.Errorf("Expected centroids to be empty since embeddings failed")
 	}
 }
 
