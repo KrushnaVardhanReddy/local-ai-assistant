@@ -1,0 +1,72 @@
+You are tasked with two UX polish features for BarnOwl AI: Post-Interview Analytics UI and Structured "Talking Points" mode (P75-T1).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+1. **Post-Interview Analytics:** The Go backend already generates a detailed JSON Scorecard in `wails-app/backend/llm/scorecard.go` when `EndSession()` is called. However, the Svelte frontend does not display this data. We need a beautiful Post-Session Dashboard that pops up when the user clicks the "End Session" button to visualize their performance.
+
+2. **Structured Talking Points:** In live interviews, reading a dense paragraph of text is difficult and makes it obvious the user is reading. We need to alter our backend LLM prompt so that it returns 3-5 short, glanceable "Talking Points" (bullet points) instead of full prose.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[CREATE] wails-app/frontend/src/products/interview/ScorecardModal.svelte
+[MODIFY] wails-app/frontend/src/products/interview/InterviewHUD.svelte
+[MODIFY] wails-app/backend/llm/prompts.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── PART 1: Post-Interview Scorecard UI ────────────────────────
+
+The backend `EndSession()` function returns an object structured like this:
+```json
+{
+  "session": { ... },
+  "scorecard": {
+    "overall_score": 8,
+    "overall_summary": "...",
+    "topic_breakdown": { "React": 9, "System Design": 6 },
+    "key_strengths": ["...", "..."],
+    "critical_gaps": ["..."],
+    "recommended_topics_to_review": ["..."],
+    "turns": [ { "turn": 1, "score": 4, "verdict": "Good", "suggested_improvement": "..." } ]
+  }
+}
+```
+
+1. **Create `ScorecardModal.svelte`**:
+   - Design a highly polished modal (similar aesthetic to `AuthModal.svelte`).
+   - The modal should overlay the screen and include:
+     - A large **Overall Score** out of 10.
+     - A short **Summary paragraph**.
+     - Two columns for **Key Strengths** (green bullet points) and **Critical Gaps / Needs Review** (red/yellow bullet points).
+     - A **Close button** to dismiss the modal and reset the app.
+
+2. **Wire it to `InterviewHUD.svelte`**:
+   - In `InterviewHUD.svelte`, there is a button that calls `App.EndSession()`.
+   - Wait for the response. When the promise resolves, save the `scorecard` object to a local state variable `let currentScorecard = null;`
+   - Use `{#if currentScorecard} <ScorecardModal scorecard={currentScorecard} onClose={() => { currentScorecard = null; App.ClearState(); }} /> {/if}` to display it.
+
+─── PART 2: Glanceable "Talking Points" Prompt ─────────────────
+
+Modify `wails-app/backend/llm/prompts.go`. We need to change the system prompts to force the LLM to write in concise, scannable bullet points.
+
+1. **Modify `DefaultSystemPrompt`**:
+   - Add explicit instructions: "You must format your response strictly as 3 to 5 short, punchy 'Talking Points' bullet points. Do NOT write paragraphs. Make it extremely easy to read at a glance while the user is speaking. Keep each bullet under 15 words."
+   
+2. **Modify `CategoryPromptInjections`**:
+   - The current injections (e.g., `behavioral`, `coding`, `system_design`) ask for full paragraphs (e.g., "Write the full implementation", "Situation (1-2 sentences)"). 
+   - Rewrite these injections to demand **Glanceable Bullet Points**.
+   - Example for `behavioral`: "Format as strict STAR bullet points (1 short bullet for Situation, 1 for Task, 2 for Action, 1 for Result). Keep words to an absolute minimum."
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Build the frontend (`npm run build`) to ensure there are no Svelte syntax errors in `ScorecardModal.svelte`.
+- Run the backend (`make build-barnowl`) to ensure `prompts.go` compiles correctly.
+- Ensure the newly added UI uses existing CSS variables for dark mode and follows the overall app aesthetic.
