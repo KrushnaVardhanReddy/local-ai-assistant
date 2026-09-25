@@ -1,6 +1,7 @@
 <script lang="ts">
   import { wsState, toggleManualMode, toggleRawMode } from '$lib/ws.svelte';
   import type { HeaderAction } from '$lib/types';
+  import { SummarizeTranscript } from '../../../wailsjs/go/main/App';
 
   const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
 
@@ -88,9 +89,12 @@
     return text;
   }
 
-  function handleSummarize() {
-    console.log("handleSummarize placeholder called");
-    // To be wired up in T3
+  async function handleSummarize() {
+    try {
+      await SummarizeTranscript();
+    } catch (err) {
+      console.error("Failed to summarize transcript:", err);
+    }
   }
 </script>
 

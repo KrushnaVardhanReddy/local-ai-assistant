@@ -183,6 +183,20 @@ function initListeners() {
     console.log('[WS] wsState.transcript is now:', wsState.transcript);
   });
 
+  onEvent("on_transcript_log", (data: any) => {
+    console.log('[WS] on_transcript_log fired:', data);
+    if (data && data.text) {
+      wsState.transcriptHistory = [
+        ...wsState.transcriptHistory,
+        { role: 'interviewer', text: data.text }
+      ];
+      // Keep a longer history for transcript mode
+      if (wsState.transcriptHistory.length > 50) {
+        wsState.transcriptHistory = wsState.transcriptHistory.slice(1);
+      }
+    }
+  });
+
   onEvent("on_response_start", () => {
     console.log('[WS] on_response_start fired');
     wsState.response = "";

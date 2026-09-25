@@ -1,7 +1,7 @@
 <script lang="ts">
 
   import { onMount, onDestroy } from "svelte";
-  import { connect, disconnect, wsState } from "$lib/ws.svelte";
+  import { connect, disconnect, wsState, setAppMode } from "$lib/ws.svelte";
   import PresenterHUD from "./products/presenter/PresenterHUD.svelte";
   import InterviewHUD from "./products/interview/InterviewHUD.svelte";
   import { restoreSession, authState, initLicenseCheck, initAuthEventListeners } from "$lib/auth.svelte";
@@ -94,6 +94,11 @@
     }, 60000);
 
     connect();
+    
+    // Sync backend mode with frontend saved state
+    setTimeout(() => {
+      setAppMode(wsState.appMode);
+    }, 1000);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
