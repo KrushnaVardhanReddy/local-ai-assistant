@@ -302,16 +302,12 @@ func (e *StealthEngine) Start(ctx context.Context) {
 	if e.questionBuffer != nil {
 		e.questionBuffer.Start()
 	}
-	if err := classifier.DefaultLlamaServer.Start(ctx, e.events); err != nil {
-		log.Printf("[Engine] Gemma sidecar unavailable (turn-detection disabled): %v\n", err)
-	}
 }
 
 func (e *StealthEngine) Stop() {
 	if e.questionBuffer != nil {
 		e.questionBuffer.Stop()
 	}
-	classifier.DefaultLlamaServer.Stop()
 	if e.ttsAdapter != nil {
 		e.ttsAdapter.Stop()
 	}

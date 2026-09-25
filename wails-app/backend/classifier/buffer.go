@@ -29,7 +29,7 @@ func NewQuestionBuffer(onFlush func(string)) *QuestionBuffer {
 		maxAge:           45 * time.Second,
 		minChunks:        1,
 		onFlush:          onFlush,
-		classifyFn:       IsQuestionComplete,
+		classifyFn:       func(_ context.Context, _ string) (bool, error) { return true, nil },
 		stopCh:           make(chan struct{}),
 		watchdogInterval: 5 * time.Second,
 		autoFlush:        true,
