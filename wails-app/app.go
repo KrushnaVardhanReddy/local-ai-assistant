@@ -698,20 +698,9 @@ func (a *App) SetAppMode(mode string) error {
 			a.audioCapture.StopCapture()
 		}
 
-		ctx := a.audioCapture.GetContext()
-		if ctx == nil {
-			return fmt.Errorf("audio capture context not initialized")
-		}
-
-		a.dualCapture = audio.NewDualCaptureEngine(ctx)
-		err := a.dualCapture.Start(-1, -1, func(samples []float32) {
-			_ = a.engine.ProcessAudioTagged(samples, "[Interviewer]")
-		}, func(samples []float32) {
-			_ = a.engine.ProcessAudioTagged(samples, "[Candidate]")
-		})
-
+		err := a.startDualCapture()
 		if err != nil {
-			return fmt.Errorf("failed to start dual capture: %w", err)
+			return err
 		}
 
 		a.engine.SetTranscriptMode(true)
@@ -744,6 +733,26 @@ func (a *App) SetAudioDevice(id int, isLoopback bool) error {
 	}
 
 	log.Printf("Successfully started capturing device %d (loopback: %v)\n", id, isLoopback)
+	return nil
+}
+
+func (a *App) startDualCapture() error {
+	ctx := a.audioCapture.GetContext()
+	if ctx == nil {
+		return fmt.Errorf("audio capture context not initialized")
+	}
+
+	a.dualCapture = audio.NewDualCaptureEngine(ctx)
+	err := a.dualCapture.Start(-1, -1, func(samples []float32) {
+		_ = a.engine.ProcessAudioTagged(samples, "[Interviewer]")
+	}, func(samples []float32) {
+		_ = a.engine.ProcessAudioTagged(samples, "[Candidate]")
+	})
+
+	if err != nil {
+		a.dualCapture = nil
+		return fmt.Errorf("failed to start dual capture: %w", err)
+	}
 	return nil
 }
 
@@ -889,6 +898,9 @@ func (a *App) GetIDEState() map[string]interface{} {
 // ToggleMic toggles the microphone capturing state.
 // Returns true if the microphone was started, false if it was stopped.
 func (a *App) ToggleMic() bool {
+	a.cmdMutex.Lock()
+	defer a.cmdMutex.Unlock()
+
 	if a.audioCapture == nil && a.dualCapture == nil {
 		return false
 	}
@@ -902,8 +914,18 @@ func (a *App) ToggleMic() bool {
 			return true
 		}
 	} else if a.appMode == AppModeTranscript {
-		// Can't easily toggle dual capture right now, just return true if running
-		return a.dualCapture != nil
+		if a.dualCapture != nil {
+			a.dualCapture.Stop()
+			a.dualCapture = nil
+			return false
+		} else {
+			err := a.startDualCapture()
+			if err != nil {
+				log.Printf("Failed to restart dual capture: %v", err)
+				return false
+			}
+			return true
+		}
 	}
 	
 	return false
