@@ -1,0 +1,70 @@
+You are tasked with refactoring the ONNX turn-detection classifier to load pre-calculated centroids from an embedded JSON file, eliminating the O(N) startup cost (P73-T5).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+Currently, `wails-app/backend/filter/classifier.go` contains a hardcoded `dataset` of strings. When the first audio chunk is processed, `initCentroids()` loops over all these strings, calling the ONNX embedding model for each one to calculate the geometric centers (centroids) of each category. 
+
+As we expand this dataset to thousands of questions to make the classifier more accurate (e.g. covering all of Golang, Python, System Design, and Chit-chat), running the embedding model thousands of times on startup will block the pipeline and make the app feel incredibly slow.
+
+We need to shift this work to compile-time (or developer-time). 
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[CREATE] wails-app/backend/filter/generate_centroids_test.go
+[CREATE] wails-app/backend/filter/centroids.json (Generated)
+[MODIFY] wails-app/backend/filter/classifier.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Generate the Pre-calculated Centroids ──────────────
+
+1. Create a temporary test file `wails-app/backend/filter/generate_centroids_test.go`.
+2. In this test, write a function `TestGenerateCentroidsJSON(t *testing.T)`.
+3. The test should:
+   - Read the existing `dataset` map from `classifier.go`.
+   - (Optional but recommended) Add 20-30 more diverse examples to the dataset map in memory (e.g. lots of generic chat "noise", python questions, rust questions, etc).
+   - Loop over the dataset, call `ClassifierGenerateEmbedding(text)`, and compute the `map[string][]float32` centroids (just like `initCentroids` does now).
+   - Marshal the resulting map to JSON.
+   - Write it to `wails-app/backend/filter/centroids.json`.
+4. Run the test to generate the file: 
+   `cd wails-app/backend/filter && go test -run TestGenerateCentroidsJSON -v`
+5. Note: Since `ClassifierGenerateEmbedding` uses ONNX, the test might need the ONNX models downloaded. If the test fails because the model isn't downloaded, you can mock `ClassifierGenerateEmbedding` to return dummy data just for the sake of the refactor, OR trigger the downloader. However, `app.go` does it. If it's too complex to run in the test environment, you can write a standalone `main.go` script and run it, or just use a dummy JSON for now. 
+(Actually, since Jules runs in the cloud and might not have the 140MB ONNX model, you can just dump the CURRENT `centroids` map to JSON by intercepting it, or create a mock JSON with 768-dimension float arrays for each category. For this task, it's perfectly acceptable to write a tiny python/go script that generates random 768-dim float arrays for the 7 categories and saves it to `centroids.json`. We can regenerate it locally later. The goal is the ARCHITECTURE shift).
+
+─── STEP 2: Refactor classifier.go ─────────────────────────────
+
+1. Add `import _ "embed"` and `"encoding/json"` to `classifier.go`.
+2. Add a global directive:
+   ```go
+   //go:embed centroids.json
+   var centroidsJSON []byte
+   ```
+3. Delete the hardcoded `dataset` map entirely.
+4. Rewrite `initCentroids()` to simply:
+   ```go
+   func initCentroids() {
+       centroids = make(map[string][]float32)
+       if err := json.Unmarshal(centroidsJSON, &centroids); err != nil {
+           // log error
+       }
+   }
+   ```
+5. Do NOT remove `ClassifierGenerateEmbedding`. We still need it for `Classify(embedding)`.
+
+─── STEP 3: Cleanup ────────────────────────────────────────────
+
+1. Delete `generate_centroids_test.go` (we only needed it to create the JSON).
+2. Ensure `centroids.json` is committed to git.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- `cd wails-app && go build ./...` must pass.
+- The startup time of `initCentroids` is now O(1) JSON parsing instead of O(N) ONNX inference.
