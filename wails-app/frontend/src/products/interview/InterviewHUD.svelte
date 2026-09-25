@@ -15,6 +15,7 @@
 
   import SessionReport from "$lib/SessionReport.svelte";
   import SummaryModal from "./SummaryModal.svelte";
+  import ScorecardModal from "./ScorecardModal.svelte";
   import Settings from "$lib/Settings.svelte";
   import type { FileNode } from "$lib/components/workspace/types";
   import type { HeaderAction } from "$lib/types";
@@ -22,10 +23,10 @@
   const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
 
   // Wails App methods
-  let App: any;
+  let App = $state<any>(null);
   let statePollInterval: any;
   onMount(() => {
-    App = (window as any).go?.main?.App;
+    if ((window as any).go?.main?.App) App = (window as any).go.main.App;
     statePollInterval = setInterval(refreshIDEState, 1000);
     
     // Listen for backend clickthrough toggles (e.g. from hotkeys)
@@ -75,6 +76,18 @@
   let showSessionReport = $state(false);
   let showSummaryModal = $state(false);
   let activeAction = $state<string | null>(null);
+  let currentScorecard = $state<any>(null);
+
+  async function handleEndSession() {
+    if (App?.EndSession) {
+      try {
+        const data = await App.EndSession();
+        currentScorecard = data.scorecard;
+      } catch (e) {
+        console.error("Failed to end session:", e);
+      }
+    }
+  }
 
   const topActions = $derived([
     { id: 'explorer', icon: 'folder', label: 'Folder' },
@@ -406,6 +419,10 @@
         <span class="material-symbols-outlined">screenshot_monitor</span>
         <span class="tool-label">Snip</span>
       </button>
+      <button class="tool-btn" onclick={handleEndSession}>
+        <span class="material-symbols-outlined">flag</span>
+        <span class="tool-label">End Session</span>
+      </button>
       <button class="tool-btn" onclick={() => showSessionReport = true}>
         <span class="material-symbols-outlined">analytics</span>
         <span class="tool-label">Report</span>
@@ -555,6 +572,10 @@
 
   {#if showSessionReport}
     <SessionReport onClose={() => showSessionReport = false} />
+  {/if}
+
+  {#if currentScorecard}
+    <ScorecardModal scorecard={currentScorecard} onClose={async () => { currentScorecard = null; if (App?.ClearState) await App.ClearState(); }} />
   {/if}
 
 

@@ -33,7 +33,7 @@ The Local AI Assistant operates on a **Hexagonal Architecture** (Ports and Adapt
 ## 1. The Core Domain (`wails-app/core/engine/`)
 The `StealthEngine` is the brain. It is responsible for:
 - Orchestrating native system audio loopback capture, Voice Activity Detection (VAD), and routing to STT (via Groq or local `whisperfile` Cosmopolitan binary).
-- Constructing prompts and routing them to the LLM. Includes injecting a **Conversational Context Window** (rolling turn memory, default 3 turns) into the system prompt to allow the LLM to understand contextual follow-up questions.
+- Constructing prompts and routing them to the LLM. Includes injecting a **Conversational Context Window** (rolling turn memory, default 3 turns) into the system prompt to allow the LLM to understand contextual follow-up questions. Responses are requested strictly as concise "Talking Points" bullet points to optimize readability during live interviews.
 - Handling local semantic caching to save on API costs.
 - **Rule:** The engine cannot import *any* external libraries or Wails packages. It only communicates through interface definitions located in `core/ports/`.
 - **System One Classifier**: A lightweight turn-detection mechanism using ONNX embeddings via `onnxruntime_go` to calculate semantic similarity against a pre-computed centroids dataset. This zero-latency engine decides exactly when an interviewer has finished speaking to optimize expensive Cloud LLM triggers. It uses a **Rolling Question Buffer** that aggregates incoming audio chunks and continuously evaluates context instead of relying on a simplistic silence timer, ensuring complete multi-part questions are processed together.
