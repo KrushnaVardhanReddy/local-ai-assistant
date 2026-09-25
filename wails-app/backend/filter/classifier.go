@@ -38,6 +38,10 @@ var dataset = map[string][]string{
 		"Write a function that flattens a nested array.",
 		"Implement rate limiting middleware in Express.",
 		"Implement a simple React component that fetches and displays a list of users from an API.",
+		"Write a Golang function to process items concurrently using goroutines.",
+		"Implement a worker pool pattern in Go.",
+		"Write a Python script to parse a CSV file and load it into SQLite.",
+		"Create a REST API endpoint in Go that handles JSON payloads.",
 	},
 	"system_design": {
 		"How would you design a scalable chat application?",
@@ -63,6 +67,11 @@ var dataset = map[string][]string{
 		"Explain the difference between useMemo and useCallback. When should you avoid them?",
 		"What are React Server Components and how do they differ from SSR?",
 		"What is the event loop in Node.js?",
+		"How do you pass data between goroutines in Golang?",
+		"Explain the difference between concurrency and parallelism.",
+		"What is the Global Interpreter Lock (GIL) in Python?",
+		"How does garbage collection work in Go compared to Java?",
+		"Explain the concept of channels in Go.",
 	},
 	"opinion": {
 		"Do you prefer React or Angular?",
