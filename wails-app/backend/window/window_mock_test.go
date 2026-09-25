@@ -13,3 +13,7 @@ func (m *mockModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) er
 func (m *mockModifier) HideFromTaskbar(ctx context.Context) error {
 	return nil
 }
+
+func (m *mockModifier) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+	return nil
+}

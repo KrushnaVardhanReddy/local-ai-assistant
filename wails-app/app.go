@@ -630,7 +630,10 @@ func (a *App) SetClickthrough(enable bool) {
 }
 
 func (a *App) ToggleStealth(opts map[string]interface{}) {
-	a.ToggleClickthroughMode()
+	isNowStealth := a.ToggleClickthroughMode()
+	if err := window.SetCaptureExcluded(a.ctx, isNowStealth); err != nil {
+		log.Printf("❌ SetCaptureExcluded error: %v\n", err)
+	}
 }
 
 func (a *App) ToggleMockInterviewMode(enabled bool) {

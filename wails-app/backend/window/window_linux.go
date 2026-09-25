@@ -151,6 +151,36 @@ gboolean do_set_skip_taskbar(gpointer data) {
 void set_window_skip_taskbar(Window wid) {
     g_idle_add(do_set_skip_taskbar, (gpointer)(uintptr_t)wid);
 }
+
+// Best-effort: set _NET_WM_BYPASS_COMPOSITOR and attempt gamma correction.
+// True capture exclusion is not standardized on Linux.
+gboolean do_set_capture_excluded(gpointer data) {
+    struct ClickthroughData *cdata = (struct ClickthroughData *)data;
+    Window wid = cdata->wid;
+    int excluded = cdata->enable;
+    free(cdata);
+
+    if (wid != 0) {
+        Display *display = XOpenDisplay(NULL);
+        if (display != NULL) {
+            Atom bypass = XInternAtom(display, "_NET_WM_BYPASS_COMPOSITOR", False);
+            long val = excluded ? 1 : 0;
+            XChangeProperty(display, wid, bypass, XA_CARDINAL, 32,
+                            PropModeReplace, (unsigned char *)&val, 1);
+            XFlush(display);
+            XCloseDisplay(display);
+        }
+    }
+    return G_SOURCE_REMOVE;
+}
+
+void set_window_capture_excluded(Window wid, int excluded) {
+    struct ClickthroughData *cdata = (struct ClickthroughData *)malloc(sizeof(struct ClickthroughData));
+    cdata->wid = wid;
+    cdata->enable = excluded;
+    g_idle_add(do_set_capture_excluded, cdata);
+}
+
 Window search_window_tree(Display *display, Window root, pid_t target_pid, Atom pid_atom) {
     Window parent, *children;
     unsigned int num_children;
@@ -241,5 +271,28 @@ func (l *linuxModifier) HideFromTaskbar(ctx context.Context) error {
 		}
 	}()
 
+	return nil
+}
+
+func (l *linuxModifier) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+	go func() {
+		var wid C.Window
+		for i := 0; i < 10; i++ {
+			wid = C.get_window_by_pid(C.pid_t(os.Getpid()))
+			if wid != 0 {
+				break
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+		if wid != 0 {
+			enable := 0
+			if excluded {
+				enable = 1
+			}
+			C.set_window_capture_excluded(wid, C.int(enable))
+		} else {
+			fmt.Println("SetCaptureExcluded: could not find window ID via X11")
+		}
+	}()
 	return nil
 }
