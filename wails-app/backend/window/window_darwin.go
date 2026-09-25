@@ -26,6 +26,19 @@ void mac_hide_from_dock() {
         [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
     });
 }
+
+void mac_set_capture_excluded(int excluded) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSApplication *app = [NSApplication sharedApplication];
+        for (NSWindow *window in [app windows]) {
+            if (excluded) {
+                [window setSharingType:NSWindowSharingNone];
+            } else {
+                [window setSharingType:NSWindowSharingReadWrite];
+            }
+        }
+    });
+}
 */
 import "C"
 
@@ -46,5 +59,14 @@ func (d *darwinModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool) 
 
 func (d *darwinModifier) HideFromTaskbar(ctx context.Context) error {
 	C.mac_hide_from_dock()
+	return nil
+}
+
+func (d *darwinModifier) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+	enable := 0
+	if excluded {
+		enable = 1
+	}
+	C.mac_set_capture_excluded(C.int(enable))
 	return nil
 }

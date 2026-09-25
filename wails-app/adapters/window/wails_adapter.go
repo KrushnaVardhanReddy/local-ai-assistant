@@ -18,8 +18,7 @@ func NewWailsWindowAdapter() *WailsWindowAdapter {
 }
 
 func (w *WailsWindowAdapter) SetCaptureExcluded(ctx context.Context, excluded bool) error {
-	// Not needed for this specific feature but implemented for the interface
-	return nil
+	return window.SetCaptureExcluded(ctx, excluded)
 }
 
 func (w *WailsWindowAdapter) HideFromTaskbar(ctx context.Context) error {

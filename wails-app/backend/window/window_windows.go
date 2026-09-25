@@ -10,17 +10,19 @@ import (
 )
 
 var (
-	user32        = syscall.NewLazyDLL("user32.dll")
-	findWindowW   = user32.NewProc("FindWindowW")
-	setWindowLong = user32.NewProc("SetWindowLongW")
-	getWindowLong = user32.NewProc("GetWindowLongW")
+	user32                   = syscall.NewLazyDLL("user32.dll")
+	findWindowW              = user32.NewProc("FindWindowW")
+	setWindowLong            = user32.NewProc("SetWindowLongW")
+	getWindowLong            = user32.NewProc("GetWindowLongW")
+	setWindowDisplayAffinity = user32.NewProc("SetWindowDisplayAffinity")
 )
 
 const (
-	GWL_EXSTYLE       = -20
-	WS_EX_TRANSPARENT = 0x00000020
-	WS_EX_LAYERED     = 0x00080000
-	WS_EX_TOOLWINDOW  = 0x00000080
+	GWL_EXSTYLE            = -20
+	WS_EX_TRANSPARENT      = 0x00000020
+	WS_EX_LAYERED          = 0x00080000
+	WS_EX_TOOLWINDOW       = 0x00000080
+	WDA_EXCLUDEFROMCAPTURE = 0x00000011
 )
 
 type windowsModifier struct{}
@@ -50,6 +52,20 @@ func (w *windowsModifier) SetIgnoreMouseEvents(ctx context.Context, ignore bool)
 
 	setWindowLong.Call(hwnd, uintptr(GWL_EXSTYLE&0xFFFFFFFF), exStyle)
 
+	return nil
+}
+
+func (w *windowsModifier) SetCaptureExcluded(ctx context.Context, excluded bool) error {
+	titlePtr, _ := syscall.UTF16PtrFromString("BarnOwl AI")
+	hwnd, _, _ := findWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	if hwnd == 0 {
+		return fmt.Errorf("could not find window by title")
+	}
+	affinity := uintptr(0)
+	if excluded {
+		affinity = WDA_EXCLUDEFROMCAPTURE
+	}
+	setWindowDisplayAffinity.Call(hwnd, affinity)
 	return nil
 }
 

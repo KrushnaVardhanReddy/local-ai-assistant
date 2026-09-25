@@ -6,6 +6,7 @@ import "context"
 type WindowModifier interface {
 	SetIgnoreMouseEvents(ctx context.Context, ignore bool) error
 	HideFromTaskbar(ctx context.Context) error
+	SetCaptureExcluded(ctx context.Context, excluded bool) error
 }
 
 // defaultModifier is a global variable that holds the current WindowModifier implementation.
@@ -21,6 +22,14 @@ func SetIgnoreMouseEvents(ctx context.Context, ignore bool) error {
 		return nil
 	}
 	return defaultModifier.SetIgnoreMouseEvents(ctx, ignore)
+}
+
+// SetCaptureExcluded excludes the window from being captured by screen sharing/recording software.
+func SetCaptureExcluded(ctx context.Context, excluded bool) error {
+	if defaultModifier == nil {
+		return nil
+	}
+	return defaultModifier.SetCaptureExcluded(ctx, excluded)
 }
 
 // HideFromTaskbar hides the application window from the taskbar.
