@@ -242,6 +242,9 @@ func (a *App) GetState() map[string]interface{} {
 	if a.audioCapture != nil {
 		isListening = a.audioCapture.IsCapturing()
 	}
+	if a.dualCapture != nil {
+		isListening = true
+	}
 	return map[string]interface{}{
 		"transcript":             s.Transcript,
 		"response":               s.Response,
@@ -874,6 +877,9 @@ func (a *App) GetIDEState() map[string]interface{} {
 	isListening := false
 	if a.audioCapture != nil {
 		isListening = a.audioCapture.IsCapturing()
+	}
+	if a.dualCapture != nil {
+		isListening = true
 	}
 
 	s := a.engine.GetState()
