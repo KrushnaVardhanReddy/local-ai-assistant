@@ -36,7 +36,7 @@ The `StealthEngine` is the brain. It is responsible for:
 - Constructing prompts and routing them to the LLM. Includes injecting a **Conversational Context Window** (rolling turn memory, default 3 turns) into the system prompt to allow the LLM to understand contextual follow-up questions.
 - Handling local semantic caching to save on API costs.
 - **Rule:** The engine cannot import *any* external libraries or Wails packages. It only communicates through interface definitions located in `core/ports/`.
-- **System One Classifier**: A lightweight turn-detection mechanism using Gemma 3 270M running on a local CPU-only `llama-server` sidecar subprocess. This engine decides exactly when an interviewer has finished speaking to optimize expensive Cloud LLM triggers. It uses a **Rolling Question Buffer** that aggregates incoming audio chunks and continuously evaluates context instead of relying on a simplistic silence timer, ensuring complete multi-part questions are processed together.
+- **System One Classifier**: A lightweight turn-detection mechanism using ONNX embeddings via `onnxruntime_go` to calculate semantic similarity against a pre-computed centroids dataset. This zero-latency engine decides exactly when an interviewer has finished speaking to optimize expensive Cloud LLM triggers. It uses a **Rolling Question Buffer** that aggregates incoming audio chunks and continuously evaluates context instead of relying on a simplistic silence timer, ensuring complete multi-part questions are processed together.
 
 ## 2. Infrastructure Adapters (`wails-app/adapters/`)
 Adapters plug into the core engine.

@@ -28,3 +28,6 @@ Append-only chronological record of all changes to this wiki.
 
 ## [2026-09-22] update | Architecture
 - Documented addition of the Conversational Context Window (rolling turn memory) in `architecture.md`
+
+## [2026-09-25] update | Architecture
+- Updated System One Classifier documentation in `architecture.md` to reflect the migration from llamafile to ONNX embeddings and a pre-computed centroids dataset.
