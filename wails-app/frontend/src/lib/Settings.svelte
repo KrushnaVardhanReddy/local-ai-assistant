@@ -2,7 +2,7 @@
   import { apiFetch } from "./api";
   import { authState, signOut } from "$lib/auth.svelte";
   import AuthModal from "$lib/components/AuthModal.svelte";
-  import { reconnect, wsState, startBuddyMode, stopBuddyMode } from "$lib/ws.svelte";
+  import { reconnect, wsState, startBuddyMode, stopBuddyMode, setAppMode } from "$lib/ws.svelte";
     import { onMount } from "svelte";
     import StealthTerminal from "$lib/StealthTerminal.svelte";
   import { getApiUrl, getWsUrl } from "$lib/api";
@@ -383,6 +383,67 @@
       {#if activeTab === 'audio'}
         <div class="config-section">
           {#if !isCloudBuild}
+            <div class="config-section">
+              <div class="section-label">🎙️ Audio Capture Mode</div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.6rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.85rem 1rem;">
+
+                <!-- Option 1: Interviewer Only (default) -->
+                <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;">
+                  <input
+                    type="radio"
+                    name="audioMode"
+                    value="interview"
+                    checked={wsState.appMode === 'interview'}
+                    onchange={() => setAppMode('interview')}
+                    style="margin-top: 0.18rem; accent-color: #4ade80;"
+                  />
+                  <div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #e5e7eb;">
+                      Interviewer Only
+                      <span style="font-size: 0.68rem; font-weight: 400; background: rgba(74,222,128,0.12); color: #4ade80; border-radius: 4px; padding: 0.1rem 0.4rem; margin-left: 0.3rem;">Default · Stealth</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.15rem; line-height: 1.4;">
+                      Captures system audio only (Google Meet / Zoom speaker output). Your microphone is silent.
+                      Best for stealth — your voice never goes through the AI.
+                    </div>
+                  </div>
+                </label>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.05);"></div>
+
+                <!-- Option 2: Dual Mode (Full Transcript) -->
+                <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;">
+                  <input
+                    type="radio"
+                    name="audioMode"
+                    value="transcript"
+                    checked={wsState.appMode === 'transcript'}
+                    onchange={() => setAppMode('transcript')}
+                    style="margin-top: 0.18rem; accent-color: #4ade80;"
+                  />
+                  <div>
+                    <div style="font-size: 0.85rem; font-weight: 600; color: #e5e7eb;">
+                      Dual Mode — Full Transcript
+                    </div>
+                    <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.15rem; line-height: 1.4;">
+                      Captures both system audio <strong style="color: #9ca3af;">[Interviewer]</strong> and your
+                      microphone <strong style="color: #9ca3af;">[Candidate]</strong> simultaneously.
+                      Generates a complete, labeled two-sided conversation transcript.
+                    </div>
+                  </div>
+                </label>
+
+              </div>
+
+              {#if wsState.appMode === 'transcript'}
+                <div style="font-size: 0.75rem; color: #f59e0b; display: flex; align-items: center; gap: 0.4rem; margin-top: -0.25rem;">
+                  <span>⚠️</span>
+                  <span>Dual Mode may have higher CPU usage. Your voice is processed by the AI.</span>
+                </div>
+              {/if}
+            </div>
+
             <div class="input-group">
               <label for="audioDevice">Audio Input Device</label>
               <select id="audioDevice" bind:value={selectedDeviceId} class="custom-select">
