@@ -21,6 +21,8 @@ type AppConfig struct {
 	PublicSupabaseURL       string `env:"PUBLIC_SUPABASE_URL"`
 	MinWords                string `env:"MIN_WORDS"`
 	SilenceThresholdSeconds string `env:"SILENCE_THRESHOLD_SECONDS"`
+	BuddyModeEnabled        bool   `env:"BUDDY_MODE_ENABLED" envDefault:"false"`
+	BuddyModePort           int    `env:"BUDDY_MODE_PORT"    envDefault:"8765"`
 }
 
 func LoadConfig() (*AppConfig, error) {

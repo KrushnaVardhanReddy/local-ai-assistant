@@ -16,11 +16,11 @@ import (
 	"sync"
 	"time"
 	cacheadapter "wails-app/adapters/cache"
-	eventsadapter "wails-app/adapters/events"
 	llmadapter "wails-app/adapters/llm"
 	"wails-app/backend"
 	"wails-app/backend/audio"
 	"wails-app/backend/auth"
+	"wails-app/backend/buddy"
 	"wails-app/backend/config"
 	"wails-app/backend/filter"
 	"wails-app/backend/hotkeys"
@@ -49,6 +49,7 @@ const (
 // App struct
 type App struct {
 	remoteServer *remote.Server
+	buddyServer  *buddy.Server
 	ctx          context.Context
 
 	backendCmd *exec.Cmd
@@ -147,9 +148,46 @@ func NewApp(cfg *config.AppConfig) *App {
 
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
+// buddyEventProxy intercepts events emitted by the engine and proxies them to the Wails runtime
+// and the buddy server if active.
+type buddyEventProxy struct {
+	app *App
+	ctx context.Context
+}
+
+func (p *buddyEventProxy) Emit(event string, payload any) {
+	wailsruntime.EventsEmit(p.ctx, event, payload)
+
+	// If this is a transcript event, broadcast it to the buddy server
+	if event == "on_transcript" {
+		if p.app.buddyServer != nil && p.app.buddyServer.IsRunning() {
+			if data, ok := payload.(map[string]interface{}); ok {
+				if text, ok := data["text"].(string); ok {
+					// Extract speaker label by splitting text, or default to candidate
+					speaker := "candidate"
+					if strings.HasPrefix(text, "[Interviewer]") {
+						speaker = "interviewer"
+					} else if strings.HasPrefix(text, "[Candidate]") {
+						speaker = "candidate"
+					} else if parts := strings.SplitN(text, ":", 2); len(parts) == 2 {
+						// e.g., "Speaker 1: hello"
+						speaker = strings.TrimSpace(parts[0])
+						text = strings.TrimSpace(parts[1])
+					}
+
+					p.app.buddyServer.BroadcastTranscript(text, speaker)
+				}
+			}
+		}
+	}
+}
+
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	a.engine.SetEventsAdapter(eventsadapter.NewWailsEventAdapter(ctx))
+
+	// Set up our proxy adapter to intercept events for the buddy server
+	a.engine.SetEventsAdapter(&buddyEventProxy{app: a, ctx: ctx})
+
 	a.engine.Start(ctx)
 
 	// We no longer hide from taskbar on startup because it breaks Alt+Tab
@@ -203,6 +241,60 @@ func (a *App) startup(ctx context.Context) {
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+// StartBuddyMode starts the buddy server and cloudflared tunnel.
+// It emits "buddy_url_ready" with the public URL once the tunnel is established.
+// It emits "buddy_hint" with the hint text when a friend sends a message.
+func (a *App) StartBuddyMode() error {
+	a.cmdMutex.Lock()
+	if a.buddyServer != nil && a.buddyServer.IsRunning() {
+		a.cmdMutex.Unlock()
+		return fmt.Errorf("buddy mode is already active")
+	}
+	port := 8765
+	if a.cfg != nil && a.cfg.BuddyModePort != 0 {
+		port = a.cfg.BuddyModePort
+	}
+	a.buddyServer = buddy.NewServer(port,
+		func(url string) {
+			// Called when Cloudflare URL is established
+			wailsruntime.EventsEmit(a.ctx, "buddy_url_ready", url)
+			log.Printf("🔗 [App] Buddy URL ready: %s\n", url)
+		},
+		func(hint string) {
+			// Called when a friend sends a hint
+			wailsruntime.EventsEmit(a.ctx, "buddy_hint", hint)
+			log.Printf("💬 [App] Buddy hint received: %s\n", hint)
+		},
+	)
+	a.cmdMutex.Unlock()
+	if err := a.buddyServer.Start(); err != nil {
+		return fmt.Errorf("failed to start buddy server: %w", err)
+	}
+	log.Println("👫 [App] Buddy Mode started")
+	return nil
+}
+
+// StopBuddyMode stops the buddy server and kills the cloudflared tunnel.
+func (a *App) StopBuddyMode() {
+	a.cmdMutex.Lock()
+	defer a.cmdMutex.Unlock()
+	if a.buddyServer != nil {
+		a.buddyServer.Stop()
+		a.buddyServer = nil
+		log.Println("👫 [App] Buddy Mode stopped")
+	}
+}
+
+// GetBuddyURL returns the current public buddy URL (with token) if active, else empty string.
+func (a *App) GetBuddyURL() string {
+	a.cmdMutex.Lock()
+	defer a.cmdMutex.Unlock()
+	if a.buddyServer == nil {
+		return ""
+	}
+	return a.buddyServer.GetPublicURL()
 }
 
 // GetSystemStatus returns diagnostic information about the configured models and engines
@@ -913,7 +1005,7 @@ func (a *App) ToggleMic() bool {
 	if a.audioCapture == nil && a.dualCapture == nil {
 		return false
 	}
-	
+
 	if a.appMode == AppModeInterview {
 		if a.audioCapture != nil && a.audioCapture.IsCapturing() {
 			a.audioCapture.StopCapture()
@@ -936,7 +1028,7 @@ func (a *App) ToggleMic() bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 

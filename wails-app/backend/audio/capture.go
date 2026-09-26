@@ -153,9 +153,9 @@ func (c *CaptureEngine) StartCapture(deviceID int, isLoopback bool, callback fun
 	if deviceID < -1 || deviceID >= len(c.deviceList) {
 		return fmt.Errorf("invalid device ID: %d (max: %d)", deviceID, len(c.deviceList)-1)
 	}
-	
+
 	if isLoopback && runtime.GOOS == "linux" && deviceID == -1 {
-		// PulseAudio/Linux does not support malgo.Loopback. 
+		// PulseAudio/Linux does not support malgo.Loopback.
 		// We must find a "Monitor" device from the Capture list instead.
 		caps, err := c.ctx.Devices(malgo.Capture)
 		if err == nil {
