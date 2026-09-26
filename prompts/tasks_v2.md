@@ -126,4 +126,4 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P80-T1 | `Settings.svelte`, `LegalModal.svelte`, `ConvPanel.svelte`, `InterviewHUD.svelte` | **UI Copy Rewrite:** Remove all user-facing instances of "Interview", "Interviewer", and "Candidate". Replace with "Meeting", "Speaker", and "You". Update Buddy share texts and Legal Modal text to reflect the generic meeting copilot branding. Internal variables/filenames remain unchanged. | ⬜ | — |
+| P80-T1 | `Settings.svelte`, `LegalModal.svelte`, `ConvPanel.svelte`, `InterviewHUD.svelte` | **UI Copy Rewrite:** Remove all user-facing instances of "Interview", "Interviewer", and "Candidate". Replace with "Meeting", "Speaker", and "You". Update Buddy share texts and Legal Modal text to reflect the generic meeting copilot branding. Internal variables/filenames remain unchanged. | 🔄 | — |

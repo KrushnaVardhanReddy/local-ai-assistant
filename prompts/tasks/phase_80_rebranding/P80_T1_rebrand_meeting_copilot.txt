@@ -21,7 +21,6 @@ You must review and update the following files:
 - `wails-app/frontend/src/products/interview/ConvPanel.svelte`
 - `wails-app/frontend/src/App.svelte`
 - `wails-app/frontend/src/lib/SessionReport.svelte`
-- `wails-app/backend/buddy/index.html` (if applicable)
 
 ════════════════════════════════════════════════════════════════
 TEXT REPLACEMENT MAPPING
