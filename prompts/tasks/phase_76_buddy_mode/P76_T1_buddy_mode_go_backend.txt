@@ -1,0 +1,431 @@
+You are tasked with implementing the Go backend for "Buddy Mode" — a Cloudflare Tunnel integration that allows a trusted friend to view the live interview transcript and send hints to the candidate. This is Phase 76, Task 1 (P76-T1).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+BarnOwl AI is a stealth interview assistant. We are adding a "Buddy Mode" feature where the user can optionally expose their live interview transcript to a friend via a secure, randomly-generated Cloudflare Tunnel URL. The friend can view the transcript in real-time from their browser and send text hints back to the candidate.
+
+This task covers ONLY the Go backend. The Svelte frontend is handled in P76-T2.
+
+════════════════════════════════════════════════════════════════
+CURRENT ARCHITECTURE (READ CAREFULLY)
+════════════════════════════════════════════════════════════════
+
+- `wails-app/app.go`: The main Wails `App` struct. It already contains a `*remote.Server` field at line 51 (`remoteServer *remote.Server`). The existing `remote.Server` runs on port `:8000` and handles cloud-mode WebSocket connections with gorilla/websocket. You MUST NOT touch this.
+- `wails-app/backend/config/config.go`: Contains `AppConfig` struct loaded from environment variables via `github.com/caarlos0/env/v11`. This is the correct place to add new config fields.
+- `wails-app/backend/remote/server.go`: The existing remote server on `:8000`. DO NOT modify this file.
+- The `App` struct in `app.go` uses `sync.Mutex` (`cmdMutex`) for all state changes. Follow this pattern.
+- Events are emitted to the Svelte frontend via `wailsruntime.EventsEmit(a.ctx, "event_name", payload)`. This is the correct IPC mechanism.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[CREATE] wails-app/backend/buddy/server.go
+[CREATE] wails-app/backend/buddy/server_test.go
+[MODIFY] wails-app/backend/config/config.go
+[MODIFY] wails-app/app.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Create `wails-app/backend/buddy/server.go` ────────
+
+This file implements the core Buddy Mode HTTP server.
+
+```go
+package buddy
+
+import (
+    "bufio"
+    "context"
+    "crypto/rand"
+    "encoding/hex"
+    "encoding/json"
+    "fmt"
+    "log"
+    "net"
+    "net/http"
+    "os/exec"
+    "strings"
+    "sync"
+
+    "github.com/gorilla/websocket"
+)
+
+// Message types exchanged over the buddy WebSocket
+const (
+    MsgTypeTranscript = "transcript" // candidate interview transcript → friend
+    MsgTypeHint       = "hint"       // friend → candidate
+    MsgTypeState      = "state"      // buddy session state update → friend
+)
+
+// BuddyMessage is the JSON structure sent over the WebSocket.
+type BuddyMessage struct {
+    Type    string `json:"type"`
+    Text    string `json:"text,omitempty"`
+    Speaker string `json:"speaker,omitempty"` // "interviewer" or "candidate"
+}
+
+// Server manages the buddy HTTP+WebSocket server and the cloudflared subprocess.
+type Server struct {
+    mu         sync.Mutex
+    httpServer *http.Server
+    upgrader   websocket.Upgrader
+    clients    map[*websocket.Conn]bool
+    clientsMu  sync.Mutex
+    token      string         // random secret token for the shared URL
+    publicURL  string         // e.g. "https://quick-fox-123.trycloudflare.com"
+    cfCmd      *exec.Cmd      // the cloudflared subprocess
+    port       int            // local HTTP port for the buddy server (default 8765)
+    isRunning  bool
+    onURL      func(url string)  // callback invoked when the public URL is known
+    onHint     func(hint string) // callback invoked when a friend sends a hint
+}
+
+// NewServer creates a new BuddyServer with the given port.
+func NewServer(port int, onURL func(string), onHint func(string)) *Server {
+    return &Server{
+        clients:  make(map[*websocket.Conn]bool),
+        port:     port,
+        onURL:    onURL,
+        onHint:   onHint,
+        upgrader: websocket.Upgrader{
+            CheckOrigin: func(r *http.Request) bool { return true },
+        },
+    }
+}
+
+// Start launches the local HTTP server and the cloudflared tunnel.
+// Returns an error if the server is already running or fails to start.
+func (s *Server) Start() error {
+    s.mu.Lock()
+    if s.isRunning {
+        s.mu.Unlock()
+        return fmt.Errorf("buddy server is already running")
+    }
+
+    // Generate a cryptographically random 16-byte hex token
+    tokenBytes := make([]byte, 16)
+    if _, err := rand.Read(tokenBytes); err != nil {
+        s.mu.Unlock()
+        return fmt.Errorf("failed to generate token: %w", err)
+    }
+    s.token = hex.EncodeToString(tokenBytes)
+    s.isRunning = true
+    s.mu.Unlock()
+
+    // Set up HTTP routes
+    mux := http.NewServeMux()
+    mux.HandleFunc("/ws", s.handleWebSocket)
+    mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+        w.WriteHeader(http.StatusOK)
+        w.Write([]byte("ok"))
+    })
+
+    s.httpServer = &http.Server{
+        Addr:    fmt.Sprintf("127.0.0.1:%d", s.port),
+        Handler: mux,
+    }
+
+    // Start HTTP server in a goroutine
+    go func() {
+        if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Printf("❌ [Buddy] HTTP server error: %v\n", err)
+        }
+    }()
+
+    // Start cloudflared tunnel in a goroutine
+    go s.startTunnel()
+
+    return nil
+}
+
+// Stop gracefully shuts down the HTTP server and kills the cloudflared subprocess.
+func (s *Server) Stop() {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+
+    if !s.isRunning {
+        return
+    }
+    s.isRunning = false
+    s.publicURL = ""
+    s.token = ""
+
+    if s.httpServer != nil {
+        s.httpServer.Shutdown(context.Background())
+        s.httpServer = nil
+    }
+
+    if s.cfCmd != nil && s.cfCmd.Process != nil {
+        s.cfCmd.Process.Kill()
+        s.cfCmd = nil
+    }
+
+    // Close all connected buddy clients
+    s.clientsMu.Lock()
+    for conn := range s.clients {
+        conn.Close()
+    }
+    s.clients = make(map[*websocket.Conn]bool)
+    s.clientsMu.Unlock()
+}
+
+// IsRunning returns whether the buddy server is currently active.
+func (s *Server) IsRunning() bool {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    return s.isRunning
+}
+
+// GetPublicURL returns the current Cloudflare public URL with the embedded token.
+// Returns empty string if the tunnel is not yet established.
+func (s *Server) GetPublicURL() string {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    if s.publicURL == "" || s.token == "" {
+        return ""
+    }
+    return fmt.Sprintf("%s/ws?token=%s", s.publicURL, s.token)
+}
+
+// BroadcastTranscript sends a new transcript segment to all connected buddy clients.
+func (s *Server) BroadcastTranscript(text, speaker string) {
+    msg := BuddyMessage{
+        Type:    MsgTypeTranscript,
+        Text:    text,
+        Speaker: speaker,
+    }
+    s.broadcast(msg)
+}
+
+// broadcast marshals a message to JSON and sends it to all connected clients.
+func (s *Server) broadcast(msg BuddyMessage) {
+    data, err := json.Marshal(msg)
+    if err != nil {
+        log.Printf("❌ [Buddy] Failed to marshal message: %v\n", err)
+        return
+    }
+    s.clientsMu.Lock()
+    defer s.clientsMu.Unlock()
+    for conn := range s.clients {
+        if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+            log.Printf("⚠️ [Buddy] Failed to write to client: %v\n", err)
+            conn.Close()
+            delete(s.clients, conn)
+        }
+    }
+}
+
+// handleWebSocket upgrades the HTTP connection to a WebSocket and validates the token.
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+    // Validate the security token from query params
+    s.mu.Lock()
+    expectedToken := s.token
+    s.mu.Unlock()
+
+    clientToken := r.URL.Query().Get("token")
+    if clientToken == "" || clientToken != expectedToken {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+
+    conn, err := s.upgrader.Upgrade(w, r, nil)
+    if err != nil {
+        log.Printf("❌ [Buddy] WebSocket upgrade error: %v\n", err)
+        return
+    }
+
+    s.clientsMu.Lock()
+    s.clients[conn] = true
+    s.clientsMu.Unlock()
+
+    log.Printf("✅ [Buddy] Friend connected from %s\n", r.RemoteAddr)
+
+    defer func() {
+        s.clientsMu.Lock()
+        delete(s.clients, conn)
+        s.clientsMu.Unlock()
+        conn.Close()
+        log.Printf("👋 [Buddy] Friend disconnected\n")
+    }()
+
+    // Listen for incoming hints from the friend
+    for {
+        _, msgBytes, err := conn.ReadMessage()
+        if err != nil {
+            break
+        }
+        var msg BuddyMessage
+        if err := json.Unmarshal(msgBytes, &msg); err != nil {
+            continue
+        }
+        if msg.Type == MsgTypeHint && msg.Text != "" && s.onHint != nil {
+            s.onHint(msg.Text)
+        }
+    }
+}
+
+// startTunnel spawns `cloudflared tunnel --url http://127.0.0.1:<port>` and
+// parses its stderr output to extract the public URL.
+// cloudflared must be installed and available on PATH.
+func (s *Server) startTunnel() {
+    cmd := exec.Command("cloudflared", "tunnel", "--url", fmt.Sprintf("http://127.0.0.1:%d", s.port))
+    s.mu.Lock()
+    s.cfCmd = cmd
+    s.mu.Unlock()
+
+    stderr, err := cmd.StderrPipe()
+    if err != nil {
+        log.Printf("❌ [Buddy] Failed to get cloudflared stderr pipe: %v\n", err)
+        return
+    }
+
+    if err := cmd.Start(); err != nil {
+        log.Printf("❌ [Buddy] Failed to start cloudflared: %v\n", err)
+        return
+    }
+
+    log.Println("🌐 [Buddy] cloudflared tunnel starting...")
+
+    scanner := bufio.NewScanner(stderr)
+    for scanner.Scan() {
+        line := scanner.Text()
+        log.Printf("[cloudflared] %s\n", line)
+        // cloudflared prints the URL in a line like:
+        // "... | INFO | +----------------------------...+\n | https://quick-fox-123.trycloudflare.com |"
+        // or more commonly: "Your quick Tunnel has been created! Visit it at: https://..."
+        // We scan for the trycloudflare.com URL pattern.
+        if idx := strings.Index(line, "trycloudflare.com"); idx != -1 {
+            // Walk backwards to find the start of the URL (https://)
+            start := strings.LastIndex(line[:idx], "https://")
+            if start == -1 {
+                start = strings.LastIndex(line[:idx], "http://")
+            }
+            if start != -1 {
+                rawURL := line[start : idx+len("trycloudflare.com")]
+                // Trim any trailing whitespace or pipes
+                rawURL = strings.TrimRight(rawURL, " |")
+                s.mu.Lock()
+                s.publicURL = rawURL
+                s.mu.Unlock()
+                log.Printf("🔗 [Buddy] Public URL established: %s\n", rawURL)
+                if s.onURL != nil {
+                    s.onURL(s.GetPublicURL())
+                }
+            }
+        }
+    }
+
+    if err := cmd.Wait(); err != nil {
+        log.Printf("⚠️ [Buddy] cloudflared exited: %v\n", err)
+    }
+}
+```
+
+─── STEP 2: Create `wails-app/backend/buddy/server_test.go` ───
+
+Write unit tests using `//go:build test` tag:
+
+1. `TestNewServer`: Verify `NewServer()` initializes correctly with `isRunning: false` and an empty token.
+2. `TestGetPublicURL_WhenNotRunning`: Verify `GetPublicURL()` returns empty string when not running.
+3. `TestBroadcastTranscript_NoClients`: Verify `BroadcastTranscript()` doesn't panic when there are no connected clients.
+4. `TestTokenValidation`: Using `httptest.NewServer`, simulate a WebSocket upgrade with a wrong token and verify it returns `401 Unauthorized`.
+
+─── STEP 3: Modify `wails-app/backend/config/config.go` ───────
+
+Add the following fields to the `AppConfig` struct, following the exact same `env` tag style as existing fields:
+
+```go
+BuddyModeEnabled bool `env:"BUDDY_MODE_ENABLED" envDefault:"false"`
+BuddyModePort    int  `env:"BUDDY_MODE_PORT"    envDefault:"8765"`
+```
+
+─── STEP 4: Modify `wails-app/app.go` ─────────────────────────
+
+1. Add the buddy server field to the `App` struct (after the existing `remoteServer` field):
+   ```go
+   buddyServer  *buddy.Server
+   ```
+   Add the import: `"wails-app/backend/buddy"`
+
+2. Add three new exported Wails methods:
+
+   ```go
+   // StartBuddyMode starts the buddy server and cloudflared tunnel.
+   // It emits "buddy_url_ready" with the public URL once the tunnel is established.
+   // It emits "buddy_hint" with the hint text when a friend sends a message.
+   func (a *App) StartBuddyMode() error {
+       a.cmdMutex.Lock()
+       if a.buddyServer != nil && a.buddyServer.IsRunning() {
+           a.cmdMutex.Unlock()
+           return fmt.Errorf("buddy mode is already active")
+       }
+       port := 8765
+       if a.cfg != nil && a.cfg.BuddyModePort != 0 {
+           port = a.cfg.BuddyModePort
+       }
+       a.buddyServer = buddy.NewServer(port,
+           func(url string) {
+               // Called when Cloudflare URL is established
+               wailsruntime.EventsEmit(a.ctx, "buddy_url_ready", url)
+               log.Printf("🔗 [App] Buddy URL ready: %s\n", url)
+           },
+           func(hint string) {
+               // Called when a friend sends a hint
+               wailsruntime.EventsEmit(a.ctx, "buddy_hint", hint)
+               log.Printf("💬 [App] Buddy hint received: %s\n", hint)
+           },
+       )
+       a.cmdMutex.Unlock()
+       if err := a.buddyServer.Start(); err != nil {
+           return fmt.Errorf("failed to start buddy server: %w", err)
+       }
+       log.Println("👫 [App] Buddy Mode started")
+       return nil
+   }
+
+   // StopBuddyMode stops the buddy server and kills the cloudflared tunnel.
+   func (a *App) StopBuddyMode() {
+       a.cmdMutex.Lock()
+       defer a.cmdMutex.Unlock()
+       if a.buddyServer != nil {
+           a.buddyServer.Stop()
+           a.buddyServer = nil
+           log.Println("👫 [App] Buddy Mode stopped")
+       }
+   }
+
+   // GetBuddyURL returns the current public buddy URL (with token) if active, else empty string.
+   func (a *App) GetBuddyURL() string {
+       a.cmdMutex.Lock()
+       defer a.cmdMutex.Unlock()
+       if a.buddyServer == nil {
+           return ""
+       }
+       return a.buddyServer.GetPublicURL()
+   }
+   ```
+
+3. In the existing `on_transcript` Wails event handler (around line 180 of `ws.svelte.ts`, the Go backend emits `on_transcript` via `wailsruntime.EventsEmit`), find the location in `app.go` where the transcript event is emitted and add a broadcast call:
+   ```go
+   // After: wailsruntime.EventsEmit(a.ctx, "on_transcript", ...)
+   // Add:
+   if a.buddyServer != nil && a.buddyServer.IsRunning() {
+       a.buddyServer.BroadcastTranscript(transcriptText, speakerLabel)
+   }
+   ```
+   You must identify the correct place in `app.go` where the `on_transcript` Wails event is fired and add this broadcast call immediately after it.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Run `go test -tags test ./backend/buddy/...` inside `wails-app/` and verify all 4 tests pass.
+- Run `make build-barnowl` to verify the full application compiles without errors.
+- Verify that `app.go` correctly exports `StartBuddyMode`, `StopBuddyMode`, and `GetBuddyURL` to Wails bindings (they will appear in `wailsjs/go/main/App.js` after build).
+- Verify `config.go` has the new `BuddyModeEnabled` and `BuddyModePort` fields with correct env tags.
+- Commit message MUST start with "jules: ".

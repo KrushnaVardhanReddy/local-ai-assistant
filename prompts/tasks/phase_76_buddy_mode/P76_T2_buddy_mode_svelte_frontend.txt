@@ -1,0 +1,279 @@
+You are tasked with implementing the Svelte frontend for "Buddy Mode" — a feature that lets a friend view the live interview transcript and send hints to the candidate. This is Phase 76, Task 2 (P76-T2).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+The Go backend (P76-T1) has already been implemented. It exposes 3 new Wails-bound Go methods:
+- `App.StartBuddyMode()` → starts the local HTTP server and cloudflared tunnel. Returns an error string if it fails.
+- `App.StopBuddyMode()` → stops the tunnel and server.
+- `App.GetBuddyURL()` → returns the current public URL (with embedded token) or empty string.
+
+It also emits 2 new Wails events to the frontend:
+- `"buddy_url_ready"` payload: `string` (the full public URL including token)
+- `"buddy_hint"` payload: `string` (the hint text sent by the friend)
+
+The friend accesses a WebSocket endpoint (`wss://<cloudflare-url>/ws?token=<token>`), NOT a full web page. The friend UI is a SEPARATE standalone HTML page described in P76-T3.
+
+This task covers ONLY the main Wails desktop app Svelte frontend.
+
+════════════════════════════════════════════════════════════════
+CURRENT ARCHITECTURE (READ CAREFULLY)
+════════════════════════════════════════════════════════════════
+
+- `wails-app/frontend/src/lib/ws.svelte.ts`: The central reactive state store using Svelte 5 `$state`. The `wsState` object holds all shared app state. The `initListeners()` function registers Wails `EventsOn` handlers. This is where the new buddy events must be handled.
+- `wails-app/frontend/src/lib/Settings.svelte`: The Settings panel component. It has a tabbed interface. The tabs array is: `['models', 'audio', 'context', 'general', 'account']`. The "General" tab is where the Buddy Mode toggle should be added, just like "Include Active File as Context" and "Embedded Stealth Terminal" live there.
+- The Settings panel saves settings via `handleSaveSettings()` function and uses the Wails binding `(window as any).go.main.App.ToggleStealth(...)` as the pattern for calling Go methods.
+- `wails-app/frontend/src/products/interview/InterviewHUD.svelte`: The main interview UI. This is where friend hints must appear as a dismissible overlay.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/frontend/src/lib/ws.svelte.ts
+[MODIFY] wails-app/frontend/src/lib/Settings.svelte
+[MODIFY] wails-app/frontend/src/products/interview/InterviewHUD.svelte
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Extend `ws.svelte.ts` ─────────────────────────────
+
+1. Add new fields to `wsState` object:
+   ```ts
+   buddyModeActive: false,
+   buddyURL: "" as string,       // the public Cloudflare URL
+   buddyURLLoading: false,       // true while waiting for cloudflared to generate URL
+   buddyHints: [] as Array<{ id: number; text: string; dismissed: boolean }>,
+   ```
+
+2. Add a hint ID counter at module level:
+   ```ts
+   let buddyHintCounter = 0;
+   ```
+
+3. In the `initListeners()` function, add two new `onEvent` handlers AFTER the existing ones:
+
+   ```ts
+   onEvent("buddy_url_ready", (url: string) => {
+     wsState.buddyURL = url;
+     wsState.buddyURLLoading = false;
+     wsState.buddyModeActive = true;
+     console.log('[Buddy] Public URL ready:', url);
+   });
+
+   onEvent("buddy_hint", (hint: string) => {
+     wsState.buddyHints = [
+       ...wsState.buddyHints,
+       { id: buddyHintCounter++, text: hint, dismissed: false }
+     ];
+     // Auto-dismiss after 30 seconds
+     const id = buddyHintCounter - 1;
+     setTimeout(() => {
+       wsState.buddyHints = wsState.buddyHints.map(h =>
+         h.id === id ? { ...h, dismissed: true } : h
+       );
+     }, 30000);
+   });
+   ```
+
+4. Export two new async functions at the bottom of the file:
+
+   ```ts
+   export async function startBuddyMode(): Promise<void> {
+     wsState.buddyURLLoading = true;
+     wsState.buddyURL = "";
+     try {
+       await (window as any).go.main.App.StartBuddyMode();
+     } catch (e: any) {
+       wsState.buddyURLLoading = false;
+       wsState.buddyModeActive = false;
+       console.error('[Buddy] Failed to start:', e);
+       throw e;
+     }
+   }
+
+   export async function stopBuddyMode(): Promise<void> {
+     try {
+       await (window as any).go.main.App.StopBuddyMode();
+     } catch (e) {
+       console.error('[Buddy] Failed to stop:', e);
+     } finally {
+       wsState.buddyModeActive = false;
+       wsState.buddyURL = "";
+       wsState.buddyURLLoading = false;
+       wsState.buddyHints = [];
+     }
+   }
+
+   export function dismissBuddyHint(id: number): void {
+     wsState.buddyHints = wsState.buddyHints.map(h =>
+       h.id === id ? { ...h, dismissed: true } : h
+     );
+   }
+   ```
+
+─── STEP 2: Add Buddy Mode UI to `Settings.svelte` ─────────────
+
+In the `{#if activeTab === 'general'}` block, add the Buddy Mode section AFTER the "Include Active File as Context" checkbox and BEFORE the closing `{/if}`.
+
+It must only appear when `!isCloudBuild`:
+
+```svelte
+{#if !isCloudBuild}
+  <hr class="divider" />
+  <div class="config-section">
+    <h3 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: #ddd;">
+      👫 Buddy Mode (Friends Help)
+    </h3>
+    <p style="font-size: 0.78rem; color: #888; margin: 0 0 0.75rem 0; line-height: 1.5;">
+      Allow a trusted friend to view your live interview transcript and send you hints — from anywhere in the world. A secure, one-time Cloudflare link is generated.
+    </p>
+
+    {#if wsState.buddyModeActive}
+      <!-- Active state: Show URL and Stop button -->
+      <div style="background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 8px; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+        <div style="font-size: 0.78rem; color: #4ade80; font-weight: 600;">🟢 Buddy Mode Active</div>
+        {#if wsState.buddyURL}
+          <div style="font-size: 0.72rem; color: #ccc; word-break: break-all; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 0.4rem 0.6rem;">
+            {wsState.buddyURL}
+          </div>
+          <button
+            id="copy-buddy-url-btn"
+            class="btn-secondary"
+            style="font-size: 0.78rem; padding: 0.3rem 0.8rem; width: fit-content;"
+            onclick={() => {
+              navigator.clipboard.writeText(wsState.buddyURL);
+              const btn = document.getElementById('copy-buddy-url-btn');
+              if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy Link'; }, 2000); }
+            }}
+          >
+            📋 Copy Link
+          </button>
+        {:else}
+          <div style="font-size: 0.78rem; color: #888;">⏳ Generating secure link...</div>
+        {/if}
+        <button class="btn-secondary" style="font-size: 0.78rem; color: #f87171; border-color: #f87171; width: fit-content;" onclick={handleStopBuddy}>
+          🛑 Stop Buddy Mode
+        </button>
+      </div>
+    {:else if wsState.buddyURLLoading}
+      <!-- Loading state -->
+      <div style="font-size: 0.82rem; color: #888; display: flex; align-items: center; gap: 0.5rem;">
+        <span class="material-symbols-outlined" style="font-size: 1rem; animation: spin 1s linear infinite;">sync</span>
+        Starting tunnel... (takes ~5 seconds)
+      </div>
+    {:else}
+      <!-- Idle state -->
+      <button class="btn-primary" style="font-size: 0.82rem; width: fit-content;" onclick={handleStartBuddy}>
+        👫 Start Buddy Mode
+      </button>
+    {/if}
+  </div>
+{/if}
+```
+
+In the `<script lang="ts">` section, add these imports and handlers:
+
+```ts
+import { wsState, startBuddyMode, stopBuddyMode } from '$lib/ws.svelte';
+
+async function handleStartBuddy() {
+  try {
+    await startBuddyMode();
+  } catch (e: any) {
+    alert(`Failed to start Buddy Mode: ${e?.message || e}. Make sure cloudflared is installed.`);
+  }
+}
+
+async function handleStopBuddy() {
+  await stopBuddyMode();
+}
+```
+
+─── STEP 3: Show Buddy Hints in `InterviewHUD.svelte` ──────────
+
+Buddy hints must appear as a non-intrusive overlay inside the HUD, similar to how a notification toast works. They must be subtle enough not to distract during the interview.
+
+1. Import at the top of the `<script>` block:
+   ```ts
+   import { wsState, dismissBuddyHint } from '$lib/ws.svelte';
+   ```
+
+2. Add the hints overlay at the END of the component's root element (just before the closing tag), so it overlays on top of the HUD:
+
+```svelte
+<!-- Buddy Hints Overlay -->
+{#if wsState.buddyHints.filter(h => !h.dismissed).length > 0}
+  <div
+    id="buddy-hints-container"
+    style="
+      position: fixed;
+      bottom: 5.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-width: 300px;
+    "
+  >
+    {#each wsState.buddyHints.filter(h => !h.dismissed) as hint (hint.id)}
+      <div
+        style="
+          background: rgba(15, 15, 25, 0.92);
+          border: 1px solid rgba(74, 222, 128, 0.4);
+          border-radius: 10px;
+          padding: 0.6rem 0.9rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+          animation: slideInRight 0.25s ease;
+        "
+      >
+        <div style="font-size: 0.68rem; color: #4ade80; font-weight: 600; letter-spacing: 0.05em;">
+          👫 BUDDY HINT
+        </div>
+        <div style="font-size: 0.82rem; color: #e5e7eb; line-height: 1.4;">
+          {hint.text}
+        </div>
+        <button
+          onclick={() => dismissBuddyHint(hint.id)}
+          style="
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 0.68rem;
+            cursor: pointer;
+            text-align: left;
+            padding: 0;
+            width: fit-content;
+          "
+        >
+          Dismiss ×
+        </button>
+      </div>
+    {/each}
+  </div>
+{/if}
+```
+
+3. Add CSS animation to the `<style>` section in `InterviewHUD.svelte`:
+   ```css
+   @keyframes slideInRight {
+     from { transform: translateX(100%); opacity: 0; }
+     to   { transform: translateX(0);    opacity: 1; }
+   }
+   ```
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Run `npm run build` inside `wails-app/frontend/` and verify zero TypeScript/Svelte errors.
+- Verify that `wsState` now includes `buddyModeActive`, `buddyURL`, `buddyURLLoading`, and `buddyHints`.
+- Verify that `Settings.svelte` shows the Buddy Mode section only in the "General" tab and only when `!isCloudBuild`.
+- Verify that `InterviewHUD.svelte` renders the hints overlay when `wsState.buddyHints` has undismissed items.
+- Commit message MUST start with "jules: ".
