@@ -24,6 +24,14 @@
         body { font-family: 'Inter', sans-serif; background-color: #0a0a0e; color: #e5e7eb; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .glass { background: rgba(21, 21, 28, 0.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .rc-btn { border: none; border-radius: 6px; padding: 0.5rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; width: 100%; }
+        .rc-btn:hover { opacity: 0.85; }
+        .rc-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .rc-btn-green { background: #4ade80; color: #000; }
+        .rc-btn-blue { background: #60a5fa; color: #000; }
+        .rc-btn-gray { background: rgba(255,255,255,0.1); color: #e5e7eb; }
+        .rc-btn-red { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+        .rc-btn-purple { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -46,22 +54,52 @@
             <div class="text-center text-xs text-gray-500 my-4">Waiting for interview to start...</div>
         </div>
 
-        <!-- Right Panel: Hint Input -->
-        <div class="w-full md:w-80 glass border-l-0 md:border-l border-t md:border-t-0 border-white/5 flex flex-col shrink-0 absolute md:relative bottom-0 left-0 h-40 md:h-full z-20">
-            <div class="p-4 border-b border-white/5 bg-surface/50">
+        <!-- Right Panel: Hint Input & Remote Control -->
+        <div class="w-full md:w-80 glass border-l-0 md:border-l border-t md:border-t-0 border-white/5 flex flex-col shrink-0 absolute md:relative bottom-0 left-0 h-[360px] md:h-full z-20">
+            <div class="p-4 border-b border-white/5 bg-surface/50 shrink-0">
                 <h2 class="text-sm font-semibold text-primary mb-1">Send a Hint</h2>
                 <p class="text-xs text-gray-400">Hints appear privately on your friend's screen.</p>
             </div>
-            <div class="p-4 flex-1 flex flex-col gap-3">
-                <textarea id="hint-input" class="w-full flex-1 bg-black/40 border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-primary/50 resize-none transition-colors" placeholder="Type your hint here... (e.g. Mention Redis for caching)"></textarea>
+            <div class="p-4 flex flex-col gap-3 shrink-0">
+                <textarea id="hint-input" class="w-full h-20 bg-black/40 border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-primary/50 resize-none transition-colors" placeholder="Type your hint here... (e.g. Mention Redis for caching)"></textarea>
                 <button id="send-btn" class="w-full bg-primary text-black font-semibold py-2 rounded-lg text-sm hover:bg-green-300 transition-colors opacity-50 cursor-not-allowed" disabled>Send Hint</button>
+            </div>
+
+            <!-- Remote Control Panel -->
+            <div class="p-4 border-t border-white/5 overflow-y-auto">
+              <h2 class="text-sm font-semibold text-purple-400 mb-3">🕹️ Remote Control</h2>
+              <div class="grid grid-cols-2 gap-2">
+                <button id="btn-flush-llm" onclick="sendAction('flush_llm')" class="rc-btn rc-btn-green">
+                  ⚡ Generate Answer
+                </button>
+                <button id="btn-capture-screen" onclick="sendAction('capture_screen')" class="rc-btn rc-btn-blue">
+                  📸 Analyze Screen
+                </button>
+                <button id="btn-mic" onclick="sendAction('toggle_mic')" class="rc-btn rc-btn-gray">
+                  🎙️ Toggle Mic
+                </button>
+                <button id="btn-manual" onclick="sendAction('toggle_manual_mode')" class="rc-btn rc-btn-gray">
+                  🤖 Toggle Auto
+                </button>
+                <button id="btn-clear-state" onclick="sendAction('clear_state')" class="rc-btn rc-btn-red" style="grid-column: span 2;">
+                  🗑️ Clear State
+                </button>
+              </div>
+              
+              <!-- Custom Question Input -->
+              <div class="mt-3">
+                <input id="chat-input" type="text" placeholder="Ask a custom question..." class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500/50 transition-colors" />
+                <button onclick="sendChat()" class="rc-btn rc-btn-purple w-full mt-2 text-sm">
+                  💬 Send Custom Question
+                </button>
+              </div>
             </div>
         </div>
     </main>
 
     <!-- Referral Banner -->
     <div class="glass py-2 px-4 text-center text-xs text-gray-400 shrink-0 z-10">
-        Helping a friend? <a href="https://barnowl.ai" target="_blank" class="text-primary hover:underline">Get BarnOwl AI</a> for your next interview.
+        Want this superpower for your own calls? <a href="https://barnowl.ai" target="_blank" class="text-primary hover:underline">Get BarnOwl AI</a> for real-time meeting transcription and live technical hints.
     </div>
 
     <script>
@@ -97,6 +135,15 @@
                     const msg = JSON.parse(event.data);
                     if (msg.type === 'transcript') {
                         appendTranscript(msg.speaker, msg.text);
+                    } else if (msg.type === 'state') {
+                        if (msg.state?.micActive !== undefined) {
+                            const btn = document.getElementById('btn-mic');
+                            if (btn) btn.textContent = msg.state.micActive ? '🔴 Stop Mic' : '🎙️ Toggle Mic';
+                        }
+                        if (msg.state?.manualMode !== undefined) {
+                            const btn = document.getElementById('btn-manual');
+                            if (btn) btn.textContent = msg.state.manualMode ? '🤖 Enable Auto' : '⏸️ Go Manual';
+                        }
                     }
                 } catch (e) { console.error(e); }
             };
@@ -170,6 +217,27 @@
                 sendHint();
             }
         });
+
+        function sendAction(action, payload = '') {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'remote_action', action, payload }));
+            
+            const btn = document.getElementById(`btn-${action.replace(/_/g, '-')}`);
+            if (btn) {
+                const orig = btn.textContent;
+                btn.textContent = '✓ Sent';
+                btn.disabled = true;
+                setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1000);
+            }
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input?.value?.trim();
+            if (!text) return;
+            sendAction('send_chat', text);
+            input.value = '';
+        }
     </script>
 </body>
 </html>

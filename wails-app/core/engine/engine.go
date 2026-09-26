@@ -336,3 +336,9 @@ func (e *StealthEngine) FlushTranscriptLog() []string {
 
 	return logCopy
 }
+
+func (e *StealthEngine) GetManualMode() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.manualMode
+}
