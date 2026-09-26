@@ -3,7 +3,6 @@ This is a massive architectural shift. We are decoupling the Svelte frontend fro
 
 This makes the "Buddy Mode" remote control drastically simpler because both the local desktop UI and the remote web UI will communicate with the backend using the exact same REST/WS protocols.
 
-**CRITICAL: THIS MUST BE DONE ON A NEW BRANCH.** Do not commit these changes to `main` or the current feature branch.
 
 ════════════════════════════════════════════════════════════════
 FILES TO MODIFY / CREATE
@@ -30,9 +29,10 @@ Create `wails-app/backend/api/server.go` and `routes.go`:
 2. Migrate all Wails IPC bindings from `app.go` (e.g., `ToggleMic`, `FlushQuestionBuffer`, `AppendToBuffer`) into standard HTTP POST endpoints (e.g., `POST /api/v1/mic/toggle`, `POST /api/v1/llm/flush`).
 
 ─── STEP 3: Unified WebSocket State ───
-1. The current app uses Wails Events (IPC) for state sync (`EventsEmit`) and a separate `buddyServer` for remote WebSockets.
-2. Unify this: The Go backend should now maintain a single unified WebSocket hub.
-3. The desktop Svelte frontend should connect to `ws://localhost:8080/ws` to receive transcript updates and state changes, exactly like the Buddy UI does.
+1. The current app uses Wails Events (IPC) for state sync (`EventsEmit`) and a separate `buddyServer` (`wails-app/backend/buddy/server.go`) for remote WebSockets.
+2. Unify this: The Go backend should now maintain a single unified WebSocket hub. You should look at `wails-app/backend/buddy/server.go` and refactor it so that BOTH the local Svelte frontend and the remote buddy clients connect to the same WebSocket implementation.
+3. The desktop Svelte frontend should connect to `ws://localhost:8080/ws` (or whatever local port is used) to receive transcript updates and state changes, reusing the existing `BuddyMessage` JSON structure instead of Wails IPC events.
+4. Ensure the cloudflared tunnel functionality in `buddy/server.go` remains intact, but the core HTTP/WebSocket routing should be unified into the new `wails-app/backend/api/server.go` or seamlessly integrated with it.
 
 ─── STEP 4: Refactor Frontend to use Fetch/WS ───
 Modify `wails-app/frontend/src/lib/ws.svelte.ts` and API calls:
