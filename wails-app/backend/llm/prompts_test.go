@@ -126,7 +126,7 @@ func TestBuildSystemPrompt(t *testing.T) {
 			category: "coding",
 			expectedParts: []string{
 				DefaultSystemPrompt,
-				"Approach (2-3 sentences)",
+				"Approach (1 short bullet)",
 				"Complexity:",
 			},
 		},
@@ -136,7 +136,7 @@ func TestBuildSystemPrompt(t *testing.T) {
 			expectedParts: []string{
 				DefaultSystemPrompt,
 				"STAR format strictly",
-				"Situation (1-2 sentences)",
+				"Situation (1 short bullet)",
 			},
 		},
 		{
@@ -144,7 +144,7 @@ func TestBuildSystemPrompt(t *testing.T) {
 			category: "system_design",
 			expectedParts: []string{
 				DefaultSystemPrompt,
-				"Clarify Requirements",
+				"Clarify Requirements (1-2 short bullets)",
 				"High-Level Architecture",
 			},
 		},
@@ -153,7 +153,7 @@ func TestBuildSystemPrompt(t *testing.T) {
 			category: "conceptual",
 			expectedParts: []string{
 				DefaultSystemPrompt,
-				"Definition (2-3 sentences)",
+				"Definition (1 short bullet)",
 				"How It Works",
 			},
 		},
@@ -162,7 +162,7 @@ func TestBuildSystemPrompt(t *testing.T) {
 			category: "opinion",
 			expectedParts: []string{
 				DefaultSystemPrompt,
-				"Position (1 sentence)",
+				"Position (1 short bullet)",
 				"Reason 1",
 			},
 		},
