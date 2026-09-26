@@ -30,8 +30,14 @@ export const wsState = $state({
   pollError: "none",
   cacheStats: { cached_pairs: 0, estimated_tokens_saved: 0 },
   downloadTask: null as { component: string, progress: number } | null,
-  appMode: (typeof localStorage !== 'undefined' ? (localStorage.getItem('barnowl_app_mode') as 'interview' | 'transcript' | null) || 'interview' : 'interview') as 'interview' | 'transcript'
+  appMode: (typeof localStorage !== 'undefined' ? (localStorage.getItem('barnowl_app_mode') as 'interview' | 'transcript' | null) || 'interview' : 'interview') as 'interview' | 'transcript',
+  buddyModeActive: false,
+  buddyURL: "" as string,
+  buddyURLLoading: false,
+  buddyHints: [] as Array<{ id: number; text: string; dismissed: boolean }>,
 });
+
+let buddyHintCounter = 0;
 
 export async function toggleManualMode(): Promise<void> {
   wsState.manualMode = !wsState.manualMode;
@@ -252,6 +258,27 @@ function initListeners() {
         }
       }
     }
+  });
+
+  onEvent("buddy_url_ready", (url: string) => {
+    wsState.buddyURL = url;
+    wsState.buddyURLLoading = false;
+    wsState.buddyModeActive = true;
+    console.log('[Buddy] Public URL ready:', url);
+  });
+
+  onEvent("buddy_hint", (hint: string) => {
+    wsState.buddyHints = [
+      ...wsState.buddyHints,
+      { id: buddyHintCounter++, text: hint, dismissed: false }
+    ];
+    // Auto-dismiss after 30 seconds
+    const id = buddyHintCounter - 1;
+    setTimeout(() => {
+      wsState.buddyHints = wsState.buddyHints.map(h =>
+        h.id === id ? { ...h, dismissed: true } : h
+      );
+    }, 30000);
   });
 }
 let retryDelay = 500;
@@ -543,4 +570,36 @@ export async function setAppMode(mode: 'interview' | 'transcript') {
   if ((window as any).go?.main?.App?.SetAppMode) {
     await (window as any).go.main.App.SetAppMode(mode);
   }
+}
+
+export async function startBuddyMode(): Promise<void> {
+  wsState.buddyURLLoading = true;
+  wsState.buddyURL = "";
+  try {
+    await (window as any).go.main.App.StartBuddyMode();
+  } catch (e: any) {
+    wsState.buddyURLLoading = false;
+    wsState.buddyModeActive = false;
+    console.error('[Buddy] Failed to start:', e);
+    throw e;
+  }
+}
+
+export async function stopBuddyMode(): Promise<void> {
+  try {
+    await (window as any).go.main.App.StopBuddyMode();
+  } catch (e) {
+    console.error('[Buddy] Failed to stop:', e);
+  } finally {
+    wsState.buddyModeActive = false;
+    wsState.buddyURL = "";
+    wsState.buddyURLLoading = false;
+    wsState.buddyHints = [];
+  }
+}
+
+export function dismissBuddyHint(id: number): void {
+  wsState.buddyHints = wsState.buddyHints.map(h =>
+    h.id === id ? { ...h, dismissed: true } : h
+  );
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { wsState, toggleMockMode, toggleMockTTS, setAppMode } from "$lib/ws.svelte";
+  import { wsState, toggleMockMode, toggleMockTTS, setAppMode, dismissBuddyHint } from "$lib/ws.svelte";
   import { getApiUrl, apiFetch } from "$lib/api";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
   import { authState } from "$lib/auth.svelte";
@@ -594,6 +594,61 @@
       </div>
     </div>
   {/if}
+
+  <!-- Buddy Hints Overlay -->
+  {#if wsState.buddyHints.filter(h => !h.dismissed).length > 0}
+    <div
+      id="buddy-hints-container"
+      style="
+        position: fixed;
+        bottom: 5.5rem;
+        right: 1.5rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        max-width: 300px;
+      "
+    >
+      {#each wsState.buddyHints.filter(h => !h.dismissed) as hint (hint.id)}
+        <div
+          style="
+            background: rgba(15, 15, 25, 0.92);
+            border: 1px solid rgba(74, 222, 128, 0.4);
+            border-radius: 10px;
+            padding: 0.6rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            animation: slideInRight 0.25s ease;
+          "
+        >
+          <div style="font-size: 0.68rem; color: #4ade80; font-weight: 600; letter-spacing: 0.05em;">
+            👫 BUDDY HINT
+          </div>
+          <div style="font-size: 0.82rem; color: #e5e7eb; line-height: 1.4;">
+            {hint.text}
+          </div>
+          <button
+            onclick={() => dismissBuddyHint(hint.id)}
+            style="
+              background: none;
+              border: none;
+              color: #6b7280;
+              font-size: 0.68rem;
+              cursor: pointer;
+              text-align: left;
+              padding: 0;
+              width: fit-content;
+            "
+          >
+            Dismiss ×
+          </button>
+        </div>
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -789,6 +844,11 @@
     flex-direction: column;
     padding: 24px;
     overflow-y: auto;
+  }
+
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
   }
 
   .hide-scrollbar::-webkit-scrollbar {
