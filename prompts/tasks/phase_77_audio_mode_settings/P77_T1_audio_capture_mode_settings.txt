@@ -1,0 +1,148 @@
+You are tasked with wiring the Audio Capture Mode selector into the Settings UI. This is Phase 77, Task 1 (P77-T1).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+BarnOwl AI already has two fully-implemented audio capture engines in the Go backend:
+
+1. **Interview Mode** (`AppModeInterview`): Uses `CaptureEngine` to capture only system audio
+   (loopback — i.e., the interviewer's voice coming through Google Meet / Zoom / Teams).
+   Audio is tagged `[Interviewer]`. The user's own microphone is silent. Best for stealth.
+
+2. **Transcript Mode** (`AppModeTranscript`): Uses `DualCaptureEngine` to capture BOTH the
+   loopback audio AND the microphone simultaneously. Both streams are transcribed, tagged as
+   `[Interviewer]` and `[Candidate]` respectively, giving a complete two-sided conversation log.
+
+These modes are already toggled by the `SetAppMode(mode string)` Wails-bound method in `app.go`.
+The `wsState.appMode` in `ws.svelte.ts` and the `setAppMode()` export already exist and work.
+
+There is currently NO UI in Settings to let the user switch between these modes during a session.
+This task adds that UI — it is a surgical, single-file Svelte change.
+
+════════════════════════════════════════════════════════════════
+CURRENT ARCHITECTURE (READ CAREFULLY)
+════════════════════════════════════════════════════════════════
+
+- `wails-app/frontend/src/lib/ws.svelte.ts`:
+  - `wsState.appMode` is typed as `'interview' | 'transcript'`, initialized from localStorage.
+  - `setAppMode(mode)` is an exported async function at the bottom of this file. It updates
+    `wsState.appMode`, writes to localStorage, and calls `window.go.main.App.SetAppMode(mode)`.
+  - DO NOT modify this file. It already has everything needed.
+
+- `wails-app/frontend/src/lib/Settings.svelte`:
+  - This is the ONLY file you will modify.
+  - It has a tabbed interface. The `{#if activeTab === 'audio'}` block handles audio settings.
+  - Currently in the audio tab: Audio Input Device selector + Loopback checkbox.
+  - The audio tab is ONLY shown when `!isCloudBuild`.
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/frontend/src/lib/Settings.svelte
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Add imports to the <script> block ──────────────────
+
+At the top of the `<script lang="ts">` block, add the following import alongside the existing ones:
+
+```ts
+import { wsState, setAppMode } from '$lib/ws.svelte';
+```
+
+─── STEP 2: Add the UI to the Audio tab ────────────────────────
+
+In the `{#if activeTab === 'audio'}` block, ADD the following section at the VERY TOP,
+before the existing "Audio Input Device" selector. It must be inside the `{#if !isCloudBuild}`
+guard that already exists in that tab.
+
+```svelte
+<div class="config-section">
+  <div class="section-label">🎙️ Audio Capture Mode</div>
+
+  <div style="display: flex; flex-direction: column; gap: 0.6rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.85rem 1rem;">
+
+    <!-- Option 1: Interviewer Only (default) -->
+    <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;">
+      <input
+        type="radio"
+        name="audioMode"
+        value="interview"
+        checked={wsState.appMode === 'interview'}
+        onchange={() => setAppMode('interview')}
+        style="margin-top: 0.18rem; accent-color: #4ade80;"
+      />
+      <div>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #e5e7eb;">
+          Interviewer Only
+          <span style="font-size: 0.68rem; font-weight: 400; background: rgba(74,222,128,0.12); color: #4ade80; border-radius: 4px; padding: 0.1rem 0.4rem; margin-left: 0.3rem;">Default · Stealth</span>
+        </div>
+        <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.15rem; line-height: 1.4;">
+          Captures system audio only (Google Meet / Zoom speaker output). Your microphone is silent.
+          Best for stealth — your voice never goes through the AI.
+        </div>
+      </div>
+    </label>
+
+    <div style="border-top: 1px solid rgba(255,255,255,0.05);"></div>
+
+    <!-- Option 2: Dual Mode (Full Transcript) -->
+    <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;">
+      <input
+        type="radio"
+        name="audioMode"
+        value="transcript"
+        checked={wsState.appMode === 'transcript'}
+        onchange={() => setAppMode('transcript')}
+        style="margin-top: 0.18rem; accent-color: #4ade80;"
+      />
+      <div>
+        <div style="font-size: 0.85rem; font-weight: 600; color: #e5e7eb;">
+          Dual Mode — Full Transcript
+        </div>
+        <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.15rem; line-height: 1.4;">
+          Captures both system audio <strong style="color: #9ca3af;">[Interviewer]</strong> and your
+          microphone <strong style="color: #9ca3af;">[Candidate]</strong> simultaneously.
+          Generates a complete, labeled two-sided conversation transcript.
+        </div>
+      </div>
+    </label>
+
+  </div>
+
+  {#if wsState.appMode === 'transcript'}
+    <div style="font-size: 0.75rem; color: #f59e0b; display: flex; align-items: center; gap: 0.4rem; margin-top: -0.25rem;">
+      <span>⚠️</span>
+      <span>Dual Mode may have higher CPU usage. Your voice is processed by the AI.</span>
+    </div>
+  {/if}
+</div>
+```
+
+────────────────────────────────────────────────────────────────
+IMPORTANT NOTES
+────────────────────────────────────────────────────────────────
+
+- The `setAppMode()` function is ALREADY exported from `ws.svelte.ts`. It handles all the backend
+  communication and localStorage persistence internally. You do NOT need to call `handleSaveSettings()`
+  for this — it takes effect immediately when the radio button is clicked.
+- Do NOT add this to the `handleSaveSettings()` function — mode switching is instant.
+- Do NOT use Svelte's `bind:group` for the radio buttons. Use `checked={...}` and `onchange`
+  explicitly, as shown above, to avoid Svelte 5 reactivity issues with `$state`.
+- The `wsState.appMode` will update reactively via `$state` and the radio buttons will reflect
+  the current mode without needing any additional local state.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Run `npm run build` inside `wails-app/frontend/` and verify zero TypeScript/Svelte errors.
+- Verify that the Audio tab now shows the "🎙️ Audio Capture Mode" section above the device selector.
+- Verify that clicking "Dual Mode" radio button calls `setAppMode('transcript')`.
+- Verify that clicking "Interviewer Only" calls `setAppMode('interview')`.
+- Verify the yellow warning banner appears only when Dual Mode is selected.
+- Commit message MUST start with "jules: ".
