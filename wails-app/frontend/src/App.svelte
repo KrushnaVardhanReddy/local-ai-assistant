@@ -8,11 +8,12 @@
   import { uiState } from "$lib/stores/uiState.svelte.ts";
   import AuthModal from "$lib/components/AuthModal.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
+  import LegalModal from "$lib/LegalModal.svelte";
 
   import { WindowSetSize, WindowCenter, WindowSetAlwaysOnTop, WindowShow } from "../wailsjs/runtime/runtime";
 
 
-
+  let hasAcceptedLegal = $state(false);
   let showAuthModal = $state(false);
   const isGated = $derived(
     authState.authMode !== "local" && (
@@ -132,8 +133,8 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
-  {#if isGated}
-    <!-- Force solid background during auth — the window has a transparent background colour
+  {#if isGated || !hasAcceptedLegal}
+    <!-- Force solid background during auth and legal modal — the window has a transparent background colour
          for stealth mode, which causes the window to appear invisible on Alt+Tab on Linux 
          unless we explicitly paint a solid background here. -->
     <style>body { background: #1e1e1e !important; }</style>
@@ -141,6 +142,10 @@
     <style>body { background: transparent !important; }</style>
   {/if}
 </svelte:head>
+
+{#if !hasAcceptedLegal}
+  <LegalModal on:agreed={() => (hasAcceptedLegal = true)} />
+{/if}
 
 {#if isGated}
   <div class="fixed inset-0 z-[9999] flex flex-col bg-[#1e1e1e]">
