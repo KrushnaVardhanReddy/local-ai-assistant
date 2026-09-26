@@ -38,7 +38,7 @@ func (e *StealthEngine) ProcessAudioTagged(samples []float32, speaker string) er
 				cleanTranscript := strings.TrimSpace(transcript)
 				taggedLine := fmt.Sprintf("%s: %s", speaker, cleanTranscript)
 				e.AppendTranscriptLog(taggedLine)
-				
+
 				if e.events != nil {
 					e.events.Emit("on_transcript_log", map[string]interface{}{"text": taggedLine})
 				}

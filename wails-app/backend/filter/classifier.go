@@ -17,7 +17,6 @@ var (
 //go:embed centroids.json
 var centroidsJSON []byte
 
-
 func initCentroids() {
 	centroids = make(map[string][]float32)
 	if err := json.Unmarshal(centroidsJSON, &centroids); err != nil {

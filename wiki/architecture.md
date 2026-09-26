@@ -109,3 +109,10 @@ The application supports two distinct audio capture paradigms, represented by th
 - **Transcript Mode (`AppModeTranscript`)**: Utilizes the `DualCaptureEngine` to concurrently capture the default Loopback hardware AND the default Microphone hardware. Both streams are independently fed into the transcription pipeline (`StealthEngine.ProcessAudioTagged`) with their respective tags (`[Interviewer]` and `[Candidate]`). In this mode, auto-LLM triggering is disabled, turning the engine into a passive, concurrent logging system. The frontend limits interactivity by hiding the chat input and "Submit Answer" button, while presenting a "Summarize Session" button.
 
 The `DualCaptureEngine` achieves concurrency by allocating two independent `malgo.Device` instances tied to a single shared `malgo.AllocatedContext` (extracted from the dormant `CaptureEngine`).
+
+### Buddy Mode (Phase 76)
+Buddy Mode allows a user to securely share their live interview transcript with a trusted friend and receive text hints back in real-time.
+- **Backend Architecture**: The Go backend spawns a local HTTP+WebSocket server running on port `8765` (by default, configurable via `BUDDY_MODE_PORT` in `AppConfig`).
+- **Cloudflare Tunnel integration**: The app launches the `cloudflared` CLI utility as a subprocess to establish a secure `trycloudflare.com` tunnel pointing to the local buddy server. The tunnel URL is protected by a 16-byte cryptographically random hex token generated per session.
+- **WebSocket Protocol**: The frontend (and backend engine) intercept the internal `on_transcript` Wails events and proxy the `text` and `speaker` properties to all connected WebSocket clients. Friends can send back `hint` messages which are emitted back to the UI via the `buddy_hint` Wails event.
+- **Separation of Concerns**: The buddy server is strictly decoupled from the core `StealthEngine` logic; events are routed via a custom `buddyEventProxy` adapter configured in `app.go`.

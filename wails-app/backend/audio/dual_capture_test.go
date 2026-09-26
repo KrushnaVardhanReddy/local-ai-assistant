@@ -1,8 +1,8 @@
 package audio
 
 import (
-	"testing"
 	"github.com/gen2brain/malgo"
+	"testing"
 )
 
 func TestNewDualCaptureEngine(t *testing.T) {
