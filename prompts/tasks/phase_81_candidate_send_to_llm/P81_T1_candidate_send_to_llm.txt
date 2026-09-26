@@ -1,0 +1,176 @@
+You are tasked with implementing Phase 81: "Candidate Send-to-LLM" — Two complementary features that let the candidate explicitly send their own spoken lines to the LLM for an AI response.
+
+════════════════════════════════════════════════════════════════
+BACKGROUND & CONTEXT
+════════════════════════════════════════════════════════════════
+
+Currently, the AI only auto-triggers on "interviewer" audio. This phase adds explicit user control
+to send any "candidate" transcript line to the LLM, via:
+
+  1. A Magic Wand hover button (🪄) on each candidate bubble in the transcript.
+  2. A new global hotkey (Ctrl+Alt+S) that sends the LAST candidate line to the LLM.
+
+════════════════════════════════════════════════════════════════
+ARCHITECTURE OVERVIEW
+════════════════════════════════════════════════════════════════
+
+Key files:
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte`
+  - Renders transcript bubbles. Each `item` has `{ role: string; text: string; answer?: string }`.
+  - `item.role === 'candidate'` are the user's own spoken lines.
+  - Bubbles have class `.bubble-candidate`.
+  - The existing `onclick` on candidate bubbles adds text to input box (line ~247–262).
+
+- `wails-app/app.go`
+  - `AppendToBuffer(text string) error` — adds text to the rolling question buffer without flushing.
+  - `FlushQuestionBuffer() error` — flushes buffer to LLM and triggers AI response.
+  - These two called together = "send this text to the LLM and get a response".
+
+- `wails-app/backend/hotkeys/hotkeys.go`
+  - Uses `golang.design/x/hotkey` to register OS-level hotkeys.
+  - Has `EventsEmit` var (mockable) to fire Wails events to the frontend.
+  - Pattern to follow: `Ctrl+Alt+1` emits `"hotkey_transcript_1"` → frontend listens.
+  - Has `NewHotkey` var (mockable) so tests can mock hotkey registration.
+
+- `wails-app/frontend/src/lib/ws.svelte.ts`
+  - Central Wails event listeners. The frontend already listens for `"hotkey_transcript_1"`.
+
+- `wails-app/backend/buddy/index.html`
+  - The friend's web interface. It also renders the transcript and should have the same wand button.
+
+════════════════════════════════════════════════════════════════
+FEATURE 1: Magic Wand Button (🪄) on Candidate Bubbles
+════════════════════════════════════════════════════════════════
+
+Modify `wails-app/frontend/src/products/interview/ConvPanel.svelte`:
+
+1. Inside the `{:else if item.role === 'candidate'}` block (around line 246), add a 🪄 button 
+   that appears ONLY on hover via CSS.
+
+2. The button's appearance:
+   - Small, pill-shaped button: `🪄 Ask AI`
+   - Positioned absolutely at the top-right corner of the candidate bubble.
+   - Hidden by default (opacity: 0), visible when the parent `.bubble-candidate` is hovered 
+     (opacity: 1), with a smooth 0.15s transition.
+   - Color: purple accent (`#a78bfa` background, dark text).
+
+3. The button's onclick handler should:
+   a. Call `AppendToBuffer(item.text)` (Wails IPC) to put the candidate's line into the buffer.
+   b. Then call `FlushQuestionBuffer()` (Wails IPC) to send it immediately to the LLM.
+   c. Show brief visual feedback on the button itself ("✓ Sent!") for 1.5 seconds, then revert.
+
+4. The button must have a unique ID like `wand-btn-{index}` for browser testing.
+
+5. Import the Wails IPC bindings for `AppendToBuffer` and `FlushQuestionBuffer` from:
+   `wailsjs/go/main/App` (they are already exported in `app.go`).
+
+CSS additions (inside the `<style>` block of ConvPanel.svelte):
+```css
+.bubble-candidate {
+    position: relative; /* ensure absolute child is positioned correctly */
+}
+
+.wand-btn {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.4rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    background: rgba(167, 139, 250, 0.2);
+    border: 1px solid rgba(167, 139, 250, 0.3);
+    color: #a78bfa;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.bubble-candidate:hover .wand-btn {
+    opacity: 1;
+}
+
+.wand-btn:hover {
+    background: rgba(167, 139, 250, 0.35);
+}
+
+.wand-btn.sent {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.3);
+    color: #4ade80;
+}
+```
+
+════════════════════════════════════════════════════════════════
+FEATURE 2: Global Hotkey Ctrl+Alt+S ("Send Last Candidate Line")
+════════════════════════════════════════════════════════════════
+
+─── Step A: Register the hotkey in `hotkeys.go` ───
+
+Modify `wails-app/backend/hotkeys/hotkeys.go`:
+
+1. Register a new hotkey: Ctrl+Alt+S
+   ```go
+   hkS := NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, ModAlt}, hotkey.KeyS)
+   if err := hkS.Register(); err != nil {
+       log.Printf("⚠️  Failed to register Ctrl+Alt+S (send-to-LLM): %v\n", err)
+       // Non-fatal: continue without this hotkey
+   } else {
+       log.Println("✅ Registered Ctrl+Alt+S (send last candidate line to LLM)")
+   }
+   ```
+
+2. In the goroutine's select loop, add a case:
+   ```go
+   case <-hkS.Keydown():
+       EventsEmit(ctx, "hotkey_send_candidate_to_llm")
+   ```
+
+3. In the ctx.Done() cleanup, add:
+   ```go
+   _ = hkS.Unregister()
+   ```
+
+─── Step B: Listen for the event in the Svelte frontend ───
+
+Modify `wails-app/frontend/src/lib/ws.svelte.ts` (or wherever `hotkey_transcript_1` is listened to):
+
+1. Add a listener for `"hotkey_send_candidate_to_llm"`.
+2. The handler should:
+   a. Find the LAST item in `transcriptHistory` (from wsState) where `item.role === 'candidate'`.
+   b. If found, call `AppendToBuffer(item.text)` then `FlushQuestionBuffer()`.
+   c. Emit a brief UI notification (optional toast or the button flash on the last wand button).
+
+─── Step C: Add the hotkey to the Hotkeys panel ───
+
+Somewhere in the UI (the existing Hotkeys tooltip/panel or `HotkeysModal.svelte`), document the new hotkey:
+- `Ctrl+Alt+S` — Send last line to AI
+
+════════════════════════════════════════════════════════════════
+FEATURE 3: Magic Wand Button (🪄) on Buddy Web UI
+════════════════════════════════════════════════════════════════
+
+Modify `wails-app/backend/buddy/index.html`:
+
+1. Update the `appendTranscript` JS function to inject the `🪄` button when rendering candidate lines:
+   - Identify candidate lines by checking `if (!isInterviewer)`.
+   - The button should have the same CSS styling as the Svelte app. Add the CSS to the `<style>` block.
+   - When clicked, the button should send two WebSocket messages:
+     ```js
+     ws.send(JSON.stringify({ type: 'remote_action', action: 'append_to_buffer', payload: text }));
+     ws.send(JSON.stringify({ type: 'remote_action', action: 'flush_llm' }));
+     ```
+   - Provide visual feedback ("✓ Sent") on the button for 1 second.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Run `npm run build` inside `wails-app/frontend/` and verify zero TypeScript/Svelte errors.
+- Run `go test ./backend/hotkeys/...` and verify tests still pass (the new hotkey uses the same
+  mockable `NewHotkey` pattern so existing tests should not break).
+- Run `make build-barnowl` to verify the full Go binary compiles.
+- Verify `wand-btn-{index}` IDs exist in the rendered DOM for each candidate bubble.
+- Commit message MUST start with "jules: ".

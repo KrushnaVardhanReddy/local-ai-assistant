@@ -119,11 +119,17 @@
 ## Phase 79 — Buddy Mode: Full Remote Control 🕹️
 
 | Task | Files | Description | Status | PR |
-|------|-------|-------------|--------|----|
-| P79-T1 | `backend/buddy/server.go`, `backend/buddy/index.html`, `app.go` | **Buddy Remote Control:** Extend the WebSocket protocol with a `remote_action` message type. Wire 8 actions (`flush_llm`, `clear_state`, `toggle_mic`, `toggle_manual_mode`, `send_chat`, `append_to_buffer`, `capture_screen`, `end_session`) to existing `App` methods. Add a "🕹️ Remote Control" panel to the friend's Web UI with buttons for each action. Update marketing copy in banner to the "Superpower" angle. | 🔄 | — |
+| P79-T1 | `backend/buddy/server.go`, `backend/buddy/index.html`, `app.go` | **Buddy Remote Control:** Extend the WebSocket protocol with a `remote_action` message type. Wire 8 actions (`flush_llm`, `clear_state`, `toggle_mic`, `toggle_manual_mode`, `send_chat`, `append_to_buffer`, `capture_screen`, `end_session`) to existing `App` methods. Add a "🕹️ Remote Control" panel to the friend's Web UI with buttons for each action. Update marketing copy in banner to the "Superpower" angle. | ✅ | #266 |
 
 ## Phase 80 — Meeting Copilot Rebranding 🎨
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
 | P80-T1 | `Settings.svelte`, `LegalModal.svelte`, `ConvPanel.svelte`, `InterviewHUD.svelte` | **UI Copy Rewrite:** Remove all user-facing instances of "Interview", "Interviewer", and "Candidate". Replace with "Meeting", "Speaker", and "You". Update Buddy share texts and Legal Modal text to reflect the generic meeting copilot branding. Internal variables/filenames remain unchanged. | 🔄 | — |
+
+## Phase 81 — Candidate Self-Prompt: Magic Wand & Hotkey 🪄⌨️
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|–---|
+| P81-T1 | `ConvPanel.svelte`, `hotkeys.go`, `ws.svelte.ts` | **Candidate Send-to-LLM:** Add a hover-reveal `🪄 Ask AI` button on every candidate transcript bubble. On click, calls `AppendToBuffer(text)` + `FlushQuestionBuffer()` to immediately get an AI response for that line. Also registers a new global hotkey `Ctrl+Alt+S` that sends the last candidate line to the LLM without touching the mouse. | ⬜ | — |
+
