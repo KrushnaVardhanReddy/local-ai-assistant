@@ -1,0 +1,45 @@
+You are tasked with implementing Phase 82: Audio & App Mode Decoupling.
+Currently, the App Mode (Meeting vs Transcript) and the Audio Capture Mode (Speaker Only vs Dual Mode) are coupled into a single `appMode` state variable. We need to decouple these so users can run the AI Assistant (Meeting Mode) while simultaneously capturing their microphone (Dual Mode).
+
+**THE GOAL:**
+By splitting these into two separate toggles, we unlock a 2x2 matrix of possibilities for the user:
+1. **Meeting + Speaker:** AI listens only to the other people and gives answers (Max stealth).
+2. **Meeting + Dual:** AI listens to *everyone*, including the user. (This allows the AI to hear the user's questions for the Magic Wand feature).
+3. **Transcript + Dual:** Raw, two-sided transcription with no AI interference.
+4. **Transcript + Speaker:** Just transcribing what the other people say.
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/frontend/src/lib/ws.svelte.ts
+[MODIFY] wails-app/frontend/src/lib/Settings.svelte
+[MODIFY] wails-app/app.go
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Update Frontend State (ws.svelte.ts) ───
+1. Add a new reactive property `audioMode` to the `wsState` object. It should default to `'speaker'`.
+2. Keep the existing `appMode` property, which dictates whether the AI generates responses (`'interview'`) or just transcribes (`'transcript'`).
+3. Create a new export function `setAudioMode(mode: 'speaker' | 'dual')`.
+4. This function should call a new Wails IPC method: `window.go.main.App.SetAudioMode(mode)`.
+
+─── STEP 2: Update Settings UI (Settings.svelte) ───
+1. In the "Audio Capture Mode" section, change the radio button logic. Instead of binding to `wsState.appMode` and calling `setAppMode`, it must bind to `wsState.audioMode` and call `setAudioMode`.
+2. The options should be value `"speaker"` and value `"dual"`.
+3. The App Mode (Meeting Copilot vs Transcript Only) is controlled elsewhere in the UI (e.g. the HUD or main nav), so remove the coupling from the audio settings.
+
+─── STEP 3: Update Backend (app.go) ───
+1. Add an `AudioMode` string property to the `App` struct or underlying state manager.
+2. Implement `SetAudioMode(mode string) error`.
+3. Update the underlying Python backend / audio engine bridging. When the frontend sets the audio mode to "speaker", it should pass a flag to the local Python STT script to ignore the microphone. When "dual", it captures both. Ensure this is wired up correctly based on the new independent variable.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- DO NOT rename directories.
+- Run `npm run build` inside `wails-app/frontend/` and verify zero errors.
+- Commit message MUST start with "jules: ".

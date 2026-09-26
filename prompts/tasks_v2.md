@@ -125,23 +125,29 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P80-T1 | `Settings.svelte`, `LegalModal.svelte`, `ConvPanel.svelte`, `InterviewHUD.svelte` | **UI Copy Rewrite:** Remove all user-facing instances of "Interview", "Interviewer", and "Candidate". Replace with "Meeting", "Speaker", and "You". Update Buddy share texts and Legal Modal text to reflect the generic meeting copilot branding. Internal variables/filenames remain unchanged. | 🔄 | — |
+| P80-T1 | `Settings.svelte`, `LegalModal.svelte`, `ConvPanel.svelte`, `InterviewHUD.svelte` | **UI Copy Rewrite:** Remove all user-facing instances of "Interview", "Interviewer", and "Candidate". Replace with "Meeting", "Speaker", and "You". Update Buddy share texts and Legal Modal text to reflect the generic meeting copilot branding. Internal variables/filenames remain unchanged. | ✅ | #268 |
 
 ## Phase 81 — Candidate Self-Prompt: Magic Wand & Hotkey 🪄⌨️
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|–---|
-| P81-T1 | `ConvPanel.svelte`, `hotkeys.go`, `ws.svelte.ts` | **Candidate Send-to-LLM:** Add a hover-reveal `🪄 Ask AI` button on every candidate transcript bubble. On click, calls `AppendToBuffer(text)` + `FlushQuestionBuffer()` to immediately get an AI response for that line. Also registers a new global hotkey `Ctrl+Alt+S` that sends the last candidate line to the LLM without touching the mouse. | 🔄 | — |
+| P81-T1 | `ConvPanel.svelte`, `hotkeys.go`, `ws.svelte.ts` | **Candidate Send-to-LLM:** Add a hover-reveal `🪄 Ask AI` button on every candidate transcript bubble. On click, calls `AppendToBuffer(text)` + `FlushQuestionBuffer()` to immediately get an AI response for that line. Also registers a new global hotkey `Ctrl+Alt+S` that sends the last candidate line to the LLM without touching the mouse. | ✅ | #268 |
 
-## Phase 82 — Enterprise SSO & Seat Licensing 🏢
-
-| Task | Files | Description | Status | PR |
-|------|-------|-------------|--------|----|
-| P82-T1 | `App.svelte`, `EnterpriseAuth.svelte`, `authStore.ts` | **Enterprise SSO UI:** Implement a blocking authentication modal for B2B consultancy clients. Restrict access based on allowed enterprise email domains. | ⬜ | — |
-
-## Phase 83 — REST API Architecture Refactor 🏗️
+## Phase 82 — Audio & App Mode Decoupling 🎛️
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P83-T1 | `app.go`, `main.go`, `ws.svelte.ts`, `api/server.go` | **IPC to REST Transition:** Decouple the Svelte frontend from Wails IPC. Stand up a local Go HTTP server (`localhost:8080`). Convert all IPC bindings into REST endpoints. Unify the desktop and buddy web UIs onto a single shared WebSocket state manager. **(Run on isolated branch)** | ⬜ | — |
+| P82-T1 | `ws.svelte.ts`, `Settings.svelte`, `app.go` | **Audio Decoupling:** Decouple `AudioMode` (Speaker vs Dual) from `AppMode` (Meeting vs Transcript). Allows using Dual Mode while the AI Assistant is active. | ⬜ | — |
+
+## Phase 83 — Enterprise SSO & Seat Licensing 🏢
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P83-T1 | `App.svelte`, `EnterpriseAuth.svelte`, `authStore.ts` | **Enterprise SSO UI:** Implement a blocking authentication modal for B2B consultancy clients. Restrict access based on allowed enterprise email domains. | ⬜ | — |
+
+## Phase 84 — REST API Architecture Refactor 🏗️
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P84-T1 | `app.go`, `main.go`, `ws.svelte.ts`, `api/server.go` | **IPC to REST Transition:** Decouple the Svelte frontend from Wails IPC. Stand up a local Go HTTP server (`localhost:8080`). Convert all IPC bindings into REST endpoints. Unify the desktop and buddy web UIs onto a single shared WebSocket state manager. **(Run on isolated branch)** | ⬜ | — |
 
