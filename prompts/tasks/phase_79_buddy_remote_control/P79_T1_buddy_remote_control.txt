@@ -1,0 +1,320 @@
+You are tasked with implementing full remote control of BarnOwl AI via the Buddy Mode WebSocket. This is Phase 79, Task 1 (P79-T1).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+In Buddy Mode, a friend currently receives the live transcript and can send text hints.
+This task upgrades Buddy Mode to a **full remote control system**. The friend should be able to
+pilot the entire app from their browser without the candidate ever needing to touch the keyboard or
+mouse. This is critical for stealth — the candidate just listens while their friend drives.
+
+The architecture uses the existing WebSocket channel on port `:8765` (created in P76-T1).
+The friend's HTML page sends a `remote_action` message, the Go buddy server receives it,
+and routes it to a new `onRemoteAction` callback in `app.go`, which dispatches to the
+appropriate existing Wails-bound method.
+
+════════════════════════════════════════════════════════════════
+CURRENT ARCHITECTURE (READ CAREFULLY)
+════════════════════════════════════════════════════════════════
+
+- `wails-app/backend/buddy/server.go`:
+  - Already has `onHint func(string)` callback.
+  - Already has `handleWebSocket` which parses incoming JSON messages.
+  - Add a NEW `onRemoteAction func(action, payload string)` callback field to `Server` struct.
+  - When a message of type `remote_action` arrives, call `onRemoteAction(msg.Action, msg.Payload)`.
+
+- `wails-app/app.go`:
+  - `App` struct already has `buddyServer *buddy.Server`.
+  - Extend buddy server initialization to wire up the `onRemoteAction` callback.
+  - The callback must dispatch to existing `App` methods based on the action string.
+
+- `wails-app/backend/buddy/index.html` (created in P76-T3):
+  - Add a "Remote Control" panel below the hint box with buttons.
+
+════════════════════════════════════════════════════════════════
+SUPPORTED REMOTE ACTIONS (Exhaustive List)
+════════════════════════════════════════════════════════════════
+
+Map these action strings to existing Go methods in `app.go`:
+
+| Action String          | App Method Called                  | Description                          |
+|------------------------|------------------------------------|--------------------------------------|
+| `flush_llm`            | `a.FlushQuestionBuffer()`          | Force generate LLM answer NOW (the "+" button) |
+| `clear_state`          | `a.ClearState()`                   | Clear transcript and AI response     |
+| `toggle_mic`           | `a.ToggleMic()`                    | Toggle audio capture on/off          |
+| `toggle_manual_mode`   | `a.SetManualMode(!currentManualMode)` | Toggle manual/auto LLM mode        |
+| `send_chat`            | `a.SendChat(payload)`              | Submit a custom question (payload=question text) |
+| `append_to_buffer`     | `a.AppendToBuffer(payload)`        | Append text to the transcript buffer |
+| `capture_screen`       | `a.CaptureScreen()` + `a.AnalyzeVision(result, "")` | Take a screenshot and analyze it |
+| `end_session`          | `a.EndSession()`                   | End the session and show scorecard   |
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Extend `BuddyMessage` struct in `server.go` ────────
+
+Add `Action` and `Payload` fields to the existing `BuddyMessage` struct:
+```go
+type BuddyMessage struct {
+    Type    string `json:"type"`
+    Text    string `json:"text,omitempty"`
+    Speaker string `json:"speaker,omitempty"`
+    Action  string `json:"action,omitempty"`  // NEW: for remote_action type
+    Payload string `json:"payload,omitempty"` // NEW: optional data for the action
+}
+```
+
+Add a new constant:
+```go
+const (
+    MsgTypeTranscript  = "transcript"
+    MsgTypeHint        = "hint"
+    MsgTypeState       = "state"
+    MsgTypeRemoteAction = "remote_action" // NEW
+)
+```
+
+─── STEP 2: Add `onRemoteAction` callback to `Server` struct ───
+
+```go
+type Server struct {
+    port           int
+    token          string
+    mu             sync.Mutex
+    clients        map[*websocket.Conn]bool
+    httpServer     *http.Server
+    isRunning      bool
+    cancelTunnel   context.CancelFunc
+    onHint         func(hint string)
+    onRemoteAction func(action, payload string) // NEW
+}
+
+// Update NewServer constructor to accept onRemoteAction:
+func NewServer(port int, onHint func(string), onRemoteAction func(string, string)) *Server {
+    return &Server{
+        port:           port,
+        clients:        make(map[*websocket.Conn]bool),
+        onHint:         onHint,
+        onRemoteAction: onRemoteAction, // NEW
+    }
+}
+```
+
+─── STEP 3: Handle `remote_action` in `handleWebSocket` ────────
+
+In the message read loop of `handleWebSocket`, add after the existing hint handling:
+```go
+case MsgTypeRemoteAction:
+    if s.onRemoteAction != nil && msg.Action != "" {
+        go s.onRemoteAction(msg.Action, msg.Payload)
+    }
+```
+
+─── STEP 4: Wire `onRemoteAction` in `app.go` ──────────────────
+
+In `StartBuddyMode()` (or wherever `buddy.NewServer` is called), update to pass the new callback:
+
+```go
+a.buddyServer = buddy.NewServer(
+    a.cfg.BuddyModePort,
+    func(hint string) {
+        wailsruntime.EventsEmit(a.ctx, "buddy_hint", hint)
+    },
+    func(action, payload string) { // NEW onRemoteAction handler
+        a.handleBuddyRemoteAction(action, payload)
+    },
+)
+```
+
+Then add the new method to `App`:
+```go
+// handleBuddyRemoteAction dispatches incoming buddy remote control actions
+// to the corresponding app methods. Runs in a goroutine.
+func (a *App) handleBuddyRemoteAction(action, payload string) {
+    log.Printf("[Buddy] Remote action received: %s (payload: %q)", action, payload)
+    switch action {
+    case "flush_llm":
+        if err := a.FlushQuestionBuffer(); err != nil {
+            log.Printf("[Buddy] flush_llm error: %v", err)
+        }
+    case "clear_state":
+        a.ClearState()
+    case "toggle_mic":
+        isOn := a.ToggleMic()
+        // Emit state back to buddy clients so their button updates
+        a.buddyServer.BroadcastState(map[string]interface{}{"micActive": isOn})
+    case "toggle_manual_mode":
+        a.cmdMutex.Lock()
+        a.isManualMode = !a.isManualMode
+        newMode := a.isManualMode
+        a.cmdMutex.Unlock()
+        a.SetManualMode(newMode)
+        a.buddyServer.BroadcastState(map[string]interface{}{"manualMode": newMode})
+    case "send_chat":
+        if payload != "" {
+            if err := a.SendChat(payload); err != nil {
+                log.Printf("[Buddy] send_chat error: %v", err)
+            }
+        }
+    case "append_to_buffer":
+        if payload != "" {
+            if err := a.AppendToBuffer(payload); err != nil {
+                log.Printf("[Buddy] append_to_buffer error: %v", err)
+            }
+        }
+    case "capture_screen":
+        screenshot := a.CaptureScreen()
+        if screenshot != "" {
+            if err := a.AnalyzeVision(screenshot, ""); err != nil {
+                log.Printf("[Buddy] capture_screen AnalyzeVision error: %v", err)
+            }
+        }
+    case "end_session":
+        if _, err := a.EndSession(); err != nil {
+            log.Printf("[Buddy] end_session error: %v", err)
+        }
+    default:
+        log.Printf("[Buddy] Unknown remote action: %s", action)
+    }
+}
+```
+
+Note: You need to check if `isManualMode` field exists on the `App` struct. If it does not already
+exist as a field on `App`, add it: `isManualMode bool`. If there is already a way to query the
+current manual mode state from the engine, use that instead.
+
+─── STEP 5: Add `BroadcastState` to `server.go` ────────────────
+
+```go
+// BroadcastState sends a state update message to all connected buddy clients.
+func (s *Server) BroadcastState(state map[string]interface{}) {
+    data := map[string]interface{}{
+        "type":  MsgTypeState,
+        "state": state,
+    }
+    jsonData, err := json.Marshal(data)
+    if err != nil {
+        return
+    }
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    for client := range s.clients {
+        _ = client.WriteMessage(websocket.TextMessage, jsonData)
+    }
+}
+```
+
+─── STEP 6: Update `index.html` Remote Control Panel ───────────
+
+In `wails-app/backend/buddy/index.html`, replace the "Send a Hint" panel with a TWO-PANEL layout:
+1. The existing "Send a Hint" text area (keep it).
+2. A new "🕹️ Remote Control" panel below it.
+
+Add this panel HTML below the hint textarea and send button:
+
+```html
+<!-- Remote Control Panel -->
+<div class="p-4 border-t border-white/5">
+  <h2 class="text-sm font-semibold text-purple-400 mb-3">🕹️ Remote Control</h2>
+  <div class="grid grid-cols-2 gap-2">
+    <button id="btn-flush" onclick="sendAction('flush_llm')" class="rc-btn rc-btn-green">
+      ⚡ Generate Answer
+    </button>
+    <button id="btn-screen" onclick="sendAction('capture_screen')" class="rc-btn rc-btn-blue">
+      📸 Analyze Screen
+    </button>
+    <button id="btn-mic" onclick="sendAction('toggle_mic')" class="rc-btn rc-btn-gray">
+      🎙️ Toggle Mic
+    </button>
+    <button id="btn-manual" onclick="sendAction('toggle_manual_mode')" class="rc-btn rc-btn-gray">
+      🤖 Toggle Auto
+    </button>
+    <button id="btn-clear" onclick="sendAction('clear_state')" class="rc-btn rc-btn-red" style="grid-column: span 2;">
+      🗑️ Clear State
+    </button>
+  </div>
+  
+  <!-- Custom Question Input -->
+  <div class="mt-3">
+    <input id="chat-input" type="text" placeholder="Ask a custom question..." class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500/50 transition-colors" />
+    <button onclick="sendChat()" class="rc-btn rc-btn-purple w-full mt-2 text-sm">
+      💬 Send Custom Question
+    </button>
+  </div>
+</div>
+```
+
+Add to the `<style>` block:
+```css
+.rc-btn { border: none; border-radius: 6px; padding: 0.5rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; width: 100%; }
+.rc-btn:hover { opacity: 0.85; }
+.rc-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.rc-btn-green { background: #4ade80; color: #000; }
+.rc-btn-blue { background: #60a5fa; color: #000; }
+.rc-btn-gray { background: rgba(255,255,255,0.1); color: #e5e7eb; }
+.rc-btn-red { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+.rc-btn-purple { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
+```
+
+Add to the `<script>` block:
+```javascript
+function sendAction(action, payload = '') {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'remote_action', action, payload }));
+    
+    // Flash button feedback
+    const btn = document.getElementById(`btn-${action.replace('_', '-')}`);
+    if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Sent';
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1000);
+    }
+}
+
+function sendChat() {
+    const input = document.getElementById('chat-input');
+    const text = input?.value?.trim();
+    if (!text) return;
+    sendAction('send_chat', text);
+    input.value = '';
+}
+
+// Handle state updates from server
+ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === 'transcript') {
+        appendTranscript(msg.speaker, msg.text);
+    } else if (msg.type === 'state') {
+        // Update button labels based on remote state
+        if (msg.state?.micActive !== undefined) {
+            const btn = document.getElementById('btn-mic');
+            if (btn) btn.textContent = msg.state.micActive ? '🔴 Stop Mic' : '🎙️ Toggle Mic';
+        }
+        if (msg.state?.manualMode !== undefined) {
+            const btn = document.getElementById('btn-manual');
+            if (btn) btn.textContent = msg.state.manualMode ? '🤖 Enable Auto' : '⏸️ Go Manual';
+        }
+    }
+};
+```
+
+Also update the referral banner at the bottom to use Option 2 marketing copy:
+```html
+<div class="glass py-2 px-4 text-center text-xs text-gray-400 shrink-0 z-10">
+  Want this superpower for your own calls?
+  <a href="https://barnowl.ai" target="_blank" class="text-primary hover:underline">Get BarnOwl AI</a>
+  for real-time meeting transcription and live technical hints.
+</div>
+```
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Run `cd wails-app && go build ./...` to verify no compilation errors.
+- Run `cd wails-app/frontend && npm run build` to verify no TypeScript/Svelte errors.
+- Run `go test -tags test ./backend/buddy/...` to verify tests pass.
+- Commit message MUST start with "jules: ".
