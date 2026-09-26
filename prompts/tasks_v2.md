@@ -101,11 +101,17 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
 | P76-T1 | `backend/buddy/server.go`, `backend/config/config.go`, `app.go` | **Go Backend:** Create `backend/buddy` package with a local HTTP+WebSocket server on `:8765`. Spawn `cloudflared` as a subprocess, parse its stdout for the public URL, emit `buddy_url_ready` and `buddy_hint` Wails events. Expose `StartBuddyMode`, `StopBuddyMode`, `GetBuddyURL` to the Wails bridge. | ✅ | #261 |
-| P76-T2 | `ws.svelte.ts`, `Settings.svelte`, `InterviewHUD.svelte` | **Svelte Frontend:** Add `buddyModeActive`, `buddyURL`, `buddyURLLoading`, `buddyHints` to `wsState`. Add a "Buddy Mode" toggle in the Settings General tab with live URL display and a Copy button. Render incoming friend hints as a dismissible slide-in toast overlay in `InterviewHUD.svelte`. | 🔄 | — |
-| P76-T3 | `backend/buddy/index.html`, `backend/buddy/server.go`, `Settings.svelte` | **Friend Web UI & Viral Sharing:** Create standalone Tailwind/VanillaJS HTML UI for the friend to view the live transcript and send hints. Use `//go:embed` to serve it on the local HTTP server. Enhance `Settings.svelte` sharing to include pre-filled WhatsApp/Slack copy and `mailto:` email invites with embedded referral codes. | ⬜ | — |
+| P76-T2 | `ws.svelte.ts`, `Settings.svelte`, `InterviewHUD.svelte` | **Svelte Frontend:** Add `buddyModeActive`, `buddyURL`, `buddyURLLoading`, `buddyHints` to `wsState`. Add a "Buddy Mode" toggle in the Settings General tab with live URL display and a Copy button. Render incoming friend hints as a dismissible slide-in toast overlay in `InterviewHUD.svelte`. | ✅ | #262 |
+| P76-T3 | `backend/buddy/index.html`, `backend/buddy/server.go`, `Settings.svelte` | **Friend Web UI & Viral Sharing:** Create standalone Tailwind/VanillaJS HTML UI for the friend to view the live transcript and send hints. Use `//go:embed` to serve it on the local HTTP server. Enhance `Settings.svelte` sharing to include pre-filled WhatsApp/Slack copy and `mailto:` email invites with embedded referral codes. | 🔄 | — |
 
 ## Phase 77 — Audio Capture Mode Settings 🎤
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
 | P77-T1 | `Settings.svelte` | **Audio Capture Mode UI:** Add a radio button selector in the Settings → Audio tab to switch between "Interviewer Only" (loopback-only, stealth default) and "Dual Mode" (loopback + microphone, full two-sided transcript). Wires to the existing `setAppMode()` function and `wsState.appMode` — no backend changes needed. | ⬜ | — |
+
+## Phase 78 — Legal & Compliance ⚖️
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P78-T1 | `LegalModal.svelte`, `App.svelte` | **First-Launch Legal Disclaimer:** Create a blocking, full-screen welcome modal that requires users to explicitly agree to audio recording laws and a strict "no interview cheating" acceptable use policy before using the app. Saves acceptance to `localStorage`. | ⬜ | — |
