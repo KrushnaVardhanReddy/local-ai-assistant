@@ -170,6 +170,10 @@ export function SetAudioDevice(arg1, arg2) {
   return window['go']['main']['App']['SetAudioDevice'](arg1, arg2);
 }
 
+export function SetAudioMode(arg1) {
+  return window['go']['main']['App']['SetAudioMode'](arg1);
+}
+
 export function SetClickthrough(arg1) {
   return window['go']['main']['App']['SetClickthrough'](arg1);
 }

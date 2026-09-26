@@ -143,7 +143,7 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P83-T1 | `App.svelte`, `EnterpriseAuth.svelte`, `authStore.ts` | **Enterprise SSO UI:** Implement a blocking authentication modal for B2B consultancy clients. Restrict access based on allowed enterprise email domains. | ⬜ | — |
+| P83-T1 | `App.svelte`, `EnterpriseAuth.svelte`, `authStore.ts` | **Enterprise SSO UI:** Implement a blocking authentication modal for B2B consultancy clients. Restrict access based on allowed enterprise email domains. | ✅ | #270 |
 
 ## Phase 84 — REST API Architecture Refactor 🏗️
 

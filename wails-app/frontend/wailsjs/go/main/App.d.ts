@@ -89,6 +89,8 @@ export function SetAppMode(arg1:string):Promise<void>;
 
 export function SetAudioDevice(arg1:number,arg2:boolean):Promise<void>;
 
+export function SetAudioMode(arg1:string):Promise<void>;
+
 export function SetClickthrough(arg1:boolean):Promise<void>;
 
 export function SetIncludeActiveDocContext(arg1:boolean):Promise<void>;
