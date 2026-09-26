@@ -137,7 +137,7 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P82-T1 | `ws.svelte.ts`, `Settings.svelte`, `app.go` | **Audio Decoupling:** Decouple `AudioMode` (Speaker vs Dual) from `AppMode` (Meeting vs Transcript). Allows using Dual Mode while the AI Assistant is active. | ⬜ | — |
+| P82-T1 | `ws.svelte.ts`, `Settings.svelte`, `app.go` | **Audio Decoupling:** Decouple `AudioMode` (Speaker vs Dual) from `AppMode` (Meeting vs Transcript). Allows using Dual Mode while the AI Assistant is active. | 🔄 | — |
 
 ## Phase 83 — Enterprise SSO & Seat Licensing 🏢
 
