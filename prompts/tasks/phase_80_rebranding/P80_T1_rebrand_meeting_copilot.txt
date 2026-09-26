@@ -1,0 +1,63 @@
+You are tasked with rebranding the UI copy across the entire Svelte frontend. This is Phase 80, Task 1 (P80-T1).
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+Currently, the UI is heavily branded around "Interviews" (e.g., "Mock Interview", "Interviewer", "Candidate").
+To broaden the appeal of the product, we are rebranding it to be a general-purpose "AI Meeting Copilot".
+
+Your job is to find all **user-facing text** in the frontend components and replace interview-specific terminology with meeting-specific terminology.
+DO NOT change internal variables, filenames, or import paths (e.g. keep `src/products/interview/` as is). Only change the text the user actually reads.
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY
+════════════════════════════════════════════════════════════════
+
+You must review and update the following files:
+- `wails-app/frontend/src/lib/Settings.svelte`
+- `wails-app/frontend/src/lib/LegalModal.svelte`
+- `wails-app/frontend/src/products/interview/InterviewHUD.svelte`
+- `wails-app/frontend/src/products/interview/ConvPanel.svelte`
+- `wails-app/frontend/src/App.svelte`
+- `wails-app/frontend/src/lib/SessionReport.svelte`
+- `wails-app/backend/buddy/index.html` (if applicable)
+
+════════════════════════════════════════════════════════════════
+TEXT REPLACEMENT MAPPING
+════════════════════════════════════════════════════════════════
+
+Apply these replacements to **visible text only** (HTML text nodes, placeholder attributes, labels, button text, alerts):
+
+| Old Term (Case-insensitive) | New Term | Context / Example |
+|-----------------------------|----------|-------------------|
+| `Interviewer`               | `Speaker` | `Speaker says:` |
+| `Candidate`                 | `You`     | `You say:` |
+| `Interview`                 | `Meeting` | `Meeting Copilot`, `End Meeting` |
+| `Mock Interview`            | `Sandbox Mode` | `Enable Sandbox Mode` |
+| `Interview HUD`             | `Copilot HUD` | |
+
+─── SPECIFIC COPY FIXES ───
+
+1. **In `Settings.svelte`:**
+   - Under Audio Tab: Change `"Interviewer Only"` to `"Speaker Only"`
+   - Under General Tab: Change any mention of "use this for your next interview" in the Buddy Mode copy to "use this for your next meeting".
+   - The buddy mode share message should say: "I'm using BarnOwl AI as my meeting copilot. Join my secure Buddy Mode..."
+   
+2. **In `ConvPanel.svelte` or `InterviewHUD.svelte`:**
+   - Where the transcript renders the speaker's name, ensure it shows "Speaker" instead of "Interviewer".
+   - (Note: The backend might still emit `speaker: "interviewer"`, so you might need to map it in the UI: `msg.speaker === 'interviewer' ? 'Speaker' : 'You'`).
+
+3. **In `LegalModal.svelte`:**
+   - Change "no interview cheating" context to "acceptable use in meetings".
+   - Remove "strictly prohibited to use this software to gain an unfair advantage in job interviews". 
+   - Replace it with: "BarnOwl AI is a real-time meeting copilot. Do not use this software in environments where outside assistance is strictly prohibited (e.g., closed-book academic exams)."
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- DO NOT rename files or directories (e.g., keep `InterviewHUD.svelte`).
+- DO NOT rename internal TypeScript variables (e.g. keep `wsState.isMockInterview`).
+- Run `npm run build` inside `wails-app/frontend/` and verify zero errors.
+- Commit message MUST start with "jules: ".

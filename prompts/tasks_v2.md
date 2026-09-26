@@ -108,7 +108,7 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P77-T1 | `Settings.svelte` | **Audio Capture Mode UI:** Add a radio button selector in the Settings → Audio tab to switch between "Interviewer Only" (loopback-only, stealth default) and "Dual Mode" (loopback + microphone, full two-sided transcript). Wires to the existing `setAppMode()` function and `wsState.appMode` — no backend changes needed. | 🔄 | — |
+| P77-T1 | `Settings.svelte` | **Audio Capture Mode UI:** Add a radio button selector in the Settings → Audio tab to switch between "Interviewer Only" (loopback-only, stealth default) and "Dual Mode" (loopback + microphone, full two-sided transcript). Wires to the existing `setAppMode()` function and `wsState.appMode` — no backend changes needed. | ✅ | #265 |
 
 ## Phase 78 — Legal & Compliance ⚖️
 
@@ -121,3 +121,9 @@
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
 | P79-T1 | `backend/buddy/server.go`, `backend/buddy/index.html`, `app.go` | **Buddy Remote Control:** Extend the WebSocket protocol with a `remote_action` message type. Wire 8 actions (`flush_llm`, `clear_state`, `toggle_mic`, `toggle_manual_mode`, `send_chat`, `append_to_buffer`, `capture_screen`, `end_session`) to existing `App` methods. Add a "🕹️ Remote Control" panel to the friend's Web UI with buttons for each action. Update marketing copy in banner to the "Superpower" angle. | 🔄 | — |
+
+## Phase 80 — Meeting Copilot Rebranding 🎨
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P80-T1 | `Settings.svelte`, `LegalModal.svelte`, `ConvPanel.svelte`, `InterviewHUD.svelte` | **UI Copy Rewrite:** Remove all user-facing instances of "Interview", "Interviewer", and "Candidate". Replace with "Meeting", "Speaker", and "You". Update Buddy share texts and Legal Modal text to reflect the generic meeting copilot branding. Internal variables/filenames remain unchanged. | ⬜ | — |
