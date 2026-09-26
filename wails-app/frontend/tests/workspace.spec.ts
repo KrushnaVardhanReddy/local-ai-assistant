@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe.serial('Core IDE & File System', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       (window as any).__authState = { authMode: 'local', productMode: 'interview' };
 
       const mockWorkspaceTree = [

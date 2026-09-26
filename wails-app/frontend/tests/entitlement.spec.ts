@@ -4,6 +4,9 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Inject mock wails/go objects before scripts run to avoid Vite waiting for Wails forever
     await page.addInitScript(() => {
+      // Mock authStore to bypass EnterpriseAuth gate
+      (window as any).__authStoreMock = { isAuthenticated: true };
+
       (window as any).go = {
         main: {
           App: {
@@ -34,6 +37,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
   test('BarnOwl AI (Interview Mode) — Developer Mode Bypass', async ({ page }) => {
     // Inject the specific state BEFORE the page loads so Svelte boots up with it and tracks it
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       (window as any).__authState = {
         authMode: 'saas',
         productMode: 'interview',
@@ -45,6 +49,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
 
     // Svelte naturally clears the gate
     await expect(page.locator('text=Unlock BarnOwl AI')).not.toBeVisible();
+    await expect(page.locator('text=BarnOwl AI Enterprise Login')).not.toBeVisible();
 
     const settingsBtn = page.locator('button[data-testid="activity-bar-settings"]');
     await expect(settingsBtn).toBeVisible({ timeout: 10000 });
@@ -59,6 +64,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
 
   test('BarnOwl AI (Interview Mode) — Active License', async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       (window as any).__authState = {
         authMode: 'saas',
         productMode: 'interview',
@@ -82,6 +88,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
 
   test('SaaS Products — Standard Usage Meter', async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       (window as any).__authState = {
         authMode: 'saas',
         productMode: 'interview', // The shell mounts in interview/presenter. Standard SaaS relies on these to be present.
@@ -107,6 +114,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
 
   test('SaaS Products — Paddle Overage Warning', async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       (window as any).__authState = {
         authMode: 'saas',
         productMode: 'interview',
@@ -132,6 +140,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
 
   test('SaaS Products — Paddle Subscription Status', async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       (window as any).__authState = {
         authMode: 'saas',
         productMode: 'interview',

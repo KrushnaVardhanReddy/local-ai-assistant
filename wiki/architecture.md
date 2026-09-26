@@ -67,6 +67,7 @@ The frontend authentication system (`src/lib/auth.svelte.ts`) and modal UI (`Aut
 
 1. **BarnOwl AI (Lifetime + Demo Mode):** For `VITE_PRODUCT=interview`, the UI presents a dual-option modal. Users can either activate a lifetime license key (via Paddle) or start a 15-minute free demo via Google OAuth. The `dev_allowlist` Supabase table enables machine IDs to bypass checks. Entitlements and 15-minute expirations are tracked in the `user_entitlements` table.
 2. **SaaS Products:** For other products (e.g., MentorGlass, CounselDesk), the UI strictly presents a "Continue with Google" OAuth sign-in, which tracks Paddle subscription plans and overage tracking via `user_entitlements`.
+3. **Enterprise SSO Overlay (Phase 83):** An overarching blocking modal (`EnterpriseAuth.svelte`) driven by a standalone `authStore.svelte.ts` enforces a corporate SSO gate over the entire application. Until a user successfully authenticates with an approved domain (e.g., `@mckinsey.com`), all other UI elements (including `LegalModal` and the product shell) are suppressed.
 
 ## Authentication and Licensing (`wails-app/backend/auth/`)
 The application supports dual authentication schemes:

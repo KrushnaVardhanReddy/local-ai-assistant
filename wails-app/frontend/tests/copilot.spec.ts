@@ -5,6 +5,7 @@ import * as path from 'path';
 test.describe.serial('Copilot UI Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       (window as any).go = {
         backend: {
           App: {

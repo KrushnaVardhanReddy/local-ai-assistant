@@ -4,6 +4,7 @@ test.describe.serial('RAG & Semantic Cache UI Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Inject mock wails/go objects before scripts run
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       // Mock window bindings as required
       (window as any).go = {
         backend: {

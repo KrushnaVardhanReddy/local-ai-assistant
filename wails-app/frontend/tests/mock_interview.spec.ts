@@ -4,6 +4,7 @@ test.describe.serial('Mock Interview Mode Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Inject mock wails/go objects before scripts run to avoid Vite waiting for Wails forever
     await page.addInitScript(() => {
+      (window as any).__authStoreMock = { isAuthenticated: true };
       (window as any).go = {
         main: {
           App: {

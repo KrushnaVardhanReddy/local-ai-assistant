@@ -9,6 +9,8 @@
   import AuthModal from "$lib/components/AuthModal.svelte";
   import Titlebar from "$lib/components/Titlebar.svelte";
   import LegalModal from "$lib/LegalModal.svelte";
+  import EnterpriseAuth from "$lib/EnterpriseAuth.svelte";
+  import { authStore } from "$lib/authStore.svelte.ts";
 
   import { WindowSetSize, WindowCenter, WindowSetAlwaysOnTop, WindowShow } from "../wailsjs/runtime/runtime";
 
@@ -143,41 +145,45 @@
   {/if}
 </svelte:head>
 
-{#if !hasAcceptedLegal}
-  <LegalModal on:agreed={() => (hasAcceptedLegal = true)} />
-{/if}
+{#if !authStore.isAuthenticated}
+  <EnterpriseAuth />
+{:else}
+  {#if !hasAcceptedLegal}
+    <LegalModal on:agreed={() => (hasAcceptedLegal = true)} />
+  {/if}
 
-{#if isGated}
-  <div class="fixed inset-0 z-[9999] flex flex-col bg-[#1e1e1e]">
-    <Titlebar />
-    <div class="flex-1 flex flex-col items-center justify-center gap-4">
-      {#if authState.licenseStatus === 'expired'}
-        <h1 class="text-3xl text-white font-semibold">🕐 Demo Expired</h1>
-        <p class="text-gray-400 text-center max-w-sm">Your 15-minute free trial has ended. Enter a lifetime license to keep using BarnOwl AI.</p>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
-          Enter License Key
-        </button>
+  {#if isGated}
+    <div class="fixed inset-0 z-[9999] flex flex-col bg-[#1e1e1e]">
+      <Titlebar />
+      <div class="flex-1 flex flex-col items-center justify-center gap-4">
+        {#if authState.licenseStatus === 'expired'}
+          <h1 class="text-3xl text-white font-semibold">🕐 Demo Expired</h1>
+          <p class="text-gray-400 text-center max-w-sm">Your 15-minute free trial has ended. Enter a lifetime license to keep using BarnOwl AI.</p>
+          <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
+            Enter License Key
+          </button>
+        {:else}
+          <h1 class="text-3xl text-white font-semibold">Unlock BarnOwl AI</h1>
+          <p class="text-gray-400 text-center max-w-sm">Start a free 15-minute demo or enter your lifetime license key.</p>
+          <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
+            Unlock
+          </button>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
+  <AuthModal bind:isOpen={showAuthModal} onClose={() => showAuthModal = false} />
+
+  {#if !isGated}
+    <div class="app-shell" class:pointer-events-none={authState.productMode !== "presenter" && authState.productMode !== "interview"} class:pointer-events-auto={authState.productMode === "presenter" || authState.productMode === "interview"}>
+      {#if authState.productMode === "presenter"}
+        <PresenterHUD />
       {:else}
-        <h1 class="text-3xl text-white font-semibold">Unlock BarnOwl AI</h1>
-        <p class="text-gray-400 text-center max-w-sm">Start a free 15-minute demo or enter your lifetime license key.</p>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all" onclick={() => showAuthModal = true}>
-          Unlock
-        </button>
+        <InterviewHUD />
       {/if}
     </div>
-  </div>
-{/if}
-
-<AuthModal bind:isOpen={showAuthModal} onClose={() => showAuthModal = false} />
-
-{#if !isGated}
-  <div class="app-shell" class:pointer-events-none={authState.productMode !== "presenter" && authState.productMode !== "interview"} class:pointer-events-auto={authState.productMode === "presenter" || authState.productMode === "interview"}>
-    {#if authState.productMode === "presenter"}
-      <PresenterHUD />
-    {:else}
-      <InterviewHUD />
-    {/if}
-  </div>
+  {/if}
 {/if}
 
 <style>
