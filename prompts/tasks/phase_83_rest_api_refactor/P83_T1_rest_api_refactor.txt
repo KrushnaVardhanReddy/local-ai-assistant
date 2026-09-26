@@ -1,0 +1,50 @@
+You are tasked with implementing Phase 83: REST API Architecture Refactor.
+This is a massive architectural shift. We are decoupling the Svelte frontend from Wails IPC and transitioning the Go backend to serve a standard REST API (via Gin, Echo, or standard net/http) alongside WebSockets for real-time state. 
+
+This makes the "Buddy Mode" remote control drastically simpler because both the local desktop UI and the remote web UI will communicate with the backend using the exact same REST/WS protocols.
+
+**CRITICAL: THIS MUST BE DONE ON A NEW BRANCH.** Do not commit these changes to `main` or the current feature branch.
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY / CREATE
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/app.go
+[MODIFY] wails-app/main.go
+[CREATE] wails-app/backend/api/server.go
+[CREATE] wails-app/backend/api/routes.go
+[MODIFY] wails-app/frontend/src/lib/ws.svelte.ts
+[MODIFY] wails-app/frontend/wailsjs/ (Will likely be deprecated/removed)
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Branch Creation ───
+1. Create and checkout a new branch named `feature/rest-api-refactor`. 
+2. All commits for this task must happen on this new branch to avoid breaking the stable IPC-based app.
+
+─── STEP 2: Create the Go REST API Server ───
+Create `wails-app/backend/api/server.go` and `routes.go`:
+1. Initialize an HTTP server (using `net/http` or a router like `chi`/`gin`) that runs on a dedicated local port (e.g., `localhost:8080`).
+2. Migrate all Wails IPC bindings from `app.go` (e.g., `ToggleMic`, `FlushQuestionBuffer`, `AppendToBuffer`) into standard HTTP POST endpoints (e.g., `POST /api/v1/mic/toggle`, `POST /api/v1/llm/flush`).
+
+─── STEP 3: Unified WebSocket State ───
+1. The current app uses Wails Events (IPC) for state sync (`EventsEmit`) and a separate `buddyServer` for remote WebSockets.
+2. Unify this: The Go backend should now maintain a single unified WebSocket hub.
+3. The desktop Svelte frontend should connect to `ws://localhost:8080/ws` to receive transcript updates and state changes, exactly like the Buddy UI does.
+
+─── STEP 4: Refactor Frontend to use Fetch/WS ───
+Modify `wails-app/frontend/src/lib/ws.svelte.ts` and API calls:
+1. Strip out all Wails JS imports (e.g., `import { FlushQuestionBuffer } from "../../wailsjs/go/main/App"`).
+2. Replace them with standard JavaScript `fetch()` calls to `http://localhost:8080/api/...`.
+3. Replace `window.runtime.EventsOn` with standard WebSocket event listeners connected to the new local WS server.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Ensure the entire app compiles.
+- Run `npm run build` inside `wails-app/frontend/`.
+- Ensure all Wails IPC imports are completely removed from the frontend.
+- Commit message MUST start with "jules: ".

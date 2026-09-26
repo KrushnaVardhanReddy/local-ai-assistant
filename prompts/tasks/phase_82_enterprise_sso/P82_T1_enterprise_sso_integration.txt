@@ -1,0 +1,44 @@
+You are tasked with implementing Phase 82: Enterprise SSO & License Verification.
+This phase transforms the app from a single-user B2C tool into a B2B-ready application by integrating an enterprise-grade authentication overlay.
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY / CREATE
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/frontend/src/App.svelte
+[MODIFY] wails-app/frontend/package.json
+[CREATE] wails-app/frontend/src/lib/EnterpriseAuth.svelte
+[CREATE] wails-app/frontend/src/lib/authStore.ts
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Implement the Auth Store ───
+Create `wails-app/frontend/src/lib/authStore.ts`:
+1. Use Svelte 5 runes (`$state`) to track the authentication status.
+2. Track `isAuthenticated` (boolean), `userEmail` (string), and `licenseType` (string - 'pro' | 'enterprise').
+3. For this phase, we will mock the backend validation. Provide a `login(email, token)` and `logout()` method.
+
+─── STEP 2: Create the Enterprise Auth Modal ───
+Create `wails-app/frontend/src/lib/EnterpriseAuth.svelte`:
+1. This should be a blocking, full-screen modal (similar to LegalModal) that prevents use of the app until authenticated.
+2. The UI should look premium and corporate. Title: "BarnOwl AI Enterprise Login".
+3. Provide an input for "Work Email" and a "Continue with SSO" button.
+4. When the user clicks "Continue with SSO", simulate a brief loading state, then validate the email domain. If the domain is `@mckinsey.com`, `@bcg.com`, or `@bain.com` (for testing purposes), authenticate them and set the store state. Otherwise, show an error: "No active enterprise license found for this domain."
+
+─── STEP 3: Wire Auth into App.svelte ───
+Modify `wails-app/frontend/src/App.svelte`:
+1. Import `EnterpriseAuth.svelte` and `authStore.ts`.
+2. Wrap the main application UI components in an `{#if authStore.isAuthenticated}` block.
+3. If NOT authenticated, render the `<EnterpriseAuth />` component over everything.
+4. Ensure the `LegalModal` is only shown AFTER successful authentication.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- DO NOT modify backend Go code in this task (we are building the UI foundation first).
+- Run `npm run build` inside `wails-app/frontend/` and verify zero errors.
+- Ensure the app is locked down upon launch until an approved enterprise email is entered.
+- Commit message MUST start with "jules: ".

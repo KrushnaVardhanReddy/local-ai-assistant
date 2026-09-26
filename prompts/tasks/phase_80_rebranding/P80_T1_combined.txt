@@ -1,0 +1,82 @@
+You are tasked with implementing Phase 80 and Phase 81 as a single combined task.
+This combines Rebranding (Phase 80) and "Candidate Send-to-LLM" self-prompting (Phase 81).
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY
+════════════════════════════════════════════════════════════════
+
+[MODIFY] wails-app/frontend/src/lib/Settings.svelte
+[MODIFY] wails-app/frontend/src/lib/LegalModal.svelte
+[MODIFY] wails-app/frontend/src/products/interview/InterviewHUD.svelte
+[MODIFY] wails-app/frontend/src/products/interview/ConvPanel.svelte
+[MODIFY] wails-app/frontend/src/App.svelte
+[MODIFY] wails-app/frontend/src/lib/SessionReport.svelte
+[MODIFY] wails-app/backend/hotkeys/hotkeys.go
+[MODIFY] wails-app/frontend/src/lib/ws.svelte.ts
+[MODIFY] wails-app/backend/buddy/index.html
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Rebrand the Svelte Frontend UI ───
+
+Find all **user-facing text** in the following Svelte components and replace interview-specific terminology with meeting-specific terminology:
+`Settings.svelte`, `LegalModal.svelte`, `InterviewHUD.svelte`, `ConvPanel.svelte`, `App.svelte`, `SessionReport.svelte`.
+DO NOT change internal variables, filenames, or import paths (keep `InterviewHUD.svelte` as the filename).
+
+Text Replacement Mapping (visible text only):
+- `Interviewer` -> `Speaker`
+- `Candidate` -> `You`
+- `Interview` -> `Meeting`
+- `Mock Interview` -> `Sandbox Mode`
+- `Interview HUD` -> `Copilot HUD`
+
+Specific fixes:
+1. **In `Settings.svelte`:** Change `"Interviewer Only"` to `"Speaker Only"`. Change mentions of "interview" in Buddy Mode to "meeting".
+2. **In `ConvPanel.svelte` / `InterviewHUD.svelte`:** Ensure rendering logic outputs "Speaker" and "You".
+3. **In `LegalModal.svelte`:** Change "no interview cheating" to "acceptable use in meetings".
+
+─── STEP 2: Add Magic Wand Button to Svelte ConvPanel ───
+
+Modify `wails-app/frontend/src/products/interview/ConvPanel.svelte`:
+1. Inside the `{:else if item.role === 'candidate'}` block, add a 🪄 button.
+2. Styling: Pill-shaped `🪄 Ask AI`. Positioned absolutely at top-right of candidate bubble. Hidden by default (opacity 0), visible on hover (opacity 1).
+3. Onclick:
+   a. Call `AppendToBuffer(item.text)`
+   b. Call `FlushQuestionBuffer()`
+   c. Show brief visual feedback ("✓ Sent!") for 1.5s on the button text.
+4. CSS should be added to the `<style>` block:
+```css
+.bubble-candidate { position: relative; }
+.wand-btn { position: absolute; top: 0.3rem; right: 0.4rem; opacity: 0; transition: opacity 0.15s ease; background: rgba(167, 139, 250, 0.2); border: 1px solid rgba(167, 139, 250, 0.3); color: #a78bfa; font-size: 0.65rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 999px; cursor: pointer; white-space: nowrap; line-height: 1.4; }
+.bubble-candidate:hover .wand-btn { opacity: 1; }
+.wand-btn:hover { background: rgba(167, 139, 250, 0.35); }
+.wand-btn.sent { background: rgba(74, 222, 128, 0.2); border-color: rgba(74, 222, 128, 0.3); color: #4ade80; }
+```
+
+─── STEP 3: Add Global Hotkey Ctrl+Alt+S ───
+
+1. Modify `wails-app/backend/hotkeys/hotkeys.go` to register `Ctrl+Alt+S` using the existing pattern. 
+   - Ensure the goroutine `case <-hkS.Keydown():` emits `"hotkey_send_candidate_to_llm"`.
+2. Modify `wails-app/frontend/src/lib/ws.svelte.ts` to listen for `"hotkey_send_candidate_to_llm"`. 
+   - The handler should find the last candidate item in `transcriptHistory`, call `AppendToBuffer(item.text)` and `FlushQuestionBuffer()`.
+
+─── STEP 4: Add Magic Wand Button to Buddy Web UI ───
+
+Modify `wails-app/backend/buddy/index.html`:
+1. In the `appendTranscript` JS function, if `!isInterviewer`, inject the `<button class="wand-btn">🪄 Ask AI</button>` into the HTML of the candidate bubble.
+2. When clicked, it should send the remote actions:
+   `ws.send(JSON.stringify({ type: 'remote_action', action: 'append_to_buffer', payload: text }));`
+   `ws.send(JSON.stringify({ type: 'remote_action', action: 'flush_llm' }));`
+3. Add the exact same `.bubble-candidate` and `.wand-btn` CSS from Step 2 to the `<style>` block in `index.html`.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- DO NOT rename files or directories.
+- Run `npm run build` inside `wails-app/frontend/` and verify zero errors.
+- Run `go test ./backend/hotkeys/...` and verify tests pass.
+- **CRITICAL:** Do NOT run Playwright E2E tests. The test timeouts are pre-existing. Just submit the PR once the build succeeds.
+- Commit message MUST start with "jules: ".

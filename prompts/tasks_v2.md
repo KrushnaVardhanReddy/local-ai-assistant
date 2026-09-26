@@ -131,5 +131,17 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|–---|
-| P81-T1 | `ConvPanel.svelte`, `hotkeys.go`, `ws.svelte.ts` | **Candidate Send-to-LLM:** Add a hover-reveal `🪄 Ask AI` button on every candidate transcript bubble. On click, calls `AppendToBuffer(text)` + `FlushQuestionBuffer()` to immediately get an AI response for that line. Also registers a new global hotkey `Ctrl+Alt+S` that sends the last candidate line to the LLM without touching the mouse. | ⬜ | — |
+| P81-T1 | `ConvPanel.svelte`, `hotkeys.go`, `ws.svelte.ts` | **Candidate Send-to-LLM:** Add a hover-reveal `🪄 Ask AI` button on every candidate transcript bubble. On click, calls `AppendToBuffer(text)` + `FlushQuestionBuffer()` to immediately get an AI response for that line. Also registers a new global hotkey `Ctrl+Alt+S` that sends the last candidate line to the LLM without touching the mouse. | 🔄 | — |
+
+## Phase 82 — Enterprise SSO & Seat Licensing 🏢
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P82-T1 | `App.svelte`, `EnterpriseAuth.svelte`, `authStore.ts` | **Enterprise SSO UI:** Implement a blocking authentication modal for B2B consultancy clients. Restrict access based on allowed enterprise email domains. | ⬜ | — |
+
+## Phase 83 — REST API Architecture Refactor 🏗️
+
+| Task | Files | Description | Status | PR |
+|------|-------|-------------|--------|----|
+| P83-T1 | `app.go`, `main.go`, `ws.svelte.ts`, `api/server.go` | **IPC to REST Transition:** Decouple the Svelte frontend from Wails IPC. Stand up a local Go HTTP server (`localhost:8080`). Convert all IPC bindings into REST endpoints. Unify the desktop and buddy web UIs onto a single shared WebSocket state manager. **(Run on isolated branch)** | ⬜ | — |
 
