@@ -108,16 +108,16 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P77-T1 | `Settings.svelte` | **Audio Capture Mode UI:** Add a radio button selector in the Settings → Audio tab to switch between "Interviewer Only" (loopback-only, stealth default) and "Dual Mode" (loopback + microphone, full two-sided transcript). Wires to the existing `setAppMode()` function and `wsState.appMode` — no backend changes needed. | ⬜ | — |
+| P77-T1 | `Settings.svelte` | **Audio Capture Mode UI:** Add a radio button selector in the Settings → Audio tab to switch between "Interviewer Only" (loopback-only, stealth default) and "Dual Mode" (loopback + microphone, full two-sided transcript). Wires to the existing `setAppMode()` function and `wsState.appMode` — no backend changes needed. | 🔄 | — |
 
 ## Phase 78 — Legal & Compliance ⚖️
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P78-T1 | `LegalModal.svelte`, `App.svelte` | **Every-Launch Legal Disclaimer:** Create a blocking, full-screen welcome modal that requires users to explicitly agree to audio recording laws and a strict "no interview cheating" acceptable use policy before using the app. Appears every time the app is launched. | ⬜ | — |
+| P78-T1 | `LegalModal.svelte`, `App.svelte` | **Every-Launch Legal Disclaimer:** Create a blocking, full-screen welcome modal that requires users to explicitly agree to audio recording laws and a strict "no interview cheating" acceptable use policy before using the app. Appears every time the app is launched. | ✅ | #264 |
 
 ## Phase 79 — Buddy Mode: Full Remote Control 🕹️
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P79-T1 | `backend/buddy/server.go`, `backend/buddy/index.html`, `app.go` | **Buddy Remote Control:** Extend the WebSocket protocol with a `remote_action` message type. Wire 8 actions (`flush_llm`, `clear_state`, `toggle_mic`, `toggle_manual_mode`, `send_chat`, `append_to_buffer`, `capture_screen`, `end_session`) to existing `App` methods. Add a "🕹️ Remote Control" panel to the friend's Web UI with buttons for each action. Update marketing copy in banner to the "Superpower" angle. | ⬜ | — |
+| P79-T1 | `backend/buddy/server.go`, `backend/buddy/index.html`, `app.go` | **Buddy Remote Control:** Extend the WebSocket protocol with a `remote_action` message type. Wire 8 actions (`flush_llm`, `clear_state`, `toggle_mic`, `toggle_manual_mode`, `send_chat`, `append_to_buffer`, `capture_screen`, `end_session`) to existing `App` methods. Add a "🕹️ Remote Control" panel to the friend's Web UI with buttons for each action. Update marketing copy in banner to the "Superpower" angle. | 🔄 | — |
