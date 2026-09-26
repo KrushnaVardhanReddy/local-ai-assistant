@@ -38,12 +38,20 @@ import (
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// AppMode defines the runtime capture and interaction mode.
+// AppMode defines the AI interaction mode.
 type AppMode string
 
 const (
 	AppModeInterview  AppMode = "interview"
 	AppModeTranscript AppMode = "transcript"
+)
+
+// AudioMode defines the microphone capture mode.
+type AudioMode string
+
+const (
+	AudioModeSpeaker AudioMode = "speaker"
+	AudioModeDual    AudioMode = "dual"
 )
 
 // App struct
@@ -59,6 +67,7 @@ type App struct {
 	audioCapture *audio.CaptureEngine
 	dualCapture  *audio.DualCaptureEngine
 	appMode      AppMode
+	audioMode    AudioMode
 
 	engine *engine.StealthEngine
 	cfg    *config.AppConfig
@@ -141,6 +150,7 @@ func NewApp(cfg *config.AppConfig) *App {
 		sttManager:   stt.NewSTTManager(initialEngine),
 		audioCapture: captureEngine,
 		appMode:      AppModeInterview,
+		audioMode:    AudioModeSpeaker,
 		engine:       eng,
 		cfg:          cfg,
 	}
@@ -316,10 +326,11 @@ func (a *App) GetSystemStatus() map[string]interface{} {
 		"stt_provider":     a.cfg.STTProvider,
 		"stt_model":        a.cfg.STTModel,
 		"local_stt_engine": a.cfg.LocalSTTEngine,
-		"audio_mode":       a.appMode,
+		"app_mode":         a.appMode,
+		"audio_mode":       a.audioMode,
 	}
 
-	if a.appMode == AppModeInterview {
+	if a.audioMode == AudioModeSpeaker {
 		if a.audioCapture != nil {
 			status["audio_isCapturing"] = a.audioCapture.IsCapturing()
 			id, isLoopback := a.audioCapture.GetActiveDevice()
@@ -328,7 +339,7 @@ func (a *App) GetSystemStatus() map[string]interface{} {
 		} else {
 			status["audio_isCapturing"] = false
 		}
-	} else if a.appMode == AppModeTranscript {
+	} else if a.audioMode == AudioModeDual {
 		status["audio_isCapturing"] = (a.dualCapture != nil)
 	}
 
@@ -788,27 +799,13 @@ func (a *App) SetAppMode(mode string) error {
 
 	if mode == string(AppModeInterview) {
 		a.appMode = AppModeInterview
-		if a.dualCapture != nil {
-			a.dualCapture.Stop()
-			a.dualCapture = nil
-		}
 		a.engine.SetTranscriptMode(false)
 		if a.engine.GetQuestionBuffer() != nil {
 			a.engine.GetQuestionBuffer().SetAutoFlush(true)
 		}
-		// Fallback to loopback
-		return a.SetAudioDevice(-1, true)
+		return nil
 	} else if mode == string(AppModeTranscript) {
 		a.appMode = AppModeTranscript
-		if a.audioCapture != nil {
-			a.audioCapture.StopCapture()
-		}
-
-		err := a.startDualCapture()
-		if err != nil {
-			return err
-		}
-
 		a.engine.SetTranscriptMode(true)
 		if a.engine.GetQuestionBuffer() != nil {
 			a.engine.GetQuestionBuffer().SetAutoFlush(false)
@@ -817,6 +814,34 @@ func (a *App) SetAppMode(mode string) error {
 	}
 
 	return fmt.Errorf("unknown mode: %s", mode)
+}
+
+func (a *App) SetAudioMode(mode string) error {
+	a.cmdMutex.Lock()
+	defer a.cmdMutex.Unlock()
+
+	if mode == string(AudioModeSpeaker) {
+		a.audioMode = AudioModeSpeaker
+		if a.dualCapture != nil {
+			a.dualCapture.Stop()
+			a.dualCapture = nil
+		}
+		// Fallback to loopback
+		return a.SetAudioDevice(-1, true)
+	} else if mode == string(AudioModeDual) {
+		a.audioMode = AudioModeDual
+		if a.audioCapture != nil {
+			a.audioCapture.StopCapture()
+		}
+
+		err := a.startDualCapture()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	return fmt.Errorf("unknown audio mode: %s", mode)
 }
 
 func (a *App) GetAudioDevices() []audio.AudioDevice {
@@ -1014,15 +1039,15 @@ func (a *App) ToggleMic() bool {
 		return false
 	}
 
-	if a.appMode == AppModeInterview {
+	if a.audioMode == AudioModeSpeaker {
 		if a.audioCapture != nil && a.audioCapture.IsCapturing() {
 			a.audioCapture.StopCapture()
 			return false
 		} else {
-			a.SetAudioDevice(-1, true) // Interview Mode defaults to loopback
+			a.SetAudioDevice(-1, true) // Speaker Mode defaults to loopback
 			return true
 		}
-	} else if a.appMode == AppModeTranscript {
+	} else if a.audioMode == AudioModeDual {
 		if a.dualCapture != nil {
 			a.dualCapture.Stop()
 			a.dualCapture = nil
