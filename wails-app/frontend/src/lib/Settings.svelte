@@ -501,18 +501,36 @@
                     <div style="font-size: 0.72rem; color: #ccc; word-break: break-all; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 0.4rem 0.6rem;">
                       {wsState.buddyURL}
                     </div>
+                  <!-- Inside the Active state of Buddy Mode, replacing the old Copy Link button -->
+                  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                    <!-- Copy Invite Message (For WhatsApp/Slack) -->
                     <button
-                      id="copy-buddy-url-btn"
-                      class="btn-secondary"
-                      style="font-size: 0.78rem; padding: 0.3rem 0.8rem; width: fit-content;"
+                      id="copy-invite-btn"
+                      class="btn-primary"
+                      style="font-size: 0.78rem; padding: 0.4rem 0.8rem; background-color: #4ade80; color: #000;"
                       onclick={() => {
-                        navigator.clipboard.writeText(wsState.buddyURL);
-                        const btn = document.getElementById('copy-buddy-url-btn');
-                        if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy Link'; }, 2000); }
+                        const msg = `Hey! I'm using BarnOwl AI for my interview. Join my secure Buddy Mode session here to watch the live transcript and send me hints: ${wsState.buddyURL}\n\nBy the way, if you want to use this for your next interview, use my referral code ${authState.referralCode || 'BARNOWL'} to unlock a free device slot for both of us!`;
+                        navigator.clipboard.writeText(msg);
+                        const btn = document.getElementById('copy-invite-btn');
+                        if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy Invite (WhatsApp/Slack)'; }, 2000); }
                       }}
                     >
-                      📋 Copy Link
+                      📋 Copy Invite (WhatsApp/Slack)
                     </button>
+
+                    <!-- Email Invite (Mailto link) -->
+                    <button
+                      class="btn-secondary"
+                      style="font-size: 0.78rem; padding: 0.4rem 0.8rem;"
+                      onclick={() => {
+                        const subject = encodeURIComponent("Help me with my interview!");
+                        const body = encodeURIComponent(`Hey!\n\nI'm using BarnOwl AI for my interview. Join my secure Buddy Mode session here to watch the live transcript and send me hints:\n\n${wsState.buddyURL}\n\nBy the way, if you want to use this for your next interview, use my referral code ${authState.referralCode || 'BARNOWL'} to unlock a free device slot for both of us!`);
+                        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+                      }}
+                    >
+                      ✉️ Email Invite
+                    </button>
+                  </div>
                   {:else}
                     <div style="font-size: 0.78rem; color: #888;">⏳ Generating secure link...</div>
                   {/if}
