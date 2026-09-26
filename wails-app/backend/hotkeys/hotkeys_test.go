@@ -86,6 +86,7 @@ func TestHotkeyGoRoutineCancellation(t *testing.T) {
 	hkRightChan := make(chan hotkey.Event)
 	hkLeftChan := make(chan hotkey.Event)
 	hk1Chan := make(chan hotkey.Event)
+	hkSChan := make(chan hotkey.Event)
 
 	var calls int
 	NewHotkey = func(mods []hotkey.Modifier, key hotkey.Key) HotkeyInterface {
@@ -95,6 +96,8 @@ func TestHotkeyGoRoutineCancellation(t *testing.T) {
 		}
 		if calls == 2 {
 			ch = hk1Chan
+		} else if calls == 3 {
+			ch = hkSChan
 		}
 		calls++
 		return &mockHotkey{
@@ -127,6 +130,7 @@ func TestKeydownBranches(t *testing.T) {
 	hkRightChan := make(chan hotkey.Event)
 	hkLeftChan := make(chan hotkey.Event)
 	hk1Chan := make(chan hotkey.Event)
+	hkSChan := make(chan hotkey.Event)
 
 	var calls int
 	NewHotkey = func(mods []hotkey.Modifier, key hotkey.Key) HotkeyInterface {
@@ -136,6 +140,9 @@ func TestKeydownBranches(t *testing.T) {
 		}
 		if calls == 2 {
 			ch = hk1Chan
+		}
+		if calls == 3 {
+			ch = hkSChan
 		}
 		calls++
 		return &mockHotkey{
@@ -158,6 +165,8 @@ func TestKeydownBranches(t *testing.T) {
 		hkLeftChan <- hotkey.Event{}
 		time.Sleep(10 * time.Millisecond)
 		hk1Chan <- hotkey.Event{}
+		time.Sleep(10 * time.Millisecond)
+		hkSChan <- hotkey.Event{}
 	}()
 
 	time.Sleep(50 * time.Millisecond)

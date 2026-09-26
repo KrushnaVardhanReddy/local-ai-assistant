@@ -67,6 +67,12 @@ func Start(ctx context.Context) error {
 		return fmt.Errorf("failed to register Ctrl+Alt+1: %v", err)
 	}
 
+	// Ctrl+Alt+S (Send candidate to LLM)
+	hkS := NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, ModAlt}, hotkey.KeyS)
+	if err := hkS.Register(); err != nil {
+		return fmt.Errorf("failed to register Ctrl+Alt+S: %v", err)
+	}
+
 	// Register Stealth Mode hotkey variants (Ctrl+Alt+M & Ctrl+Shift+M, including NumLock variants)
 	stealthVariants := []HotkeyInterface{
 		NewHotkey([]hotkey.Modifier{hotkey.ModCtrl, ModAlt}, hotkey.KeyM),
@@ -92,6 +98,7 @@ func Start(ctx context.Context) error {
 				hkRight.Unregister()
 				hkLeft.Unregister()
 				hk1.Unregister()
+				hkS.Unregister()
 				for _, hk := range activeStealthKeys {
 					_ = hk.Unregister()
 				}
@@ -102,6 +109,8 @@ func Start(ctx context.Context) error {
 				handleMoveWindow(ctx, -100)
 			case <-hk1.Keydown():
 				handleIPC(ctx)
+			case <-hkS.Keydown():
+				EventsEmit(ctx, "hotkey_send_candidate_to_llm")
 			case <-stealthCh:
 				log.Println("🔥 [HOTKEY] Stealth toggle keydown detected! Invoking ToggleClickthrough...")
 				ToggleClickthrough(ctx)

@@ -16,7 +16,7 @@ import (
 
 func TestNewServer(t *testing.T) {
 	port := 8765
-	srv := NewServer(port, nil, nil)
+	srv := NewServer(port, nil, nil, nil)
 
 	if srv.IsRunning() {
 		t.Errorf("expected isRunning to be false, got true")
@@ -30,7 +30,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestGetPublicURL_WhenNotRunning(t *testing.T) {
-	srv := NewServer(8765, nil, nil)
+	srv := NewServer(8765, nil, nil, nil)
 	if srv.GetPublicURL() != "" {
 		t.Errorf("expected GetPublicURL to be empty, got %q", srv.GetPublicURL())
 	}
@@ -56,7 +56,7 @@ func TestGetPublicURL_WhenNotRunning(t *testing.T) {
 }
 
 func TestBroadcastTranscript_NoClients(t *testing.T) {
-	srv := NewServer(8765, nil, nil)
+	srv := NewServer(8765, nil, nil, nil)
 
 	// Should not panic or error
 	srv.BroadcastTranscript("test message", "candidate")
@@ -64,7 +64,7 @@ func TestBroadcastTranscript_NoClients(t *testing.T) {
 
 func TestTokenValidation(t *testing.T) {
 	// Setup a server instance
-	srv := NewServer(8765, nil, nil)
+	srv := NewServer(8765, nil, nil, nil)
 	srv.token = "valid-token"
 
 	// Create httptest server using handleWebSocket
@@ -162,7 +162,7 @@ func TestTokenValidation(t *testing.T) {
 
 func TestStartStopServer(t *testing.T) {
 	// Setup a server instance with a random port for testing
-	srv := NewServer(0, nil, nil)
+	srv := NewServer(0, nil, nil, nil)
 
 	// Server shouldn't run yet
 	if srv.IsRunning() {

@@ -388,7 +388,7 @@
 
               <div style="display: flex; flex-direction: column; gap: 0.6rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.85rem 1rem;">
 
-                <!-- Option 1: Interviewer Only (default) -->
+                <!-- Option 1: Speaker Only (default) -->
                 <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;">
                   <input
                     type="radio"
@@ -400,7 +400,7 @@
                   />
                   <div>
                     <div style="font-size: 0.85rem; font-weight: 600; color: #e5e7eb;">
-                      Interviewer Only
+                      Speaker Only
                       <span style="font-size: 0.68rem; font-weight: 400; background: rgba(74,222,128,0.12); color: #4ade80; border-radius: 4px; padding: 0.1rem 0.4rem; margin-left: 0.3rem;">Default · Stealth</span>
                     </div>
                     <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.15rem; line-height: 1.4;">
@@ -427,8 +427,8 @@
                       Dual Mode — Full Transcript
                     </div>
                     <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.15rem; line-height: 1.4;">
-                      Captures both system audio <strong style="color: #9ca3af;">[Interviewer]</strong> and your
-                      microphone <strong style="color: #9ca3af;">[Candidate]</strong> simultaneously.
+                      Captures both system audio <strong style="color: #9ca3af;">[Speaker]</strong> and your
+                      microphone <strong style="color: #9ca3af;">[You]</strong> simultaneously.
                       Generates a complete, labeled two-sided conversation transcript.
                     </div>
                   </div>
@@ -551,7 +551,7 @@
                 👫 Buddy Mode (Friends Help)
               </h3>
               <p style="font-size: 0.78rem; color: #888; margin: 0 0 0.75rem 0; line-height: 1.5;">
-                Allow a trusted friend to view your live interview transcript and send you hints — from anywhere in the world. A secure, one-time Cloudflare link is generated.
+                Allow a trusted friend to view your live meeting transcript and send you hints — from anywhere in the world. A secure, one-time Cloudflare link is generated.
               </p>
 
               {#if wsState.buddyModeActive}
@@ -570,7 +570,7 @@
                       class="btn-primary"
                       style="font-size: 0.78rem; padding: 0.4rem 0.8rem; background-color: #4ade80; color: #000;"
                       onclick={() => {
-                        const msg = `Hey! I'm using BarnOwl AI for my interview. Join my secure Buddy Mode session here to watch the live transcript and send me hints: ${wsState.buddyURL}\n\nBy the way, if you want to use this for your next interview, use my referral code ${authState.referralCode || 'BARNOWL'} to unlock a free device slot for both of us!`;
+                        const msg = `Hey! I'm using BarnOwl AI for my meeting. Join my secure Buddy Mode session here to watch the live transcript and send me hints: ${wsState.buddyURL}\n\nBy the way, if you want to use this for your next meeting, use my referral code ${authState.referralCode || 'BARNOWL'} to unlock a free device slot for both of us!`;
                         navigator.clipboard.writeText(msg);
                         const btn = document.getElementById('copy-invite-btn');
                         if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy Invite (WhatsApp/Slack)'; }, 2000); }
@@ -584,8 +584,8 @@
                       class="btn-secondary"
                       style="font-size: 0.78rem; padding: 0.4rem 0.8rem;"
                       onclick={() => {
-                        const subject = encodeURIComponent("Help me with my interview!");
-                        const body = encodeURIComponent(`Hey!\n\nI'm using BarnOwl AI for my interview. Join my secure Buddy Mode session here to watch the live transcript and send me hints:\n\n${wsState.buddyURL}\n\nBy the way, if you want to use this for your next interview, use my referral code ${authState.referralCode || 'BARNOWL'} to unlock a free device slot for both of us!`);
+                        const subject = encodeURIComponent("Help me with my meeting!");
+                        const body = encodeURIComponent(`Hey!\n\nI'm using BarnOwl AI for my meeting. Join my secure Buddy Mode session here to watch the live transcript and send me hints:\n\n${wsState.buddyURL}\n\nBy the way, if you want to use this for your next meeting, use my referral code ${authState.referralCode || 'BARNOWL'} to unlock a free device slot for both of us!`);
                         window.location.href = `mailto:?subject=${subject}&body=${body}`;
                       }}
                     >

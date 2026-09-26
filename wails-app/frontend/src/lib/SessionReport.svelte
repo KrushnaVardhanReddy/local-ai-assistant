@@ -16,7 +16,7 @@
   let isGeneratingEmail = $state(false);
   let emailError = $state<string | null>(null);
 
-  let interviewerName = $state("");
+  let speakerName = $state("");
   let companyName = $state("");
   let roleName = $state("");
   let showEmailMeta = $state(false);
@@ -108,7 +108,7 @@
   function getReportMarkdown() {
     if (!scorecard) return "";
     const lines = [
-      `# Interview Scorecard — ${new Date().toLocaleDateString()}`,
+      `# Meeting Scorecard — ${new Date().toLocaleDateString()}`,
       ``,
       `**Overall Score:** ${scorecard.overall_score}/10`,
       ``,
@@ -167,7 +167,7 @@
         body: JSON.stringify({
           session,
           scorecard,
-          interviewer_name: interviewerName,
+          speaker_name: speakerName,
           company_name: companyName,
           role_name: roleName,
         }),
@@ -347,8 +347,8 @@
             <div class="grid grid-cols-3 gap-2 mb-3">
               <input
                 type="text"
-                placeholder="Interviewer name"
-                bind:value={interviewerName}
+                placeholder="Speaker name"
+                bind:value={speakerName}
                 class="bg-white/5 border border-white/10 rounded-lg px-3 py-2
                        text-on-background text-xs focus:outline-none
                        focus:border-primary/40 transition-colors"
@@ -459,7 +459,7 @@
                 </div>
               {:else if historyEntries.length === 0}
                 <p class="text-on-surface-variant/40 text-xs py-4 text-center">
-                  No past sessions yet. Complete more interviews to see your trend.
+                  No past sessions yet. Complete more meetings to see your trend.
                 </p>
               {:else}
                 <!-- Sparkline trend -->

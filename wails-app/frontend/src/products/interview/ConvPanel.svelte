@@ -217,7 +217,7 @@
       {#if transcriptHistory.length === 0}
         <div class="empty-state">
           <span class="material-symbols-outlined ghost-icon">hearing</span>
-          <p>Waiting for the interview to begin…</p>
+          <p>Waiting for the meeting to begin…</p>
         </div>
       {:else}
         {#each transcriptHistory as item}
@@ -237,7 +237,7 @@
                 }
               }
             }}>
-              <div class="bubble-label">Interviewer</div>
+              <div class="bubble-label">Speaker</div>
               <div class="text-content">{item.text}</div>
               {#if wsState.manualMode && !item.answer}
                 <span class="send-hint">↑ click to ask AI</span>
@@ -260,6 +260,23 @@
               }
             }}>
               <div class="bubble-label">You</div>
+              {#if !wsState.isMockMode}
+                <button
+                  class="wand-btn {item._wandSent ? 'sent' : ''}"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    if (typeof (window as any).go?.main?.App?.AppendToBuffer === 'function' && typeof (window as any).go?.main?.App?.FlushQuestionBuffer === 'function') {
+                      (window as any).go.main.App.AppendToBuffer(item.text);
+                      (window as any).go.main.App.FlushQuestionBuffer();
+                      item._wandSent = true;
+                      setTimeout(() => { item._wandSent = false; }, 1500);
+                    }
+                  }}
+                  title="Send to LLM"
+                >
+                  {item._wandSent ? '✓ Sent!' : '🪄 Ask AI'}
+                </button>
+              {/if}
               <div class="text-content">{item.text}</div>
               {#if wsState.manualMode && !item.answer}
                 <span class="send-hint">↑ click to ask AI</span>
@@ -555,7 +572,11 @@
     border-left: 3px solid rgba(148, 163, 184, 0.4);
   }
 
+
   .bubble-candidate {
+    position: relative;
+    /* existing styles follow */
+
     align-self: flex-end;
     background: rgba(20, 40, 25, 0.6);
     border-left: 3px solid rgba(74, 222, 128, 0.4);
@@ -842,4 +863,9 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .wand-btn { position: absolute; top: 0.3rem; right: 0.4rem; opacity: 0; transition: opacity 0.15s ease; background: rgba(167, 139, 250, 0.2); border: 1px solid rgba(167, 139, 250, 0.3); color: #a78bfa; font-size: 0.65rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 999px; cursor: pointer; white-space: nowrap; line-height: 1.4; }
+  .bubble-candidate:hover .wand-btn { opacity: 1; }
+  .wand-btn:hover { background: rgba(167, 139, 250, 0.35); }
+  .wand-btn.sent { background: rgba(74, 222, 128, 0.2); border-color: rgba(74, 222, 128, 0.3); color: #4ade80; }
 </style>

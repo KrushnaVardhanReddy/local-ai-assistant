@@ -23,8 +23,8 @@
       </div>
 
       <div class="legal-section">
-        <h3>2. Acceptable Use (No Interviews/Exams)</h3>
-        <p>BarnOwl AI is designed as a real-time meeting copilot, accessibility tool, and pair-programming assistant. <strong>It is strictly prohibited to use this software to gain an unfair advantage in job interviews</strong>, academic exams, or any technical assessments where outside assistance is disallowed.</p>
+        <h3>2. Acceptable Use (No Exams)</h3>
+        <p>BarnOwl AI is designed as a real-time meeting copilot, accessibility tool, and pair-programming assistant. <strong>It is strictly prohibited to use this software to gain an unfair advantage in exams</strong>, academic exams, or any technical assessments where outside assistance is disallowed.</p>
       </div>
 
       <p class="footer-text">By clicking below, you accept full legal responsibility for how you choose to use this software.</p>
