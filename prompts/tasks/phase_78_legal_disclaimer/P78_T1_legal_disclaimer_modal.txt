@@ -7,7 +7,7 @@ TASK CONTEXT
 To protect the software creator from liability, users must explicitly agree to a disclaimer regarding audio recording laws and academic/interview integrity before using the app.
 
 This modal should appear immediately upon startup, blocking the entire UI until the user clicks "I Understand and Agree".
-Once agreed, we store a flag `barnowl_legal_accepted` in `localStorage` so they never see it again on this machine.
+It must appear **every single time** the app is launched (do NOT save the acceptance to localStorage). This ensures maximum legal compliance, similar to a GPS warning in a car.
 
 ════════════════════════════════════════════════════════════════
 FILES TO CREATE / MODIFY
@@ -30,7 +30,6 @@ Create a new Svelte component. It must be a full-screen, unclosable overlay (sim
   const dispatch = createEventDispatcher();
 
   function handleAgree() {
-    localStorage.setItem('barnowl_legal_accepted', 'true');
     dispatch('agreed');
   }
 </script>
@@ -174,13 +173,11 @@ In `App.svelte`:
 import LegalModal from '$lib/LegalModal.svelte';
 ```
 
-2. Add a reactive state variable to check if it has been accepted. Since it checks localStorage immediately on mount, we can initialize it like this:
+2. Add a reactive state variable to check if it has been accepted. It should default to false so it shows every time the app starts.
 ```ts
 let hasAcceptedLegal = $state(false);
 
 onMount(async () => {
-  // Check legal acceptance
-  hasAcceptedLegal = localStorage.getItem('barnowl_legal_accepted') === 'true';
   // ... existing onMount code ...
 ```
 

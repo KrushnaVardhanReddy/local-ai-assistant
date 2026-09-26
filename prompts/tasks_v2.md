@@ -114,4 +114,4 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P78-T1 | `LegalModal.svelte`, `App.svelte` | **First-Launch Legal Disclaimer:** Create a blocking, full-screen welcome modal that requires users to explicitly agree to audio recording laws and a strict "no interview cheating" acceptable use policy before using the app. Saves acceptance to `localStorage`. | ⬜ | — |
+| P78-T1 | `LegalModal.svelte`, `App.svelte` | **Every-Launch Legal Disclaimer:** Create a blocking, full-screen welcome modal that requires users to explicitly agree to audio recording laws and a strict "no interview cheating" acceptable use policy before using the app. Appears every time the app is launched. | ⬜ | — |
