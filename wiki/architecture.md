@@ -1,3 +1,13 @@
+
+## Architecture Refactor (Phase 83)
+
+The application has been migrated from a purely Wails IPC-driven approach to a standard REST API and WebSocket architecture.
+
+- **REST API (`wails-app/backend/api`)**: Replaces Wails JS Bindings (e.g., `GetState`, `ToggleMic`) with standard HTTP endpoints running locally on `:8080/api/...`.
+- **Unified WebSockets (`wails-app/backend/buddy`)**: The `buddy` server was expanded to act as the central WebSocket hub for both local frontend clients and remote viewers, dropping the need for Wails `EventsOn` for real-time transcript streaming.
+
+Local clients communicate via `http://localhost:8080/api` and `ws://localhost:8080/ws`.
+
 # System Architecture
 
 The Local AI Assistant operates on a **Hexagonal Architecture** (Ports and Adapters), designed to completely isolate the heavy AI orchestration from infrastructure concerns (like how events are emitted or how LLM APIs are called).

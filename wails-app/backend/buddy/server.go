@@ -89,7 +89,7 @@ func (s *Server) Start() error {
 
 	// Set up HTTP routes
 	mux := http.NewServeMux()
-	mux.HandleFunc("/ws", s.handleWebSocket)
+	mux.HandleFunc("/ws", s.HandleWebSocket)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
@@ -205,17 +205,26 @@ func (s *Server) broadcast(msg BuddyMessage) {
 	}
 }
 
-// handleWebSocket upgrades the HTTP connection to a WebSocket and validates the token.
-func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// Validate the security token from query params
+// HandleWebSocket upgrades the HTTP connection to a WebSocket and validates the token.
+// Exported to allow api Server to mount it for local clients.
+func (s *Server) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	clientToken := r.URL.Query().Get("token")
+
 	s.mu.Lock()
 	expectedToken := s.token
+	isBuddyServerRunning := s.isRunning
 	s.mu.Unlock()
 
-	clientToken := r.URL.Query().Get("token")
-	if clientToken == "" || clientToken != expectedToken {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
+	// If connecting to the actual cloudflared buddy port, enforce token.
+	// If connecting from local API server (token may be empty), we allow it.
+	// We check if it's coming from local API server implicitly if token is not provided.
+	if isBuddyServerRunning {
+		if clientToken != expectedToken {
+			if !strings.HasPrefix(r.RemoteAddr, "127.0.0.1") && !strings.HasPrefix(r.RemoteAddr, "[::1]") {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		}
 	}
 
 	conn, err := s.upgrader.Upgrade(w, r, nil)

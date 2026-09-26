@@ -18,6 +18,7 @@ import (
 	cacheadapter "wails-app/adapters/cache"
 	llmadapter "wails-app/adapters/llm"
 	"wails-app/backend"
+	"wails-app/backend/api"
 	"wails-app/backend/audio"
 	"wails-app/backend/auth"
 	"wails-app/backend/buddy"
@@ -58,6 +59,7 @@ const (
 type App struct {
 	remoteServer *remote.Server
 	buddyServer  *buddy.Server
+	apiServer    *api.Server
 	ctx          context.Context
 
 	backendCmd *exec.Cmd
@@ -145,7 +147,7 @@ func NewApp(cfg *config.AppConfig) *App {
 		ttsAdapter,
 	)
 
-	return &App{
+	appInstance := &App{
 		remoteServer: remote.NewServer(http.FS(assets), sessMgr),
 		sttManager:   stt.NewSTTManager(initialEngine),
 		audioCapture: captureEngine,
@@ -154,6 +156,9 @@ func NewApp(cfg *config.AppConfig) *App {
 		engine:       eng,
 		cfg:          cfg,
 	}
+	appInstance.apiServer = api.NewServer(8080, appInstance)
+
+	return appInstance
 }
 
 // startup is called when the app starts. The context is saved
@@ -199,6 +204,7 @@ func (a *App) startup(ctx context.Context) {
 	a.engine.SetEventsAdapter(&buddyEventProxy{app: a, ctx: ctx})
 
 	a.engine.Start(ctx)
+	a.apiServer.Start()
 
 	// We no longer hide from taskbar on startup because it breaks Alt+Tab
 	// during the Auth flow. Instead, the frontend calls HideFromTaskbar()
@@ -896,6 +902,9 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	if a.engine != nil {
 		a.engine.Stop()
+	}
+	if a.apiServer != nil {
+		a.apiServer.Stop()
 	}
 }
 

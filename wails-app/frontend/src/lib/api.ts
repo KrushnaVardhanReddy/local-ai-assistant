@@ -10,10 +10,17 @@ export function getApiUrl(): string {
     return 'https://ai.krushnavardhan.workers.dev';
   }
 
-  throw new Error("Local Edition uses Wails IPC, not HTTP/WS API.");
+  // Local Edition now uses standard HTTP/WS API
+  return 'http://localhost:8080/api';
 }
 
 export function getWsUrl(): string {
+  const isCloud = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
+
+  if (!isCloud) {
+    return 'ws://localhost:8080/ws';
+  }
+
   const baseUrl = getApiUrl();
   if (baseUrl.startsWith('https://')) {
     return baseUrl.replace('https://', 'wss://');
