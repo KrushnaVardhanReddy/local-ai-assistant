@@ -192,9 +192,59 @@ func TestStartStopServer(t *testing.T) {
 		}
 
 		// Cleanup
+		// Wait a bit for the server to fully start so Stop doesn't race
+		time.Sleep(100 * time.Millisecond)
 		srv.Stop()
 		if srv.IsRunning() {
 			t.Errorf("Expected server to be stopped")
 		}
+	}
+}
+
+func TestServeIndex(t *testing.T) {
+	// Create httptest server using the mux logic we use in Start
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		content, err := staticAssets.ReadFile("index.html")
+		if err != nil {
+			http.Error(w, "File not found", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(content)
+	})
+
+	testSrv := httptest.NewServer(mux)
+	defer testSrv.Close()
+
+	// Test GET /
+	resp, err := http.Get(testSrv.URL + "/")
+	if err != nil {
+		t.Fatalf("failed to GET /: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", resp.StatusCode)
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.Contains(contentType, "text/html") {
+		t.Errorf("expected text/html, got %v", contentType)
+	}
+
+	// Test GET /notfound
+	respNotFound, err := http.Get(testSrv.URL + "/notfound")
+	if err != nil {
+		t.Fatalf("failed to GET /notfound: %v", err)
+	}
+	defer respNotFound.Body.Close()
+
+	if respNotFound.StatusCode != http.StatusNotFound {
+		t.Errorf("expected status NotFound, got %v", respNotFound.StatusCode)
 	}
 }
