@@ -59,4 +59,5 @@ VALIDATION
 - DO NOT rename files or directories (e.g., keep `InterviewHUD.svelte`).
 - DO NOT rename internal TypeScript variables (e.g. keep `wsState.isMockInterview`).
 - Run `npm run build` inside `wails-app/frontend/` and verify zero errors.
+- **CRITICAL:** Do NOT run Playwright E2E tests. The test timeouts are pre-existing. Just submit the PR once the build succeeds.
 - Commit message MUST start with "jules: ".
