@@ -31,6 +31,7 @@ export const wsState = $state({
   cacheStats: { cached_pairs: 0, estimated_tokens_saved: 0 },
   downloadTask: null as { component: string, progress: number } | null,
   appMode: (typeof localStorage !== 'undefined' ? (localStorage.getItem('barnowl_app_mode') as 'interview' | 'transcript' | null) || 'interview' : 'interview') as 'interview' | 'transcript',
+  audioMode: (typeof localStorage !== 'undefined' ? (localStorage.getItem('barnowl_audio_mode') as 'speaker' | 'dual' | null) || 'speaker' : 'speaker') as 'speaker' | 'dual',
   buddyModeActive: false,
   buddyURL: "" as string,
   buddyURLLoading: false,
@@ -582,6 +583,16 @@ export async function setAppMode(mode: 'interview' | 'transcript') {
   }
   if ((window as any).go?.main?.App?.SetAppMode) {
     await (window as any).go.main.App.SetAppMode(mode);
+  }
+}
+
+export async function setAudioMode(mode: 'speaker' | 'dual') {
+  wsState.audioMode = mode;
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem("barnowl_audio_mode", mode);
+  }
+  if ((window as any).go?.main?.App?.SetAudioMode) {
+    await (window as any).go.main.App.SetAudioMode(mode);
   }
 }
 

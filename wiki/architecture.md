@@ -103,10 +103,10 @@ Run `scripts/deploy_supabase.sh` to link your Supabase project, push all schema 
 
 ### App Modes and Dual-Mode Audio Capture
 
-The application supports two distinct audio capture paradigms, represented by the `AppMode` enum and toggled via the ActivityBar in the frontend:
+The application supports distinct paradigms for both AI functionality and audio capture. These are now decoupled:
 
-- **Interview Mode (`AppModeInterview`)**: Uses the standard `CaptureEngine` to capture a single Loopback channel (e.g., Zoom/Teams audio) representing the interviewer. Auto-detection triggers via Gemma are active to recognize complete questions and route to the LLM. The frontend provides full UI controls (Submit Answer, TTS).
-- **Transcript Mode (`AppModeTranscript`)**: Utilizes the `DualCaptureEngine` to concurrently capture the default Loopback hardware AND the default Microphone hardware. Both streams are independently fed into the transcription pipeline (`StealthEngine.ProcessAudioTagged`) with their respective tags (`[Interviewer]` and `[Candidate]`). In this mode, auto-LLM triggering is disabled, turning the engine into a passive, concurrent logging system. The frontend limits interactivity by hiding the chat input and "Submit Answer" button, while presenting a "Summarize Session" button.
+- **App Mode (`AppModeInterview` vs `AppModeTranscript`)**: Controls the AI behavior. In Interview mode, auto-detection triggers via Gemma are active to recognize complete questions and route to the LLM. The frontend provides full UI controls. In Transcript mode, auto-LLM triggering is disabled, turning the engine into a passive logging system.
+- **Audio Mode (`AudioModeSpeaker` vs `AudioModeDual`)**: Controls the audio capture. `AudioModeSpeaker` uses the standard `CaptureEngine` to capture a single Loopback channel (e.g., Zoom/Teams audio). `AudioModeDual` utilizes the `DualCaptureEngine` to concurrently capture the default Loopback hardware AND the default Microphone hardware. Both streams are independently fed into the transcription pipeline with their respective tags (`[Interviewer]` and `[Candidate]`).
 
 The `DualCaptureEngine` achieves concurrency by allocating two independent `malgo.Device` instances tied to a single shared `malgo.AllocatedContext` (extracted from the dormant `CaptureEngine`).
 

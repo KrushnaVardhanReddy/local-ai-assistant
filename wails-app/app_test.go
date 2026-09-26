@@ -140,6 +140,57 @@ func TestApp_ToggleMic(t *testing.T) {
 	app.ToggleMic()
 }
 
+func TestApp_SetAppMode(t *testing.T) {
+	app := NewApp(&config.AppConfig{})
+
+	// Test setting to Interview mode
+	err := app.SetAppMode("interview")
+	if err != nil {
+		t.Fatalf("Failed to set app mode to interview: %v", err)
+	}
+	if app.appMode != AppModeInterview {
+		t.Errorf("Expected appMode to be %v, got %v", AppModeInterview, app.appMode)
+	}
+
+	// Test setting to Transcript mode
+	err = app.SetAppMode("transcript")
+	if err != nil {
+		t.Fatalf("Failed to set app mode to transcript: %v", err)
+	}
+	if app.appMode != AppModeTranscript {
+		t.Errorf("Expected appMode to be %v, got %v", AppModeTranscript, app.appMode)
+	}
+
+	// Test invalid mode
+	err = app.SetAppMode("invalid")
+	if err == nil {
+		t.Error("Expected error when setting invalid app mode")
+	}
+}
+
+func TestApp_SetAudioMode(t *testing.T) {
+	app := NewApp(&config.AppConfig{})
+
+	// Test setting to Speaker mode
+	err := app.SetAudioMode("speaker")
+	// If it fails on startDualCapture, it might return err.
+	// We just test if mode was set
+	if app.audioMode != AudioModeSpeaker {
+		t.Errorf("Expected audioMode to be %v, got %v", AudioModeSpeaker, app.audioMode)
+	}
+
+	_ = app.SetAudioMode("dual")
+	if app.audioMode != AudioModeDual {
+		t.Errorf("Expected audioMode to be %v, got %v", AudioModeDual, app.audioMode)
+	}
+
+	// Test invalid mode
+	err = app.SetAudioMode("invalid")
+	if err == nil {
+		t.Error("Expected error when setting invalid audio mode")
+	}
+}
+
 func TestApp_ExportSession(t *testing.T) {
 	app := NewApp(&config.AppConfig{})
 

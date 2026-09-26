@@ -2,7 +2,7 @@
   import { apiFetch } from "./api";
   import { authState, signOut } from "$lib/auth.svelte";
   import AuthModal from "$lib/components/AuthModal.svelte";
-  import { reconnect, wsState, startBuddyMode, stopBuddyMode, setAppMode } from "$lib/ws.svelte";
+  import { reconnect, wsState, startBuddyMode, stopBuddyMode, setAppMode, setAudioMode } from "$lib/ws.svelte";
     import { onMount } from "svelte";
     import StealthTerminal from "$lib/StealthTerminal.svelte";
   import { getApiUrl, getWsUrl } from "$lib/api";
@@ -393,9 +393,9 @@
                   <input
                     type="radio"
                     name="audioMode"
-                    value="interview"
-                    checked={wsState.appMode === 'interview'}
-                    onchange={() => setAppMode('interview')}
+                    value="speaker"
+                    checked={wsState.audioMode === 'speaker'}
+                    onchange={() => setAudioMode('speaker')}
                     style="margin-top: 0.18rem; accent-color: #4ade80;"
                   />
                   <div>
@@ -417,9 +417,9 @@
                   <input
                     type="radio"
                     name="audioMode"
-                    value="transcript"
-                    checked={wsState.appMode === 'transcript'}
-                    onchange={() => setAppMode('transcript')}
+                    value="dual"
+                    checked={wsState.audioMode === 'dual'}
+                    onchange={() => setAudioMode('dual')}
                     style="margin-top: 0.18rem; accent-color: #4ade80;"
                   />
                   <div>
