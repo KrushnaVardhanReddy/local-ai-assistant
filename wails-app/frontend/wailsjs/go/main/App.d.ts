@@ -37,6 +37,8 @@ export function GetActiveDocument():Promise<driving.WorkspaceDocument>;
 
 export function GetAudioDevices():Promise<Array<audio.AudioDevice>>;
 
+export function GetBuddyURL():Promise<string>;
+
 export function GetCacheItems():Promise<Array<backend.CacheItem>>;
 
 export function GetCacheStats():Promise<Record<string, any>>;
@@ -99,9 +101,13 @@ export function SetRawMode(arg1:boolean):Promise<void>;
 
 export function StartBackend():Promise<void>;
 
+export function StartBuddyMode():Promise<void>;
+
 export function StartOAuthFlow(arg1:string):Promise<void>;
 
 export function StopBackend():Promise<void>;
+
+export function StopBuddyMode():Promise<void>;
 
 export function SummarizeSession(arg1:Array<engine.SummaryRequest>):Promise<void>;
 

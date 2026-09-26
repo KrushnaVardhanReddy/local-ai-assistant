@@ -66,6 +66,10 @@ export function GetAudioDevices() {
   return window['go']['main']['App']['GetAudioDevices']();
 }
 
+export function GetBuddyURL() {
+  return window['go']['main']['App']['GetBuddyURL']();
+}
+
 export function GetCacheItems() {
   return window['go']['main']['App']['GetCacheItems']();
 }
@@ -190,12 +194,20 @@ export function StartBackend() {
   return window['go']['main']['App']['StartBackend']();
 }
 
+export function StartBuddyMode() {
+  return window['go']['main']['App']['StartBuddyMode']();
+}
+
 export function StartOAuthFlow(arg1) {
   return window['go']['main']['App']['StartOAuthFlow'](arg1);
 }
 
 export function StopBackend() {
   return window['go']['main']['App']['StopBackend']();
+}
+
+export function StopBuddyMode() {
+  return window['go']['main']['App']['StopBuddyMode']();
 }
 
 export function SummarizeSession(arg1) {

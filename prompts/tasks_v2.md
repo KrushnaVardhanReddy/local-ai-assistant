@@ -100,7 +100,7 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P76-T1 | `backend/buddy/server.go`, `backend/config/config.go`, `app.go` | **Go Backend:** Create `backend/buddy` package with a local HTTP+WebSocket server on `:8765`. Spawn `cloudflared` as a subprocess, parse its stdout for the public URL, emit `buddy_url_ready` and `buddy_hint` Wails events. Expose `StartBuddyMode`, `StopBuddyMode`, `GetBuddyURL` to the Wails bridge. | 🔄 | — |
+| P76-T1 | `backend/buddy/server.go`, `backend/config/config.go`, `app.go` | **Go Backend:** Create `backend/buddy` package with a local HTTP+WebSocket server on `:8765`. Spawn `cloudflared` as a subprocess, parse its stdout for the public URL, emit `buddy_url_ready` and `buddy_hint` Wails events. Expose `StartBuddyMode`, `StopBuddyMode`, `GetBuddyURL` to the Wails bridge. | ✅ | #261 |
 | P76-T2 | `ws.svelte.ts`, `Settings.svelte`, `InterviewHUD.svelte` | **Svelte Frontend:** Add `buddyModeActive`, `buddyURL`, `buddyURLLoading`, `buddyHints` to `wsState`. Add a "Buddy Mode" toggle in the Settings General tab with live URL display and a Copy button. Render incoming friend hints as a dismissible slide-in toast overlay in `InterviewHUD.svelte`. | 🔄 | — |
 | P76-T3 | `backend/buddy/index.html`, `backend/buddy/server.go`, `Settings.svelte` | **Friend Web UI & Viral Sharing:** Create standalone Tailwind/VanillaJS HTML UI for the friend to view the live transcript and send hints. Use `//go:embed` to serve it on the local HTTP server. Enhance `Settings.svelte` sharing to include pre-filled WhatsApp/Slack copy and `mailto:` email invites with embedded referral codes. | ⬜ | — |
 
