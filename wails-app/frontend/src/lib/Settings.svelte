@@ -2,7 +2,7 @@
   import { apiFetch } from "./api";
   import { authState, signOut } from "$lib/auth.svelte";
   import AuthModal from "$lib/components/AuthModal.svelte";
-  import { reconnect } from "$lib/ws.svelte";
+  import { reconnect, wsState, startBuddyMode, stopBuddyMode } from "$lib/ws.svelte";
     import { onMount } from "svelte";
     import StealthTerminal from "$lib/StealthTerminal.svelte";
   import { getApiUrl, getWsUrl } from "$lib/api";
@@ -125,6 +125,18 @@
       console.error("Failed to get initial doc context state", e);
     }
   });
+
+  async function handleStartBuddy() {
+    try {
+      await startBuddyMode();
+    } catch (e: any) {
+      alert(`Failed to start Buddy Mode: ${e?.message || e}. Make sure cloudflared is installed.`);
+    }
+  }
+
+  async function handleStopBuddy() {
+    await stopBuddyMode();
+  }
 
   async function toggleSettings() {
     internalShowSettings = !internalShowSettings;
@@ -470,6 +482,58 @@
               Include Active File as Context
             </label>
           </div>
+
+          {#if !isCloudBuild}
+            <hr class="divider" />
+            <div class="config-section">
+              <h3 style="font-size: 0.9rem; margin: 0 0 0.5rem 0; color: #ddd;">
+                👫 Buddy Mode (Friends Help)
+              </h3>
+              <p style="font-size: 0.78rem; color: #888; margin: 0 0 0.75rem 0; line-height: 1.5;">
+                Allow a trusted friend to view your live interview transcript and send you hints — from anywhere in the world. A secure, one-time Cloudflare link is generated.
+              </p>
+
+              {#if wsState.buddyModeActive}
+                <!-- Active state: Show URL and Stop button -->
+                <div style="background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 8px; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                  <div style="font-size: 0.78rem; color: #4ade80; font-weight: 600;">🟢 Buddy Mode Active</div>
+                  {#if wsState.buddyURL}
+                    <div style="font-size: 0.72rem; color: #ccc; word-break: break-all; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 0.4rem 0.6rem;">
+                      {wsState.buddyURL}
+                    </div>
+                    <button
+                      id="copy-buddy-url-btn"
+                      class="btn-secondary"
+                      style="font-size: 0.78rem; padding: 0.3rem 0.8rem; width: fit-content;"
+                      onclick={() => {
+                        navigator.clipboard.writeText(wsState.buddyURL);
+                        const btn = document.getElementById('copy-buddy-url-btn');
+                        if (btn) { btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy Link'; }, 2000); }
+                      }}
+                    >
+                      📋 Copy Link
+                    </button>
+                  {:else}
+                    <div style="font-size: 0.78rem; color: #888;">⏳ Generating secure link...</div>
+                  {/if}
+                  <button class="btn-secondary" style="font-size: 0.78rem; color: #f87171; border-color: #f87171; width: fit-content;" onclick={handleStopBuddy}>
+                    🛑 Stop Buddy Mode
+                  </button>
+                </div>
+              {:else if wsState.buddyURLLoading}
+                <!-- Loading state -->
+                <div style="font-size: 0.82rem; color: #888; display: flex; align-items: center; gap: 0.5rem;">
+                  <span class="material-symbols-outlined" style="font-size: 1rem; animation: spin 1s linear infinite;">sync</span>
+                  Starting tunnel... (takes ~5 seconds)
+                </div>
+              {:else}
+                <!-- Idle state -->
+                <button class="btn-primary" style="font-size: 0.82rem; width: fit-content;" onclick={handleStartBuddy}>
+                  👫 Start Buddy Mode
+                </button>
+              {/if}
+            </div>
+          {/if}
         </div>
       {/if}
 
