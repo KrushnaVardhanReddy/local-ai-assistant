@@ -25,6 +25,7 @@ const (
 	MsgTypeTranscript = "transcript" // candidate interview transcript → friend
 	MsgTypeHint       = "hint"       // friend → candidate
 	MsgTypeState      = "state"      // buddy session state update → friend
+	MsgTypeRemoteAction = "remote_action"
 )
 
 // BuddyMessage is the JSON structure sent over the WebSocket.
@@ -32,6 +33,8 @@ type BuddyMessage struct {
 	Type    string `json:"type"`
 	Text    string `json:"text,omitempty"`
 	Speaker string `json:"speaker,omitempty"` // "interviewer" or "candidate"
+	Action  string `json:"action,omitempty"`
+	Payload string `json:"payload,omitempty"`
 }
 
 // Server manages the buddy HTTP+WebSocket server and the cloudflared subprocess.
@@ -48,15 +51,17 @@ type Server struct {
 	isRunning  bool
 	onURL      func(url string)  // callback invoked when the public URL is known
 	onHint     func(hint string) // callback invoked when a friend sends a hint
+	onRemoteAction func(action string, payload string) // callback for remote actions like wand
 }
 
 // NewServer creates a new BuddyServer with the given port.
-func NewServer(port int, onURL func(string), onHint func(string)) *Server {
+func NewServer(port int, onURL func(string), onHint func(string), onRemoteAction func(string, string)) *Server {
 	return &Server{
 		clients: make(map[*websocket.Conn]bool),
 		port:    port,
 		onURL:   onURL,
 		onHint:  onHint,
+		onRemoteAction: onRemoteAction,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
@@ -245,6 +250,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 		if msg.Type == MsgTypeHint && msg.Text != "" && s.onHint != nil {
 			s.onHint(msg.Text)
+		}
+		if msg.Type == MsgTypeRemoteAction && s.onRemoteAction != nil {
+			s.onRemoteAction(msg.Action, msg.Payload)
 		}
 	}
 }

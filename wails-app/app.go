@@ -267,6 +267,14 @@ func (a *App) StartBuddyMode() error {
 			wailsruntime.EventsEmit(a.ctx, "buddy_hint", hint)
 			log.Printf("💬 [App] Buddy hint received: %s\n", hint)
 		},
+		func(action string, payload string) {
+			// Called on remote actions
+			if action == "append_to_buffer" {
+				a.AppendToBuffer(payload)
+			} else if action == "flush_llm" {
+				a.FlushQuestionBuffer()
+			}
+		},
 	)
 	a.cmdMutex.Unlock()
 	if err := a.buddyServer.Start(); err != nil {

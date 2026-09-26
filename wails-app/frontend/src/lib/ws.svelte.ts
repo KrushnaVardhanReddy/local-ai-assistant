@@ -307,7 +307,20 @@ export function connect(url?: string): void {
   // Idempotent: don't reconnect if we are already connected to the same URL or opening
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
-  }
+
+
+  onEvent("hotkey_send_candidate_to_llm", () => {
+    console.log("[WS] Received hotkey_send_candidate_to_llm");
+    if (!wsState.isMockMode && typeof (window as any).go?.main?.App?.AppendToBuffer === 'function' && typeof (window as any).go?.main?.App?.FlushQuestionBuffer === 'function') {
+      const candidates = wsState.transcriptHistory.filter(i => i.role === 'candidate' || i.role === 'You');
+      if (candidates.length > 0) {
+        const lastCandidate = candidates[candidates.length - 1];
+        (window as any).go.main.App.AppendToBuffer(lastCandidate.text);
+        (window as any).go.main.App.FlushQuestionBuffer();
+      }
+    }
+  });
+}
 
   // Bypass WebSocket connection entirely if running in Wails (Local Edition)
   if (!isCloud) {

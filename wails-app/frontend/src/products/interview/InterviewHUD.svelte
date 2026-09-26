@@ -92,7 +92,7 @@
   const topActions = $derived([
     { id: 'explorer', icon: 'folder', label: 'Folder' },
     { id: 'mock', icon: 'record_voice_over', label: 'Mock' },
-    { id: 'mode_interview', icon: 'support_agent', label: 'Interview', isActive: wsState.appMode === 'interview' },
+    { id: 'mode_interview', icon: 'support_agent', label: 'Meeting', isActive: wsState.appMode === 'interview' },
     { id: 'mode_transcript', icon: 'summarize', label: 'Transcript', isActive: wsState.appMode === 'transcript' }
   ]);
 
@@ -307,7 +307,7 @@
   }
 
   function handleCatchMeUp() {
-    sendChat("Please catch me up on the current context of the interview or conversation.");
+    sendChat("Please catch me up on the current context of the meeting or conversation.");
     wsState.isThinking = true;
   }
 
@@ -349,7 +349,7 @@
 
 
         if (App.AnalyzeVision) {
-          App.AnalyzeVision(b64, "Analyze this technical interview screen and provide key hints, solution or code concisely.");
+          App.AnalyzeVision(b64, "Analyze this technical meeting screen and provide key hints, solution or code concisely.");
         } else {
           apiFetch(`${getApiUrl()}/api/vision/analyze`, {
             method: 'POST',
