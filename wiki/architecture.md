@@ -79,9 +79,15 @@ All sensitive tokens and activation secrets are stored natively on the user's OS
 ## SaaS Entitlements & Paddle Billing
 For our SaaS products (MentorGlass, CounselDesk, ClinicHUD), user entitlements (such as `usage_seconds`, `included_seconds`, and `product_mode`) are synchronized from Supabase and tracked globally in the frontend via `authState.userEntitlements`. This powers the live Usage & Billing meter UI in the Settings panel.
 
-We use Paddle as our single unified billing Merchant of Record (MoR). Paddle handles both one-time lifetime deals and monthly SaaS subscriptions. This is supported by two Supabase Edge Functions:
-- **`paddle-webhook`**: Receives Paddle webhook events (e.g., `transaction.completed`, `subscription.activated`, `subscription.updated`, `subscription.canceled`) and activates or deactivates entitlements in `user_entitlements`.
+We use Paddle as our single unified billing Merchant of Record (MoR). Paddle handles both one-time lifetime deals, monthly SaaS subscriptions, and B2B Enterprise Seat Licenses. This is supported by two Supabase Edge Functions:
+- **`paddle-webhook`**: Receives Paddle webhook events (e.g., `transaction.completed`, `subscription.activated`, `subscription.updated`, `subscription.canceled`) and activates or deactivates entitlements in `user_entitlements`. It also intercepts `enterprise` plan purchases to automatically provision corporate organizations based on email domains in the `organizations` table.
 - **`paddle-billing-cron`**: A monthly cron job that reads actual usage vs included limits from `user_entitlements` and dynamically charges any overages directly via the Paddle API.
+
+### Enterprise Seat Licensing (Phase 85)
+For B2B sales, companies can purchase a block of seats associated with their email domain (e.g., `@acme.com`).
+- **Organizations Table**: A Supabase table mapping `email_domain` to an active status and `max_seats` limit.
+- **`enterprise-seat-check` Edge Function**: A pre-flight API called by the frontend before OAuth, preventing login if the domain lacks an active enterprise license or has exceeded its purchased seat count. Supports local bypass via `BYPASS_ENTERPRISE_CHECKS`, strongly guarded against execution in production.
+- **Entitlement Linking**: The `user_entitlements` table is extended to link individual user seats to an `org_id` with `is_enterprise=true`.
 
 ### Multi-Device Referral Engine
 Every user gets a unique referral code auto-generated when their entitlements row is created in `user_entitlements`.

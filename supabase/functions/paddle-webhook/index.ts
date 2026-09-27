@@ -118,6 +118,7 @@ serve(async (req: Request) => {
       case "transaction.completed": {
         const items = data.items || [];
         const productId = items[0]?.price?.product_id || items[0]?.price?.name || "unknown";
+        const customData = data.custom_data;
 
         // 1. Update the buyer's own entitlement row as before
         const { error } = await supabase
@@ -129,6 +130,24 @@ serve(async (req: Request) => {
           .eq("user_id", userId);
 
         if (error) console.error("Transaction upsert error:", error);
+
+        // 1b. Enterprise Organization Logic
+        if (customData?.plan_type === "enterprise" && customData?.email_domain) {
+          const { error: orgError } = await supabase
+            .from("organizations")
+            .upsert({
+              email_domain: customData.email_domain.toLowerCase(),
+              name: customData.org_name ?? customData.email_domain,
+              max_seats: parseInt(customData.max_seats ?? "5", 10),
+              status: "active",
+              plan_type: "enterprise",
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "email_domain" });
+
+          if (orgError) {
+            console.error("[Paddle Webhook] Failed to upsert org:", orgError);
+          }
+        }
 
         // 2. Referral Reward Logic
         // The frontend injects referred_by into customData when user entered a code.
