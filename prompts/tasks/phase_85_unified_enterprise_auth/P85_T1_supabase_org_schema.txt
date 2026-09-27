@@ -1,0 +1,249 @@
+You are tasked with implementing Phase 85, Task 1 (P85-T1): Supabase Database Schema for Enterprise Seat Licensing.
+This is a backend-only task. Do NOT touch any frontend Svelte files.
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+BarnOwl AI currently supports two purchase models:
+  1. B2C Lifetime License (LemonSqueezy key, no login required)
+  2. B2C Demo (Google OAuth → 15-min trial, tracked in `user_entitlements`)
+
+This task adds a third model:
+  3. B2B Enterprise Seat License — a company buys N seats; any employee whose
+     email domain matches the org can claim a seat and use the app.
+
+The existing `user_entitlements` table must be extended (NOT replaced) to support
+enterprise seat tracking. We also need a new `organizations` table.
+
+CRITICAL: This task MUST NOT break the existing `demo` or `lifetime` flows.
+All new columns are nullable and additive.
+
+════════════════════════════════════════════════════════════════
+DEV vs PROD BYPASS POLICY
+════════════════════════════════════════════════════════════════
+
+In DEV: Seat limit and domain checks can be bypassed with a Supabase environment
+variable `BYPASS_ENTERPRISE_CHECKS=true` set in the edge function environment.
+This allows local testing without needing a real org record.
+
+In PROD: This variable MUST NOT be set. The edge function enforces this by
+checking `Deno.env.get('SUPABASE_URL')` to detect the production project
+and refusing to skip checks if BYPASS_ENTERPRISE_CHECKS is set alongside
+the production URL. Document this in a SECURITY comment in the edge function.
+
+════════════════════════════════════════════════════════════════
+FILES TO CREATE / MODIFY
+════════════════════════════════════════════════════════════════
+
+[CREATE] supabase/migrations/20260927000001_enterprise_orgs.sql
+[CREATE] supabase/functions/enterprise-seat-check/index.ts
+[MODIFY] supabase/functions/paddle-webhook/index.ts
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Create `organizations` table ────────────────────────
+
+Create file: `supabase/migrations/20260927000001_enterprise_orgs.sql`
+
+```sql
+-- ============================================================
+-- Phase 85: Enterprise Seat Licensing Schema
+-- ============================================================
+
+-- 1. Organizations table: one row per company that bought a license
+CREATE TABLE IF NOT EXISTS public.organizations (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name            text NOT NULL,                          -- "Acme Corp"
+  email_domain    text NOT NULL UNIQUE,                   -- "acme.com"
+  max_seats       integer NOT NULL DEFAULT 1,             -- seats purchased
+  status          text NOT NULL DEFAULT 'active'          -- 'active' | 'suspended' | 'expired'
+                  CHECK (status IN ('active','suspended','expired')),
+  plan_type       text NOT NULL DEFAULT 'enterprise',     -- for forward-compat
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+
+-- Row-level security: only service-role can write; anon can read their own domain
+ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_read_by_domain" ON public.organizations
+  FOR SELECT USING (true); -- reads filtered by edge function, not RLS
+
+-- 2. Extend `user_entitlements` with enterprise columns (additive, all nullable)
+ALTER TABLE public.user_entitlements
+  ADD COLUMN IF NOT EXISTS org_id          uuid REFERENCES public.organizations(id),
+  ADD COLUMN IF NOT EXISTS is_enterprise   boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS seat_claimed_at timestamptz;
+
+-- 3. Index for fast seat-count lookups
+CREATE INDEX IF NOT EXISTS idx_user_entitlements_org_id
+  ON public.user_entitlements (org_id)
+  WHERE is_enterprise = true;
+
+-- 4. Helper view: active seat count per org
+CREATE OR REPLACE VIEW public.org_seat_usage AS
+  SELECT
+    org_id,
+    COUNT(*) AS seats_used
+  FROM public.user_entitlements
+  WHERE is_enterprise = true
+    AND plan_type = 'enterprise'
+  GROUP BY org_id;
+```
+
+─── STEP 2: Create `enterprise-seat-check` Edge Function ───────
+
+Create file: `supabase/functions/enterprise-seat-check/index.ts`
+
+This function is called by the frontend BEFORE triggering Supabase OAuth.
+It takes `{ email: string }` and returns org info or an error.
+
+```typescript
+// SECURITY NOTE:
+// BYPASS_ENTERPRISE_CHECKS=true is ONLY set in the local dev Supabase project.
+// The production Supabase project MUST NOT have this variable set.
+// If somehow both SUPABASE_URL (prod) and BYPASS_ENTERPRISE_CHECKS=true are
+// present, this function will REFUSE to bypass and will return a 403.
+// This prevents accidental bypass in production.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const PROD_URL_FRAGMENT = ".supabase.co"; // prod URLs always contain this
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const bypassEnabled = Deno.env.get("BYPASS_ENTERPRISE_CHECKS") === "true";
+  const isProduction = supabaseUrl.includes(PROD_URL_FRAGMENT);
+
+  // Hard block: bypass cannot be active in production
+  if (bypassEnabled && isProduction) {
+    console.error("[SECURITY] BYPASS_ENTERPRISE_CHECKS is set in PRODUCTION. Refusing.");
+    return new Response(JSON.stringify({ error: "Configuration error" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const { email } = await req.json();
+  if (!email || !email.includes("@")) {
+    return new Response(JSON.stringify({ error: "Invalid email" }), { status: 400 });
+  }
+
+  const domain = email.split("@")[1].toLowerCase();
+
+  // DEV bypass: return a fake org for testing without a real DB record
+  if (bypassEnabled && !isProduction) {
+    console.warn(`[DEV] Bypassing enterprise check for domain: ${domain}`);
+    return new Response(JSON.stringify({
+      found: true,
+      org: { id: "dev-bypass-org", name: "Dev Bypass Org", max_seats: 999, seats_used: 0, status: "active" },
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
+
+  const supabase = createClient(
+    supabaseUrl,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+
+  // Look up org by email domain
+  const { data: org, error } = await supabase
+    .from("organizations")
+    .select("id, name, max_seats, status")
+    .eq("email_domain", domain)
+    .eq("status", "active")
+    .single();
+
+  if (error || !org) {
+    return new Response(JSON.stringify({ found: false, error: "No active enterprise license found for this domain." }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Check seat availability
+  const { count } = await supabase
+    .from("user_entitlements")
+    .select("*", { count: "exact", head: true })
+    .eq("org_id", org.id)
+    .eq("is_enterprise", true);
+
+  const seatsUsed = count ?? 0;
+  if (seatsUsed >= org.max_seats) {
+    return new Response(JSON.stringify({ found: true, error: `All ${org.max_seats} seats are in use. Contact your admin.` }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  return new Response(JSON.stringify({
+    found: true,
+    org: { id: org.id, name: org.name, max_seats: org.max_seats, seats_used: seatsUsed, status: org.status },
+  }), { status: 200, headers: { "Content-Type": "application/json" } });
+});
+```
+
+─── STEP 3: Update Paddle Webhook to handle enterprise plans ───
+
+In `supabase/functions/paddle-webhook/index.ts`, inside the
+`transaction.completed` handler, add a branch for enterprise plan purchases.
+When Paddle `customData.plan_type === "enterprise"`:
+
+1. Extract `customData.email_domain` and `customData.max_seats` from the Paddle payload.
+2. Upsert a row into `organizations` with the `email_domain` and `max_seats`.
+3. Set `status = 'active'` and record the `paddle_subscription_id`.
+
+```typescript
+// Inside the existing transaction.completed handler, after the existing upsert:
+if (customData?.plan_type === "enterprise" && customData?.email_domain) {
+  const { error: orgError } = await supabase
+    .from("organizations")
+    .upsert({
+      email_domain: customData.email_domain.toLowerCase(),
+      name: customData.org_name ?? customData.email_domain,
+      max_seats: parseInt(customData.max_seats ?? "5", 10),
+      status: "active",
+      plan_type: "enterprise",
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "email_domain" });
+
+  if (orgError) {
+    console.error("[Paddle Webhook] Failed to upsert org:", orgError);
+  }
+}
+```
+
+════════════════════════════════════════════════════════════════
+PARALLEL SESSION SAFETY
+════════════════════════════════════════════════════════════════
+
+This task touches ONLY additive SQL migrations and new edge functions.
+It does NOT modify any existing Go code, Svelte files, or existing
+Supabase functions beyond the Paddle webhook addition.
+
+Therefore it is safe to run in PARALLEL (⚡) with P85-T2 (auth.svelte.ts changes)
+because T2 touches only frontend TypeScript and T1 touches only SQL/edge functions.
+There are NO merge conflicts between T1 and T2.
+
+P85-T3 (Unified Gate UI) DEPENDS ON T2 and must run AFTER T2 is merged.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Run `supabase db push` (local) and confirm migration applies with zero errors.
+- Run `supabase functions serve enterprise-seat-check` and test with:
+    curl -X POST http://localhost:54321/functions/v1/enterprise-seat-check \
+      -H "Content-Type: application/json" \
+      -d '{"email":"test@acme.com"}'
+  Expect 404 (no org). Then insert a test org row and confirm 200.
+- Set BYPASS_ENTERPRISE_CHECKS=true in local `.env` and confirm dev bypass works.
+- Confirm that setting BYPASS_ENTERPRISE_CHECKS=true alongside a prod SUPABASE_URL
+  returns 403 (security guard).
+- Commit message MUST start with "jules: ".

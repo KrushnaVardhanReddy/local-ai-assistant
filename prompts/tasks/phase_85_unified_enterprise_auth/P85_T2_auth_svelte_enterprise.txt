@@ -1,0 +1,295 @@
+You are tasked with implementing Phase 85, Task 2 (P85-T2): Extend auth.svelte.ts for Enterprise Seat Auth.
+This is a FRONTEND-ONLY task. Do NOT modify any Go backend files or Supabase SQL.
+
+════════════════════════════════════════════════════════════════
+TASK CONTEXT
+════════════════════════════════════════════════════════════════
+
+BarnOwl AI has a real, working auth system in `auth.svelte.ts` that handles:
+  - Local mode (no auth)
+  - Lifetime license key via LemonSqueezy (no login)
+  - Demo via Google OAuth (15-min timer, tracked in Supabase `user_entitlements`)
+
+A separate stub file `authStore.svelte.ts` was created in Phase 83 with a MOCKED
+enterprise gate (hardcoded domain list). This stub:
+  1. Is not connected to any real backend validation
+  2. Currently BLOCKS ALL users (including B2C lifetime license holders)
+     because App.svelte wraps everything in `{#if !authStore.isAuthenticated}`
+  3. Must be DELETED and replaced by real logic in auth.svelte.ts
+
+This task:
+  A. Deletes `authStore.svelte.ts`
+  B. Adds `"enterprise"` as a valid `licenseStatus` in `auth.svelte.ts`
+  C. Adds `checkEnterpriseDomain(email)` and `claimEnterpriseSeat(userId, orgId)` functions
+  D. Fixes `App.svelte` to remove the broken double-gate
+
+════════════════════════════════════════════════════════════════
+DEV vs PROD BYPASS POLICY (Frontend)
+════════════════════════════════════════════════════════════════
+
+In DEV: Set VITE_DEV_ENTERPRISE_EMAIL=test@devcompany.com in `.env.local`.
+When this env var is set, `initEnterpriseLogin()` will skip the domain check
+and directly trigger Supabase OAuth as if the domain matched.
+This allows testing the full OAuth + seat-claim flow without a real org record.
+
+In PROD: VITE_DEV_ENTERPRISE_EMAIL must NOT be set. Vite strips all `VITE_`
+prefixed env vars that are not explicitly defined, but add a runtime guard:
+
+```typescript
+const DEV_ENTERPRISE_EMAIL = import.meta.env.VITE_DEV_ENTERPRISE_EMAIL;
+// SECURITY: this is only safe because Vite replaces env vars at BUILD TIME.
+// In a production build, undefined env vars become the string "undefined".
+// We explicitly check for the string to avoid accidental bypasses.
+if (DEV_ENTERPRISE_EMAIL && DEV_ENTERPRISE_EMAIL !== "undefined" && import.meta.env.PROD) {
+  console.error("[SECURITY] VITE_DEV_ENTERPRISE_EMAIL must not be set in production builds.");
+  // Continue without bypass — do NOT throw, just log and fall through to real check.
+}
+```
+
+════════════════════════════════════════════════════════════════
+FILES TO MODIFY / DELETE
+════════════════════════════════════════════════════════════════
+
+[DELETE]  wails-app/frontend/src/lib/authStore.svelte.ts
+[MODIFY]  wails-app/frontend/src/lib/auth.svelte.ts
+[MODIFY]  wails-app/frontend/src/App.svelte
+[MODIFY]  wails-app/frontend/src/lib/EnterpriseAuth.svelte
+
+════════════════════════════════════════════════════════════════
+CURRENT STATE (READ CAREFULLY)
+════════════════════════════════════════════════════════════════
+
+`auth.svelte.ts` currently has:
+  - `authState` ($state rune) with `licenseStatus` typed as:
+    "unchecked" | "active" | "expired" | "not_activated" | "dev_allowed" | "error" | "demo"
+  - `supabase` client (may be null in local mode)
+  - `initLicenseCheck()` — checks LemonSqueezy key, then demo session
+  - `syncUserEntitlements()` — reads `user_entitlements` from Supabase
+  - `restoreSession()` — loads keychain token and hydrates Supabase session
+
+`App.svelte` currently has (BUG - lines 148–149):
+  ```svelte
+  {#if !authStore.isAuthenticated}    ← THIS BLOCKS ALL B2C USERS
+    <EnterpriseAuth />
+  {:else}
+    ... real app ...
+  {/if}
+  ```
+
+════════════════════════════════════════════════════════════════
+DETAILED SPECIFICATION
+════════════════════════════════════════════════════════════════
+
+─── STEP 1: Delete authStore.svelte.ts ──────────────────────────
+
+Delete the file: `wails-app/frontend/src/lib/authStore.svelte.ts`
+This file is a stub with no real validation. Its only consumer is App.svelte (broken import).
+
+─── STEP 2: Extend `authState` in `auth.svelte.ts` ─────────────
+
+Update the `licenseStatus` type to add `"enterprise"`:
+
+```typescript
+licenseStatus: (initialAuth.licenseStatus || "unchecked") as
+  "unchecked" | "active" | "expired" | "not_activated" | "dev_allowed" | "error" | "demo" | "enterprise",
+```
+
+Add new enterprise-related fields to `authState`:
+
+```typescript
+  // Enterprise seat fields (null unless plan_type = 'enterprise')
+  enterpriseOrg: null as { id: string; name: string; max_seats: number; seats_used: number } | null,
+```
+
+─── STEP 3: Add `checkEnterpriseDomain()` ───────────────────────
+
+Add this new exported function to `auth.svelte.ts`:
+
+```typescript
+/**
+ * Checks if the given email domain has an active enterprise org in Supabase.
+ * Calls the `enterprise-seat-check` edge function.
+ * Returns { found: true, org: {...} } or { found: false, error: string }.
+ */
+export async function checkEnterpriseDomain(email: string): Promise<{
+  found: boolean;
+  org?: { id: string; name: string; max_seats: number; seats_used: number; status: string };
+  error?: string;
+}> {
+  // DEV bypass
+  const DEV_EMAIL = import.meta.env.VITE_DEV_ENTERPRISE_EMAIL;
+  if (DEV_EMAIL && DEV_EMAIL !== "undefined" && !import.meta.env.PROD) {
+    console.warn("[DEV] Enterprise domain check bypassed. Using dev org.");
+    return { found: true, org: { id: "dev-org", name: "Dev Org", max_seats: 999, seats_used: 0, status: "active" } };
+  }
+
+  if (!supabase) return { found: false, error: "Auth not configured" };
+
+  try {
+    const { data, error } = await supabase.functions.invoke("enterprise-seat-check", {
+      body: { email },
+    });
+    if (error) throw error;
+    return data;
+  } catch (err: any) {
+    return { found: false, error: err.message ?? "Unknown error" };
+  }
+}
+```
+
+─── STEP 4: Add `claimEnterpriseSeat()` ─────────────────────────
+
+After a user signs in via Supabase OAuth and their domain is validated,
+we must claim a seat in `user_entitlements`. Add:
+
+```typescript
+/**
+ * Records an enterprise seat claim for the authenticated user.
+ * Called after OAuth completes and domain is confirmed valid.
+ */
+export async function claimEnterpriseSeat(orgId: string): Promise<void> {
+  if (!supabase || !authState.user) throw new Error("Not authenticated");
+
+  const machineId: string = await (window as any).go.main.App.GetMachineId();
+
+  const { error } = await supabase.from("user_entitlements").upsert({
+    user_id: authState.user.id,
+    machine_id: machineId,
+    org_id: orgId,
+    is_enterprise: true,
+    plan_type: "enterprise",
+    seat_claimed_at: new Date().toISOString(),
+  }, { onConflict: "user_id,machine_id" });
+
+  if (error) throw new Error(`Seat claim failed: ${error.message}`);
+
+  authState.licenseStatus = "enterprise";
+  authState.enterpriseOrg = (await supabase
+    .from("organizations")
+    .select("id, name, max_seats")
+    .eq("id", orgId)
+    .single()
+  ).data ?? null;
+}
+```
+
+─── STEP 5: Update `initLicenseCheck()` ─────────────────────────
+
+Inside `initLicenseCheck()`, after the existing `planType` check (line ~78),
+add a branch for enterprise:
+
+```typescript
+  // Check if they have an active enterprise seat
+  if (authState.user && authState.userEntitlements?.is_enterprise) {
+    authState.licenseStatus = "enterprise";
+    return;
+  }
+```
+
+─── STEP 6: Fix `App.svelte` ────────────────────────────────────
+
+Remove the broken enterprise gate (lines 148–149) and fix imports:
+
+REMOVE these lines entirely from App.svelte:
+```svelte
+  import EnterpriseAuth from "$lib/EnterpriseAuth.svelte";
+  import { authStore } from "$lib/authStore.svelte.ts";
+```
+
+REMOVE the broken outer wrapper:
+```svelte
+{#if !authStore.isAuthenticated}
+  <EnterpriseAuth />
+{:else}
+  ...
+{/if}
+```
+
+REPLACE with the flat structure (no outer wrapper):
+```svelte
+{#if !hasAcceptedLegal}
+  <LegalModal on:agreed={() => (hasAcceptedLegal = true)} />
+{/if}
+
+{#if isGated}
+  <!-- Auth Gate rendered inline — see P85-T3 for the unified gate component -->
+  <UnifiedAuthGate />
+{/if}
+
+{#if !isGated}
+  <div class="app-shell" ...>
+    {#if authState.productMode === "presenter"}
+      <PresenterHUD />
+    {:else}
+      <InterviewHUD />
+    {/if}
+  </div>
+{/if}
+```
+
+Update the `isGated` derived value to include `"enterprise"` as an unblocked status:
+```typescript
+const isGated = $derived(
+  authState.authMode !== "local" && (
+    authState.productMode === "interview"
+      ? (authState.licenseStatus !== "active" &&
+         authState.licenseStatus !== "dev_allowed" &&
+         authState.licenseStatus !== "demo" &&
+         authState.licenseStatus !== "enterprise")  // ← ADD THIS
+      : (!authState.user || authState.paddleStatus !== "active")
+  )
+);
+```
+
+Note: The `<UnifiedAuthGate />` component is created in P85-T3. For now, import
+and render the existing `<AuthModal>` in its place to keep the app functional.
+
+─── STEP 7: Update `EnterpriseAuth.svelte` ──────────────────────
+
+Strip the hardcoded domain mock from `EnterpriseAuth.svelte` and replace with
+a real call to `checkEnterpriseDomain()`. The component should:
+
+1. Have an email input + "Continue with SSO" button.
+2. On submit: call `checkEnterpriseDomain(email)`.
+3. If `found: true`: store the org info in a local variable, show "Org found: [name]",
+   then trigger `supabase.auth.signInWithOAuth({ provider: 'google' })`.
+   After OAuth completes (the existing `on_auth_complete` Wails event fires),
+   call `claimEnterpriseSeat(org.id)`.
+4. If `found: false`: show the error message from the response.
+5. If `VITE_DEV_ENTERPRISE_EMAIL` is set in the environment: pre-fill the email
+   input and show a [DEV BYPASS ACTIVE] badge.
+
+Import from `auth.svelte.ts`:
+```typescript
+import { checkEnterpriseDomain, claimEnterpriseSeat, supabase } from "$lib/auth.svelte";
+```
+
+════════════════════════════════════════════════════════════════
+PARALLEL SESSION SAFETY
+════════════════════════════════════════════════════════════════
+
+This task (T2) modifies ONLY:
+  - `auth.svelte.ts` (frontend TypeScript)
+  - `App.svelte` (Svelte frontend)
+  - `EnterpriseAuth.svelte` (Svelte frontend)
+
+Task T1 modifies ONLY:
+  - `supabase/migrations/*.sql`
+  - `supabase/functions/**`
+
+There is ZERO file overlap between T1 and T2. They can be submitted
+to Jules in PARALLEL (⚡) with no merge conflict risk.
+
+T3 (Unified Gate UI) imports from this task's exports and from T1's edge
+function. T3 MUST run AFTER both T1 and T2 are merged.
+
+════════════════════════════════════════════════════════════════
+VALIDATION
+════════════════════════════════════════════════════════════════
+
+- Run `cd wails-app/frontend && npm run build` — zero TypeScript errors.
+- Confirm `authStore.svelte.ts` no longer exists (import in App.svelte is removed).
+- Manually test: start the app, confirm B2C lifetime license flow is UNAFFECTED.
+- Set VITE_DEV_ENTERPRISE_EMAIL=test@devcompany.com in .env.local, restart dev
+  server, open EnterpriseAuth — confirm dev bypass badge appears and auth flow runs.
+- Commit message MUST start with "jules: ".
