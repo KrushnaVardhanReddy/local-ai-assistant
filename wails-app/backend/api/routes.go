@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/websocket"
 )
@@ -44,6 +46,30 @@ func RegisterRoutes(mux *http.ServeMux, s *Server) {
 	mux.HandleFunc("POST /api/v1/buddy/stop", jsonHandler(func(r *http.Request) (any, error) { s.app.StopBuddyMode(); return "ok", nil }))
 	mux.HandleFunc("POST /api/v1/screen/capture", jsonHandler(func(r *http.Request) (any, error) { return s.app.CaptureScreen(), nil }))
 	mux.HandleFunc("POST /api/v1/screen/analyze", s.handleAnalyzeVision)
+
+	// ── Audio Devices ──────────────────────────────────────────────
+	mux.HandleFunc("GET /api/v1/audio/devices", jsonHandler(func(r *http.Request) (any, error) { return s.app.GetAudioDevices(), nil }))
+	mux.HandleFunc("POST /api/v1/audio/device", s.handleSetAudioDevice)
+
+	// ── License & Auth ─────────────────────────────────────────────
+	mux.HandleFunc("GET /api/v1/license/status", jsonHandler(func(r *http.Request) (any, error) { return s.app.CheckLicense(), nil }))
+	mux.HandleFunc("POST /api/v1/license/activate", s.handleActivateLicense)
+	mux.HandleFunc("POST /api/v1/license/deactivate", jsonHandler(func(r *http.Request) (any, error) { return nil, s.app.DeactivateLicense() }))
+	mux.HandleFunc("GET /api/v1/system/machine-id", jsonHandler(func(r *http.Request) (any, error) { return s.app.GetMachineId(), nil }))
+	mux.HandleFunc("GET /api/v1/auth/token", jsonHandler(func(r *http.Request) (any, error) { return s.app.LoadToken(), nil }))
+	mux.HandleFunc("POST /api/v1/auth/token", s.handleSaveToken)
+	mux.HandleFunc("DELETE /api/v1/auth/token", jsonHandler(func(r *http.Request) (any, error) { s.app.DeleteToken(); return "ok", nil }))
+	mux.HandleFunc("POST /api/v1/auth/proxy", s.handleSetProxyToken)
+
+	// ── System / App Settings ──────────────────────────────────────
+	mux.HandleFunc("POST /api/v1/system/start", jsonHandler(func(r *http.Request) (any, error) { return nil, s.app.StartBackend() }))
+	mux.HandleFunc("POST /api/v1/system/stop", jsonHandler(func(r *http.Request) (any, error) { return nil, s.app.StopBackend() }))
+	mux.HandleFunc("POST /api/v1/system/quit", jsonHandler(func(r *http.Request) (any, error) { s.app.QuitApp(); return "ok", nil }))
+	mux.HandleFunc("POST /api/v1/settings/stealth", s.handleToggleStealth)
+	mux.HandleFunc("POST /api/v1/settings/context", s.handleSetIncludeActiveDocContext)
+
+	// ── Cache/Indexed Paths ────────────────────────────────────────
+	mux.HandleFunc("DELETE /api/v1/indexed-paths", s.handleRemoveIndexedPath)
 }
 
 // handleWS upgrades HTTP to WebSocket and registers the client with the hub.
@@ -182,6 +208,87 @@ func (s *Server) handleAnalyzeVision(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, nil, s.app.AnalyzeVision(body.Image, body.Prompt))
+}
+
+func (s *Server) handleSetAudioDevice(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID         string `json:"id"`
+		IsLoopback bool   `json:"isLoopback"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	idInt, _ := strconv.Atoi(body.ID)
+	writeJSON(w, nil, s.app.SetAudioDevice(idInt, body.IsLoopback))
+}
+
+func (s *Server) handleActivateLicense(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Key string `json:"key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	writeJSON(w, nil, s.app.ActivateLicense(body.Key))
+}
+
+func (s *Server) handleSaveToken(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	s.app.SaveToken(map[string]interface{}{"token": body.Token})
+	writeJSON(w, "ok", nil)
+}
+
+func (s *Server) handleSetProxyToken(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	s.app.SetProxyToken(body.Token)
+	writeJSON(w, "ok", nil)
+}
+
+func (s *Server) handleToggleStealth(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Enable bool `json:"enable"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	s.app.ToggleStealth(map[string]interface{}{"enable": body.Enable})
+	writeJSON(w, "ok", nil)
+}
+
+func (s *Server) handleSetIncludeActiveDocContext(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Include bool `json:"include"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	s.app.SetIncludeActiveDocContext(body.Include)
+	writeJSON(w, "ok", nil)
+}
+
+func (s *Server) handleRemoveIndexedPath(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		writeJSON(w, nil, fmt.Errorf("path is required"))
+		return
+	}
+	writeJSON(w, nil, s.app.RemoveIndexedPath(path))
 }
 
 // ── Response helpers ───────────────────────────────────────────────────────────
