@@ -106,7 +106,10 @@ Run `scripts/deploy_supabase.sh` to link your Supabase project, push all schema 
 - **TTS**: Migrated from a backend adapter (`edge-tts`) to native frontend Web Speech API (`window.speechSynthesis`) for cross-platform reliability without CLI dependencies.
 - **Engine State**: `StealthEngine` tracks `isMockMode` and updates `SystemPrompt` dynamically to an interviewer persona when active. Uses `llm.MockInterviewerPrompt` which instructs the LLM to act as a senior technical interviewer, evaluate the response, give brief constructive feedback, and ask a relevant follow-up question.
 - **Audio Output**: Final LLM answers are sent to the frontend's Web Speech API when Mock Mode is active.
-- **UI Toggle**: Added a Mock Mode toggle to the frontend header in `InterviewHUD.svelte` that issues Wails IPC calls to update backend state.
+- **UI Toggle**: Added a Mock Mode toggle to the frontend header in `InterviewHUD.svelte` that issues REST API calls to update backend state.
+
+### Phase 84: REST Migration
+The application architecture is transitioning from legacy Wails IPC bindings to a standard local REST API (`/api/v1`) running dynamically on an internal HTTP server, combined with a WebSocket server (`/ws`) for state synchronization and real-time events. The `wails-app/backend/api` module defines these routes and standardizes JSON handler implementations, allowing decoupling of the frontend to enable potential web-only deployment modes. The frontend uses a newly typed `api.ts` module to handle dynamic base URLs matching the random port selected by the local server on app startup.
 
 ### App Modes and Dual-Mode Audio Capture
 

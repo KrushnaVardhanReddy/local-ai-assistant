@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"wails-app/backend"
+	"wails-app/backend/audio"
 )
 
 // mockApp implements AppInterface for testing
@@ -33,6 +34,23 @@ func (m *mockApp) GetCacheItems() []backend.CacheItem      { return nil }
 func (m *mockApp) GetIndexedPaths() []string               { return nil }
 func (m *mockApp) GetBuddyURL() string                     { return "" }
 func (m *mockApp) GetIDEState() map[string]interface{}     { return nil }
+
+func (m *mockApp) GetAudioDevices() []audio.AudioDevice         { return nil }
+func (m *mockApp) SetAudioDevice(id int, isLoopback bool) error { return nil }
+func (m *mockApp) CheckLicense() string                         { return "active" }
+func (m *mockApp) ActivateLicense(key string) error             { return nil }
+func (m *mockApp) DeactivateLicense() error                     { return nil }
+func (m *mockApp) LoadToken() string                            { return "" }
+func (m *mockApp) SaveToken(token map[string]interface{})       {}
+func (m *mockApp) DeleteToken()                                 {}
+func (m *mockApp) SetProxyToken(token string)                   {}
+func (m *mockApp) StartBackend() error                          { return nil }
+func (m *mockApp) StopBackend() error                           { return nil }
+func (m *mockApp) QuitApp()                                     {}
+func (m *mockApp) ToggleStealth(opts map[string]interface{})    {}
+func (m *mockApp) SetIncludeActiveDocContext(include bool)      {}
+func (m *mockApp) RemoveIndexedPath(path string) error          { return nil }
+
 func (m *mockApp) ToggleMic() bool {
 	m.micEnabled = !m.micEnabled
 	return m.micEnabled
@@ -146,6 +164,52 @@ func TestRESTEndpoints(t *testing.T) {
 
 	if len(mock.buffer) == 0 || mock.buffer[0] != "test append" {
 		t.Errorf("Expected buffer to contain 'test append', got %v", mock.buffer)
+	}
+
+	// Test GET /api/v1/system/machine-id
+	req = httptest.NewRequest("GET", "/api/v1/system/machine-id", nil)
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200 OK, got %d", rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), `"data":"test-machine"`) {
+		t.Errorf("Expected body to contain test-machine, got %s", rr.Body.String())
+	}
+
+	// Test POST /api/v1/audio/device
+	reqBody = bytes.NewBuffer([]byte(`{"id":"1", "isLoopback":true}`))
+	req = httptest.NewRequest("POST", "/api/v1/audio/device", reqBody)
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200 OK for /api/v1/audio/device, got %d", rr.Code)
+	}
+
+	// Test POST /api/v1/license/activate
+	reqBody = bytes.NewBuffer([]byte(`{"key":"12345"}`))
+	req = httptest.NewRequest("POST", "/api/v1/license/activate", reqBody)
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200 OK for /api/v1/license/activate, got %d", rr.Code)
+	}
+
+	// Test POST /api/v1/auth/token
+	reqBody = bytes.NewBuffer([]byte(`{"token":"secret"}`))
+	req = httptest.NewRequest("POST", "/api/v1/auth/token", reqBody)
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200 OK for /api/v1/auth/token, got %d", rr.Code)
+	}
+
+	// Test DELETE /api/v1/indexed-paths
+	req = httptest.NewRequest("DELETE", "/api/v1/indexed-paths?path=test", nil)
+	rr = httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected 200 OK for /api/v1/indexed-paths, got %d", rr.Code)
 	}
 }
 

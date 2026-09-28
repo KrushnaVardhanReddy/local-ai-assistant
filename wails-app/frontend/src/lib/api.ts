@@ -70,6 +70,18 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
   return json.data as T;
 }
 
+async function del<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${baseURL}${path}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(`DELETE ${path} → ${res.status}`);
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json.data as T;
+}
+
 export function connectWebSocket(onMessage: (type: string, payload: unknown) => void): WebSocket {
   const wsURL = baseURL.replace("http://", "ws://") + "/ws";
   const ws = new WebSocket(wsURL);
@@ -114,4 +126,21 @@ export const api = {
   stopBuddyMode:      () => post<null>("/api/v1/buddy/stop"),
   captureScreen:      () => post<string>("/api/v1/screen/capture"),
   analyzeVision:      (image: string, prompt: string) => post<null>("/api/v1/screen/analyze", { image, prompt }),
+
+  getAudioDevices:    () => get<unknown[]>("/api/v1/audio/devices"),
+  setAudioDevice:     (id: string, isLoopback: boolean) => post<null>("/api/v1/audio/device", { id, isLoopback }),
+  checkLicense:       () => get<string>("/api/v1/license/status"),
+  activateLicense:    (key: string) => post<null>("/api/v1/license/activate", { key }),
+  deactivateLicense:  () => post<null>("/api/v1/license/deactivate"),
+  getMachineId:       () => get<string>("/api/v1/system/machine-id"),
+  loadToken:          () => get<string>("/api/v1/auth/token"),
+  saveToken:          (token: string) => post<null>("/api/v1/auth/token", { token }),
+  deleteToken:        () => del<null>("/api/v1/auth/token"),
+  setProxyToken:      (token: string) => post<null>("/api/v1/auth/proxy", { token }),
+  startBackend:       () => post<null>("/api/v1/system/start"),
+  stopBackend:        () => post<null>("/api/v1/system/stop"),
+  quitApp:            () => post<null>("/api/v1/system/quit"),
+  toggleStealth:      (enable: boolean) => post<null>("/api/v1/settings/stealth", { enable }),
+  setIncludeActiveDocContext: (include: boolean) => post<null>("/api/v1/settings/context", { include }),
+  removeIndexedPath:  (path: string) => del<null>(`/api/v1/indexed-paths?path=${encodeURIComponent(path)}`),
 };

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"wails-app/backend"
+	"wails-app/backend/audio"
 )
 
 // Server is the local REST+WS HTTP server.
@@ -30,6 +31,22 @@ type AppInterface interface {
 	GetIndexedPaths() []string
 	GetBuddyURL() string
 	GetIDEState() map[string]interface{}
+
+	GetAudioDevices() []audio.AudioDevice
+	SetAudioDevice(id int, isLoopback bool) error
+	CheckLicense() string
+	ActivateLicense(key string) error
+	DeactivateLicense() error
+	LoadToken() string
+	SaveToken(token map[string]interface{})
+	DeleteToken()
+	SetProxyToken(token string)
+	StartBackend() error
+	StopBackend() error
+	QuitApp()
+	ToggleStealth(opts map[string]interface{})
+	SetIncludeActiveDocContext(include bool)
+	RemoveIndexedPath(path string) error
 
 	ToggleMic() bool
 	FlushQuestionBuffer() error
