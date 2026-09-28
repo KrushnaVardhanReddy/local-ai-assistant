@@ -23,10 +23,8 @@
   const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
 
   // Wails App methods
-  let App = $state<any>(null);
   let statePollInterval: any;
   onMount(() => {
-    if ((window as any).go?.main?.App) App = (window as any).go.main.App;
     statePollInterval = setInterval(refreshIDEState, 1000);
     
     // Listen for backend clickthrough toggles (e.g. from hotkeys)
@@ -79,13 +77,16 @@
   let currentScorecard = $state<any>(null);
 
   async function handleEndSession() {
-    if (App?.EndSession) {
-      try {
-        const data = await App.EndSession();
+    try {
+      if ((window as any).go?.main?.App?.EndSession) {
+        const data = await (window as any).go.main.App.EndSession();
         currentScorecard = data.scorecard;
-      } catch (e) {
-        console.error("Failed to end session:", e);
+      } else {
+        const res = await api.endSession();
+        currentScorecard = (res as any).scorecard;
       }
+    } catch (e) {
+      console.error("Failed to end session:", e);
     }
   }
 
@@ -108,8 +109,14 @@
   let expandedMap = new Map<string, boolean>();
 
   async function refreshIDEState() {
-    if (App?.GetIDEState) {
-      const state = await App.GetIDEState();
+    try {
+      let state: any;
+      if ((window as any).go?.main?.App?.GetIDEState) {
+        state = await (window as any).go.main.App.GetIDEState();
+      } else {
+        state = await api.getIDEState();
+      }
+
       if (state) {
         includeActiveDocContext = state.includeActiveDocContext;
         activeDocumentName = state.activeDocumentName || '';
@@ -144,50 +151,48 @@
         activeDocumentPath = state.activeDocumentPath || '';
         activeDocumentContent = state.activeDocumentContent || '';
       }
+    } catch (e) {
+      console.warn("IDE state refresh failed", e);
     }
+
     try {
-      if (App?.GetCacheStats) {
-        const stats = await App.GetCacheStats();
-        if (stats && stats.count !== undefined) cacheCount = stats.count;
-      } else {
-        const stats = await apiFetch(`${getApiUrl()}/api/cache/stats`, { method: 'GET' });
-        if (stats?.count !== undefined) cacheCount = stats.count;
-      }
+      const stats = await api.getCacheStats() as any;
+      if (stats?.cached_pairs !== undefined) cacheCount = stats.cached_pairs;
     } catch { /* ignore if endpoint not available */ }
   }
 
 
   async function handleSelectNode(node: any) {
-    if (App?.OpenFile && node && node.path && !node.isDirectory) {
-      await App.OpenFile(node.path);
+    if ((window as any).go?.main?.App?.OpenFile && node && node.path && !node.isDirectory) {
+      await (window as any).go.main.App.OpenFile(node.path);
       await refreshIDEState();
     }
   }
 
   async function handleTabSelect(path: string) {
-    if (App?.SetActiveDocument) {
-      await App.SetActiveDocument(path);
+    if ((window as any).go?.main?.App?.SetActiveDocument) {
+      await (window as any).go.main.App.SetActiveDocument(path);
       await refreshIDEState();
     }
   }
 
   async function handleTabClose(path: string) {
-    if (App?.CloseDocument) {
-      await App.CloseDocument(path);
+    if ((window as any).go?.main?.App?.CloseDocument) {
+      await (window as any).go.main.App.CloseDocument(path);
       await refreshIDEState();
     }
   }
 
   async function handleOpenFile() {
-    if (App?.PromptOpenFile) {
-      await App.PromptOpenFile();
+    if ((window as any).go?.main?.App?.PromptOpenFile) {
+      await (window as any).go.main.App.PromptOpenFile();
       await refreshIDEState();
     }
   }
 
   async function handleOpenFolder() {
-    if (App?.PromptOpenDirectory) {
-      await App.PromptOpenDirectory();
+    if ((window as any).go?.main?.App?.PromptOpenDirectory) {
+      await (window as any).go.main.App.PromptOpenDirectory();
       await refreshIDEState();
     }
   }
@@ -196,10 +201,6 @@
   async function handleMockModeToggle() {
     const isNowEnabled = !wsState.isMockMode;
     toggleMockMode(isNowEnabled);
-
-    if ((window as any).go?.main?.App?.ToggleMockInterviewMode) {
-      await (window as any).go.main.App.ToggleMockInterviewMode(isNowEnabled);
-    }
 
     if (isNowEnabled) {
       apiFetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);

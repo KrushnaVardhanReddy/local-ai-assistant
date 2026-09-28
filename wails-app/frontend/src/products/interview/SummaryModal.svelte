@@ -1,5 +1,6 @@
 <script lang="ts">
   import { wsState } from "$lib/ws.svelte";
+  import { api } from "$lib/api";
 
   export let onClose: () => void;
 
@@ -68,7 +69,9 @@
     });
 
     try {
-      await (window as any).go.main.App.SummarizeSession(requests);
+      if ((window as any).go?.main?.App?.SummarizeSession) {
+        await (window as any).go.main.App.SummarizeSession(requests);
+      }
     } catch (e) {
       console.error("Failed to start summarization:", e);
     }

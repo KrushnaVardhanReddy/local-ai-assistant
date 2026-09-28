@@ -1,6 +1,6 @@
 <script lang="ts">
   import { wsState, sendChat, sendChip, dismissChip, clearAllChips } from "$lib/ws.svelte";
-  import { apiFetch, getApiUrl } from "$lib/api";
+  import { api } from "$lib/api";
   import { onMount, onDestroy } from "svelte";
 
   const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
@@ -56,17 +56,7 @@
 
   async function fetchCacheStats() {
     try {
-      if ((window as any)?.go?.main?.App?.GetCacheStats) {
-        cacheStats = await (window as any).go.main.App.GetCacheStats();
-        return;
-      }
-      const apiUrl = getApiUrl();
-      const res = await apiFetch(`${apiUrl}/api/cache/stats`);
-      if (res.ok) {
-        cacheStats = await res.json();
-      } else {
-        cacheStats = { cached_pairs: 0, estimated_tokens_saved: 0 };
-      }
+      cacheStats = await api.getCacheStats() as { cached_pairs: number; estimated_tokens_saved: number };
     } catch {
       cacheStats = { cached_pairs: 0, estimated_tokens_saved: 0 };
     }
@@ -75,12 +65,7 @@
   async function clearCache() {
     clearingCache = true;
     try {
-      if ((window as any)?.go?.main?.App?.ClearCache) {
-        await (window as any).go.main.App.ClearCache();
-      } else {
-        const apiUrl = getApiUrl();
-        await apiFetch(`${apiUrl}/api/cache/clear`, { method: "POST" });
-      }
+      await api.clearCache();
       await fetchCacheStats();
     } catch (e) {
       console.error("Failed to clear cache", e);
