@@ -66,7 +66,7 @@
 
 | Task | Files | Description | Status | PR |
 |------|-------|-------------|--------|----|
-| P84-T1 | `app.go`, `main.go`, `ws.svelte.ts`, `api/server.go` | **IPC to REST Transition:** Decouple the Svelte frontend from Wails IPC. Stand up a local Go HTTP server (`localhost:8080`). Convert all IPC bindings into REST endpoints. Unify the desktop and buddy web UIs onto a single shared WebSocket state manager. **(Run on isolated branch)** | ⬜ | — |
+| P84-T1 | `app.go`, `main.go`, `ws.svelte.ts`, `api/server.go` | **IPC to REST Transition:** Decouple the Svelte frontend from Wails IPC. Stand up a local Go HTTP server (`localhost:8080`). Convert all IPC bindings into REST endpoints. Unify the desktop and buddy web UIs onto a single shared WebSocket state manager. **(Run on isolated branch)** | ⏳ | Jules |
 
 ## Phase 85 — Unified Enterprise Auth & Seat Licensing 🏢
 
