@@ -49,7 +49,7 @@ test.describe.serial('Entitlement Gate UI Tests', () => {
 
     // Svelte naturally clears the gate
     await expect(page.locator('text=Unlock BarnOwl AI')).not.toBeVisible();
-    await expect(page.locator('text=BarnOwl AI Enterprise Login')).not.toBeVisible();
+    await expect(page.locator('text=Choose how to access')).not.toBeVisible();
 
     const settingsBtn = page.locator('button[data-testid="activity-bar-settings"]');
     await expect(settingsBtn).toBeVisible({ timeout: 10000 });
