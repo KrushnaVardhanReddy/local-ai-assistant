@@ -1,8 +1,9 @@
-import { apiFetch, getApiUrl, getWsUrl } from './api';
+import { api, connectWebSocket } from './api';
 import { authState, supabase } from '$lib/auth.svelte';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { GetState } from '../../wailsjs/go/main/App';
 
+const USE_REST = !!(import.meta.env && import.meta.env.VITE_API_BASE_URL);
 const isCloud = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_BUILD_FLAVOR === 'cloud';
 
 export const wsState = $state({
@@ -43,7 +44,11 @@ let buddyHintCounter = 0;
 export async function toggleManualMode(): Promise<void> {
   wsState.manualMode = !wsState.manualMode;
   try {
-    await (window as any).go.main.App.SetManualMode(wsState.manualMode);
+    if (USE_REST) {
+      await api.setManualMode(wsState.manualMode);
+    } else {
+      await (window as any).go.main.App.SetManualMode(wsState.manualMode);
+    }
   } catch (e) {
     console.error('Failed to set manual mode:', e);
     wsState.manualMode = !wsState.manualMode; // Rollback on error
@@ -53,7 +58,11 @@ export async function toggleManualMode(): Promise<void> {
 export async function toggleRawMode(): Promise<void> {
   wsState.rawMode = !wsState.rawMode;
   try {
-    await (window as any).go.main.App.SetRawMode(wsState.rawMode);
+    if (USE_REST) {
+      await api.setRawMode(wsState.rawMode);
+    } else {
+      await (window as any).go.main.App.SetRawMode(wsState.rawMode);
+    }
   } catch (e) {
     console.error('Failed to set raw mode:', e);
     wsState.rawMode = !wsState.rawMode; // Rollback on error
@@ -70,13 +79,17 @@ if (!isCloud) {
     wsState.pollCount++;
     try {
       let state: any = null;
-      if (typeof GetState === 'function') {
-        state = await GetState();
-      } else if ((window as any)?.go?.main?.App?.GetState) {
-        state = await (window as any).go.main.App.GetState();
+      if (USE_REST) {
+        state = await api.getState();
       } else {
-        wsState.pollError = "no_binding";
-        return;
+        if (typeof GetState === 'function') {
+          state = await GetState();
+        } else if ((window as any)?.go?.main?.App?.GetState) {
+          state = await (window as any).go.main.App.GetState();
+        } else {
+          wsState.pollError = "no_binding";
+          return;
+        }
       }
       if (state) {
         wsState.pollError = "ok";
@@ -150,8 +163,168 @@ function handleTranscript(data: any) {
   }
 }
 
+function handleEvent(eventName: string, data?: any) {
+  switch (eventName) {
+    case "ptt-start":
+      wsState.isPTTHeld = true;
+      if (USE_REST) {
+        api.toggleMic(); // Using toggleMic for REST since no ptt/start endpoint
+      } else {
+        (window as any).go?.main?.App?.ToggleMic(); // Approximate PTT
+      }
+      break;
+
+    case "ptt-stop":
+      wsState.isPTTHeld = false;
+      if (USE_REST) {
+        api.toggleMic();
+      } else {
+        (window as any).go?.main?.App?.ToggleMic();
+      }
+      break;
+
+    case "panic-clear":
+      wsState.transcript = "";
+      wsState.response = "";
+      wsState.isThinking = false;
+      wsState.ragSources = [];
+      wsState.pendingTranscripts = [];
+      wsState.transcriptHistory = [];
+      if (USE_REST) {
+        api.clearState();
+      } else {
+        (window as any).go?.main?.App?.ClearState();
+      }
+      break;
+
+    case "on_transcript":
+      console.log('[WS] on_transcript fired:', data);
+      handleTranscript(data);
+      console.log('[WS] wsState.transcript is now:', wsState.transcript);
+      break;
+
+    case "on_transcript_log":
+      console.log('[WS] on_transcript_log fired:', data);
+      if (data && data.text) {
+        wsState.transcriptHistory = [
+          ...wsState.transcriptHistory,
+          { role: 'interviewer', text: data.text }
+        ];
+        // Keep a longer history for transcript mode
+        if (wsState.transcriptHistory.length > 50) {
+          wsState.transcriptHistory = wsState.transcriptHistory.slice(1);
+        }
+      }
+      break;
+
+    case "on_response_start":
+      console.log('[WS] on_response_start fired');
+      wsState.response = "";
+      wsState.isThinking = true;
+      wsState.ragSources = [];
+      break;
+
+    case "on_response_token":
+      console.log('[WS] on_response_token:', data?.text?.slice(0, 20));
+      wsState.response += data.text;
+      wsState.isThinking = true;
+      break;
+
+    case "on_summary_start":
+      wsState.isSummarizing[data.id] = true;
+      wsState.summaryResults[data.id] = "";
+      break;
+
+    case "on_summary_token":
+      if (!wsState.summaryResults[data.id]) {
+        wsState.summaryResults[data.id] = "";
+      }
+      wsState.summaryResults[data.id] += data.text;
+      break;
+
+    case "on_summary_end":
+      wsState.isSummarizing[data.id] = false;
+      break;
+
+    case "on_download_progress":
+      if (data.progress >= 100) {
+        wsState.downloadTask = null;
+      } else {
+        wsState.downloadTask = { component: data.component, progress: data.progress };
+      }
+      break;
+
+    case "on_response_end":
+      console.log('[WS] on_response_end fired. Final response length:', wsState.response.length);
+      wsState.isThinking = false;
+
+      if (wsState.isMockMode && wsState.mockTTS && wsState.response) {
+        console.log('[WS] Mock mode + TTS active. Backend will handle audio.');
+      }
+
+      // Store the completed answer against the most recent unanswered transcript
+      if (wsState.response) {
+        for (let i = wsState.transcriptHistory.length - 1; i >= 0; i--) {
+          const entry = wsState.transcriptHistory[i];
+          if (!entry.answer) {
+            wsState.transcriptHistory[i] = { ...entry, answer: wsState.response };
+            break;
+          }
+        }
+      }
+      break;
+
+    case "buddy_url_ready":
+      wsState.buddyURL = data;
+      wsState.buddyURLLoading = false;
+      wsState.buddyModeActive = true;
+      console.log('[Buddy] Public URL ready:', data);
+      break;
+
+    case "buddy_hint":
+      wsState.buddyHints = [
+        ...wsState.buddyHints,
+        { id: buddyHintCounter++, text: data, dismissed: false }
+      ];
+      // Auto-dismiss after 30 seconds
+      const id = buddyHintCounter - 1;
+      setTimeout(() => {
+        wsState.buddyHints = wsState.buddyHints.map(h =>
+          h.id === id ? { ...h, dismissed: true } : h
+        );
+      }, 30000);
+      break;
+
+    case "hotkey_send_candidate_to_llm":
+      console.log("[WS] Received hotkey_send_candidate_to_llm");
+      if (!wsState.isMockMode) {
+        const candidates = wsState.transcriptHistory.filter(i => i.role === 'candidate' || i.role === 'You');
+        if (candidates.length > 0) {
+          const lastCandidate = candidates[candidates.length - 1];
+          if (USE_REST) {
+            api.appendToBuffer(lastCandidate.text).then(() => {
+              api.flushBuffer();
+            });
+          } else {
+            if (typeof (window as any).go?.main?.App?.AppendToBuffer === 'function' && typeof (window as any).go?.main?.App?.FlushQuestionBuffer === 'function') {
+              (window as any).go.main.App.AppendToBuffer(lastCandidate.text);
+              (window as any).go.main.App.FlushQuestionBuffer();
+            }
+          }
+        }
+      }
+      break;
+  }
+}
+
 function initListeners() {
   console.log('[WS] initListeners() called — registering Wails EventsOn handlers');
+
+  if (USE_REST) {
+    connectWebSocket((type, payload) => {
+      handleEvent(type, payload);
+    });
+  }
 
   // Fallback to imported EventsOn if window.runtime is missing (e.g. dev mode without Wails)
   const onEvent = (window as any).runtime?.EventsOn || EventsOn;
@@ -164,122 +337,16 @@ function initListeners() {
     });
   }
 
-  onEvent("ptt-start", () => {
-    wsState.isPTTHeld = true;
-    apiFetch(`${getApiUrl()}/ptt/start`, { method: 'POST' }).catch(console.error);
-  });
+  // Bind individual Wails events to handleEvent
+  const eventsToBind = [
+    "ptt-start", "ptt-stop", "panic-clear",
+    "on_transcript", "on_transcript_log", "on_response_start", "on_response_token",
+    "on_summary_start", "on_summary_token", "on_summary_end", "on_download_progress",
+    "on_response_end", "buddy_url_ready", "buddy_hint", "hotkey_send_candidate_to_llm"
+  ];
 
-  onEvent("ptt-stop", () => {
-    wsState.isPTTHeld = false;
-    apiFetch(`${getApiUrl()}/ptt/stop`, { method: 'POST' }).catch(console.error);
-  });
-
-  onEvent("panic-clear", () => {
-    wsState.transcript = "";
-    wsState.response = "";
-    wsState.isThinking = false;
-    wsState.ragSources = [];
-    wsState.pendingTranscripts = [];
-    wsState.transcriptHistory = [];
-    apiFetch(`${getApiUrl()}/history/clear`, { method: 'POST' }).catch(console.error);
-  });
-
-  onEvent("on_transcript", (data: any) => {
-    console.log('[WS] on_transcript fired:', data);
-    handleTranscript(data);
-    console.log('[WS] wsState.transcript is now:', wsState.transcript);
-  });
-
-  onEvent("on_transcript_log", (data: any) => {
-    console.log('[WS] on_transcript_log fired:', data);
-    if (data && data.text) {
-      wsState.transcriptHistory = [
-        ...wsState.transcriptHistory,
-        { role: 'interviewer', text: data.text }
-      ];
-      // Keep a longer history for transcript mode
-      if (wsState.transcriptHistory.length > 50) {
-        wsState.transcriptHistory = wsState.transcriptHistory.slice(1);
-      }
-    }
-  });
-
-  onEvent("on_response_start", () => {
-    console.log('[WS] on_response_start fired');
-    wsState.response = "";
-    wsState.isThinking = true;
-    wsState.ragSources = [];
-  });
-
-  onEvent("on_response_token", (data: any) => {
-    console.log('[WS] on_response_token:', data?.text?.slice(0, 20));
-    wsState.response += data.text;
-    wsState.isThinking = true;
-  });
-
-  onEvent("on_summary_start", (data: any) => {
-    wsState.isSummarizing[data.id] = true;
-    wsState.summaryResults[data.id] = "";
-  });
-
-  onEvent("on_summary_token", (data: any) => {
-    if (!wsState.summaryResults[data.id]) {
-      wsState.summaryResults[data.id] = "";
-    }
-    wsState.summaryResults[data.id] += data.text;
-  });
-
-  onEvent("on_summary_end", (data: any) => {
-    wsState.isSummarizing[data.id] = false;
-  });
-
-  onEvent("on_download_progress", (data: any) => {
-    if (data.progress >= 100) {
-      wsState.downloadTask = null;
-    } else {
-      wsState.downloadTask = { component: data.component, progress: data.progress };
-    }
-  });
-
-  onEvent("on_response_end", () => {
-    console.log('[WS] on_response_end fired. Final response length:', wsState.response.length);
-    wsState.isThinking = false;
-
-    if (wsState.isMockMode && wsState.mockTTS && wsState.response) {
-      console.log('[WS] Mock mode + TTS active. Backend will handle audio.');
-    }
-
-    // Store the completed answer against the most recent unanswered transcript
-    if (wsState.response) {
-      for (let i = wsState.transcriptHistory.length - 1; i >= 0; i--) {
-        const entry = wsState.transcriptHistory[i];
-        if (!entry.answer) {
-          wsState.transcriptHistory[i] = { ...entry, answer: wsState.response };
-          break;
-        }
-      }
-    }
-  });
-
-  onEvent("buddy_url_ready", (url: string) => {
-    wsState.buddyURL = url;
-    wsState.buddyURLLoading = false;
-    wsState.buddyModeActive = true;
-    console.log('[Buddy] Public URL ready:', url);
-  });
-
-  onEvent("buddy_hint", (hint: string) => {
-    wsState.buddyHints = [
-      ...wsState.buddyHints,
-      { id: buddyHintCounter++, text: hint, dismissed: false }
-    ];
-    // Auto-dismiss after 30 seconds
-    const id = buddyHintCounter - 1;
-    setTimeout(() => {
-      wsState.buddyHints = wsState.buddyHints.map(h =>
-        h.id === id ? { ...h, dismissed: true } : h
-      );
-    }, 30000);
+  eventsToBind.forEach(ev => {
+    onEvent(ev, (data: any) => handleEvent(ev, data));
   });
 }
 let retryDelay = 500;
@@ -308,20 +375,7 @@ export function connect(url?: string): void {
   // Idempotent: don't reconnect if we are already connected to the same URL or opening
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
-
-
-  onEvent("hotkey_send_candidate_to_llm", () => {
-    console.log("[WS] Received hotkey_send_candidate_to_llm");
-    if (!wsState.isMockMode && typeof (window as any).go?.main?.App?.AppendToBuffer === 'function' && typeof (window as any).go?.main?.App?.FlushQuestionBuffer === 'function') {
-      const candidates = wsState.transcriptHistory.filter(i => i.role === 'candidate' || i.role === 'You');
-      if (candidates.length > 0) {
-        const lastCandidate = candidates[candidates.length - 1];
-        (window as any).go.main.App.AppendToBuffer(lastCandidate.text);
-        (window as any).go.main.App.FlushQuestionBuffer();
-      }
-    }
-  });
-}
+  }
 
   // Bypass WebSocket connection entirely if running in Wails (Local Edition)
   if (!isCloud) {
@@ -336,7 +390,7 @@ export function connect(url?: string): void {
   }
 
 
-  let defaultUrl = getWsUrl();
+  let defaultUrl = "ws://localhost/ws"; // fallback default
   let targetUrl = url ?? import.meta.env.VITE_WS_URL ?? defaultUrl;
   if (targetUrl.startsWith('http://')) {
     targetUrl = targetUrl.replace('http://', 'ws://');
@@ -522,37 +576,50 @@ export function sendChat(text: string): void {
   }
 }
 
-export function toggleMockMode(enabled: boolean): void {
+export async function toggleMockMode(enabled: boolean): Promise<void> {
   wsState.isMockMode = enabled;
-  if (typeof (window as any).go?.main?.App?.ToggleMockInterviewMode === 'function') {
-    (window as any).go.main.App.ToggleMockInterviewMode(enabled);
-  }
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "mock_mode_toggle", enabled }));
+  if (USE_REST) {
+    await api.setMockMode(enabled, wsState.mockTTS);
+  } else {
+    if (typeof (window as any).go?.main?.App?.ToggleMockInterviewMode === 'function') {
+      (window as any).go.main.App.ToggleMockInterviewMode(enabled);
+    }
   }
 }
 
-export function toggleMockTTS(enabled: boolean): void {
+export async function toggleMockTTS(enabled: boolean): Promise<void> {
   console.log('[WS] toggleMockTTS called with:', enabled);
   wsState.mockTTS = enabled;
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem("mock_tts", enabled ? "true" : "false");
   }
-  if (typeof (window as any).go?.main?.App?.ToggleMockTTS === 'function') {
-    (window as any).go.main.App.ToggleMockTTS(enabled);
+  if (USE_REST) {
+    await api.setMockMode(wsState.isMockMode, enabled);
+  } else {
+    if (typeof (window as any).go?.main?.App?.ToggleMockTTS === 'function') {
+      (window as any).go.main.App.ToggleMockTTS(enabled);
+    }
   }
 }
 
 export function sendChip(chip: { id: number; text: string; speaker?: "interviewer" | "candidate" | null }): void {
-  sendChat(chip.text);
+  if (USE_REST) {
+    api.sendChat(chip.text);
+  } else {
+    sendChat(chip.text);
+  }
   wsState.pendingTranscripts = wsState.pendingTranscripts.filter(
     (c) => c.id !== chip.id
   );
 }
 
 export function addChipToBuffer(chip: { id: number; text: string; speaker?: "interviewer" | "candidate" | null }): void {
-  if (typeof (window as any).go?.main?.App?.AppendToBuffer === 'function') {
-    (window as any).go.main.App.AppendToBuffer(chip.text);
+  if (USE_REST) {
+    api.appendToBuffer(chip.text);
+  } else {
+    if (typeof (window as any).go?.main?.App?.AppendToBuffer === 'function') {
+      (window as any).go.main.App.AppendToBuffer(chip.text);
+    }
   }
 
   // Add it to transcript history so it shows up in the UI
@@ -581,7 +648,9 @@ export async function setAppMode(mode: 'interview' | 'transcript') {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem("barnowl_app_mode", mode);
   }
-  if ((window as any).go?.main?.App?.SetAppMode) {
+  if (USE_REST) {
+    await api.setAppMode(mode);
+  } else if ((window as any).go?.main?.App?.SetAppMode) {
     await (window as any).go.main.App.SetAppMode(mode);
   }
 }
@@ -591,7 +660,9 @@ export async function setAudioMode(mode: 'speaker' | 'dual') {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem("barnowl_audio_mode", mode);
   }
-  if ((window as any).go?.main?.App?.SetAudioMode) {
+  if (USE_REST) {
+    await api.setAudioMode(mode);
+  } else if ((window as any).go?.main?.App?.SetAudioMode) {
     await (window as any).go.main.App.SetAudioMode(mode);
   }
 }
@@ -600,7 +671,11 @@ export async function startBuddyMode(): Promise<void> {
   wsState.buddyURLLoading = true;
   wsState.buddyURL = "";
   try {
-    await (window as any).go.main.App.StartBuddyMode();
+    if (USE_REST) {
+      await api.startBuddyMode();
+    } else {
+      await (window as any).go.main.App.StartBuddyMode();
+    }
   } catch (e: any) {
     wsState.buddyURLLoading = false;
     wsState.buddyModeActive = false;
@@ -611,7 +686,11 @@ export async function startBuddyMode(): Promise<void> {
 
 export async function stopBuddyMode(): Promise<void> {
   try {
-    await (window as any).go.main.App.StopBuddyMode();
+    if (USE_REST) {
+      await api.stopBuddyMode();
+    } else {
+      await (window as any).go.main.App.StopBuddyMode();
+    }
   } catch (e) {
     console.error('[Buddy] Failed to stop:', e);
   } finally {

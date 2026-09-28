@@ -18,6 +18,7 @@ import (
 	cacheadapter "wails-app/adapters/cache"
 	llmadapter "wails-app/adapters/llm"
 	"wails-app/backend"
+	"wails-app/backend/api"
 	"wails-app/backend/audio"
 	"wails-app/backend/auth"
 	"wails-app/backend/buddy"
@@ -58,6 +59,7 @@ const (
 type App struct {
 	remoteServer *remote.Server
 	buddyServer  *buddy.Server
+	apiServer    *api.Server
 	ctx          context.Context
 
 	backendCmd *exec.Cmd
@@ -167,8 +169,16 @@ type buddyEventProxy struct {
 	ctx context.Context
 }
 
+// Helper to emit to both Wails IPC and the REST WebSocket hub:
+func (a *App) emit(eventName string, payload interface{}) {
+	wailsruntime.EventsEmit(a.ctx, eventName, payload)
+	if a.apiServer != nil {
+		a.apiServer.Hub().Broadcast(eventName, payload)
+	}
+}
+
 func (p *buddyEventProxy) Emit(event string, payload any) {
-	wailsruntime.EventsEmit(p.ctx, event, payload)
+	p.app.emit(event, payload)
 
 	// If this is a transcript event, broadcast it to the buddy server
 	if event == "on_transcript" {
@@ -214,6 +224,16 @@ func (a *App) startup(ctx context.Context) {
 		a.ToggleClickthroughMode()
 	}
 
+	a.apiServer = api.NewServer(a)
+	if err := a.apiServer.Start(); err != nil {
+		log.Printf("[API] Failed to start local REST server: %v", err)
+	} else {
+		port := a.apiServer.Port()
+		log.Printf("[API] Local server started on http://127.0.0.1:%d", port)
+		// Inject port into the Wails window context so the frontend can read it
+		wailsruntime.EventsEmit(ctx, "api_port", port)
+	}
+
 	// Preload the ONNX embedding model during startup so it doesn't log on first microphone input
 	go backend.InitEmbeddings()
 
@@ -230,7 +250,7 @@ func (a *App) startup(ctx context.Context) {
 	if a.cfg.STTProvider == "parakeet" {
 		go system.StartBackgroundDownload(ctx, func(progress float32) {
 			// Example: Emit progress event to frontend
-			wailsruntime.EventsEmit(ctx, "download_progress", progress)
+			a.emit("download_progress", progress)
 		})
 	}
 
@@ -271,12 +291,12 @@ func (a *App) StartBuddyMode() error {
 	a.buddyServer = buddy.NewServer(port,
 		func(url string) {
 			// Called when Cloudflare URL is established
-			wailsruntime.EventsEmit(a.ctx, "buddy_url_ready", url)
+			a.emit("buddy_url_ready", url)
 			log.Printf("🔗 [App] Buddy URL ready: %s\n", url)
 		},
 		func(hint string) {
 			// Called when a friend sends a hint
-			wailsruntime.EventsEmit(a.ctx, "buddy_hint", hint)
+			a.emit("buddy_hint", hint)
 			log.Printf("💬 [App] Buddy hint received: %s\n", hint)
 		},
 		func(action string, payload string) {
@@ -576,7 +596,7 @@ func (a *App) StartOAuthFlow(provider string) error {
 	}
 
 	log.Printf("📡 [Auth] Emitting on_auth_complete event to frontend...")
-	wailsruntime.EventsEmit(a.ctx, "on_auth_complete", access+":"+refresh)
+	a.emit("on_auth_complete", access+":"+refresh)
 
 	// Force window to foreground from the backend
 	wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
@@ -600,7 +620,7 @@ func (a *App) ActivateLicense(licenseKey string) error {
 	if err := auth.SaveLicenseKey(licenseKey + ":" + activationID); err != nil {
 		log.Printf("[Auth] Could not save license key: %v", err)
 	}
-	wailsruntime.EventsEmit(a.ctx, "on_license_activated", map[string]string{
+	a.emit("on_license_activated", map[string]string{
 		"license_key":   licenseKey,
 		"activation_id": activationID,
 	})
@@ -691,12 +711,12 @@ func (a *App) AnalyzeVision(base64Image string, prompt string) error {
 			answerBuilder.WriteString(token)
 			a.engine.UpdateState("📸 [Screenshot Snip Captured]", answerBuilder.String(), true)
 			if a.ctx != nil {
-				wailsruntime.EventsEmit(a.ctx, "on_response_token", map[string]interface{}{"text": token})
+				a.emit("on_response_token", map[string]interface{}{"text": token})
 			}
 		}, func() {
 			a.engine.UpdateState("📸 [Screenshot Snip Captured]", answerBuilder.String(), false)
 			if a.ctx != nil {
-				wailsruntime.EventsEmit(a.ctx, "on_response_end", nil)
+				a.emit("on_response_end", nil)
 			}
 		})
 
@@ -723,8 +743,8 @@ func (a *App) ToggleClickthroughMode() bool {
 	if err := window.SetIgnoreMouseEvents(a.ctx, curr); err != nil {
 		log.Printf("❌ SetIgnoreMouseEvents error: %v\n", err)
 	}
-	wailsruntime.EventsEmit(a.ctx, "on_clickthrough_changed", curr)
-	wailsruntime.EventsEmit(a.ctx, "toggle-clickthrough", curr)
+	a.emit("on_clickthrough_changed", curr)
+	a.emit("toggle-clickthrough", curr)
 	return curr
 }
 
@@ -739,7 +759,7 @@ func (a *App) SetClickthrough(enable bool) {
 	if err := window.SetIgnoreMouseEvents(a.ctx, enable); err != nil {
 		log.Printf("❌ SetIgnoreMouseEvents error: %v\n", err)
 	}
-	wailsruntime.EventsEmit(a.ctx, "toggle-clickthrough", enable)
+	a.emit("toggle-clickthrough", enable)
 }
 
 func (a *App) ToggleStealth(opts map[string]interface{}) {
@@ -902,6 +922,11 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	if a.engine != nil {
 		a.engine.Stop()
+	}
+	if a.apiServer != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		a.apiServer.Stop(shutdownCtx)
 	}
 }
 
