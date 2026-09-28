@@ -15,7 +15,7 @@ export const authState = $state({
   productMode: (initialAuth.productMode || import.meta.env.VITE_PRODUCT || "interview") as string,
 
   // BarnOwl AI / Lifetime mode
-  licenseStatus: (initialAuth.licenseStatus || "unchecked") as "unchecked" | "active" | "expired" | "not_activated" | "dev_allowed" | "error" | "demo",
+  licenseStatus: (initialAuth.licenseStatus || "unchecked") as "unchecked" | "active" | "expired" | "not_activated" | "dev_allowed" | "error" | "demo" | "enterprise",
   licenseKey: null as string | null,
 
   // OAuth / SaaS / Demo mode
@@ -28,6 +28,9 @@ export const authState = $state({
   referralCode: null as string | null,
   allowedDevices: 1 as number,
   deviceLimitReached: false as boolean,
+
+  // Enterprise seat fields (null unless plan_type = 'enterprise')
+  enterpriseOrg: null as { id: string; name: string; max_seats: number; seats_used: number } | null,
 });
 
 $effect.root(() => {
@@ -80,6 +83,12 @@ export async function initLicenseCheck() {
     return;
   }
 
+  // Check if they have an active enterprise seat
+  if (authState.user && authState.userEntitlements?.is_enterprise) {
+    authState.licenseStatus = "enterprise";
+    return;
+  }
+
   // If no valid license key, check if they have an active OAuth demo session
   if (authState.user && authState.demoExpiresAt) {
     const exp = new Date(authState.demoExpiresAt).getTime();
@@ -95,6 +104,65 @@ export async function initLicenseCheck() {
 
   // User has never started a demo on this machine
   authState.licenseStatus = "not_activated";
+}
+
+/**
+ * Checks if the given email domain has an active enterprise org in Supabase.
+ * Calls the `enterprise-seat-check` edge function.
+ * Returns { found: true, org: {...} } or { found: false, error: string }.
+ */
+export async function checkEnterpriseDomain(email: string): Promise<{
+  found: boolean;
+  org?: { id: string; name: string; max_seats: number; seats_used: number; status: string };
+  error?: string;
+}> {
+  // DEV bypass
+  const DEV_EMAIL = import.meta.env.VITE_DEV_ENTERPRISE_EMAIL;
+  if (DEV_EMAIL && DEV_EMAIL !== "undefined" && !import.meta.env.PROD) {
+    console.warn("[DEV] Enterprise domain check bypassed. Using dev org.");
+    return { found: true, org: { id: "dev-org", name: "Dev Org", max_seats: 999, seats_used: 0, status: "active" } };
+  }
+
+  if (!supabase) return { found: false, error: "Auth not configured" };
+
+  try {
+    const { data, error } = await supabase.functions.invoke("enterprise-seat-check", {
+      body: { email },
+    });
+    if (error) throw error;
+    return data;
+  } catch (err: any) {
+    return { found: false, error: err.message ?? "Unknown error" };
+  }
+}
+
+/**
+ * Records an enterprise seat claim for the authenticated user.
+ * Called after OAuth completes and domain is confirmed valid.
+ */
+export async function claimEnterpriseSeat(orgId: string): Promise<void> {
+  if (!supabase || !authState.user) throw new Error("Not authenticated");
+
+  const machineId: string = await (window as any).go.main.App.GetMachineId();
+
+  const { error } = await supabase.from("user_entitlements").upsert({
+    user_id: authState.user.id,
+    machine_id: machineId,
+    org_id: orgId,
+    is_enterprise: true,
+    plan_type: "enterprise",
+    seat_claimed_at: new Date().toISOString(),
+  }, { onConflict: "user_id,machine_id" });
+
+  if (error) throw new Error(`Seat claim failed: ${error.message}`);
+
+  authState.licenseStatus = "enterprise";
+  authState.enterpriseOrg = (await supabase
+    .from("organizations")
+    .select("id, name, max_seats")
+    .eq("id", orgId)
+    .single()
+  ).data ?? null;
 }
 
 export async function activateLicense(key: string) {

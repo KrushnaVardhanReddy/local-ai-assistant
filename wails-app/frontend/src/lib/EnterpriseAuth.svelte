@@ -1,24 +1,54 @@
 <script lang="ts">
-  import { authStore } from "./authStore.svelte.ts";
+  import { checkEnterpriseDomain, claimEnterpriseSeat, supabase, authState } from "$lib/auth.svelte";
   import Titlebar from "./components/Titlebar.svelte";
 
-  let email = $state("");
+  let email = $state(import.meta.env.VITE_DEV_ENTERPRISE_EMAIL && import.meta.env.VITE_DEV_ENTERPRISE_EMAIL !== "undefined" ? import.meta.env.VITE_DEV_ENTERPRISE_EMAIL : "");
   let isLoading = $state(false);
   let errorMsg = $state<string | null>(null);
+  let orgFound = $state<string | null>(null);
+  let pendingOrgId = $state<string | null>(null);
+
+  const DEV_BYPASS_ACTIVE = Boolean(import.meta.env.VITE_DEV_ENTERPRISE_EMAIL && import.meta.env.VITE_DEV_ENTERPRISE_EMAIL !== "undefined" && !import.meta.env.PROD);
+
+  $effect(() => {
+    if (pendingOrgId && authState.user) {
+      const orgId = pendingOrgId;
+      pendingOrgId = null; // Clear immediately to prevent re-runs
+
+      claimEnterpriseSeat(orgId).catch(err => {
+        errorMsg = err.message;
+        isLoading = false;
+      });
+    }
+  });
 
   async function handleSSO() {
     isLoading = true;
     errorMsg = null;
+    orgFound = null;
 
-    // Simulate brief loading state
-    await new Promise(resolve => setTimeout(resolve, 800));
+    try {
+      const { found, org, error } = await checkEnterpriseDomain(email);
 
-    const result = authStore.login(email);
-    if (!result.success) {
-      errorMsg = result.error || "Authentication failed.";
+      if (!found || error || !org) {
+        errorMsg = error || "Domain not found or unauthorized.";
+        isLoading = false;
+        return;
+      }
+
+      orgFound = org.name;
+      pendingOrgId = org.id;
+
+      if (!supabase) {
+        throw new Error("Supabase is not configured.");
+      }
+
+      await supabase.auth.signInWithOAuth({ provider: 'google' });
+      // Note: Do not set isLoading = false here, keep it true since OAuth navigates away (or opens external browser in Wails)
+    } catch (err: any) {
+      errorMsg = err.message || "An unexpected error occurred.";
+      isLoading = false;
     }
-
-    isLoading = false;
   }
 </script>
 
@@ -30,8 +60,18 @@
       <p class="subtitle">Please authenticate with your corporate SSO to continue.</p>
 
       <form onsubmit={(e) => { e.preventDefault(); handleSSO(); }} class="auth-form">
+        {#if DEV_BYPASS_ACTIVE}
+          <div class="dev-bypass-badge">
+            [DEV BYPASS ACTIVE]
+          </div>
+        {/if}
+
         {#if errorMsg}
           <div class="error-banner">{errorMsg}</div>
+        {/if}
+
+        {#if orgFound}
+          <div class="success-banner">Org found: {orgFound}. Redirecting...</div>
         {/if}
 
         <div class="input-group">
@@ -150,6 +190,28 @@
 
   .btn-sso:hover:not(:disabled) {
     background: #2563eb;
+  }
+
+  .dev-bypass-badge {
+    background: #eab308;
+    color: #422006;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .success-banner {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    text-align: center;
+    border: 1px solid rgba(16, 185, 129, 0.2);
   }
 
   .btn-sso:disabled {
