@@ -101,6 +101,12 @@
     // Sync backend mode with frontend saved state
     setTimeout(() => {
       setAppMode(wsState.appMode);
+      // Restore saved audio mode — if user had dual mode, start dual capture on launch
+      if (wsState.audioMode === 'dual' && (window as any).go?.main?.App?.SetAudioMode) {
+        (window as any).go.main.App.SetAudioMode('dual').catch((e: any) => {
+          console.warn('[Audio] Failed to restore dual mode on startup:', e);
+        });
+      }
     }, 1000);
 
     return () => {

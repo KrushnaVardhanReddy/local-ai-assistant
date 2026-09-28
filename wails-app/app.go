@@ -63,11 +63,12 @@ type App struct {
 	backendCmd *exec.Cmd
 	cmdMutex   sync.Mutex
 
-	sttManager   *stt.STTManager
-	audioCapture *audio.CaptureEngine
-	dualCapture  *audio.DualCaptureEngine
-	appMode      AppMode
-	audioMode    AudioMode
+	sttManager    *stt.STTManager
+	audioCapture  *audio.CaptureEngine
+	dualCapture   *audio.DualCaptureEngine
+	appMode       AppMode
+	audioMode     AudioMode
+	selectedMicID int
 
 	engine *engine.StealthEngine
 	cfg    *config.AppConfig
@@ -146,13 +147,14 @@ func NewApp(cfg *config.AppConfig) *App {
 	)
 
 	return &App{
-		remoteServer: remote.NewServer(http.FS(assets), sessMgr),
-		sttManager:   stt.NewSTTManager(initialEngine),
-		audioCapture: captureEngine,
-		appMode:      AppModeInterview,
-		audioMode:    AudioModeSpeaker,
-		engine:       eng,
-		cfg:          cfg,
+		remoteServer:  remote.NewServer(http.FS(assets), sessMgr),
+		sttManager:    stt.NewSTTManager(initialEngine),
+		audioCapture:  captureEngine,
+		appMode:       AppModeInterview,
+		audioMode:     AudioModeSpeaker,
+		selectedMicID: -1,
+		engine:        eng,
+		cfg:           cfg,
 	}
 }
 
@@ -854,6 +856,10 @@ func (a *App) GetAudioDevices() []audio.AudioDevice {
 }
 
 func (a *App) SetAudioDevice(id int, isLoopback bool) error {
+	if !isLoopback {
+		a.selectedMicID = id
+	}
+
 	err := a.audioCapture.StartCapture(id, isLoopback, func(samples []float32) {
 		_ = a.engine.ProcessAudio(samples)
 	})
@@ -873,8 +879,8 @@ func (a *App) startDualCapture() error {
 		return fmt.Errorf("audio capture context not initialized")
 	}
 
-	a.dualCapture = audio.NewDualCaptureEngine(ctx)
-	err := a.dualCapture.Start(-1, -1, func(samples []float32) {
+	a.dualCapture = audio.NewDualCaptureEngine(ctx, a.audioCapture)
+	err := a.dualCapture.Start(-1, a.selectedMicID, func(samples []float32) {
 		_ = a.engine.ProcessAudioTagged(samples, "[Interviewer]")
 	}, func(samples []float32) {
 		_ = a.engine.ProcessAudioTagged(samples, "[Candidate]")

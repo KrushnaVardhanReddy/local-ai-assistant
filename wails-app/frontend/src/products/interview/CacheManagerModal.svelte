@@ -120,7 +120,11 @@
 </script>
 
 {#if isOpen}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="modal-overlay" onclick={onClose}>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div class="modal-content" onclick={(e) => e.stopPropagation()}>
       <div class="modal-header">
         <div class="tabs">

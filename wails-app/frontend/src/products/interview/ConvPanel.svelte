@@ -467,33 +467,6 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .icon-btn {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    color: rgba(255, 255, 255, 0.6);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .icon-btn .material-symbols-outlined {
-    font-size: 16px;
-  }
-
-  .icon-btn:hover {
-    color: rgba(255, 255, 255, 0.9);
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .icon-btn.active {
-    color: #4ade80;
-    background: rgba(74, 222, 128, 0.1);
-  }
 
   .header-action-btn {
     display: flex;

@@ -202,13 +202,25 @@
         body: JSON.stringify({ prompt: selectedPrompt })
       });
 
-      if (!isCloudBuild && (window as any).go?.main?.App?.SetAudioDevice) {
-        if (selectedDeviceId !== null) {
-          await (window as any).go.main.App.SetAudioDevice(selectedDeviceId, isLoopbackEnabled);
-          const { wsState } = await import("$lib/ws.svelte");
-          wsState.isListening = true;
+      if (!isCloudBuild && (window as any).go?.main?.App?.SetAudioMode) {
+        if (wsState.audioMode === 'dual') {
+          // For dual mode: first save the mic device (so Go stores selectedMicID), then start dual capture.
+          // If user left the dropdown at "Default Microphone" (null), pass -1 to use system default.
+          const micId = selectedDeviceId ?? -1;
+          await (window as any).go.main.App.SetAudioDevice(micId, false);
+          await (window as any).go.main.App.SetAudioMode('dual');
+        } else {
+          // Speaker-only mode: use selected device or default loopback
+          if (selectedDeviceId !== null) {
+            await (window as any).go.main.App.SetAudioDevice(selectedDeviceId, isLoopbackEnabled);
+          } else {
+            await (window as any).go.main.App.SetAudioDevice(-1, true); // default loopback
+          }
+          await (window as any).go.main.App.SetAudioMode('speaker');
         }
-      } else {
+        const { wsState: ws } = await import("$lib/ws.svelte");
+        ws.isListening = true;
+      } else if (!isCloudBuild) {
         await apiFetch(`${apiUrl}/api/audio/device`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -395,7 +407,7 @@
                     name="audioMode"
                     value="speaker"
                     checked={wsState.audioMode === 'speaker'}
-                    onchange={() => setAudioMode('speaker')}
+                    onchange={() => wsState.audioMode = 'speaker'}
                     style="margin-top: 0.18rem; accent-color: #4ade80;"
                   />
                   <div>
@@ -419,7 +431,7 @@
                     name="audioMode"
                     value="dual"
                     checked={wsState.audioMode === 'dual'}
-                    onchange={() => setAudioMode('dual')}
+                    onchange={() => wsState.audioMode = 'dual'}
                     style="margin-top: 0.18rem; accent-color: #4ade80;"
                   />
                   <div>
@@ -841,39 +853,6 @@
     box-shadow: none;
   }
 
-  .hotkeys-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-  }
-
-  .hotkey-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.35rem 0;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.8);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  }
-
-  .hotkey-row:last-child {
-    border-bottom: none;
-  }
-
-  .hotkey-row kbd {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-    padding: 0.15rem 0.4rem;
-    font-family: monospace;
-    font-size: 0.75rem;
-    color: #4ade80;
-  }
 
   .config-section {
     display: flex;
@@ -1023,19 +1002,9 @@
     color: white;
   }
 
-  .input-group input:focus, .input-group textarea:focus, .custom-select:focus {
+  .input-group input:focus, .custom-select:focus {
     outline: none;
     border-color: #007bff;
-  }
-
-  .input-group textarea {
-    padding: 0.5rem;
-    border-radius: 4px;
-    border: 1px solid #444;
-    background: #222;
-    color: white;
-    resize: vertical;
-    font-family: inherit;
   }
 
   .custom-select {

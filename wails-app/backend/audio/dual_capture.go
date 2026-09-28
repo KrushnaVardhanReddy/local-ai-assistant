@@ -12,16 +12,18 @@ import (
 
 // DualCaptureEngine manages simultaneous audio capture from a loopback and a mic device.
 type DualCaptureEngine struct {
-	mu          sync.Mutex
-	ctx         *malgo.AllocatedContext
-	loopbackDev *malgo.Device
-	micDev      *malgo.Device
+	mu            sync.Mutex
+	ctx           *malgo.AllocatedContext
+	captureEngine *CaptureEngine
+	loopbackDev   *malgo.Device
+	micDev        *malgo.Device
 }
 
 // NewDualCaptureEngine creates a new DualCaptureEngine sharing an existing malgo context.
-func NewDualCaptureEngine(ctx *malgo.AllocatedContext) *DualCaptureEngine {
+func NewDualCaptureEngine(ctx *malgo.AllocatedContext, captureEngine *CaptureEngine) *DualCaptureEngine {
 	return &DualCaptureEngine{
-		ctx: ctx,
+		ctx:           ctx,
+		captureEngine: captureEngine,
 	}
 }
 
@@ -91,6 +93,11 @@ func (d *DualCaptureEngine) Start(loopbackDeviceID int, micDeviceID int, loopbac
 	micConfig.Capture.Format = malgo.FormatS16
 	micConfig.Capture.Channels = 1
 	micConfig.SampleRate = 16000
+
+	if micDeviceID >= 0 && micDeviceID < len(d.captureEngine.deviceList) {
+		info := d.captureEngine.deviceList[micDeviceID]
+		micConfig.Capture.DeviceID = info.ID.Pointer()
+	}
 
 	micProcessor := NewAudioProcessor(micCallback)
 	onRecvMic := func(pOutputSample, pInputSamples []byte, framecount uint32) {

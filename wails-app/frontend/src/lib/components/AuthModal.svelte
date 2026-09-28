@@ -163,7 +163,7 @@
                 autocomplete="off"
               />
             </div>
-            <a href="#" onclick={(e) => {
+            <a href="javascript:void(0)" onclick={(e) => {
               e.preventDefault();
               if (typeof window !== "undefined" && (window as any).Paddle) {
                 const checkoutOptions: any = {

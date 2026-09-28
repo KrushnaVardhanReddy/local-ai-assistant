@@ -1,5 +1,4 @@
 You are tasked with implementing Phase 84, Task 1 (P84-T1): IPC to REST API Architecture Refactor.
-This is a MAJOR architectural transition. Do NOT commit to `main` or `feature/krushna_golang`.
 
 ════════════════════════════════════════════════════════════════
 TASK CONTEXT
