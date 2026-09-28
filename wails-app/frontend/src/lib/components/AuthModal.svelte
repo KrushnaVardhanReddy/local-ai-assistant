@@ -68,7 +68,11 @@
     errorMsg = null;
     try {
       try { WindowMinimise(); } catch (e) {} // Minimize app so the browser is clearly visible
-      await (window as any).go.main.App.StartOAuthFlow("google");
+      if ((window as any).go?.main?.App?.StartOAuthFlow) {
+        await (window as any).go.main.App.StartOAuthFlow("google");
+      } else {
+        throw new Error("OAuth flow is only supported in the Desktop application currently.");
+      }
       // The on_auth_complete listener in auth.svelte.ts handles the rest
       // We must reset isLoading here so the button isn't permanently stuck
       // if the auth finishes but the user's demo is expired.

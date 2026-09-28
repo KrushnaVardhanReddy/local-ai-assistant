@@ -12,6 +12,7 @@
   import UnifiedAuthGate from "$lib/UnifiedAuthGate.svelte";
 
   import { WindowSetSize, WindowCenter, WindowSetAlwaysOnTop, WindowShow } from "../wailsjs/runtime/runtime";
+  import { api } from "$lib/api";
 
 
   let hasAcceptedLegal = $state(false);
@@ -102,10 +103,16 @@
     setTimeout(() => {
       setAppMode(wsState.appMode);
       // Restore saved audio mode — if user had dual mode, start dual capture on launch
-      if (wsState.audioMode === 'dual' && (window as any).go?.main?.App?.SetAudioMode) {
-        (window as any).go.main.App.SetAudioMode('dual').catch((e: any) => {
-          console.warn('[Audio] Failed to restore dual mode on startup:', e);
-        });
+      if (wsState.audioMode === 'dual') {
+        if ((window as any).go?.main?.App?.SetAudioMode) {
+          (window as any).go.main.App.SetAudioMode('dual').catch((e: any) => {
+            console.warn('[Audio] Failed to restore dual mode on startup via IPC:', e);
+          });
+        } else {
+          api.setAudioMode('dual').catch((e: any) => {
+            console.warn('[Audio] Failed to restore dual mode on startup via REST:', e);
+          });
+        }
       }
     }, 1000);
 
@@ -130,6 +137,10 @@
       e.preventDefault();
       if ((window as any).go?.main?.App?.ToggleMic) {
         (window as any).go.main.App.ToggleMic().then((newState: boolean) => {
+          wsState.isListening = newState;
+        });
+      } else {
+        api.toggleMic().then((newState: boolean) => {
           wsState.isListening = newState;
         });
       }

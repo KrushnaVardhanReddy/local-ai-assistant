@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { apiFetch } from "./api";
+  import { api } from "$lib/api";
   import { wsState, sendChat, sendChip, dismissChip, clearAllChips, toggleMockMode } from "$lib/ws.svelte";
   import { onMount } from "svelte";
-  import { getApiUrl } from "$lib/api";
   import SessionReport from './SessionReport.svelte';
   import { authState } from "$lib/auth.svelte";
   import { uiState } from "$lib/stores/uiState.svelte.ts";
@@ -11,7 +10,6 @@
 
   const isGated = $derived(authState.authMode === 'saas' && (!authState.user || (!authState.byok_pass_active && authState.remaining_sessions <= 0)));
   let isAuthModalOpen = $state(false);
-  import { CaptureScreen, AnalyzeVision, ClearState, ClearCache, SetClickthrough } from "../../wailsjs/go/main/App";
 
   const stealthMode = import.meta.env.VITE_STEALTH_MODE === 'true';
 

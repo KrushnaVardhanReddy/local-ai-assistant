@@ -89,9 +89,15 @@
     return text;
   }
 
+  import { api } from "$lib/api";
+
   async function handleSummarize() {
     try {
-      await SummarizeTranscript();
+      if ((window as any).go?.main?.App?.SummarizeTranscript) {
+        await (window as any).go.main.App.SummarizeTranscript();
+      } else {
+        await api.summarizeTranscript();
+      }
     } catch (err) {
       console.error("Failed to summarize transcript:", err);
     }
@@ -268,9 +274,11 @@
                     if (typeof (window as any).go?.main?.App?.AppendToBuffer === 'function' && typeof (window as any).go?.main?.App?.FlushQuestionBuffer === 'function') {
                       (window as any).go.main.App.AppendToBuffer(item.text);
                       (window as any).go.main.App.FlushQuestionBuffer();
-                      item._wandSent = true;
-                      setTimeout(() => { item._wandSent = false; }, 1500);
+                    } else {
+                      api.appendToBuffer(item.text).then(() => api.flushBuffer());
                     }
+                    item._wandSent = true;
+                    setTimeout(() => { item._wandSent = false; }, 1500);
                   }}
                   title="Send to LLM"
                 >

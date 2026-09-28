@@ -22,13 +22,22 @@
     onOpenFolder: () => void;
   }>();
 
+  import { api } from "$lib/api";
+
   $effect(() => {
     // Fetch initially indexed paths
-    if ((window as any).go?.main?.App?.GetIndexedPaths && !(window as any)._indexedPaths) {
-      (window as any).go.main.App.GetIndexedPaths().then((paths: string[]) => {
-        (window as any)._indexedPaths = paths || [];
-        window.dispatchEvent(new Event('indexed-paths-updated'));
-      });
+    if (!(window as any)._indexedPaths) {
+      if ((window as any).go?.main?.App?.GetIndexedPaths) {
+        (window as any).go.main.App.GetIndexedPaths().then((paths: string[]) => {
+          (window as any)._indexedPaths = paths || [];
+          window.dispatchEvent(new Event('indexed-paths-updated'));
+        });
+      } else {
+        api.getIndexedPaths().then((paths: string[]) => {
+          (window as any)._indexedPaths = paths || [];
+          window.dispatchEvent(new Event('indexed-paths-updated'));
+        }).catch(console.warn);
+      }
     }
   });
 </script>

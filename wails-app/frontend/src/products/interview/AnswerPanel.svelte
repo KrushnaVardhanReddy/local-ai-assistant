@@ -30,11 +30,18 @@
   let cacheItems = $state<any[]>([]);
   let localOverride = $state('');
 
+  import { api } from "$lib/api";
+
   async function toggleHistory() {
     if (!showHistory) {
       try {
-        const items = await (window as any).go.main.App.GetCacheItems();
-        cacheItems = items || [];
+        if ((window as any).go?.main?.App?.GetCacheItems) {
+          const items = await (window as any).go.main.App.GetCacheItems();
+          cacheItems = items || [];
+        } else {
+          const items = await api.getCacheItems();
+          cacheItems = items || [];
+        }
       } catch (e) {
         console.error('Failed to fetch cache items:', e);
       }
@@ -56,7 +63,12 @@
 
   export async function showCachedAnswerFor(questionText: string) {
     try {
-      const items = await (window as any).go.main.App.GetCacheItems();
+      let items: any[];
+      if ((window as any).go?.main?.App?.GetCacheItems) {
+        items = await (window as any).go.main.App.GetCacheItems();
+      } else {
+        items = await api.getCacheItems() as any[];
+      }
       const found = items.find((i: any) => (i.question || i.Question) === questionText);
       if (found) {
         localOverride = found.answer || found.Answer;
@@ -171,7 +183,12 @@
   async function handleExport() {
     exportStatus = 'saving';
     try {
-      const path = await (window as any).go.main.App.ExportSession();
+      let path: string;
+      if ((window as any).go?.main?.App?.ExportSession) {
+        path = await (window as any).go.main.App.ExportSession();
+      } else {
+        path = await api.exportSession();
+      }
       if (!path) {
         exportStatus = 'idle'; // User cancelled
         return;

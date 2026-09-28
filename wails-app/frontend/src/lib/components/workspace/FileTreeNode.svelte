@@ -58,6 +58,8 @@
     node.isExpanded = isExpanded;
   }
 
+  import { api } from "$lib/api";
+
   async function handleCheckboxChange(e: Event) {
     e.stopPropagation();
     const checked = (e.target as HTMLInputElement).checked;
@@ -74,12 +76,14 @@
       }
       
       // Refresh global paths
+      let paths: string[];
       if ((window as any).go?.main?.App?.GetIndexedPaths) {
-        const paths = await (window as any).go.main.App.GetIndexedPaths();
-        (window as any)._indexedPaths = paths || [];
-        // Trigger a custom event or reactive update for all nodes
-        window.dispatchEvent(new Event('indexed-paths-updated'));
+        paths = await (window as any).go.main.App.GetIndexedPaths();
+      } else {
+        paths = await api.getIndexedPaths();
       }
+      (window as any)._indexedPaths = paths || [];
+      window.dispatchEvent(new Event('indexed-paths-updated'));
     } catch (err) {
       console.error("Failed to index path:", err);
       // Revert state on error
